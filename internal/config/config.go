@@ -1,8 +1,8 @@
 package config
 
 import (
-	"aramina/internal/repository/postgres"
-	auth "aramina/internal/service/auth"
+	"shadowing-backend/internal/repository/postgres"
+	auth "shadowing-backend/internal/service/auth"
 )
 
 type HttpServer struct {

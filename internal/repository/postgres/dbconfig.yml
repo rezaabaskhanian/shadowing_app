@@ -1,0 +1,11 @@
+development:
+  dialect: postgres
+  datasource: host=localhost port=5435 dbname=shadowing-backend_db user=reza_abasi password=r1367R1367 sslmode=disable
+  dir: internal/repository/postgres/migrations
+  table: migrations
+
+production:
+  dialect: postgres
+  datasource: host=localhost port=5435 dbname=shadowing-backend_db user=${DB_USER} password=${DB_PASS} sslmode=disable
+  dir: internal/repository/postgres/migrations
+  table: migrations
