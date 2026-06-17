@@ -5,7 +5,7 @@ type Op string
 type Kind int
 
 const (
-	kindInvalid Kind = iota + 1
+	KindInvalid Kind = iota + 1
 	KindForbidden
 	KindNotFound
 	KindUnexpected
