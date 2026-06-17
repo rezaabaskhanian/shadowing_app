@@ -187,7 +187,7 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 }
 
 // GetByID implements [learningservice.Repository].
-func (r DB) GetByID(ctx context.Context, id uuid.UUID) (scene.Scene, error) {
+func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	const op = "postgres.GetSceneByID"
 
 	// 1️⃣ Get Scene
