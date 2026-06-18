@@ -6,7 +6,7 @@ import (
 )
 
 type Scene struct {
-	ID                 ScenceID
+	ID                 SceneID
 	Title              string
 	Description        string
 	BackgroundImageURL string
