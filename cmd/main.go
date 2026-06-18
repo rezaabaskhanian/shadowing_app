@@ -10,12 +10,15 @@ import (
 	"shadowing-backend/internal/repository/postgres"
 
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
+	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
+	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	shadowingservice "shadowing-backend/internal/service/shadowing"
 
 	userservice "shadowing-backend/internal/service/user"
 
@@ -62,15 +65,15 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc := setupservice(cfg)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc)
 
 	server.Server()
 
 }
 
-func setupservice(cfg config.Config) (authservice.Service, userservice.Service, learningservice.Service) {
+func setupservice(cfg config.Config) (authservice.Service, userservice.Service, learningservice.Service, shadowingservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -84,7 +87,12 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service, 
 
 	learnningSvc := learningservice.New(learnningRepo)
 
+	sessionRepo := postgressession.New(MyPostgresgresRepo.DB)
+	recordingRepo := postgresrecording.New(MyPostgresgresRepo.DB)
+
+	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc
 }

@@ -1,0 +1,103 @@
+package shadowingservice
+
+import (
+	"context"
+	"shadowing-backend/internal/domain/shadowing/session"
+	"shadowing-backend/internal/service/shadowing/dto"
+
+	"github.com/google/uuid"
+
+	"shadowing-backend/internal/pkg/richerror"
+)
+
+func (s Service) StartSession(ctx context.Context, req dto.StartSessionRequest) (*dto.StartSessionResponse, error) {
+
+	const op = "shadowing.StartSession"
+
+	// 1️⃣ تبدیل IDها
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("invalid user ID")
+	}
+
+	sceneID, err := uuid.Parse(req.SceneID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("invalid scene ID")
+	}
+
+	dialogueID, err := uuid.Parse(req.DialogueID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("invalid dialogue ID")
+	}
+
+	// 2️⃣ بررسی اینکه جلسه فعال قبلی وجود نداشته باشد
+	existingSession, _ := s.sessionRepo.GetByUserAndDialogue(ctx, userID, dialogueID)
+	if existingSession != nil && existingSession.Status != session.StatusCompleted {
+		return nil, richerror.New(op).
+			WithMessage("an active session already exists for this dialogue").
+			WithKind(richerror.KindConflict)
+	}
+
+	// 3️⃣ ساخت Session جدید
+	newSession, err := session.NewSession(userID, sceneID, dialogueID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+
+	// 4️⃣ ایجاد ۴ مرحله
+	steps := s.createSteps(newSession.ID, dialogueID)
+	if err := newSession.AddSteps(steps); err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+
+	// 5️⃣ شروع جلسه
+	if err := newSession.Start(); err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+
+	// 6️⃣ ذخیره در دیتابیس
+	if err := s.sessionRepo.Create(ctx, newSession); err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to save session")
+	}
+
+	// 7️⃣ ساخت پاسخ
+	return &dto.StartSessionResponse{
+		SessionID:   newSession.ID.String(),
+		DialogueID:  newSession.DialogueID.String(),
+		CurrentStep: int(newSession.CurrentStep),
+		TotalSteps:  newSession.TotalSteps,
+		Status:      string(newSession.Status),
+	}, nil
+}
+
+// createSteps - ایجاد ۴ مرحله برای جلسه
+func (s *Service) createSteps(sessionID, dialogueID uuid.UUID) []session.Step {
+	// در حالت واقعی، این اطلاعات از دیتابیس یا سرویس دیگر می‌آید
+	// برای نمونه، یک دیالوگ نمونه می‌سازیم
+	displayText := "How much is this can of tuna?"
+	translation := "این کنسرو تن ماهی چند است؟"
+	audioURL := "https://cdn.example.com/audio/dialogue_123.mp3"
+
+	steps := make([]session.Step, 0, 4)
+
+	stepTypes := []session.StepType{
+		session.StepListen,
+		session.StepShadow,
+		session.StepRecord,
+		session.StepRepeat,
+	}
+
+	for _, stepType := range stepTypes {
+		step, _ := session.NewStep(
+			sessionID,
+			dialogueID,
+			stepType,
+			displayText,
+			translation,
+			audioURL,
+		)
+		steps = append(steps, *step)
+	}
+
+	return steps
+}

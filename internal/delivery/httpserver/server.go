@@ -5,12 +5,14 @@ import (
 	// adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
+	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	shadowingservice "shadowing-backend/internal/service/shadowing"
 
 	"fmt"
 	userservice "shadowing-backend/internal/service/user"
@@ -24,16 +26,20 @@ type Service struct {
 	userHandler userhandler.Handler
 
 	learningHandler learninghandler.Handler
+
+	shadowingHandler shadowinghandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
 	authSvc authservice.Service, authConfig authservice.Config,
-	learningSvc learningservice.Service,
+	learningSvc learningservice.Service, shadowingSvc shadowingservice.Service,
 ) Service {
 
 	return Service{cfg: cfg,
 		userHandler:     userhandler.New(userSvc, authSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(learningSvc, authSvc, authConfig),
+
+		shadowingHandler: shadowinghandler.New(shadowingSvc),
 	}
 }
 
@@ -72,6 +78,8 @@ func (s Service) Server() {
 
 	s.userHandler.SetUserRoutes(e)
 	s.learningHandler.SetLearningRoutes(e)
+
+	s.shadowingHandler.SetShadowingRoutes(e)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", s.cfg.HttpServer.Port)))
 
