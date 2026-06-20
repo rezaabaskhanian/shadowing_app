@@ -10,6 +10,9 @@ import (
 	"shadowing-backend/internal/repository/postgres"
 
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
+	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
+	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
+	postgressstreak "shadowing-backend/internal/repository/postgres/progress/streak"
 	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
@@ -18,6 +21,7 @@ import (
 
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	progressservice "shadowing-backend/internal/service/progress"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 
 	userservice "shadowing-backend/internal/service/user"
@@ -65,15 +69,16 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc := setupservice(cfg)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc)
 
 	server.Server()
 
 }
 
-func setupservice(cfg config.Config) (authservice.Service, userservice.Service, learningservice.Service, shadowingservice.Service) {
+func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
+	learningservice.Service, shadowingservice.Service, progressservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -92,7 +97,13 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service, 
 
 	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo)
 
+	streakRepo := postgressstreak.NewStreakRepository(MyPostgresgresRepo.DB)
+	achievementRepo := postgresachievement.NewAchievementRepository(MyPostgresgresRepo.DB)
+	sceneprogressRepo := postgresssceneprogress.NewSceneProgressRepository(MyPostgresgresRepo.DB)
+
+	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc
 }

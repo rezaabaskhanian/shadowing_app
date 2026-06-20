@@ -5,6 +5,7 @@ import (
 	// adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
+	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
 
@@ -12,6 +13,7 @@ import (
 
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	progressservice "shadowing-backend/internal/service/progress"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 
 	"fmt"
@@ -28,18 +30,25 @@ type Service struct {
 	learningHandler learninghandler.Handler
 
 	shadowingHandler shadowinghandler.Handler
+
+	progressHndler progresshandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
 	authSvc authservice.Service, authConfig authservice.Config,
-	learningSvc learningservice.Service, shadowingSvc shadowingservice.Service,
+	learningSvc learningservice.Service,
+	shadowingSvc shadowingservice.Service,
+	progressSvc progressservice.Service,
+
 ) Service {
 
 	return Service{cfg: cfg,
 		userHandler:     userhandler.New(userSvc, authSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(learningSvc, authSvc, authConfig),
 
-		shadowingHandler: shadowinghandler.New(shadowingSvc),
+		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig),
+
+		progressHndler: progresshandler.New(progressSvc, authSvc, authConfig),
 	}
 }
 
@@ -80,6 +89,8 @@ func (s Service) Server() {
 	s.learningHandler.SetLearningRoutes(e)
 
 	s.shadowingHandler.SetShadowingRoutes(e)
+
+	s.progressHndler.SetProgressRoutes(e)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", s.cfg.HttpServer.Port)))
 
