@@ -1064,6 +1064,27 @@ export const SceneScreen = () => {
     }
   }, []);
 
+  // رفرنس‌های به‌روز تا تایمرها بدون وابسته‌کردن افکت‌ها به مقادیر تازه دسترسی داشته باشند
+  const playingRef = useRef(playing);
+  const hotspotsLenRef = useRef(hotspots.length);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+  useEffect(() => {
+    hotspotsLenRef.current = hotspots.length;
+  }, [hotspots.length]);
+
+  // رفتن به دیالوگ بعدی (یا پایان در آخرین دیالوگ)
+  const advanceToNext = useCallback(() => {
+    setActiveIndex((prev) => {
+      if (prev >= hotspotsLenRef.current - 1) {
+        setPlaying(false);
+        return prev;
+      }
+      return prev + 1;
+    });
+  }, []);
+
   const playAudio = useCallback((url: string) => {
     setAudioUri(url);
     setIsAudioReady(false);
@@ -1077,29 +1098,24 @@ export const SceneScreen = () => {
   const handleAudioStatus = useCallback((status: string) => {
     if (status === 'playing') {
       setIsAudioReady(true);
-    } else if (status === 'finished') {
+    } else if (status === 'finished' || status === 'error') {
+      // پایان صدا یا خطای پخش → بعد از کمی مکث خودکار به دیالوگ بعدی برو
       clearAdvanceTimer();
-      if (playing) {
-        advanceTimer.current = setTimeout(() => {
-          setActiveIndex((prev) => {
-            if (prev >= hotspots.length - 1) {
-              setPlaying(false);
-              return prev;
-            }
-            return prev + 1;
-          });
-        }, AUTO_ADVANCE_MS);
+      if (playingRef.current) {
+        advanceTimer.current = setTimeout(advanceToNext, AUTO_ADVANCE_MS);
       }
-    } else if (status === 'error') {
-      console.error('Audio playback error');
     }
-  }, [playing, clearAdvanceTimer]);
+  }, [clearAdvanceTimer, advanceToNext]);
 
   useEffect(() => {
     if (!viewport.width || !viewport.height) return;
 
     const spot = hotspots[activeIndex];
     if (!spot) return;
+
+    // هر تایمر پیشرفت قبلی را لغو کن تا با جابه‌جایی دستی/خودکار تداخل نکند
+    clearAdvanceTimer();
+
     const targetX = viewport.width * 0.5 - spot.x * canvasWidth * FOCUS_SCALE;
     const targetY = viewport.height * 0.42 - spot.y * canvasHeight * FOCUS_SCALE;
 
@@ -1125,9 +1141,26 @@ export const SceneScreen = () => {
     ]).start();
 
     if (spot.audioUrl) {
+      // دیالوگ دارای ویس: پس از پایان زوم پخش کن (پیشرفت با پایان صدا انجام می‌شود)
       setTimeout(() => playAudio(spot.audioUrl), 700);
+    } else {
+      // دیالوگ بدون ویس: بعد از مکثی متناسب با طول متن خودکار جلو برو تا گیر نکند
+      const holdMs = Math.min(6000, Math.max(2500, (spot.dialogue?.length || 0) * 55));
+      advanceTimer.current = setTimeout(() => {
+        if (playingRef.current) advanceToNext();
+      }, holdMs + 700);
     }
-  }, [scenario, activeIndex, canvasWidth, canvasHeight, viewport.width, viewport.height, playAudio]);
+  }, [
+    scenario,
+    activeIndex,
+    canvasWidth,
+    canvasHeight,
+    viewport.width,
+    viewport.height,
+    playAudio,
+    clearAdvanceTimer,
+    advanceToNext,
+  ]);
 
   useEffect(() => {
     if (!playing) {
