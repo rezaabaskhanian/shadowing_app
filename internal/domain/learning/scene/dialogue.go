@@ -43,11 +43,11 @@ func NewDialogue(hotspotID HotspotID, order int, speaker SpeakerType,
 		CreatedAt:    time.Now(),
 	}, nil
 }
-func (d Dialogue) SetAudioURL(url string) {
+func (d *Dialogue) SetAudioURL(url string) {
 	d.AudioURL = url
 }
 
-func (d Dialogue) SetPartialHint(hint string) {
+func (d *Dialogue) SetPartialHint(hint string) {
 	if d.DisplayType == DisplayPartial {
 		d.PartialHint = hint
 	}

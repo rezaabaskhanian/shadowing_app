@@ -27,6 +27,6 @@ func NewHotspot(name string, x, y float64, order int) Hotspot {
 	}
 }
 
-func (h Hotspot) AddDialogue(d Dialogue) {
+func (h *Hotspot) AddDialogue(d Dialogue) {
 	h.Dialogues = append(h.Dialogues, d)
 }

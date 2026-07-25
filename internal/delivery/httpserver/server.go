@@ -2,7 +2,7 @@ package httpserver
 
 import (
 	"shadowing-backend/internal/config"
-	// adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
+	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
@@ -23,6 +23,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+// مسیر ذخیره‌سازی فایل‌های آپلودشده و پیشوند عمومی سرو آن‌ها
+const (
+	uploadDir     = "uploads"
+	uploadURLPath = "/uploads"
+)
+
 type Service struct {
 	cfg         config.Config
 	userHandler userhandler.Handler
@@ -32,6 +38,8 @@ type Service struct {
 	shadowingHandler shadowinghandler.Handler
 
 	progressHndler progresshandler.Handler
+
+	adminHandler adminhandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -49,6 +57,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig),
 
 		progressHndler: progresshandler.New(progressSvc, authSvc, authConfig),
+
+		adminHandler: adminhandler.New(learningSvc, authSvc, authConfig, uploadDir, uploadURLPath),
 	}
 }
 
@@ -88,9 +98,17 @@ func (s Service) Server() {
 	s.userHandler.SetUserRoutes(e)
 	s.learningHandler.SetLearningRoutes(e)
 
+	// روت‌های عمومی صحنه برای اپ موبایل (فقط خواندن)
+	s.learningHandler.SetPublicSceneRoutes(e)
+
 	s.shadowingHandler.SetShadowingRoutes(e)
 
 	s.progressHndler.SetProgressRoutes(e)
+
+	s.adminHandler.SetAdminRoutes(e)
+
+	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
+	e.Static(uploadURLPath, uploadDir)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", s.cfg.HttpServer.Port)))
 

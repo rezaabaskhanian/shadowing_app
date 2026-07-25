@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# فایل‌های آپلودشده در زمان اجرا (فقط پوشه نگه داشته می‌شود)
+/uploads/*
+!/uploads/.gitkeep
+
+# باینری‌های build
+/main

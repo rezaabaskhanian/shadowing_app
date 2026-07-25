@@ -43,7 +43,7 @@ func NewScene(title, description, bgImage string, difficulty DifficultyLevel) (S
 	}, nil
 }
 
-func (s Scene) Publish() error {
+func (s *Scene) Publish() error {
 	if len(s.Hotspots) == 0 {
 		return errors.New("cannot publish scene without hotspots")
 	}
@@ -52,7 +52,7 @@ func (s Scene) Publish() error {
 	return nil
 }
 
-func (s Scene) AddHotspot(hotspot Hotspot) {
+func (s *Scene) AddHotspot(hotspot Hotspot) {
 	s.Hotspots = append(s.Hotspots, hotspot)
 	s.UpdatedAt = time.Now()
 }

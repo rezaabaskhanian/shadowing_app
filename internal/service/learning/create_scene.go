@@ -120,6 +120,9 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			}
 
 			// تنظیمات اختیاری
+			if dReq.AudioURL != "" {
+				dialog.AudioURL = dReq.AudioURL
+			}
 			if dReq.PartialHint != "" {
 				dialog.PartialHint = dReq.PartialHint
 			}
