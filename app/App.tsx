@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { AuthScreens } from './src/screens/AuthScreens';
 import { ScenesProvider } from './src/data/ScenesContext';
+import { VocabProvider } from './src/data/VocabContext';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -42,10 +43,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ScenesProvider>
-        <NavigationContainer>
-          <StatusBar barStyle="light-content" />
-          <AppNavigator />
-        </NavigationContainer>
+        <VocabProvider>
+          <NavigationContainer>
+            <StatusBar barStyle="light-content" />
+            <AppNavigator />
+          </NavigationContainer>
+        </VocabProvider>
       </ScenesProvider>
     </GestureHandlerRootView>
   );

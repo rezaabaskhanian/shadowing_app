@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import {
   API_BASE,
   createScene,
+  generateScene,
   uploadAudio,
   uploadImage,
 } from "@/lib/api";
@@ -13,6 +14,7 @@ import type {
   DisplayType,
   HotspotInput,
   Speaker,
+  WordInput,
 } from "@/lib/types";
 
 const SPEAKERS: { v: Speaker; l: string }[] = [
@@ -36,6 +38,7 @@ function newDialogue(order: number): DialogueInput {
     display_type: "full",
     partial_hint: "",
     wait_duration: 5,
+    words: [],
   };
 }
 
@@ -54,7 +57,51 @@ export default function SceneCreator({
   const [selected, setSelected] = useState<number | null>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // ---------- تولید با هوش مصنوعی (فرم را پر می‌کند؛ ذخیره نمی‌کند) ----------
+  async function handleGenerate() {
+    if (aiPrompt.trim().length < 3) {
+      notify("یک موقعیت کوتاه بنویس (مثلاً: مکالمه در داروخانه)", "err");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const g = await generateScene(aiPrompt.trim(), difficulty);
+      setTitle(g.title || "");
+      setDescription(g.description || "");
+      if (g.difficulty) setDifficulty(g.difficulty);
+      const newHotspots: HotspotInput[] = (g.hotspots || []).map((h, hi) => ({
+        name: h.name || `نقطه ${hi + 1}`,
+        x_position: h.x_position ?? 50,
+        y_position: h.y_position ?? 50,
+        order: h.order ?? hi + 1,
+        dialogues: (h.dialogues || []).map((d, di) => ({
+          order: d.order ?? di + 1,
+          speaker: d.speaker || "customer",
+          original_text: d.original_text || "",
+          translation: d.translation || "",
+          audio_url: "",
+          display_type: d.display_type || "full",
+          partial_hint: "",
+          wait_duration: d.wait_duration || 5,
+          words: d.words || [],
+        })),
+      }));
+      setHotspots(newHotspots);
+      setSelected(newHotspots.length > 0 ? 0 : null);
+      notify(
+        "محتوا تولید شد ✅ حالا تصویر را آپلود کن و جای نقاط را با کلیک تنظیم کن",
+        "ok"
+      );
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   // ---------- آپلود تصویر ----------
   async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -145,6 +192,33 @@ export default function SceneCreator({
       )
     );
   }
+  // ---------- واژه‌های دیالوگ ----------
+  function addWord(hi: number, di: number) {
+    updateDialogue(hi, di, {
+      words: [
+        ...(hotspots[hi]?.dialogues[di]?.words ?? []),
+        { word: "", meaning: "" },
+      ],
+    });
+  }
+  function updateWord(
+    hi: number,
+    di: number,
+    wi: number,
+    patch: Partial<WordInput>
+  ) {
+    const words = (hotspots[hi]?.dialogues[di]?.words ?? []).map((w, k) =>
+      k === wi ? { ...w, ...patch } : w
+    );
+    updateDialogue(hi, di, { words });
+  }
+  function removeWord(hi: number, di: number, wi: number) {
+    const words = (hotspots[hi]?.dialogues[di]?.words ?? []).filter(
+      (_, k) => k !== wi
+    );
+    updateDialogue(hi, di, { words });
+  }
+
   async function handleDialogueAudio(
     hi: number,
     di: number,
@@ -213,6 +287,35 @@ export default function SceneCreator({
 
   return (
     <div>
+      {/* تولید با هوش مصنوعی (اختیاری — فرم را پر می‌کند) */}
+      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+        <h2 style={{ marginTop: 0 }}>🤖 تولید با هوش مصنوعی (اختیاری)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          یک موقعیت کوتاه بنویس؛ دیالوگ‌ها، ترجمه و واژه‌ها خودکار ساخته و در فرم
+          زیر پر می‌شوند. بعدش تصویر را آپلود کن و جای نقاط را تنظیم کن.
+        </p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="مثلاً: مکالمه در داروخانه"
+            disabled={generating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !generating) handleGenerate();
+            }}
+            style={{ flex: 1 }}
+          />
+          <button
+            className="btn"
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+          >
+            {generating ? "در حال تولید..." : "✨ تولید"}
+          </button>
+        </div>
+      </div>
+
       {/* اطلاعات پایه صحنه */}
       <div className="card">
         <h2 style={{ marginTop: 0 }}>اطلاعات صحنه</h2>
@@ -478,6 +581,49 @@ export default function SceneCreator({
                   {d.audio_url && (
                     <audio controls src={`${API_BASE}${d.audio_url}`} />
                   )}
+
+                  {/* واژه‌های دیالوگ (انگلیسی + معنی) */}
+                  <div style={{ marginTop: 12 }}>
+                    <label>📚 واژه‌های این دیالوگ (اختیاری)</label>
+                    {(d.words ?? []).map((w, wi) => (
+                      <div
+                        key={wi}
+                        style={{ display: "flex", gap: 6, marginTop: 6 }}
+                      >
+                        <input
+                          placeholder="واژه انگلیسی"
+                          value={w.word}
+                          onChange={(e) =>
+                            updateWord(selected, di, wi, { word: e.target.value })
+                          }
+                        />
+                        <input
+                          placeholder="معنی فارسی"
+                          value={w.meaning}
+                          onChange={(e) =>
+                            updateWord(selected, di, wi, {
+                              meaning: e.target.value,
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => removeWord(selected, di, wi)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ marginTop: 6 }}
+                      onClick={() => addWord(selected, di)}
+                    >
+                      + افزودن واژه
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

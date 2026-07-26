@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// DialogueWord یک واژه‌ی مهم دیالوگ همراه با معنی آن است.
+type DialogueWord struct {
+	Word    string `json:"word"`
+	Meaning string `json:"meaning"`
+}
+
 type Dialogue struct {
 	ID           DialogueID
 	HotspotID    HotspotID
@@ -14,8 +20,9 @@ type Dialogue struct {
 	Translation  string // ترجمه فارسی
 	AudioURL     string // آدرس فایل صوتی
 	DisplayType  DisplayType
-	PartialHint  string // برای حالت partial
-	WaitDuration int    // مدت انتظار برای پاسخ (ثانیه)
+	PartialHint  string         // برای حالت partial
+	WaitDuration int            // مدت انتظار برای پاسخ (ثانیه)
+	Words        []DialogueWord // واژه‌های مهم این دیالوگ با معنی
 	CreatedAt    time.Time
 }
 

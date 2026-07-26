@@ -1,4 +1,10 @@
-import type { CreateScenePayload, LoginResponse, SceneResp } from "./types";
+import type {
+  CreateScenePayload,
+  Difficulty,
+  GeneratedScene,
+  LoginResponse,
+  SceneResp,
+} from "./types";
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8088";
@@ -96,6 +102,19 @@ export async function createScene(payload: CreateScenePayload) {
     body: JSON.stringify(payload),
   });
   return jsonOrThrow(res);
+}
+
+// تولید محتوای صحنه با هوش مصنوعی (فقط برای پرکردن فرم؛ چیزی ذخیره نمی‌کند)
+export async function generateScene(
+  prompt: string,
+  difficulty: Difficulty
+): Promise<GeneratedScene> {
+  const res = await authFetch("/v1/admin/generate-scene", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, difficulty }),
+  });
+  return jsonOrThrow(res) as Promise<GeneratedScene>;
 }
 
 export async function listScenes(): Promise<SceneResp[]> {

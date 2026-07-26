@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { WebView } from 'react-native-webview';
 import { View } from 'react-native';
 
 interface AudioPlayerProps {
@@ -8,69 +8,41 @@ interface AudioPlayerProps {
   onPlaybackStatusUpdate?: (status: 'loading' | 'playing' | 'paused' | 'finished' | 'error') => void;
 }
 
-const HTML_PLAYER = (uri: string) => `
+// HTML سبک که به‌محض لود، همان uri را می‌سازد و (در صورت نیاز) خودکار پخش می‌کند.
+// چون uri داخل خود HTML است، هر دیالوگ جدید WebView را ری‌لود و خودکار پخش می‌کند
+// و دیگر به ریسِ postMessage وابسته نیستیم.
+const HTML_PLAYER = (uri: string, autoplay: boolean) => `
 <!DOCTYPE html>
 <html>
 <head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0">
 <script>
-  var audio = null;
-  var currentUri = '';
-  window.addEventListener('message', function(e) {
-    var data = JSON.parse(e.data);
-    if (data.action === 'play' && data.uri) {
-      if (audio && currentUri === data.uri) {
-        audio.play();
-        sendStatus('playing');
-        return;
-      }
-      currentUri = data.uri;
-      audio = new Audio(data.uri);
-      audio.onplaying = function() { sendStatus('playing'); };
-      audio.onpause = function() { sendStatus('paused'); };
-      audio.onended = function() { sendStatus('finished'); };
-      audio.onerror = function() { sendStatus('error'); };
-      audio.load();
-      audio.play().catch(function() { sendStatus('error'); });
-    } else if (data.action === 'pause') {
-      if (audio) audio.pause();
-    } else if (data.action === 'stop') {
-      if (audio) { audio.pause(); audio.currentTime = 0; }
-    }
+  function send(s){ try { window.ReactNativeWebView.postMessage(s); } catch(e){} }
+  var audio = new Audio(${JSON.stringify(uri)});
+  audio.onplaying = function(){ send('playing'); };
+  audio.onpause = function(){ send('paused'); };
+  audio.onended = function(){ send('finished'); };
+  audio.onerror = function(){ send('error'); };
+  ${autoplay ? "audio.play().catch(function(){ send('error'); });" : ''}
+  // فرمان‌های بعدی از سمت RN (pause/play/stop) بدون ری‌لود
+  window.addEventListener('message', function(e){
+    var a = String(e.data || '');
+    if (a === 'pause') { audio.pause(); }
+    else if (a === 'play') { audio.play().catch(function(){ send('error'); }); }
+    else if (a === 'stop') { audio.pause(); audio.currentTime = 0; }
   });
-  function sendStatus(s) {
-    window.ReactNativeWebView.postMessage(s);
-  }
 </script>
 </body>
 </html>`;
 
 export const AudioPlayer = ({ uri, shouldPlay, onPlaybackStatusUpdate }: AudioPlayerProps) => {
   const webViewRef = useRef<any>(null);
-  const lastUri = useRef<string | null>(null);
 
-  const sendCommand = useCallback((action: string) => {
-    if (webViewRef.current && uri) {
-      webViewRef.current.postMessage(JSON.stringify({ action, uri }));
-    }
-  }, [uri]);
-
+  // pause/resume بدون تغییر uri: با postMessage به WebViewِ بارگذاری‌شده
   useEffect(() => {
-    if (!uri) return;
-
-    if (shouldPlay) {
-      lastUri.current = uri;
-      sendCommand('play');
-    } else {
-      sendCommand('pause');
-    }
-  }, [uri, shouldPlay, sendCommand]);
-
-  useEffect(() => {
-    return () => {
-      sendCommand('stop');
-    };
-  }, []);
+    if (!uri || !webViewRef.current) return;
+    webViewRef.current.postMessage(shouldPlay ? 'play' : 'pause');
+  }, [shouldPlay, uri]);
 
   const onMessage = useCallback(
     (event: any) => {
@@ -84,10 +56,17 @@ export const AudioPlayer = ({ uri, shouldPlay, onPlaybackStatusUpdate }: AudioPl
     <View style={{ width: 0, height: 0, opacity: 0, position: 'absolute' }}>
       <WebView
         ref={webViewRef}
-        source={{ html: uri ? HTML_PLAYER(uri) : '<html><body></body></html>' }}
+        // با تغییر uri، HTML جدید لود و خودکار پخش می‌شود
+        source={{ html: uri ? HTML_PLAYER(uri, shouldPlay) : '<html><body></body></html>' }}
         onMessage={onMessage}
         originWhitelist={['*']}
         javaScriptEnabled={true}
+        domStorageEnabled={true}
+        // اجازه‌ی پخش خودکار صدا بدون نیاز به لمس کاربر (کلید حل مشکل صدا در اندروید)
+        mediaPlaybackRequiresUserAction={false}
+        allowsInlineMediaPlayback={true}
+        // اجازه‌ی بارگذاری صدای http (cleartext) داخل WebView
+        mixedContentMode="always"
         style={{ width: 1, height: 1 }}
       />
     </View>

@@ -130,6 +130,18 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 				dialog.WaitDuration = dReq.WaitDuration
 			}
 
+			// واژه‌های دیالوگ (انگلیسی + معنی)
+			if len(dReq.Words) > 0 {
+				words := make([]scene.DialogueWord, 0, len(dReq.Words))
+				for _, w := range dReq.Words {
+					if w.Word == "" {
+						continue
+					}
+					words = append(words, scene.DialogueWord{Word: w.Word, Meaning: w.Meaning})
+				}
+				dialog.Words = words
+			}
+
 			// ✅ اضافه کردن دیالوگ به هات‌اسپات
 			hotspot.AddDialogue(dialog)
 		}
@@ -170,6 +182,7 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 				DisplayType:  string(d.DisplayType),
 				PartialHint:  d.PartialHint,
 				WaitDuration: d.WaitDuration,
+				Words:        toWordDTOs(d.Words),
 			}
 		}
 
@@ -195,4 +208,13 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 		CreatedAt:          s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:          s.UpdatedAt.Format(time.RFC3339),
 	}
+}
+
+// toWordDTOs واژه‌های دامنه را به DTO تبدیل می‌کند (همیشه آرایه‌ی غیرnil برمی‌گرداند).
+func toWordDTOs(ws []scene.DialogueWord) []dto.Word {
+	out := make([]dto.Word, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, dto.Word{Word: w.Word, Meaning: w.Meaning})
+	}
+	return out
 }

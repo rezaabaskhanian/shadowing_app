@@ -1,6 +1,7 @@
 package adminhandler
 
 import (
+	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
 )
@@ -8,6 +9,7 @@ import (
 // Handler پنل ادمین را سرویس‌دهی می‌کند: آپلود تصویر/صدا و مدیریت صحنه‌ها/هات‌اسپات‌ها/دیالوگ‌ها
 type Handler struct {
 	learningSvc learningservice.Service
+	aiSvc       aiservice.Service
 
 	authSvc    authservice.Service
 	authConfig authservice.Config
@@ -21,12 +23,14 @@ type Handler struct {
 
 func New(
 	learningSvc learningservice.Service,
+	aiSvc aiservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	uploadDir, publicPath string,
 ) Handler {
 	return Handler{
 		learningSvc: learningSvc,
+		aiSvc:       aiSvc,
 		authSvc:     authSvc,
 		authConfig:  authConfig,
 		uploadDir:   uploadDir,

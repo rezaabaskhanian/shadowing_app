@@ -308,6 +308,11 @@ import { COLORS } from '../theme/colors';
 //   audio_url: string;
 //   duration: number;
 // }
+export interface WordEntry {
+  word: string;
+  meaning: string;
+}
+
 export interface Dialogue {
   id: string;
   sequence: number;
@@ -316,6 +321,7 @@ export interface Dialogue {
   persian_text: string;
   audio_url: string;
   duration: number;
+  words?: WordEntry[];
 }
 
 export interface Conversation {
@@ -344,6 +350,7 @@ export interface DialogueItem {
   dialogue: string;
   translation: string;
   audioUrl: string;
+  words?: WordEntry[];
 }
 
 export interface Scenario {
@@ -373,6 +380,7 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
           dialogue: d.english_text,
           translation: d.persian_text,
           audioUrl: d.audio_url,
+          words: d.words,
         });
       }
     } else {

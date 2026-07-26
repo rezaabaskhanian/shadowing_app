@@ -11,6 +11,7 @@ import (
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
+	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
 	progressservice "shadowing-backend/internal/service/progress"
@@ -58,7 +59,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 
 		progressHndler: progresshandler.New(progressSvc, authSvc, authConfig),
 
-		adminHandler: adminhandler.New(learningSvc, authSvc, authConfig, uploadDir, uploadURLPath),
+		adminHandler: adminhandler.New(learningSvc, aiservice.New(), authSvc, authConfig, uploadDir, uploadURLPath),
 	}
 }
 

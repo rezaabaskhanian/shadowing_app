@@ -63,9 +63,22 @@ CREATE INDEX idx_shadowing_recordings_user_id ON shadowing_recordings(user_id);
 CREATE INDEX idx_shadowing_recordings_session_id ON shadowing_recordings(session_id);
 
 -- ============================================
+-- تابع مشترک به‌روزرسانی updated_at
+-- ============================================
+-- +migrate StatementBegin
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+-- +migrate StatementEnd
+
+-- ============================================
 -- تریگر به‌روزرسانی updated_at
 -- ============================================
-CREATE TRIGGER update_shadowing_sessions_updated_at 
+CREATE TRIGGER update_shadowing_sessions_updated_at
     BEFORE UPDATE ON shadowing_sessions 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

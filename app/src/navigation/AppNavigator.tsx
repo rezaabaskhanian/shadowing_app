@@ -51,10 +51,12 @@ export const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => <Compass color={color} size={size} />,
         }}
       />
-      <Tab.Screen 
-        name="Shadowing" 
-        component={SceneScreen} 
+      <Tab.Screen
+        name="Shadowing"
+        component={SceneScreen}
         options={{
+          // در صفحه‌ی صحنه تب‌بار مخفی شود
+          tabBarStyle: { display: 'none' },
           tabBarLabel: '',
           tabBarIcon: ({ color, size }) => (
             <View style={{

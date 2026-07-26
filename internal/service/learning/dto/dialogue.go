@@ -1,5 +1,10 @@
 package dto
 
+type Word struct {
+	Word    string `json:"word"`
+	Meaning string `json:"meaning"`
+}
+
 type Dialogue struct {
 	ID           string `json:"id"`
 	Order        int    `json:"order"`
@@ -10,4 +15,5 @@ type Dialogue struct {
 	DisplayType  string `json:"display_type"`
 	PartialHint  string `json:"partial_hint"`
 	WaitDuration int    `json:"wait_duration"`
+	Words        []Word `json:"words"`
 }

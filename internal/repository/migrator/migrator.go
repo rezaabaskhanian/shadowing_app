@@ -21,7 +21,7 @@ type Migrator struct {
 func New(dbConfig postgres.Config) Migrator {
 	// OR: Read migrations from a folder:
 	migrations := &migrate.FileMigrationSource{
-		Dir: "../internal/repository/postgres/migrations",
+		Dir: "internal/repository/postgres/migrations",
 	}
 	return Migrator{
 		dbconfig:   dbConfig,

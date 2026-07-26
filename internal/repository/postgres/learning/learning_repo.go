@@ -2,6 +2,7 @@ package postgreslearning
 
 import (
 	"context"
+	"encoding/json"
 	domain "shadowing-backend/internal/domain/learning/scene"
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/richerror"
@@ -66,10 +67,18 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 
 		// درج Dialogues این Hotspot
 		for _, d := range h.Dialogues {
+			// واژه‌ها به‌صورت JSON ذخیره می‌شوند (پیش‌فرض آرایه‌ی خالی)
+			wordsJSON := []byte("[]")
+			if len(d.Words) > 0 {
+				if b, mErr := json.Marshal(d.Words); mErr == nil {
+					wordsJSON = b
+				}
+			}
+
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())`
+				audio_url, display_type, partial_hint, wait_duration, words, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID,
@@ -82,6 +91,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 				d.DisplayType,
 				d.PartialHint,
 				d.WaitDuration,
+				wordsJSON,
 			)
 			if err != nil {
 				return richerror.New(op).
@@ -226,16 +236,17 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 		var h scene.Hotspot
 		err := rows.Scan(
 			&h.ID, &h.SceneID, &h.Name, &h.XPosition,
-			&h.YPosition, &h.OrderIndex,
+			&h.YPosition, &h.OrderIndex, &h.CreatedAt, &h.UpdatedAt,
 		)
 		if err != nil {
 			return scene.Scene{}, richerror.New(op).WithErr(err)
 		}
 
 		// 3️⃣ Get Dialogues for this hotspot
-		dialogueQuery := `SELECT 
-			id, hotspot_id, "order", speaker, original_text, translation,
-			audio_url, display_type, partial_hint, wait_duration, created_at, updated_at
+		dialogueQuery := `SELECT
+			id, hotspot_id, "order", speaker, original_text, COALESCE(translation, ''),
+			COALESCE(audio_url, ''), display_type, COALESCE(partial_hint, ''), wait_duration,
+			COALESCE(words, '[]'::jsonb), created_at
 		FROM dialogues WHERE hotspot_id = $1 ORDER BY "order"`
 
 		dRows, err := r.conn.Query(ctx, dialogueQuery, h.ID)
@@ -247,19 +258,29 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 		var dialogues []scene.Dialogue
 		for dRows.Next() {
 			var d scene.Dialogue
+			var wordsJSON []byte
 			err := dRows.Scan(
 				&d.ID, &d.HotspotID, &d.Order, &d.Speaker, &d.OriginalText,
 				&d.Translation, &d.AudioURL, &d.DisplayType,
-				&d.PartialHint, &d.WaitDuration, &d.CreatedAt,
+				&d.PartialHint, &d.WaitDuration, &wordsJSON, &d.CreatedAt,
 			)
 			if err != nil {
 				return scene.Scene{}, richerror.New(op).WithErr(err)
 			}
+			if len(wordsJSON) > 0 {
+				_ = json.Unmarshal(wordsJSON, &d.Words)
+			}
 			dialogues = append(dialogues, d)
+		}
+		if err := dRows.Err(); err != nil {
+			return scene.Scene{}, richerror.New(op).WithErr(err)
 		}
 
 		h.Dialogues = dialogues
 		hotspots = append(hotspots, h)
+	}
+	if err := rows.Err(); err != nil {
+		return scene.Scene{}, richerror.New(op).WithErr(err)
 	}
 
 	s.Hotspots = hotspots

@@ -20,6 +20,9 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/upload", h.UploadImage)       // تصویر پس‌زمینه صحنه
 	g.POST("/upload-audio", h.UploadAudio) // صدای دیالوگ
 
+	// تولید محتوای صحنه با هوش مصنوعی (مکملِ ساخت دستی؛ چیزی ذخیره نمی‌کند)
+	g.POST("/generate-scene", h.GenerateScene)
+
 	// مدیریت صحنه‌ها، هات‌اسپات‌ها و دیالوگ‌ها
 	g.POST("/scenes", h.CreateScene)
 	g.GET("/scenes", h.ListScenes)

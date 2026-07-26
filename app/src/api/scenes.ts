@@ -4,6 +4,10 @@ import type { Dialogue, Hotspot, Scenario } from '../data/scenarios';
 import { API_BASE, absUrl } from './config';
 
 // ---- شکل پاسخ بک‌اند ----
+interface BackendWord {
+  word: string;
+  meaning: string;
+}
 interface BackendDialogue {
   id: string;
   order: number;
@@ -14,6 +18,7 @@ interface BackendDialogue {
   display_type: string;
   partial_hint: string;
   wait_duration: number;
+  words: BackendWord[] | null;
 }
 interface BackendHotspot {
   id: string;
@@ -60,6 +65,7 @@ function mapScene(s: BackendScene): Scenario {
       persian_text: d.translation,
       audio_url: absUrl(d.audio_url),
       duration: d.wait_duration || 3,
+      words: (d.words || []).map((w) => ({ word: w.word, meaning: w.meaning })),
     }));
     const first = dialogues[0];
     return {

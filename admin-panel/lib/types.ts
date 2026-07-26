@@ -2,6 +2,12 @@ export type Speaker = "customer" | "clerk" | "npc";
 export type DisplayType = "full" | "partial" | "none";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+// یک واژه‌ی دیالوگ همراه با معنی
+export interface WordInput {
+  word: string;
+  meaning: string;
+}
+
 // ورودی‌ها (برای ساخت صحنه)
 export interface DialogueInput {
   order: number;
@@ -12,6 +18,7 @@ export interface DialogueInput {
   display_type: DisplayType;
   partial_hint: string;
   wait_duration: number;
+  words: WordInput[];
 }
 
 export interface HotspotInput {
@@ -28,6 +35,31 @@ export interface CreateScenePayload {
   background_image_url: string;
   difficulty: Difficulty;
   hotspots: HotspotInput[];
+}
+
+// خروجی تولید صحنه با هوش مصنوعی (بدون تصویر/صدا)
+export interface GeneratedDialogue {
+  order: number;
+  speaker: Speaker;
+  original_text: string;
+  translation: string;
+  display_type: DisplayType;
+  wait_duration: number;
+  words: WordInput[];
+}
+export interface GeneratedHotspot {
+  name: string;
+  x_position: number;
+  y_position: number;
+  order: number;
+  dialogues: GeneratedDialogue[];
+}
+export interface GeneratedScene {
+  title: string;
+  description: string;
+  difficulty: Difficulty;
+  image_prompt: string;
+  hotspots: GeneratedHotspot[];
 }
 
 // پاسخ‌ها (از بک‌اند)

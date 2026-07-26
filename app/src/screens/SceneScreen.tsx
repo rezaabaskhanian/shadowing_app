@@ -1005,15 +1005,17 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
+  BookOpen,
   ChevronLeft,
-  Mic,
+  ChevronRight,
   Pause,
   Play,
-  Volume2,
 } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../theme/colors';
 import { AudioPlayer } from '../components/AudioPlayer';
+import { WordsSheet } from '../components/WordsSheet';
+import { LeitnerBoxModal } from '../components/LeitnerBoxModal';
 import { expandScenarioToDialogueItems, type Scenario } from '../data/scenarios';
 import { useScenes } from '../data/ScenesContext';
 
@@ -1039,21 +1041,20 @@ export const SceneScreen = () => {
   }, [scenarioId, getScene]);
 
   const hotspots = scenario ? expandScenarioToDialogueItems(scenario) : [];
-  const uniqueHotspots = scenario?.hotspots ?? [];
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [isAudioReady, setIsAudioReady] = useState(false);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [wordsVisible, setWordsVisible] = useState(false);
+  const [boxVisible, setBoxVisible] = useState(false);
 
   const scale = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
   const currentDialogue = hotspots[activeIndex];
-  const canvasWidth = viewport.width * 1.8;
-  const canvasHeight = viewport.height * 1.8;
 
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1116,8 +1117,11 @@ export const SceneScreen = () => {
     // هر تایمر پیشرفت قبلی را لغو کن تا با جابه‌جایی دستی/خودکار تداخل نکند
     clearAdvanceTimer();
 
-    const targetX = viewport.width * 0.5 - spot.x * canvasWidth * FOCUS_SCALE;
-    const targetY = viewport.height * 0.42 - spot.y * canvasHeight * FOCUS_SCALE;
+    // نقطه‌ی هات‌اسپات (spot.x, spot.y نسبت ۰..۱) را به مرکز صفحه (کمی بالاتر از وسط) می‌بریم.
+    // با مبدأ مقیاس در مرکعِ ویو: پاسخِ صحیح برای transform ترتیب [translate, scale].
+    const S = FOCUS_SCALE;
+    const targetX = S * viewport.width * (0.5 - spot.x);
+    const targetY = -0.08 * viewport.height - S * viewport.height * (spot.y - 0.5);
 
     Animated.parallel([
       Animated.timing(scale, {
@@ -1153,8 +1157,6 @@ export const SceneScreen = () => {
   }, [
     scenario,
     activeIndex,
-    canvasWidth,
-    canvasHeight,
     viewport.width,
     viewport.height,
     playAudio,
@@ -1242,35 +1244,26 @@ export const SceneScreen = () => {
         </View>
       </View>
 
-      {/* SCENE WITH ZOOM */}
+      {/* SCENE WITH ZOOM — تصویر زوم/جابه‌جا می‌شود تا نقطه‌ی فعال وسط بیاید (بدون آیکون) */}
       <View style={styles.sceneViewport} onLayout={handleLayout}>
-        <ImageBackground
-          source={scenario.imageUri}
-          style={StyleSheet.absoluteFill}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              transform: [
+                { translateX },
+                { translateY },
+                { scale },
+              ],
+            },
+          ]}
         >
-          <View style={StyleSheet.absoluteFill}>
-            {uniqueHotspots.map((spot) => {
-              const isActive = spot.id === hotspots[activeIndex]?.hotspotId;
-              return (
-                <View
-                  key={spot.id}
-                  style={[
-                    styles.hotspot,
-                    {
-                      left: spot.x * (viewport.width || 1),
-                      top: spot.y * (viewport.height || 1),
-                    },
-                    isActive ? styles.hotspotActive : null,
-                  ]}
-                >
-                  <View style={[styles.hotspotCore, isActive ? styles.hotspotCoreActive : null]}>
-                    <Volume2 color={COLORS.white} size={isActive ? 16 : 13} />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </ImageBackground>
+          <ImageBackground
+            source={scenario.imageUri}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        </Animated.View>
       </View>
 
       {/* DIALOGUE CARD */}
@@ -1285,6 +1278,16 @@ export const SceneScreen = () => {
               <Text style={styles.dialogueText}>{currentDialogue.dialogue}</Text>
               <Text style={styles.translation}>{currentDialogue.translation}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.wordsBtn}
+              onPress={() => {
+                setPlaying(false);
+                setWordsVisible(true);
+              }}
+            >
+              <BookOpen color={COLORS.primary} size={20} />
+              <Text style={styles.wordsBtnText}>واژه‌ها</Text>
+            </TouchableOpacity>
           </View>
 
           {/* PROGRESS BAR */}
@@ -1302,30 +1305,56 @@ export const SceneScreen = () => {
             </View>
           </View>
 
-          {/* ACTION BUTTONS */}
+          {/* ACTION BUTTONS: قبلی / پخش‌ومکث / بعدی */}
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.iconBtn} onPress={goPrevious}>
-              <ChevronLeft color={COLORS.text} size={20} />
+            <TouchableOpacity
+              style={[styles.navBtn, activeIndex === 0 ? styles.navBtnDisabled : null]}
+              onPress={goPrevious}
+              disabled={activeIndex === 0}
+            >
+              <ChevronLeft color={activeIndex === 0 ? COLORS.textSecondary : COLORS.text} size={20} />
+              <Text
+                style={[styles.navBtnText, activeIndex === 0 ? styles.navBtnTextDisabled : null]}
+              >
+                قبلی
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={togglePlay}>
+
+            <TouchableOpacity style={styles.playBtn} onPress={togglePlay}>
               {playing ? (
-                <Pause color={COLORS.text} size={20} />
+                <Pause color={COLORS.white} size={22} />
               ) : (
-                <Play color={COLORS.text} size={20} fill={COLORS.text} />
+                <Play color={COLORS.white} size={22} fill={COLORS.white} />
               )}
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[styles.nextBtn, activeIndex >= hotspots.length - 1 ? styles.finishBtn : null]}
+              style={[styles.navBtn, styles.navBtnPrimary, activeIndex >= hotspots.length - 1 ? styles.finishBtn : null]}
               onPress={goNext}
             >
-              <Mic color={COLORS.white} size={20} />
-              <Text style={styles.nextBtnText}>
-                {activeIndex >= hotspots.length - 1 ? 'Finish' : 'Next'}
+              <Text style={styles.navBtnTextPrimary}>
+                {activeIndex >= hotspots.length - 1 ? 'پایان' : 'بعدی'}
               </Text>
+              {activeIndex < hotspots.length - 1 && (
+                <ChevronRight color={COLORS.white} size={20} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* شیت واژه‌ها + جعبه‌ی لایتنر */}
+      <WordsSheet
+        visible={wordsVisible}
+        onClose={() => setWordsVisible(false)}
+        dialogueText={currentDialogue?.dialogue ?? ''}
+        backendWords={currentDialogue?.words}
+        onOpenBox={() => {
+          setWordsVisible(false);
+          setBoxVisible(true);
+        }}
+      />
+      <LeitnerBoxModal visible={boxVisible} onClose={() => setBoxVisible(false)} />
     </View>
   );
 };
@@ -1439,11 +1468,13 @@ const styles = StyleSheet.create({
   dialogueCard: {
     marginHorizontal: SPACING.m,
     marginTop: -22,
+    marginBottom: 28,
     borderRadius: BORDER_RADIUS.l,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     padding: 18,
+    paddingBottom: 22,
   },
   dialogueHeader: {
     flexDirection: 'row',
@@ -1453,6 +1484,22 @@ const styles = StyleSheet.create({
   dialogueCopy: {
     flex: 1,
     marginRight: 14,
+  },
+  wordsBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.backgroundSoft,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    gap: 4,
+  },
+  wordsBtnText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '800',
   },
   readingLabel: {
     color: COLORS.cyan,
@@ -1501,32 +1548,48 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 12,
   },
-  iconBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: COLORS.backgroundSoft,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextBtn: {
+  navBtn: {
     flex: 1,
     height: 54,
     borderRadius: 27,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.backgroundSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  navBtnPrimary: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  navBtnDisabled: {
+    opacity: 0.45,
+  },
+  navBtnText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  navBtnTextDisabled: {
+    color: COLORS.textSecondary,
+  },
+  navBtnTextPrimary: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  playBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   finishBtn: {
     backgroundColor: COLORS.pink,
-  },
-  nextBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '900',
-    marginLeft: 10,
+    borderColor: COLORS.pink,
   },
 });
