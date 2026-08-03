@@ -7,6 +7,7 @@ import { SplashScreen } from './src/screens/SplashScreen';
 import { AuthScreens } from './src/screens/AuthScreens';
 import { ScenesProvider } from './src/data/ScenesContext';
 import { VocabProvider } from './src/data/VocabContext';
+import { LanguageProvider } from './src/data/i18n';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -16,8 +17,6 @@ export default function App() {
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
     }, 1900);
-
-    console.log("sdfsdfsdf∂")
 
     return () => clearTimeout(splashTimer);
   }, []);
@@ -34,22 +33,26 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar barStyle="light-content" />
-        <AuthScreens onComplete={() => setIsAuthenticated(true)} />
+        <LanguageProvider>
+          <StatusBar barStyle="light-content" />
+          <AuthScreens onComplete={() => setIsAuthenticated(true)} />
+        </LanguageProvider>
       </GestureHandlerRootView>
     );
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ScenesProvider>
-        <VocabProvider>
-          <NavigationContainer>
-            <StatusBar barStyle="light-content" />
-            <AppNavigator />
-          </NavigationContainer>
-        </VocabProvider>
-      </ScenesProvider>
+      <LanguageProvider>
+        <ScenesProvider>
+          <VocabProvider>
+            <NavigationContainer>
+              <StatusBar barStyle="light-content" />
+              <AppNavigator />
+            </NavigationContainer>
+          </VocabProvider>
+        </ScenesProvider>
+      </LanguageProvider>
     </GestureHandlerRootView>
   );
 }

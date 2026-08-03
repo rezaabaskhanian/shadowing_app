@@ -29,13 +29,13 @@ export function isDue(w: BoxWord): boolean {
   return (w.nextReview ?? 0) <= Date.now();
 }
 
-// برچسب فارسی برای موعد مرور بعدی
-export function dueLabel(w: BoxWord): string {
+// برچسب موعد مرور بعدی (دوزبانه)
+export function dueLabel(w: BoxWord, lang: 'en' | 'fa' = 'en'): string {
   const diff = (w.nextReview ?? 0) - Date.now();
-  if (diff <= 0) return 'سررسیده';
+  if (diff <= 0) return lang === 'fa' ? 'سررسیده' : 'Due now';
   const days = Math.ceil(diff / DAY);
-  if (days === 1) return 'فردا';
-  return `${days} روز دیگر`;
+  if (days === 1) return lang === 'fa' ? 'فردا' : 'Tomorrow';
+  return lang === 'fa' ? `${days} روز دیگر` : `In ${days} days`;
 }
 
 export interface BoxWord {

@@ -1,23 +1,37 @@
 export const COLORS = {
-  background: '#050B18',
-  backgroundSoft: '#091326',
-  surface: '#111A2C',
-  surfaceLight: '#18223A',
-  primary: '#7C3DFF',
-  primaryDark: '#5228D9',
-  secondary: '#FFB545',
-  accent: '#26E6A3',
-  cyan: '#37C7FF',
-  pink: '#F02D8C',
-  orange: '#FF7A2F',
+  // Dark obsidian minimal background tokens
+  background: '#0C1017',
+  backgroundSoft: '#101520',
+  surface: '#151C28',
+  surfaceLight: '#1F2939',
+  surfaceCard: '#182130',
+  
+  // Brand & Accent Colors
+  primary: '#FFA01C',        // Amber/Orange CTA Primary
+  primaryDark: '#E0850D',
+  primaryLight: 'rgba(255, 160, 28, 0.15)',
+  
+  secondary: '#14B8A6',      // Teal Accent
+  secondaryLight: 'rgba(20, 184, 166, 0.15)',
+  
+  accent: '#14B8A6',
+  teal: '#14B8A6',
+  amber: '#FFA01C',
+  cyan: '#14B8A6',
+  orange: '#FFA01C',
+  pink: '#F43F5E',
+  
+  // Neutral Text Tokens
   text: '#FFFFFF',
-  textSecondary: '#AAB3C5',
-  muted: '#66718A',
-  border: '#26324C',
-  success: '#26E6A3',
-  error: '#FF426E',
-  errorLight: '#FF6F8F',
-  info: '#37C7FF',
+  textSecondary: '#9CA3AF',
+  muted: '#6B7280',
+  border: '#202A3B',
+  borderLight: '#2A364B',
+  
+  // State Colors
+  success: '#10B981',
+  error: '#EF4444',
+  info: '#3B82F6',
   white: '#FFFFFF',
   black: '#000000',
 };
@@ -35,4 +49,5 @@ export const BORDER_RADIUS = {
   m: 16,
   l: 24,
   xl: 32,
+  full: 9999,
 };

@@ -36,8 +36,6 @@ interface BackendScene {
   status: string;
   order: number;
   hotspots: BackendHotspot[] | null;
-  // توجه: کلید difficulty در بک‌اند فاصله‌ی انتهایی دارد
-  'difficulty '?: string;
   difficulty?: string;
 }
 
@@ -53,6 +51,13 @@ function difficultyToLevel(d?: string): string {
       return 'Beginner';
   }
 }
+
+const LOCAL_SCENE_IMAGES: Record<string, any> = {
+  '770e8400-e29b-41d4-a716-446655440000': require('../assets/scenes/clothes_shopping.png'),
+  '880e8400-e29b-41d4-a716-446655440000': require('../assets/scenes/hotel_reception.png'),
+  '990e8400-e29b-41d4-a716-446655440000': require('../assets/scenes/driving_lesson.png'),
+  'aa0e8400-e29b-41d4-a716-446655440000': require('../assets/scenes/weight_loss.png'),
+};
 
 // تبدیل صحنه‌ی بک‌اند به مدل Scenario اپ
 function mapScene(s: BackendScene): Scenario {
@@ -84,16 +89,18 @@ function mapScene(s: BackendScene): Scenario {
     };
   });
 
+  const localImg = LOCAL_SCENE_IMAGES[s.id];
+
   return {
     id: s.id,
     title: s.title,
     lesson: s.description || '',
-    level: difficultyToLevel(s['difficulty '] ?? s.difficulty),
+    level: difficultyToLevel(s.difficulty),
     progress: 0,
-    time: '',
+    time: '12 min',
     icon: MapPin,
     color: COLORS.primary,
-    imageUri: { uri: absUrl(s.backgroundImageURL) },
+    imageUri: localImg || (s.backgroundImageURL ? { uri: absUrl(s.backgroundImageURL) } : require('../assets/scenes/clothes_shopping.png')),
     hotspots,
   };
 }

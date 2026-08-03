@@ -1,1034 +1,59 @@
-// import React, { useEffect, useRef, useState, useCallback } from 'react';
-// import {
-//   Animated,
-//   Easing,
-//   ImageBackground,
-//   LayoutChangeEvent,
-//   StyleSheet,
-//   Text,
-//   TouchableOpacity,
-//   View,
-// } from 'react-native';
-// import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
-// import { useNavigation } from '@react-navigation/native';
-// import { ChevronLeft, Mic, Pause, Play, RotateCcw, Volume2 } from 'lucide-react-native';
-// import { COLORS, SPACING, BORDER_RADIUS } from '../theme/colors';
-// import { AudioPlayer } from '../components/AudioPlayer';
-
-// const FOCUS_SCALE = 2.0;
-// const ZOOM_DURATION = 700;
-
-// interface Hotspot {
-//   id: string;
-//   x: number;
-//   y: number;
-//   speaker: string;
-//   dialogue: string;
-//   translation: string;
-//   audioUrl: string;
-// }
-
-// interface SceneScreenProps {
-//   scene: {
-//     id: string;
-//     title: string;
-//     imageUri: string;
-//     hotspots: Hotspot[];
-//   };
-// }
-
-// export const SceneScreen = ({ scene }: SceneScreenProps) => {
-//   const navigation = useNavigation<any>();
-//   const [activeIndex, setActiveIndex] = useState(0);
-//   const [isPlaying, setIsPlaying] = useState(true);
-//   const [audioUri, setAudioUri] = useState<string | null>(null);
-//   const [isAudioReady, setIsAudioReady] = useState(false);
-//   const [isAutoZoom, setIsAutoZoom] = useState(true);
-//   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-
-//   const scale = useRef(new Animated.Value(1)).current;
-//   const translateX = useRef(new Animated.Value(0)).current;
-//   const translateY = useRef(new Animated.Value(0)).current;
-
-//   const lastScale = useRef(1);
-//   const lastTranslateX = useRef(0);
-//   const lastTranslateY = useRef(0);
-
-//   const pinchScale = useRef(new Animated.Value(1)).current;
-//   const panX = useRef(new Animated.Value(0)).current;
-//   const panY = useRef(new Animated.Value(0)).current;
-
-//   const canvasWidth = viewport.width * 1.8;
-//   const canvasHeight = viewport.height * 1.8;
-
-//   const hotspots = scene.hotspots;
-//   const currentHotspot = hotspots[activeIndex];
-
-//   const handleAudioStatus = useCallback((status: string) => {
-//     if (status === 'playing') {
-//       setIsAudioReady(true);
-//     } else if (status === 'finished') {
-//       // Audio finished - advance to next hotspot
-//       setIsPlaying((prev) => {
-//         if (!prev) return prev;
-//         if (activeIndex >= hotspots.length - 1) {
-//           return false;
-//         }
-//         return true;
-//       });
-//     } else if (status === 'error') {
-//       console.error('Audio playback error');
-//     }
-//   }, [activeIndex, hotspots.length]);
-
-//   const playAudio = useCallback((url: string) => {
-//     setAudioUri(url);
-//     setIsAudioReady(false);
-//   }, []);
-
-//   const stopAudio = useCallback(() => {
-//     setAudioUri(null);
-//     setIsAudioReady(false);
-//   }, []);
-
-//   // Auto-zoom to hotspot
-//   const zoomToHotspot = useCallback(
-//     (index: number, animated = true) => {
-//       if (!viewport.width || !viewport.height) return;
-
-//       const spot = hotspots[index];
-//       const targetX = viewport.width * 0.5 - spot.x * canvasWidth * FOCUS_SCALE;
-//       const targetY = viewport.height * 0.4 - spot.y * canvasHeight * FOCUS_SCALE;
-
-//       const duration = animated ? ZOOM_DURATION : 0;
-
-//       Animated.parallel([
-//         Animated.timing(scale, {
-//           toValue: FOCUS_SCALE,
-//           duration,
-//           easing: Easing.out(Easing.cubic),
-//           useNativeDriver: true,
-//         }),
-//         Animated.timing(translateX, {
-//           toValue: targetX,
-//           duration,
-//           easing: Easing.out(Easing.cubic),
-//           useNativeDriver: true,
-//         }),
-//         Animated.timing(translateY, {
-//           toValue: targetY,
-//           duration,
-//           easing: Easing.out(Easing.cubic),
-//           useNativeDriver: true,
-//         }),
-//       ]).start(() => {
-//         lastScale.current = FOCUS_SCALE;
-//         lastTranslateX.current = targetX;
-//         lastTranslateY.current = targetY;
-//       });
-
-//       // Play audio after zoom completes
-//       if (hotspots[index].audioUrl) {
-//         setTimeout(() => {
-//           playAudio(hotspots[index].audioUrl);
-//         }, animated ? duration + 200 : 0);
-//       }
-//     },
-//     [viewport, hotspots, canvasWidth, canvasHeight, scale, translateX, translateY, playAudio]
-//   );
-
-//   // Reset zoom to overview
-//   const resetZoom = useCallback(() => {
-//     Animated.parallel([
-//       Animated.timing(scale, {
-//         toValue: 1,
-//         duration: 500,
-//         easing: Easing.out(Easing.cubic),
-//         useNativeDriver: true,
-//       }),
-//       Animated.timing(translateX, {
-//         toValue: 0,
-//         duration: 500,
-//         easing: Easing.out(Easing.cubic),
-//         useNativeDriver: true,
-//       }),
-//       Animated.timing(translateY, {
-//         toValue: 0,
-//         duration: 500,
-//         easing: Easing.out(Easing.cubic),
-//         useNativeDriver: true,
-//       }),
-//     ]).start(() => {
-//       lastScale.current = 1;
-//       lastTranslateX.current = 0;
-//       lastTranslateY.current = 0;
-//     });
-//   }, [scale, translateX, translateY]);
-
-//   // Handle layout
-//   const handleLayout = useCallback((event: LayoutChangeEvent) => {
-//     const { width, height } = event.nativeEvent.layout;
-//     setViewport({ width, height });
-//   }, []);
-
-//   // When activeIndex changes, zoom to hotspot and play audio
-//   useEffect(() => {
-//     if (!isAutoZoom || !viewport.width) return;
-
-//     zoomToHotspot(activeIndex);
-//   }, [activeIndex, isAutoZoom, viewport.width, zoomToHotspot]);
-
-//   // Pinch gesture
-//   const pinchRef = useRef(null);
-//   const panRef = useRef(null);
-
-//   const onPinchGestureEvent = Animated.event(
-//     [{ nativeEvent: { scale: pinchScale } }],
-//     { useNativeDriver: true }
-//   );
-
-//   const onPinchHandlerStateChange = (event: any) => {
-//     if (event.nativeEvent.oldState === State.ACTIVE) {
-//       const newScale = lastScale.current * event.nativeEvent.scale;
-//       lastScale.current = Math.max(1, Math.min(newScale, 5));
-//       pinchScale.setValue(1);
-
-//       // Apply pinch result
-//       Animated.parallel([
-//         Animated.timing(scale, {
-//           toValue: lastScale.current,
-//           duration: 100,
-//           useNativeDriver: true,
-//         }),
-//       ]).start();
-
-//       // Reset auto-zoom if user is pinching
-//       if (Math.abs(lastScale.current - 1) > 0.1) {
-//         setIsAutoZoom(false);
-//       }
-//     }
-//   };
-
-//   // Pan gesture
-//   const onPanGestureEvent = Animated.event(
-//     [{ nativeEvent: { translationX: panX, translationY: panY } }],
-//     { useNativeDriver: true }
-//   );
-
-//   const onPanHandlerStateChange = (event: any) => {
-//     if (event.nativeEvent.oldState === State.ACTIVE) {
-//       lastTranslateX.current += event.nativeEvent.translationX;
-//       lastTranslateY.current += event.nativeEvent.translationY;
-//       panX.setValue(0);
-//       panY.setValue(0);
-
-//       Animated.parallel([
-//         Animated.timing(translateX, {
-//           toValue: lastTranslateX.current,
-//           duration: 100,
-//           useNativeDriver: true,
-//         }),
-//         Animated.timing(translateY, {
-//           toValue: lastTranslateY.current,
-//           duration: 100,
-//           useNativeDriver: true,
-//         }),
-//       ]).start();
-
-//       // Reset auto-zoom if user is panning
-//       setIsAutoZoom(false);
-//     }
-//   };
-
-//   // Tap hotspot to zoom manually
-//   const handleHotspotPress = (index: number) => {
-//     setIsAutoZoom(true);
-//     setActiveIndex(index);
-//   };
-
-//   // Toggle play/pause
-//   const togglePlay = () => {
-//     if (isPlaying) {
-//       setIsPlaying(false);
-//       stopAudio();
-//     } else {
-//       setIsPlaying(true);
-//       if (activeIndex < hotspots.length - 1) {
-//         zoomToHotspot(activeIndex);
-//       }
-//     }
-//   };
-
-//   // Go to next
-//   const goNext = () => {
-//     stopAudio();
-//     if (activeIndex >= hotspots.length - 1) {
-//       setIsPlaying(false);
-//       resetZoom();
-//       return;
-//     }
-//     setIsAutoZoom(true);
-//     setActiveIndex((prev) => prev + 1);
-//   };
-
-//   // Go to previous
-//   const goPrevious = () => {
-//     stopAudio();
-//     setIsAutoZoom(true);
-//     setActiveIndex((prev) => Math.max(0, prev - 1));
-//     setIsPlaying(true);
-//   };
-
-//   // Go back
-//   const onBack = () => {
-//     stopAudio();
-//     navigation.goBack();
-//   };
-
-//   return (
-//     <GestureHandlerRootView style={styles.container}>
-//       <AudioPlayer uri={audioUri} shouldPlay={isPlaying} onPlaybackStatusUpdate={handleAudioStatus} />
-//       <View style={styles.screen}>
-//         {/* Top Bar */}
-//         <View style={styles.topBar}>
-//           <TouchableOpacity style={styles.roundBack} onPress={onBack}>
-//             <ChevronLeft color={COLORS.text} size={24} />
-//           </TouchableOpacity>
-//           <View style={styles.scenePill}>
-//             <Text style={styles.scenePillText}>{scene.title}</Text>
-//           </View>
-//           <View style={styles.stepPill}>
-//             <Text style={styles.stepText}>
-//               {activeIndex + 1} / {hotspots.length}
-//             </Text>
-//           </View>
-//         </View>
-
-//         {/* Image Viewport with Gestures */}
-//         <PanGestureHandler
-//           ref={panRef}
-//           onGestureEvent={onPanGestureEvent}
-//           onHandlerStateChange={onPanHandlerStateChange}
-//           simultaneousHandlers={[pinchRef]}
-//         >
-//           <Animated.View style={styles.sceneViewport}>
-//             <PinchGestureHandler
-//               ref={pinchRef}
-//               onGestureEvent={onPinchGestureEvent}
-//               onHandlerStateChange={onPinchHandlerStateChange}
-//               simultaneousHandlers={[panRef]}
-//             >
-//               <Animated.View
-//                 onLayout={handleLayout}
-//                 style={[
-//                   styles.sceneCanvas,
-//                   {
-//                     width: canvasWidth || '100%',
-//                     height: canvasHeight || 420,
-//                     transform: [
-//                       { scale: Animated.add(scale, Animated.subtract(pinchScale, 1)) },
-//                       { translateX: Animated.add(translateX, panX) },
-//                       { translateY: Animated.add(translateY, panY) },
-//                     ],
-//                   },
-//                 ]}
-//               >
-//                 <ImageBackground
-//                   source={{ uri: scene.imageUri }}
-//                   style={styles.sceneImage}
-//                   imageStyle={styles.sceneImageStyle}
-//                 >
-//                   <View style={styles.sceneScrim} />
-
-//                   {/* Hotspot Markers */}
-//                   {hotspots.map((spot, index) => {
-//                     const isActive = index === activeIndex;
-//                     return (
-//                       <TouchableOpacity
-//                         key={spot.id}
-//                         activeOpacity={0.7}
-//                         onPress={() => handleHotspotPress(index)}
-//                         style={[
-//                           styles.hotspot,
-//                           {
-//                             left: spot.x * (canvasWidth || 1),
-//                             top: spot.y * (canvasHeight || 1),
-//                           },
-//                           isActive ? styles.hotspotActive : null,
-//                         ]}
-//                       >
-//                         <View style={[styles.hotspotCore, isActive ? styles.hotspotCoreActive : null]}>
-//                           <Volume2 color={COLORS.white} size={isActive ? 16 : 13} />
-//                         </View>
-//                         {isActive && (
-//                           <View style={styles.hotspotPulse}>
-//                             <View style={styles.hotspotPulseRing} />
-//                           </View>
-//                         )}
-//                       </TouchableOpacity>
-//                     );
-//                   })}
-//                 </ImageBackground>
-//               </Animated.View>
-//             </PinchGestureHandler>
-//           </Animated.View>
-//         </PanGestureHandler>
-
-//         {/* Dialogue Card */}
-//         {currentHotspot && (
-//           <View style={styles.dialogueCard}>
-//             <View style={styles.dialogueHeader}>
-//               <View style={styles.dialogueCopy}>
-//                 <Text style={styles.readingLabel}>
-//                   {isAudioReady ? (isPlaying ? 'Playing' : 'Paused') : isPlaying ? 'Loading...' : 'Paused'}
-//                 </Text>
-//                 <Text style={styles.roleText}>{currentHotspot.speaker}</Text>
-//                 <Text style={styles.dialogueText}>{currentHotspot.dialogue}</Text>
-//                 <Text style={styles.translation}>{currentHotspot.translation}</Text>
-//               </View>
-//               <TouchableOpacity style={styles.speakerButton} onPress={togglePlay}>
-//                 {isPlaying ? (
-//                   <Pause color={COLORS.text} size={22} />
-//                 ) : (
-//                   <Play color={COLORS.text} size={22} fill={COLORS.text} />
-//                 )}
-//               </TouchableOpacity>
-//             </View>
-
-//             {/* Progress Bar */}
-//             <View style={styles.progressRow}>
-//               <View style={styles.progressTrack}>
-//                 {hotspots.map((spot, index) => (
-//                   <TouchableOpacity
-//                     key={spot.id}
-//                     style={[
-//                       styles.progressStep,
-//                       index <= activeIndex ? styles.progressStepActive : null,
-//                     ]}
-//                     onPress={() => handleHotspotPress(index)}
-//                   />
-//                 ))}
-//               </View>
-//             </View>
-
-//             {/* Action Buttons */}
-//             <View style={styles.actions}>
-//               <TouchableOpacity style={styles.iconBtn} onPress={goPrevious}>
-//                 <RotateCcw color={COLORS.text} size={20} />
-//               </TouchableOpacity>
-//               <TouchableOpacity style={styles.iconBtn} onPress={togglePlay}>
-//                 {isPlaying ? (
-//                   <Pause color={COLORS.text} size={20} />
-//                 ) : (
-//                   <Play color={COLORS.text} size={20} fill={COLORS.text} />
-//                 )}
-//               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.nextBtn, activeIndex >= hotspots.length - 1 ? styles.finishBtn : null]}
-//                 onPress={goNext}
-//               >
-//                 <Mic color={COLORS.white} size={20} />
-//                 <Text style={styles.nextBtnText}>
-//                   {activeIndex >= hotspots.length - 1 ? 'Finish' : 'Next'}
-//                 </Text>
-//               </TouchableOpacity>
-//             </View>
-//           </View>
-//         )}
-//       </View>
-//     </GestureHandlerRootView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//   },
-//   screen: {
-//     flex: 1,
-//     backgroundColor: COLORS.background,
-//     paddingTop: 56,
-//   },
-//   topBar: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     paddingHorizontal: SPACING.m,
-//   },
-//   roundBack: {
-//     width: 46,
-//     height: 46,
-//     borderRadius: 23,
-//     backgroundColor: 'rgba(5, 11, 24, 0.8)',
-//     borderWidth: 1,
-//     borderColor: COLORS.border,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   scenePill: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     backgroundColor: 'rgba(5, 11, 24, 0.7)',
-//     borderRadius: 24,
-//     paddingHorizontal: 16,
-//     paddingVertical: 10,
-//   },
-//   scenePillText: {
-//     color: COLORS.text,
-//     fontSize: 15,
-//     fontWeight: '800',
-//   },
-//   stepPill: {
-//     minWidth: 58,
-//     height: 46,
-//     borderRadius: 23,
-//     backgroundColor: 'rgba(5, 11, 24, 0.8)',
-//     borderWidth: 1,
-//     borderColor: COLORS.border,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   stepText: {
-//     color: COLORS.text,
-//     fontSize: 15,
-//     fontWeight: '900',
-//   },
-//   sceneViewport: {
-//     flex: 1,
-//     marginTop: 16,
-//     overflow: 'hidden',
-//     borderTopLeftRadius: 30,
-//     borderTopRightRadius: 30,
-//   },
-//   sceneCanvas: {
-//     flex: 1,
-//   },
-//   sceneImage: {
-//     flex: 1,
-//   },
-//   sceneImageStyle: {
-//     borderTopLeftRadius: 30,
-//     borderTopRightRadius: 30,
-//   },
-//   sceneScrim: {
-//     position: 'absolute',
-//     left: 0,
-//     right: 0,
-//     top: 0,
-//     bottom: 0,
-//     backgroundColor: 'rgba(5, 11, 24, 0.24)',
-//   },
-//   hotspot: {
-//     position: 'absolute',
-//     width: 48,
-//     height: 48,
-//     marginLeft: -24,
-//     marginTop: -24,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   hotspotActive: {
-//     zIndex: 3,
-//   },
-//   hotspotCore: {
-//     width: 30,
-//     height: 30,
-//     borderRadius: 15,
-//     backgroundColor: 'rgba(5, 11, 24, 0.86)',
-//     borderWidth: 1,
-//     borderColor: 'rgba(255, 255, 255, 0.22)',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   hotspotCoreActive: {
-//     width: 36,
-//     height: 36,
-//     borderRadius: 18,
-//     backgroundColor: COLORS.primary,
-//     borderColor: 'rgba(255, 255, 255, 0.3)',
-//     shadowColor: COLORS.primary,
-//     shadowOffset: { width: 0, height: 10 },
-//     shadowOpacity: 0.6,
-//     shadowRadius: 14,
-//     elevation: 10,
-//   },
-//   hotspotPulse: {
-//     position: 'absolute',
-//     width: 60,
-//     height: 60,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   hotspotPulseRing: {
-//     width: 60,
-//     height: 60,
-//     borderRadius: 30,
-//     borderWidth: 2,
-//     borderColor: COLORS.primary,
-//     opacity: 0.4,
-//   },
-//   dialogueCard: {
-//     marginHorizontal: SPACING.m,
-//     marginTop: -22,
-//     borderRadius: BORDER_RADIUS.l,
-//     backgroundColor: COLORS.surface,
-//     borderWidth: 1,
-//     borderColor: COLORS.border,
-//     padding: 18,
-//     marginBottom: 16,
-//   },
-//   dialogueHeader: {
-//     flexDirection: 'row',
-//     alignItems: 'flex-start',
-//     justifyContent: 'space-between',
-//   },
-//   dialogueCopy: {
-//     flex: 1,
-//     marginRight: 14,
-//   },
-//   readingLabel: {
-//     color: COLORS.cyan,
-//     fontSize: 13,
-//     fontWeight: '800',
-//     marginBottom: 6,
-//   },
-//   roleText: {
-//     color: COLORS.text,
-//     fontSize: 18,
-//     fontWeight: '900',
-//   },
-//   dialogueText: {
-//     color: COLORS.text,
-//     fontSize: 20,
-//     lineHeight: 28,
-//     fontWeight: '800',
-//     marginTop: 8,
-//   },
-//   translation: {
-//     color: COLORS.textSecondary,
-//     fontSize: 14,
-//     marginTop: 10,
-//   },
-//   speakerButton: {
-//     width: 46,
-//     height: 46,
-//     borderRadius: 23,
-//     borderWidth: 1,
-//     borderColor: COLORS.primary,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   progressRow: {
-//     marginTop: 18,
-//   },
-//   progressTrack: {
-//     flexDirection: 'row',
-//     gap: 6,
-//   },
-//   progressStep: {
-//     flex: 1,
-//     height: 8,
-//     borderRadius: 10,
-//     backgroundColor: COLORS.border,
-//   },
-//   progressStepActive: {
-//     backgroundColor: COLORS.accent,
-//   },
-//   actions: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginTop: 16,
-//     gap: 12,
-//   },
-//   iconBtn: {
-//     width: 52,
-//     height: 52,
-//     borderRadius: 26,
-//     backgroundColor: COLORS.backgroundSoft,
-//     borderWidth: 1,
-//     borderColor: COLORS.border,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   nextBtn: {
-//     flex: 1,
-//     height: 54,
-//     borderRadius: 27,
-//     backgroundColor: COLORS.primary,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   finishBtn: {
-//     backgroundColor: COLORS.pink,
-//   },
-//   nextBtnText: {
-//     color: COLORS.white,
-//     fontSize: 16,
-//     fontWeight: '900',
-//     marginLeft: 10,
-//   },
-// });
-// import React, { useCallback, useEffect, useState } from 'react';
-// import {
-//   View,
-//   Text,
-//   TouchableOpacity,
-//   ImageBackground,
-//   StyleSheet,
-//   LayoutChangeEvent,
-// } from 'react-native';
-
-// import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-// import Animated, {
-//   useSharedValue,
-//   useAnimatedStyle,
-//   withTiming,
-// } from 'react-native-reanimated';
-
-// import { useNavigation } from '@react-navigation/native';
-// import { ChevronLeft, Pause, Play, RotateCcw, Mic, Volume2 } from 'lucide-react-native';
-
-// import { COLORS, SPACING, BORDER_RADIUS } from '../theme/colors';
-// import { AudioPlayer } from '../components/AudioPlayer';
-
-// const FOCUS_SCALE = 2;
-
-// interface Hotspot {
-//   id: string;
-//   x: number;
-//   y: number;
-//   speaker: string;
-//   dialogue: string;
-//   translation: string;
-//   audioUrl: string;
-// }
-
-// interface SceneScreenProps {
-//   scene: {
-//     id: string;
-//     title: string;
-//     imageUri: string;
-//     hotspots: Hotspot[];
-//   };
-// }
-
-// export const SceneScreen = ({ scene }: SceneScreenProps) => {
-//   const navigation = useNavigation<any>();
-
-//   const hotspots = scene.hotspots;
-//   const [activeIndex, setActiveIndex] = useState(0);
-//   const [isPlaying, setIsPlaying] = useState(true);
-//   const [audioUri, setAudioUri] = useState<string | null>(null);
-//   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-
-//   // 🔥 Reanimated shared values
-//   const scale = useSharedValue(1);
-//   const savedScale = useSharedValue(1);
-
-//   const tx = useSharedValue(0);
-//   const ty = useSharedValue(0);
-//   const savedTx = useSharedValue(0);
-//   const savedTy = useSharedValue(0);
-
-//   const currentHotspot = hotspots[activeIndex];
-
-//   // ---------------- AUDIO ----------------
-//   const playAudio = useCallback((url: string) => {
-//     setAudioUri(url);
-//   }, []);
-
-//   const stopAudio = useCallback(() => {
-//     setAudioUri(null);
-//   }, []);
-
-//   // ---------------- ZOOM ----------------
-//   const zoomToHotspot = useCallback(
-//     (index: number) => {
-//       if (!viewport.width) return;
-
-//       const spot = hotspots[index];
-
-//       const targetX = viewport.width * 0.5 - spot.x * viewport.width * FOCUS_SCALE;
-//       const targetY = viewport.height * 0.4 - spot.y * viewport.height * FOCUS_SCALE;
-
-//       scale.value = withTiming(FOCUS_SCALE, { duration: 500 });
-//       tx.value = withTiming(targetX, { duration: 500 });
-//       ty.value = withTiming(targetY, { duration: 500 });
-
-//       savedScale.value = FOCUS_SCALE;
-//       savedTx.value = targetX;
-//       savedTy.value = targetY;
-
-//       if (spot.audioUrl) {
-//         setTimeout(() => playAudio(spot.audioUrl), 600);
-//       }
-//     },
-//     [viewport]
-//   );
-
-//   const resetZoom = () => {
-//     scale.value = withTiming(1);
-//     tx.value = withTiming(0);
-//     ty.value = withTiming(0);
-
-//     savedScale.value = 1;
-//     savedTx.value = 0;
-//     savedTy.value = 0;
-//   };
-
-//   // ---------------- GESTURES ----------------
-
-//   const panGesture = Gesture.Pan()
-//     .onUpdate((e) => {
-//       tx.value = savedTx.value + e.translationX;
-//       ty.value = savedTy.value + e.translationY;
-//     })
-//     .onEnd(() => {
-//       savedTx.value = tx.value;
-//       savedTy.value = ty.value;
-//     });
-
-//   const pinchGesture = Gesture.Pinch()
-//     .onUpdate((e) => {
-//       scale.value = savedScale.value * e.scale;
-//     })
-//     .onEnd(() => {
-//       savedScale.value = scale.value;
-//     });
-
-//   const gesture = Gesture.Simultaneous(panGesture, pinchGesture);
-
-//   // ---------------- ANIMATION STYLE ----------------
-//   const animatedStyle = useAnimatedStyle(() => {
-//     return {
-//       transform: [
-//         { scale: scale.value },
-//         { translateX: tx.value },
-//         { translateY: ty.value },
-//       ],
-//     };
-//   });
-
-//   // ---------------- HOTSPOT ----------------
-//   const handleHotspotPress = (index: number) => {
-//     setActiveIndex(index);
-//     zoomToHotspot(index);
-//   };
-
-//   // ---------------- LAYOUT ----------------
-//   const onLayout = (e: LayoutChangeEvent) => {
-//     setViewport(e.nativeEvent.layout);
-//   };
-
-//   // auto zoom
-//   useEffect(() => {
-//     if (viewport.width) {
-//       zoomToHotspot(activeIndex);
-//     }
-//   }, [activeIndex, viewport.width]);
-
-//   // ---------------- UI ----------------
-//   return (
-//     <View style={styles.container}>
-//       <AudioPlayer uri={audioUri} shouldPlay={isPlaying} />
-
-//       {/* TOP BAR */}
-//       <View style={styles.topBar}>
-//         <TouchableOpacity onPress={() => navigation.goBack()}>
-//           <ChevronLeft color={COLORS.text} />
-//         </TouchableOpacity>
-
-//         <Text style={styles.title}>{scene.title}</Text>
-
-//         <Text style={styles.step}>
-//           {activeIndex + 1}/{hotspots.length}
-//         </Text>
-//       </View>
-
-//       {/* SCENE */}
-//       <GestureDetector gesture={gesture}>
-//         <Animated.View style={[styles.canvas, animatedStyle]} onLayout={onLayout}>
-//           <ImageBackground source={{ uri: scene.imageUri }} style={styles.image}>
-//             {hotspots.map((h, i) => {
-//               const active = i === activeIndex;
-
-//               return (
-//                 <TouchableOpacity
-//                   key={h.id}
-//                   onPress={() => handleHotspotPress(i)}
-//                   style={[
-//                     styles.hotspot,
-//                     {
-//                       left: h.x * viewport.width,
-//                       top: h.y * viewport.height,
-//                     },
-//                   ]}
-//                 >
-//                   <View style={[styles.dot, active && styles.activeDot]}>
-//                     <Volume2 color="white" size={14} />
-//                   </View>
-//                 </TouchableOpacity>
-//               );
-//             })}
-//           </ImageBackground>
-//         </Animated.View>
-//       </GestureDetector>
-
-//       {/* CARD */}
-//       {currentHotspot && (
-//         <View style={styles.card}>
-//           <Text style={styles.speaker}>{currentHotspot.speaker}</Text>
-//           <Text style={styles.dialogue}>{currentHotspot.dialogue}</Text>
-//           <Text style={styles.translation}>{currentHotspot.translation}</Text>
-
-//           <View style={styles.actions}>
-//             <TouchableOpacity onPress={() => setIsPlaying(!isPlaying)}>
-//               {isPlaying ? <Pause /> : <Play />}
-//             </TouchableOpacity>
-
-//             <TouchableOpacity onPress={resetZoom}>
-//               <RotateCcw />
-//             </TouchableOpacity>
-
-//             <TouchableOpacity
-//               onPress={() => {
-//                 if (activeIndex < hotspots.length - 1) {
-//                   setActiveIndex((p) => p + 1);
-//                 }
-//               }}
-//             >
-//               <Mic />
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       )}
-//     </View>
-//   );
-// };
-
-// // ---------------- STYLES ----------------
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: COLORS.background },
-
-//   topBar: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     padding: SPACING.m,
-//   },
-
-//   title: {
-//     color: COLORS.text,
-//     fontWeight: '800',
-//   },
-
-//   step: {
-//     color: COLORS.text,
-//   },
-
-//   canvas: {
-//     flex: 1,
-//   },
-
-//   image: {
-//     flex: 1,
-//   },
-
-//   hotspot: {
-//     position: 'absolute',
-//     width: 40,
-//     height: 40,
-//     marginLeft: -20,
-//     marginTop: -20,
-//   },
-
-//   dot: {
-//     width: 30,
-//     height: 30,
-//     borderRadius: 15,
-//     backgroundColor: COLORS.backgroundSoft,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-
-//   activeDot: {
-//     backgroundColor: COLORS.primary,
-//   },
-
-//   card: {
-//     padding: 16,
-//     backgroundColor: COLORS.surface,
-//     borderTopLeftRadius: BORDER_RADIUS.l,
-//     borderTopRightRadius: BORDER_RADIUS.l,
-//   },
-
-//   speaker: {
-//     color: COLORS.text,
-//     fontWeight: '900',
-//     fontSize: 16,
-//   },
-
-//   dialogue: {
-//     fontSize: 18,
-//     marginTop: 6,
-//     color: COLORS.text,
-//   },
-
-//   translation: {
-//     marginTop: 6,
-//     color: COLORS.textSecondary,
-//   },
-
-//   actions: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-around',
-//     marginTop: 12,
-//   },
-// });
-
-
-
-
-
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
-  Easing,
+  BackHandler,
+  Dimensions,
+  Image,
   ImageBackground,
-  LayoutChangeEvent,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import {
-  BookOpen,
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Pause,
+  Mic,
   Play,
+  Pause,
+  RotateCcw,
+  SkipBack,
+  SkipForward,
+  Sparkles,
+  X,
+  Check,
+  Plus,
 } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../theme/colors';
+import { COLORS } from '../theme/colors';
 import { AudioPlayer } from '../components/AudioPlayer';
-import { WordsSheet } from '../components/WordsSheet';
-import { LeitnerBoxModal } from '../components/LeitnerBoxModal';
 import { expandScenarioToDialogueItems, type Scenario } from '../data/scenarios';
 import { useScenes } from '../data/ScenesContext';
+import { useLanguage } from '../data/i18n';
+import { useVocab } from '../data/VocabContext';
 
-const FOCUS_SCALE = 2;
-const AUTO_ADVANCE_MS = 1000;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 export const SceneScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { scenarioId } = route.params || {};
   const { getScene } = useScenes();
+  const { language, t } = useLanguage();
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [inScene, setInScene] = useState(false); // false = Intro overview, true = Active player
+
+  // Animated Camera Zoom Scale and Pan Translation for image
+  const zoomAnim = useRef(new Animated.Value(1)).current;
+  const panXAnim = useRef(new Animated.Value(0)).current;
+  const panYAnim = useRef(new Animated.Value(0)).current;
+
+  const hotspots = scenario ? expandScenarioToDialogueItems(scenario) : [];
 
   useEffect(() => {
     let mounted = true;
@@ -1040,556 +65,1280 @@ export const SceneScreen = () => {
     };
   }, [scenarioId, getScene]);
 
-  const hotspots = scenario ? expandScenarioToDialogueItems(scenario) : [];
-
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeStepIndex, setActiveStepIndex] = useState(0); // 0..4 steps
   const [playing, setPlaying] = useState(true);
-  const [audioUri, setAudioUri] = useState<string | null>(null);
-  const [isAudioReady, setIsAudioReady] = useState(false);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const [wordsVisible, setWordsVisible] = useState(false);
-  const [boxVisible, setBoxVisible] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [autoMode, setAutoMode] = useState(true);
+  const [repsCount, setRepsCount] = useState(0);
+  const [isShadowingMode, setIsShadowingMode] = useState(false);
 
-  const scale = useRef(new Animated.Value(1)).current;
-  const translateX = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
-
-  const currentDialogue = hotspots[activeIndex];
-
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearAdvanceTimer = useCallback(() => {
-    if (advanceTimer.current) {
-      clearTimeout(advanceTimer.current);
-      advanceTimer.current = null;
-    }
-  }, []);
-
-  // رفرنس‌های به‌روز تا تایمرها بدون وابسته‌کردن افکت‌ها به مقادیر تازه دسترسی داشته باشند
-  const playingRef = useRef(playing);
-  const hotspotsLenRef = useRef(hotspots.length);
+  // Smooth camera zoom & pan to current hotspot coordinates
   useEffect(() => {
-    playingRef.current = playing;
-  }, [playing]);
-  useEffect(() => {
-    hotspotsLenRef.current = hotspots.length;
-  }, [hotspots.length]);
-
-  // رفتن به دیالوگ بعدی (یا پایان در آخرین دیالوگ)
-  const advanceToNext = useCallback(() => {
-    setActiveIndex((prev) => {
-      if (prev >= hotspotsLenRef.current - 1) {
-        setPlaying(false);
-        return prev;
-      }
-      return prev + 1;
-    });
-  }, []);
-
-  const playAudio = useCallback((url: string) => {
-    setAudioUri(url);
-    setIsAudioReady(false);
-  }, []);
-
-  const stopAudio = useCallback(() => {
-    setAudioUri(null);
-    setIsAudioReady(false);
-  }, []);
-
-  const handleAudioStatus = useCallback((status: string) => {
-    if (status === 'playing') {
-      setIsAudioReady(true);
-    } else if (status === 'finished' || status === 'error') {
-      // پایان صدا یا خطای پخش → بعد از کمی مکث خودکار به دیالوگ بعدی برو
-      clearAdvanceTimer();
-      if (playingRef.current) {
-        advanceTimer.current = setTimeout(advanceToNext, AUTO_ADVANCE_MS);
-      }
-    }
-  }, [clearAdvanceTimer, advanceToNext]);
-
-  useEffect(() => {
-    if (!viewport.width || !viewport.height) return;
-
-    const spot = hotspots[activeIndex];
-    if (!spot) return;
-
-    // هر تایمر پیشرفت قبلی را لغو کن تا با جابه‌جایی دستی/خودکار تداخل نکند
-    clearAdvanceTimer();
-
-    // نقطه‌ی هات‌اسپات (spot.x, spot.y نسبت ۰..۱) را به مرکز صفحه (کمی بالاتر از وسط) می‌بریم.
-    // با مبدأ مقیاس در مرکعِ ویو: پاسخِ صحیح برای transform ترتیب [translate, scale].
-    const S = FOCUS_SCALE;
-    const targetX = S * viewport.width * (0.5 - spot.x);
-    const targetY = -0.08 * viewport.height - S * viewport.height * (spot.y - 0.5);
-
-    Animated.parallel([
-      Animated.timing(scale, {
-        toValue: FOCUS_SCALE,
-        duration: 620,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateX, {
-        toValue: targetX,
-        duration: 620,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: targetY,
-        duration: 620,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (spot.audioUrl) {
-      // دیالوگ دارای ویس: پس از پایان زوم پخش کن (پیشرفت با پایان صدا انجام می‌شود)
-      setTimeout(() => playAudio(spot.audioUrl), 700);
-    } else {
-      // دیالوگ بدون ویس: بعد از مکثی متناسب با طول متن خودکار جلو برو تا گیر نکند
-      const holdMs = Math.min(6000, Math.max(2500, (spot.dialogue?.length || 0) * 55));
-      advanceTimer.current = setTimeout(() => {
-        if (playingRef.current) advanceToNext();
-      }, holdMs + 700);
-    }
-  }, [
-    scenario,
-    activeIndex,
-    viewport.width,
-    viewport.height,
-    playAudio,
-    clearAdvanceTimer,
-    advanceToNext,
-  ]);
-
-  useEffect(() => {
-    if (!playing) {
-      stopAudio();
-      clearAdvanceTimer();
-    }
-  }, [playing, stopAudio, clearAdvanceTimer]);
-
-  useEffect(() => {
-    return () => clearAdvanceTimer();
-  }, [clearAdvanceTimer]);
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setViewport({ width, height });
-  };
-
-  const goNext = () => {
-    clearAdvanceTimer();
-    stopAudio();
-    if (activeIndex >= hotspots.length - 1) {
-      setPlaying(false);
+    if (!inScene) {
+      Animated.parallel([
+        Animated.timing(zoomAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(panXAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        Animated.timing(panYAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]).start();
       return;
     }
-    setActiveIndex((value) => value + 1);
+
+    const currentItem = hotspots[activeIndex];
+    const itemX = currentItem?.x ?? 0.5;
+    const itemY = currentItem?.y ?? 0.5;
+
+    // Pan camera smoothly towards current hotspot, clamped within container bounds
+    const maxPanX = 30;
+    const maxPanY = 20;
+    const rawPanX = (0.5 - itemX) * 60;
+    const rawPanY = (0.5 - itemY) * 40;
+
+    const targetPanX = Math.max(-maxPanX, Math.min(maxPanX, rawPanX));
+    const targetPanY = Math.max(-maxPanY, Math.min(maxPanY, rawPanY));
+
+    Animated.parallel([
+      Animated.timing(zoomAnim, { toValue: 1.22, duration: 800, useNativeDriver: true }),
+      Animated.timing(panXAnim, { toValue: targetPanX, duration: 800, useNativeDriver: true }),
+      Animated.timing(panYAnim, { toValue: targetPanY, duration: 800, useNativeDriver: true }),
+    ]).start();
+  }, [inScene, activeIndex, hotspots, zoomAnim, panXAnim, panYAnim]);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [actionCommand, setActionCommand] = useState<
+    'none' | 'start_record' | 'stop_record' | 'play_recording' | 'play_original'
+  >('none');
+
+  const currentDialogue = hotspots[activeIndex] || {
+    dialogue: 'Great. Can I pay by card?',
+    translation: 'عالی. می‌توانم با کارت پرداخت کنم؟',
+    speaker: 'CU CUSTOMER',
+    audioUrl: '',
   };
 
-  const goPrevious = () => {
-    clearAdvanceTimer();
-    stopAudio();
+  const { has, add: addVocab, remove: removeVocab } = useVocab();
+
+  const resetToHome = useCallback(() => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Home' }],
+    });
+  }, [navigation]);
+
+  // Intercept physical phone back button on hardware press to return to Home
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        resetToHome();
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [resetToHome])
+  );
+
+  const handleEnterScene = () => {
+    setInScene(true);
+    if (currentDialogue.audioUrl) {
+      setAudioUri(currentDialogue.audioUrl);
+      setActionCommand('play_original');
+      setPlaying(true);
+    }
+  };
+
+  const autoTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    };
+  }, []);
+
+  const handleNextDialogue = useCallback(() => {
+    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    setActiveIndex((prevIdx) => {
+      const nextIdx = prevIdx + 1 < hotspots.length ? prevIdx + 1 : 0;
+      const nextDialogue = hotspots[nextIdx];
+      if (nextDialogue?.audioUrl) {
+        setAudioUri(nextDialogue.audioUrl);
+        setActionCommand('play_original');
+        setPlaying(true);
+      }
+      return nextIdx;
+    });
+  }, [hotspots]);
+
+  const handlePrevDialogue = useCallback(() => {
+    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    setActiveIndex((prevIdx) => {
+      const nextIdx = prevIdx > 0 ? prevIdx - 1 : 0;
+      const nextDialogue = hotspots[nextIdx];
+      if (nextDialogue?.audioUrl) {
+        setAudioUri(nextDialogue.audioUrl);
+        setActionCommand('play_original');
+        setPlaying(true);
+      }
+      return nextIdx;
+    });
+  }, [hotspots]);
+
+  const handleReplay = useCallback(() => {
+    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    setActionCommand('play_original');
     setPlaying(true);
-    setActiveIndex((value) => Math.max(0, value - 1));
+  }, []);
+
+  const toggleSpeed = () => {
+    const speeds = [1.0, 0.75, 1.25, 1.5];
+    const nextSpeedIdx = (speeds.indexOf(playbackRate) + 1) % speeds.length;
+    setPlaybackRate(speeds[nextSpeedIdx]);
   };
 
   const togglePlay = () => {
-    if (playing) {
-      clearAdvanceTimer();
-      stopAudio();
-      setPlaying(false);
-    } else {
-      setPlaying(true);
-      if (currentDialogue.audioUrl) {
-        playAudio(currentDialogue.audioUrl);
-      }
-    }
+    setPlaying(!playing);
+    setActionCommand(playing ? 'none' : 'play_original');
   };
 
-  const onSceneBack = () => {
-    clearAdvanceTimer();
-    stopAudio();
-    navigation.navigate('Scenes');
-  };
+  const defaultCoverUri =
+    'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop';
+  const coverImage = scenario?.imageUri
+    ? typeof scenario.imageUri === 'string'
+      ? { uri: scenario.imageUri }
+      : scenario.imageUri
+    : { uri: defaultCoverUri };
 
-  // تا وقتی صحنه از بک‌اند بارگذاری نشده، لودینگ نمایش بده
-  if (!scenario) {
+  // ================= SCENE OVERVIEW INTRO SCREEN (SCREENSHOT #2) =================
+  if (!inScene) {
     return (
-      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator color={COLORS.primary} size="large" />
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.introScroll} showsVerticalScrollIndicator={false}>
+          {/* Cover Hero Banner */}
+          <View style={[styles.introCoverWrapper, { height: SCREEN_HEIGHT / 3 }]}>
+            <ImageBackground source={coverImage} style={styles.introCover}>
+              <View style={styles.introCoverScrim} />
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={resetToHome}
+              >
+                <X size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </ImageBackground>
+          </View>
+
+          {/* Scenario Meta Header */}
+          <View style={styles.introHeader}>
+            <Text style={styles.introCategory}>
+              📍 SUPERMARKET · LEVEL {scenario?.level || 'A2'}
+            </Text>
+            <Text style={styles.introTitle}>
+              {scenario?.title || 'The Last Can of Tuna'}
+            </Text>
+            <Text style={styles.introDesc}>
+              {scenario?.description ||
+                'Maya has ten dollars and a hungry roommate. Walk the aisles, ask for prices, and get to the checkout before it closes.'}
+            </Text>
+          </View>
+
+          {/* 3 Metric Pills Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statPill}>
+              <Text style={styles.statNumber}>5</Text>
+              <Text style={styles.statLabel}>{t('hotspots')}</Text>
+            </View>
+
+            <View style={styles.statPill}>
+              <Text style={styles.statNumber}>24</Text>
+              <Text style={styles.statLabel}>{t('sentencesCount')}</Text>
+            </View>
+
+            <View style={styles.statPill}>
+              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statLabel}>{t('minutesCount')}</Text>
+            </View>
+          </View>
+
+          {/* Conversations In This Scene */}
+          <Text style={styles.conversationsLabel}>
+            {t('conversationsInScene')}
+          </Text>
+
+          <View style={styles.conversationsList}>
+            {[
+              { num: 1, en: 'Checkout', fa: 'صندوق', micCount: 5 },
+              { num: 2, en: 'Dairy fridge', fa: 'لبنیات', micCount: 3 },
+              { num: 3, en: 'Fruit stand', fa: 'میوه', micCount: 2 },
+              { num: 4, en: 'Drinks cooler', fa: 'نوشیدنی', micCount: 2 },
+              { num: 5, en: 'Shopping basket', fa: 'سبد خرید', micCount: 2 },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.num}
+                activeOpacity={0.8}
+                style={styles.convCard}
+                onPress={handleEnterScene}
+              >
+                <View style={styles.convNumCircle}>
+                  <Text style={styles.convNumText}>{item.num}</Text>
+                </View>
+
+                <Text style={styles.convTitle}>{item.en}</Text>
+
+                <View style={styles.convRight}>
+                  <Text style={styles.convFaTitle}>{item.fa}</Text>
+                  <View style={styles.convMicTag}>
+                    <Mic size={12} color={COLORS.textSecondary} />
+                    <Text style={styles.convMicCount}>{item.micCount}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Rule Tip Banner */}
+          <View style={styles.tipBanner}>
+            <Sparkles size={18} color={COLORS.teal} style={{ marginTop: 2 }} />
+            <Text style={styles.tipText}>{t('sceneRuleTip')}</Text>
+          </View>
+
+          {/* Enter Scene CTA Button */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={styles.enterCtaBtn}
+            onPress={handleEnterScene}
+          >
+            <Play size={20} color={COLORS.black} fill={COLORS.black} />
+            <Text style={styles.enterCtaText}>{t('enterScene')}</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </View>
     );
   }
 
+  // ================= ACTIVE PRACTICE PLAYER SHEET (100% PURE ENGLISH UI & SCROLLABLE) =================
+  const stepTitles = [
+    { num: 1, label: 'Step 1: Listen' },
+    { num: 2, label: 'Step 2: Vocabulary' },
+    { num: 3, label: 'Step 3: Practice' },
+    { num: 4, label: 'Step 4: AI Score' },
+  ];
+
   return (
     <View style={styles.container}>
-      <AudioPlayer uri={audioUri} shouldPlay={playing} onPlaybackStatusUpdate={handleAudioStatus} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-      {/* TOP BAR */}
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.roundBack} onPress={onSceneBack}>
-          <ChevronLeft color={COLORS.text} size={24} />
-        </TouchableOpacity>
-        <View style={styles.scenePill}>
-          <Text style={styles.scenePillText}>{scenario.title}</Text>
-        </View>
-        <View style={styles.stepPill}>
-          <Text style={styles.stepText}>
-            {activeIndex + 1} / {hotspots.length}
-          </Text>
-        </View>
-      </View>
+      {/* Audio Engine */}
+      <AudioPlayer
+        uri={audioUri}
+        shouldPlay={playing}
+        playbackRate={playbackRate}
+        textHint={currentDialogue.dialogue}
+        actionCommand={actionCommand}
+        onPlaybackStatusUpdate={(status) => {
+          if (status === 'finished' && autoMode) {
+            if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+            autoTimeoutRef.current = setTimeout(() => {
+              handleNextDialogue();
+            }, 2200);
+          }
+        }}
+      />
 
-      {/* SCENE WITH ZOOM — تصویر زوم/جابه‌جا می‌شود تا نقطه‌ی فعال وسط بیاید (بدون آیکون) */}
-      <View style={styles.sceneViewport} onLayout={handleLayout}>
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              transform: [
-                { translateX },
-                { translateY },
-                { scale },
-              ],
-            },
-          ]}
-        >
-          <ImageBackground
-            source={scenario.imageUri}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-        </Animated.View>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollablePlayerContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Top Header Bar OUTSIDE & ABOVE the Scene Image */}
+        <View style={styles.topHeaderBar}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.backHeaderBtn}
+            onPress={resetToHome}
+          >
+            <ChevronRight size={22} color={COLORS.text} />
+            <Text style={styles.backHeaderText}>Back to Home</Text>
+          </TouchableOpacity>
 
-      {/* DIALOGUE CARD */}
-      {currentDialogue && (
-        <View style={styles.dialogueCard}>
-          <View style={styles.dialogueHeader}>
-            <View style={styles.dialogueCopy}>
-              <Text style={styles.readingLabel}>
-                {isAudioReady ? (playing ? 'Reading...' : 'Paused') : playing ? 'Loading...' : 'Paused'}
-              </Text>
-              <Text style={styles.roleText}>{currentDialogue.speaker}</Text>
-              <Text style={styles.dialogueText}>{currentDialogue.dialogue}</Text>
-              <Text style={styles.translation}>{currentDialogue.translation}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.wordsBtn}
-              onPress={() => {
-                setPlaying(false);
-                setWordsVisible(true);
-              }}
-            >
-              <BookOpen color={COLORS.primary} size={20} />
-              <Text style={styles.wordsBtnText}>واژه‌ها</Text>
-            </TouchableOpacity>
+          {/* Level Difficulty Badge */}
+          <View style={styles.levelHeaderBadge}>
+            <Sparkles size={13} color={COLORS.amber} />
+            <Text style={styles.levelHeaderBadgeText}>
+              {(scenario?.level || 'Beginner').toUpperCase()}
+            </Text>
           </View>
+        </View>
 
-          {/* PROGRESS BAR */}
-          <View style={styles.progressRow}>
-            <View style={styles.progressTrack}>
-              {hotspots.map((spot, index) => (
+        {/* Top Scene Camera Zoom View (Clean without overlapping buttons) */}
+        <View style={styles.playerTopView}>
+          <View style={styles.zoomContainer}>
+            <Animated.Image
+              source={coverImage}
+              style={[
+                styles.topSceneImage,
+                {
+                  transform: [
+                    { scale: zoomAnim },
+                    { translateX: panXAnim },
+                    { translateY: panYAnim },
+                  ],
+                },
+              ]}
+              resizeMode="cover"
+            />
+          </View>
+        </View>
+
+        {/* Bottom Sheet Dialogue Card */}
+        <View style={styles.playerSheet}>
+          {/* Top Drag Handle */}
+          <View style={styles.dragHandle} />
+
+          {!isShadowingMode ? (
+            /* ================= MODE 1: EXPLORE SCENE MODE ================= */
+            <View style={styles.exploreModeContainer}>
+              <View style={styles.exploreHeaderRow}>
+                <View style={styles.speakerPill}>
+                  <Text style={styles.speakerText}>
+                    {(currentDialogue.speaker || 'SPEAKER').toUpperCase()}
+                  </Text>
+                </View>
+
+                {/* Mode Pill Indicator */}
+                <View style={styles.exploreModeBadge}>
+                  <Text style={styles.exploreModeBadgeText}>Explore Mode</Text>
+                </View>
+              </View>
+
+              <Text style={styles.englishText}>
+                {currentDialogue.dialogue || 'Great. Can I pay by card?'}
+              </Text>
+
+              {/* Audio Waveform Visualizer */}
+              <View style={styles.waveformRow}>
+                {Array.from({ length: 24 }).map((_, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.waveBar,
+                      {
+                        height: playing ? 8 + ((idx * 7) % 20) : 8,
+                        backgroundColor: COLORS.amber,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+
+              {/* Hotspots Selector Row */}
+              <Text style={styles.hotspotSelectTitle}>Hotspots ({hotspots.length}):</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hotspotChipScroll}>
+                {hotspots.map((hs, i) => (
+                  <TouchableOpacity
+                    key={hs.id || i}
+                    style={[styles.hotspotChip, activeIndex === i ? styles.hotspotChipActive : null]}
+                    onPress={() => setActiveIndex(i)}
+                  >
+                    <Text style={[styles.hotspotChipText, activeIndex === i ? styles.hotspotChipTextActive : null]}>
+                      #{i + 1} {hs.speaker}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Primary CTA: Start 4-Step Shadowing Practice */}
+              <TouchableOpacity
+                activeOpacity={0.88}
+                style={styles.startShadowingCtaBtn}
+                onPress={() => setIsShadowingMode(true)}
+              >
+                <Mic size={20} color={COLORS.black} />
+                <Text style={styles.startShadowingCtaText}>Start 4-Step Shadowing Practice 🎙️</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* ================= MODE 2: 4-STEP INTERACTIVE SHADOWING MODE ================= */
+            <View>
+              {/* Exit Shadowing Mode Row */}
+              <View style={styles.shadowingHeaderRow}>
+                <TouchableOpacity
+                  style={styles.exitShadowingBtn}
+                  onPress={() => setIsShadowingMode(false)}
+                >
+                  <Text style={styles.exitShadowingText}>← Exit Practice</Text>
+                </TouchableOpacity>
+
+                <View style={styles.stepTitleBadge}>
+                  <Text style={styles.stepTitleBadgeText}>
+                    {stepTitles[activeStepIndex]?.label}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 4 Step Progress Segments Header */}
+              <View style={styles.stepHeaderRow}>
+                {stepTitles.map((st, idx) => (
+                  <TouchableOpacity
+                    key={st.num}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.stepTab,
+                      activeStepIndex === idx ? styles.stepTabActive : null,
+                    ]}
+                    onPress={() => setActiveStepIndex(idx)}
+                  >
+                    <Text
+                      style={[
+                        styles.stepTabText,
+                        activeStepIndex === idx ? styles.stepTabTextActive : null,
+                      ]}
+                    >
+                      Step {st.num}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Dialogue Speaker & Sentences Box */}
+              <View style={styles.dialogueBox}>
+                <View style={styles.speakerPill}>
+                  <Text style={styles.speakerText}>
+                    {(currentDialogue.speaker || 'SPEAKER').toUpperCase()}
+                  </Text>
+                </View>
+
+                {/* STEP 1: LISTEN */}
+                <Text style={styles.englishText}>
+                  {currentDialogue.dialogue || 'Great. Can I pay by card?'}
+                </Text>
+
+            {activeStepIndex === 1 && currentDialogue.words && currentDialogue.words.length > 0 && (
+              <View style={styles.wordPillsContainer}>
+                {currentDialogue.words.map((w, i) => {
+                  const isSaved = has(w.word);
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      activeOpacity={0.8}
+                      style={[styles.wordCardPill, isSaved ? styles.wordCardPillSaved : null]}
+                      onPress={() => {
+                        if (isSaved) {
+                          removeVocab(w.word);
+                        } else {
+                          addVocab({ word: w.word, meaning: w.meaning });
+                        }
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.wordCardEnglish}>{w.word}</Text>
+                        <Text style={styles.wordCardMeaning}>{w.meaning}</Text>
+                      </View>
+
+                      <View style={[styles.leitnerTag, isSaved ? styles.leitnerTagSaved : null]}>
+                        {isSaved ? (
+                          <Check size={12} color={COLORS.black} />
+                        ) : (
+                          <Plus size={12} color={COLORS.amber} />
+                        )}
+                        <Text style={[styles.leitnerTagText, isSaved ? styles.leitnerTagTextSaved : null]}>
+                          {isSaved ? 'Saved' : 'Leitner'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Audio Waveform Visualizer */}
+            <View style={styles.waveformRow}>
+              {Array.from({ length: 24 }).map((_, idx) => (
                 <View
-                  key={spot.id}
+                  key={idx}
                   style={[
-                    styles.progressStep,
-                    index <= activeIndex ? styles.progressStepActive : null,
+                    styles.waveBar,
+                    {
+                      height: playing ? 8 + ((idx * 7) % 20) : 8,
+                      backgroundColor: COLORS.amber,
+                    },
                   ]}
                 />
               ))}
             </View>
           </View>
 
-          {/* ACTION BUTTONS: قبلی / پخش‌ومکث / بعدی */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.navBtn, activeIndex === 0 ? styles.navBtnDisabled : null]}
-              onPress={goPrevious}
-              disabled={activeIndex === 0}
-            >
-              <ChevronLeft color={activeIndex === 0 ? COLORS.textSecondary : COLORS.text} size={20} />
-              <Text
-                style={[styles.navBtnText, activeIndex === 0 ? styles.navBtnTextDisabled : null]}
+          {/* STEP 3: RECORD SHADOWING MIC BUTTON */}
+          {activeStepIndex === 2 && (
+            <View style={styles.recordSection}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.micRecordBtn,
+                  actionCommand === 'start_record' ? styles.micRecordActive : null,
+                ]}
+                onPress={() => {
+                  if (actionCommand === 'start_record') {
+                    setActionCommand('stop_record');
+                  } else {
+                    setActionCommand('start_record');
+                  }
+                }}
               >
-                قبلی
-              </Text>
+                <Mic size={22} color={COLORS.black} />
+                <Text style={styles.micRecordText}>
+                  {actionCommand === 'start_record' ? 'Recording Voice...' : 'Record Your Voice 🎤'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.playRecordingBtn}
+                onPress={() => setActionCommand('play_recording')}
+              >
+                <Play size={16} color={COLORS.teal} />
+                <Text style={styles.playRecordingText}>Play Your Recording 🔊</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* STEP 4: AI EVALUATION SCORE BADGES */}
+          {activeStepIndex === 3 && (
+            <View style={styles.evalScoreSection}>
+              <View style={styles.evalScoreBadge}>
+                <Sparkles size={16} color={COLORS.amber} />
+                <Text style={styles.evalScoreTitle}>Fluency Score</Text>
+                <Text style={styles.evalScoreValue}>94%</Text>
+              </View>
+              <View style={styles.evalScoreBadge}>
+                <Check size={16} color={COLORS.teal} />
+                <Text style={styles.evalScoreTitle}>Pronunciation Score</Text>
+                <Text style={styles.evalScoreValue}>88%</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Player Controls Bar */}
+          <View style={styles.controlsBar}>
+            {/* Speed Toggle */}
+            <TouchableOpacity style={styles.controlPillBtn} onPress={toggleSpeed}>
+              <Text style={styles.controlPillText}>{playbackRate}x</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.playBtn} onPress={togglePlay}>
-              {playing ? (
-                <Pause color={COLORS.white} size={22} />
-              ) : (
-                <Play color={COLORS.white} size={22} fill={COLORS.white} />
-              )}
-            </TouchableOpacity>
-
+            {/* Auto Mode Toggle */}
             <TouchableOpacity
-              style={[styles.navBtn, styles.navBtnPrimary, activeIndex >= hotspots.length - 1 ? styles.finishBtn : null]}
-              onPress={goNext}
+              style={[
+                styles.autoPillBtn,
+                autoMode ? styles.autoPillActive : null,
+              ]}
+              onPress={() => setAutoMode(!autoMode)}
             >
-              <Text style={styles.navBtnTextPrimary}>
-                {activeIndex >= hotspots.length - 1 ? 'پایان' : 'بعدی'}
+              <Text
+                style={[
+                  styles.autoPillText,
+                  autoMode ? styles.autoPillTextActive : null,
+                ]}
+              >
+                Auto {autoMode ? '✓' : ''}
               </Text>
-              {activeIndex < hotspots.length - 1 && (
-                <ChevronRight color={COLORS.white} size={20} />
+            </TouchableOpacity>
+
+            {/* Skip Prev */}
+            <TouchableOpacity style={styles.iconCtrlBtn} onPress={handlePrevDialogue}>
+              <SkipBack size={18} color={COLORS.white} />
+            </TouchableOpacity>
+
+            {/* Replay */}
+            <TouchableOpacity style={styles.iconCtrlBtn} onPress={handleReplay}>
+              <RotateCcw size={18} color={COLORS.white} />
+            </TouchableOpacity>
+
+            {/* Play/Pause Orange Circle */}
+            <TouchableOpacity style={styles.mainPlayBtn} onPress={togglePlay}>
+              {playing ? (
+                <Pause size={22} color={COLORS.black} fill={COLORS.black} />
+              ) : (
+                <Play size={22} color={COLORS.black} fill={COLORS.black} />
               )}
+            </TouchableOpacity>
+
+            {/* Skip Next */}
+            <TouchableOpacity style={styles.iconCtrlBtn} onPress={handleNextDialogue}>
+              <SkipForward size={18} color={COLORS.white} />
+            </TouchableOpacity>
+
+            {/* Step Advancement CTA */}
+            <TouchableOpacity
+              style={styles.nextStepCtaBtn}
+              onPress={() => {
+                if (activeStepIndex < 3) {
+                  setActiveStepIndex(activeStepIndex + 1);
+                } else {
+                  handleNextDialogue();
+                  setActiveStepIndex(0);
+                }
+              }}
+            >
+              <Text style={styles.nextStepCtaText}>
+                {activeStepIndex === 3 ? 'Next Line ➔' : `Step ${activeStepIndex + 2} ➔`}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
-
-      {/* شیت واژه‌ها + جعبه‌ی لایتنر */}
-      <WordsSheet
-        visible={wordsVisible}
-        onClose={() => setWordsVisible(false)}
-        dialogueText={currentDialogue?.dialogue ?? ''}
-        backendWords={currentDialogue?.words}
-        onOpenBox={() => {
-          setWordsVisible(false);
-          setBoxVisible(true);
-        }}
-      />
-      <LeitnerBoxModal visible={boxVisible} onClose={() => setBoxVisible(false)} />
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.m,
-    paddingTop: 56,
-  },
-  roundBack: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(5, 11, 24, 0.8)',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scenePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(5, 11, 24, 0.7)',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  scenePillText: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  stepPill: {
-    minWidth: 58,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(5, 11, 24, 0.8)',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepText: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  sceneViewport: {
+  container: {
     flex: 1,
-    marginTop: 16,
+    backgroundColor: COLORS.background,
+  },
+  // Intro Screen Styles
+  introScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  introCoverWrapper: {
+    height: 240,
+    borderRadius: 28,
     overflow: 'hidden',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    marginTop: 20,
+    marginBottom: 20,
   },
-  sceneCanvas: {
-    flex: 1,
+  introCover: {
+    width: '100%',
+    height: '100%',
   },
-  sceneImage: {
-    flex: 1,
-  },
-  sceneImageStyle: {
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  sceneScrim: {
+  introCoverScrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 11, 24, 0.24)',
+    backgroundColor: 'rgba(12, 16, 23, 0.25)',
   },
-
-  hotspot: {
+  closeBtn: {
     position: 'absolute',
-    width: 48,
-    height: 48,
-    marginLeft: -24,
-    marginTop: -24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hotspotActive: {
-    zIndex: 3,
-  },
-  hotspotCore: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(5, 11, 24, 0.86)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hotspotCoreActive: {
+    top: 16,
+    right: 16,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.primary,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.6,
-    shadowRadius: 14,
-    elevation: 10,
-  },
-
-  dialogueCard: {
-    marginHorizontal: SPACING.m,
-    marginTop: -22,
-    marginBottom: 28,
-    borderRadius: BORDER_RADIUS.l,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 18,
-    paddingBottom: 22,
-  },
-  dialogueHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  dialogueCopy: {
-    flex: 1,
-    marginRight: 14,
-  },
-  wordsBtn: {
+    backgroundColor: 'rgba(15, 20, 28, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.backgroundSoft,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 4,
   },
-  wordsBtnText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '800',
+  introHeader: {
+    marginBottom: 20,
   },
-  readingLabel: {
-    color: COLORS.cyan,
-    fontSize: 13,
+  introCategory: {
+    color: COLORS.amber,
+    fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 0.8,
     marginBottom: 6,
   },
-  roleText: {
+  introTitle: {
     color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  dialogueText: {
-    color: COLORS.text,
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: 28,
     fontWeight: '800',
-    marginTop: 8,
+    marginBottom: 10,
+    letterSpacing: -0.5,
   },
-  translation: {
+  introDesc: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    marginTop: 10,
+    lineHeight: 22,
   },
-
-  progressRow: {
-    marginTop: 18,
-  },
-  progressTrack: {
+  statsRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 10,
+    marginBottom: 24,
   },
-  progressStep: {
+  statPill: {
     flex: 1,
-    height: 8,
-    borderRadius: 10,
-    backgroundColor: COLORS.border,
-  },
-  progressStepActive: {
-    backgroundColor: COLORS.accent,
-  },
-
-  actions: {
-    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 16,
-    gap: 12,
-  },
-  navBtn: {
-    flex: 1,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: COLORS.backgroundSoft,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  statNumber: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  statLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  conversationsLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  conversationsList: {
+    gap: 10,
+    marginBottom: 20,
+  },
+  convCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  convNumCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  convNumText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  convTitle: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '700',
+    flex: 1,
+  },
+  convRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  convFaTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+  convMicTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  convMicCount: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  tipBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(20, 184, 166, 0.08)',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 184, 166, 0.25)',
+    gap: 12,
+    marginBottom: 24,
+  },
+  tipText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    flex: 1,
+  },
+  enterCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: COLORS.amber,
+    borderRadius: 28,
+    height: 56,
+    gap: 10,
+  },
+  enterCtaText: {
+    color: COLORS.black,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+
+  // Active Player Styles
+  scrollablePlayerContainer: {
+    flexGrow: 1,
+    backgroundColor: COLORS.background,
+  },
+  topHeaderBar: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 44,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: COLORS.background,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 20,
+  },
+  backHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     gap: 6,
   },
-  navBtnPrimary: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  navBtnDisabled: {
-    opacity: 0.45,
-  },
-  navBtnText: {
+  backHeaderText: {
     color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  levelHeaderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 160, 28, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 160, 28, 0.3)',
+    gap: 6,
+  },
+  levelHeaderBadgeText: {
+    color: COLORS.amber,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  exploreModeContainer: {
+    paddingVertical: 4,
+  },
+  exploreHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  exploreModeBadge: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  exploreModeBadgeText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  hotspotSelectTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  hotspotChipScroll: {
+    marginBottom: 16,
+  },
+  hotspotChip: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  hotspotChipActive: {
+    backgroundColor: COLORS.amber,
+    borderColor: COLORS.amber,
+  },
+  hotspotChipText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  hotspotChipTextActive: {
+    color: COLORS.black,
+    fontWeight: '800',
+  },
+  startShadowingCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.amber,
+    paddingVertical: 14,
+    borderRadius: 22,
+    gap: 8,
+    marginTop: 6,
+    shadowColor: COLORS.amber,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  startShadowingCtaText: {
+    color: COLORS.black,
     fontSize: 15,
     fontWeight: '800',
   },
-  navBtnTextDisabled: {
+  shadowingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  exitShadowingBtn: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  exitShadowingText: {
+    color: COLORS.teal,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  playerTopView: {
+    height: Math.round(SCREEN_HEIGHT * 0.38),
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  zoomContainer: {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+  },
+  topSceneImage: {
+    width: '100%',
+    height: '100%',
+  },
+  playerSheet: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'flex-start',
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  stepSegmentsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 12,
+  },
+  stepSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  stepSegmentActive: {
+    backgroundColor: COLORS.amber,
+  },
+  dialogueBox: {
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  speakerPill: {
+    backgroundColor: 'rgba(255, 160, 28, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  speakerText: {
+    color: COLORS.amber,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  englishText: {
+    color: COLORS.text,
+    fontSize: 19,
+    fontWeight: '800',
+    lineHeight: 26,
+    marginBottom: 4,
+  },
+  persianText: {
     color: COLORS.textSecondary,
+    fontSize: 13,
+    textAlign: 'right',
+    alignSelf: 'flex-end',
+    marginBottom: 8,
   },
-  navBtnTextPrimary: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '900',
+  waveformRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    width: '100%',
+    height: 28,
+    marginVertical: 4,
   },
-  playBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: COLORS.accent,
+  waveBar: {
+    width: 3,
+    borderRadius: 1.5,
+  },
+  controlsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+  controlPillBtn: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  controlPillText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  iconCtrlBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  finishBtn: {
-    backgroundColor: COLORS.pink,
-    borderColor: COLORS.pink,
+  mainPlayBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.amber,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  autoPillBtn: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  autoPillActive: {
+    backgroundColor: 'rgba(20, 184, 166, 0.2)',
+    borderWidth: 1,
+    borderColor: COLORS.teal,
+  },
+  autoPillText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  autoPillTextActive: {
+    color: COLORS.teal,
+  },
+  shadowActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  shadowActionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  shadowActionText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  shadowRepsText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // 4-Step Interactive Shadowing Styles
+  stepHeaderRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  stepTab: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  stepTabActive: {
+    backgroundColor: COLORS.amber,
+  },
+  stepTabText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stepTabTextActive: {
+    color: COLORS.black,
+    fontWeight: '800',
+  },
+  stepTitleBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 160, 28, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  stepTitleBadgeText: {
+    color: COLORS.amber,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  wordPillsContainer: {
+    gap: 8,
+    marginVertical: 8,
+    width: '100%',
+  },
+  wordCardPill: {
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    width: '100%',
+  },
+  wordCardPillSaved: {
+    backgroundColor: 'rgba(20, 184, 166, 0.12)',
+    borderColor: COLORS.teal,
+  },
+  wordCardEnglish: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  wordCardMeaning: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  leitnerTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.amber,
+  },
+  leitnerTagSaved: {
+    backgroundColor: COLORS.teal,
+    borderColor: COLORS.teal,
+  },
+  leitnerTagText: {
+    color: COLORS.amber,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  leitnerTagTextSaved: {
+    color: COLORS.black,
+    fontWeight: '800',
+  },
+  recordSection: {
+    marginVertical: 8,
+    gap: 8,
+  },
+  micRecordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.amber,
+    paddingVertical: 12,
+    borderRadius: 20,
+    gap: 8,
+  },
+  micRecordActive: {
+    backgroundColor: '#EF4444',
+  },
+  micRecordText: {
+    color: COLORS.black,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  playRecordingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    paddingVertical: 8,
+    borderRadius: 14,
+    gap: 6,
+  },
+  playRecordingText: {
+    color: COLORS.teal,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  evalScoreSection: {
+    flexDirection: 'row',
+    gap: 10,
+    marginVertical: 8,
+  },
+  evalScoreBadge: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceLight,
+    padding: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  evalScoreTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  evalScoreValue: {
+    color: COLORS.teal,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  nextStepCtaBtn: {
+    backgroundColor: COLORS.teal,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  nextStepCtaText: {
+    color: COLORS.black,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

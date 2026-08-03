@@ -7,27 +7,29 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Lock, Play, RotateCcw, Settings } from 'lucide-react-native';
+import { Award, BarChart2, CheckCircle2, Play, Settings, User as UserIcon } from 'lucide-react-native';
 import { ScenarioCard } from '../components/ScenarioCard';
 import { useScenes } from '../data/ScenesContext';
-import { BORDER_RADIUS, COLORS, SPACING } from '../theme/colors';
+import { COLORS } from '../theme/colors';
+import { useLanguage } from '../data/i18n';
 
 export { HomeScreen } from './Home';
 
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
+  const { t } = useLanguage();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
-        <Text style={styles.kicker}>Journey</Text>
+        <Text style={styles.kicker}>{t('worlds')}</Text>
         <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
           <Settings color={COLORS.text} size={20} />
         </TouchableOpacity>
       </View>
-      <Text style={styles.pageTitle}>Choose Your Scenario</Text>
-      <Text style={styles.pageSub}>Practice natural conversations in real places.</Text>
+      <Text style={styles.pageTitle}>{t('chooseScenarioTitle')}</Text>
+      <Text style={styles.pageSub}>{t('chooseScenarioSub')}</Text>
 
       <View style={styles.featuredList}>
         {scenes.map((scenario) => (
@@ -39,7 +41,7 @@ export const ScenesScreen = () => {
             time={scenario.time}
             imageUri={scenario.imageUri}
             color={scenario.color}
-            Icon={scenario.icon}
+            subtitle={scenario.lesson}
             onPress={() => navigation.navigate('Shadowing', { scenarioId: scenario.id })}
           />
         ))}
@@ -49,45 +51,45 @@ export const ScenesScreen = () => {
 };
 
 export const ProgressScreen = () => {
-  const navigation = useNavigation<any>();
+  const { t } = useLanguage();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>Great Job!</Text>
-      <Text style={styles.pageSub}>You did amazing on today's practice.</Text>
+      <Text style={styles.pageTitle}>{t('greatJobTitle')}</Text>
+      <Text style={styles.pageSub}>{t('greatJobSub')}</Text>
 
       <View style={styles.scoreCard}>
         <View style={styles.scoreRing}>
           <Text style={styles.scoreValue}>87</Text>
-          <Text style={styles.scoreLabel}>Overall Score</Text>
+          <Text style={styles.scoreLabel}>{t('overallScore')}</Text>
         </View>
         <View style={styles.scoreRow}>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>90</Text>
-            <Text style={styles.metricLabel}>Pronunciation</Text>
+            <Text style={styles.metricValue}>90%</Text>
+            <Text style={styles.metricLabel}>{t('pronunciation')}</Text>
           </View>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>83</Text>
-            <Text style={styles.metricLabel}>Fluency</Text>
+            <Text style={styles.metricValue}>83%</Text>
+            <Text style={styles.metricLabel}>{t('fluency')}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.practiceCard}>
-        <Text style={styles.cardTitle}>Compare</Text>
+        <Text style={styles.cardTitle}>{t('compareAudio')}</Text>
         <View style={styles.waveRow}>
           <TouchableOpacity style={styles.playCircle}>
-            <Play color={COLORS.white} size={18} fill={COLORS.white} />
+            <Play color={COLORS.black} size={18} fill={COLORS.black} />
           </TouchableOpacity>
           <View style={styles.waveform}>
-            {Array.from({ length: 34 }).map((_, index) => (
+            {Array.from({ length: 28 }).map((_, index) => (
               <View
                 key={index}
                 style={[
                   styles.waveBar,
                   {
-                    height: 8 + ((index * 7) % 30),
-                    backgroundColor: index % 2 === 0 ? COLORS.pink : COLORS.cyan,
+                    height: 8 + ((index * 7) % 24),
+                    backgroundColor: index % 2 === 0 ? COLORS.amber : COLORS.teal,
                   },
                 ]}
               />
@@ -95,16 +97,40 @@ export const ProgressScreen = () => {
           </View>
         </View>
       </View>
+    </ScrollView>
+  );
+};
 
-      <View style={styles.feedbackCard}>
-        <Text style={styles.feedbackTitle}>Keep practicing! You're sounding more natural.</Text>
-        <View style={styles.feedbackActions}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Shadowing')}>
-            <RotateCcw color={COLORS.text} size={18} />
-            <Text style={styles.secondaryButtonText}>Replay</Text>
+export const ProfileScreen = () => {
+  const { language, setLanguage, t } = useLanguage();
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <Text style={styles.pageTitle}>{t('profileTitle')}</Text>
+      <Text style={styles.pageSub}>{t('profileSub')}</Text>
+
+      <View style={styles.profileHeader}>
+        <View style={styles.avatarCircle}>
+          <UserIcon size={36} color={COLORS.amber} />
+        </View>
+        <Text style={styles.profileName}>Maya</Text>
+        <Text style={styles.profileSub}>{t('learnerLevel')}</Text>
+      </View>
+
+      <View style={styles.settingCard}>
+        <Text style={styles.settingLabel}>{t('appLanguage')}</Text>
+        <View style={styles.langToggleRow}>
+          <TouchableOpacity
+            style={[styles.langBtn, language === 'en' ? styles.langBtnActive : null]}
+            onPress={() => setLanguage('en')}
+          >
+            <Text style={[styles.langBtnText, language === 'en' ? styles.langBtnTextActive : null]}>English</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Shadowing')}>
-            <Text style={styles.primaryButtonText}>Next Dialogue</Text>
+          <TouchableOpacity
+            style={[styles.langBtn, language === 'fa' ? styles.langBtnActive : null]}
+            onPress={() => setLanguage('fa')}
+          >
+            <Text style={[styles.langBtnText, language === 'fa' ? styles.langBtnTextActive : null]}>فارسی</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -112,299 +138,194 @@ export const ProgressScreen = () => {
   );
 };
 
-export const ProfileScreen = () => (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-    <Text style={styles.pageTitle}>Profile</Text>
-    <Text style={styles.pageSub}>Your learning stats and achievements.</Text>
-
-    <View style={styles.profileCard}>
-      <View style={styles.profileAvatar}>
-        <Text style={styles.profileInitial}>R</Text>
-      </View>
-      <View>
-        <Text style={styles.profileName}>Reza</Text>
-        <Text style={styles.profileLevel}>Beginner - 5 day streak</Text>
-      </View>
-    </View>
-
-    <View style={styles.profileGrid}>
-      <View style={styles.profileTile}>
-        <Text style={styles.tileValue}>18</Text>
-        <Text style={styles.tileLabel}>Lessons</Text>
-      </View>
-      <View style={styles.profileTile}>
-        <Text style={styles.tileValue}>7</Text>
-        <Text style={styles.tileLabel}>Badges</Text>
-      </View>
-      <View style={styles.profileTile}>
-        <Text style={styles.tileValue}>4.2h</Text>
-        <Text style={styles.tileLabel}>Practice</Text>
-      </View>
-      <View style={styles.profileTile}>
-        <Text style={styles.tileValue}>87</Text>
-        <Text style={styles.tileLabel}>Best Score</Text>
-      </View>
-    </View>
-
-    <View style={styles.lockedCard}>
-      <Lock color={COLORS.primary} size={22} />
-      <View style={styles.lockedCopy}>
-        <Text style={styles.cardTitle}>Next Achievement</Text>
-        <Text style={styles.pageSub}>Complete two more lessons to unlock Fluent Starter.</Text>
-      </View>
-    </View>
-  </ScrollView>
-);
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingTop: 56,
-    paddingHorizontal: SPACING.m,
-    paddingBottom: 116,
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 90,
   },
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   kicker: {
-    color: COLORS.primary,
-    fontSize: 16,
+    color: COLORS.amber,
+    fontSize: 12,
     fontWeight: '800',
+    letterSpacing: 1,
   },
   iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pageTitle: {
     color: COLORS.text,
-    fontSize: 30,
-    fontWeight: '900',
-    marginTop: 12,
+    fontSize: 26,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   pageSub: {
     color: COLORS.textSecondary,
-    fontSize: 16,
-    lineHeight: 23,
-    marginTop: 8,
+    fontSize: 14,
+    marginBottom: 24,
   },
   featuredList: {
-    marginTop: 24,
+    gap: 4,
   },
   scoreCard: {
-    marginTop: 28,
-    borderRadius: BORDER_RADIUS.l,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 20,
   },
   scoreRing: {
-    width: 166,
-    height: 166,
-    borderRadius: 83,
-    borderWidth: 9,
-    borderColor: COLORS.secondary,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: COLORS.amber,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.backgroundSoft,
+    marginBottom: 16,
   },
   scoreValue: {
     color: COLORS.text,
-    fontSize: 42,
-    fontWeight: '900',
+    fontSize: 32,
+    fontWeight: '800',
   },
   scoreLabel: {
     color: COLORS.textSecondary,
-    fontSize: 13,
+    fontSize: 11,
   },
   scoreRow: {
-    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 24,
+    gap: 40,
   },
   scoreMetric: {
     alignItems: 'center',
   },
   metricValue: {
-    color: COLORS.accent,
-    fontSize: 24,
-    fontWeight: '900',
+    color: COLORS.teal,
+    fontSize: 20,
+    fontWeight: '800',
   },
   metricLabel: {
     color: COLORS.textSecondary,
-    fontSize: 13,
-    marginTop: 4,
+    fontSize: 12,
+    marginTop: 2,
   },
   practiceCard: {
-    marginTop: 18,
-    borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 18,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
   },
   cardTitle: {
     color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   waveRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    gap: 14,
   },
   playCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: COLORS.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.amber,
     alignItems: 'center',
     justifyContent: 'center',
   },
   waveform: {
     flex: 1,
-    height: 58,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    marginLeft: 14,
+    height: 32,
   },
   waveBar: {
-    width: 4,
-    borderRadius: 4,
+    width: 3,
+    borderRadius: 1.5,
   },
-  feedbackCard: {
-    marginTop: 18,
-    borderRadius: BORDER_RADIUS.m,
+  profileHeader: {
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
+    marginBottom: 20,
   },
-  feedbackTitle: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
-    lineHeight: 24,
-  },
-  feedbackActions: {
-    flexDirection: 'row',
-    marginTop: 20,
-    gap: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '800',
-    marginLeft: 8,
-  },
-  primaryButton: {
-    flex: 1.35,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: COLORS.pink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  profileCard: {
-    marginTop: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.l,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 20,
-  },
-  profileAvatar: {
+  avatarCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
-  },
-  profileInitial: {
-    color: COLORS.white,
-    fontSize: 30,
-    fontWeight: '900',
+    marginBottom: 12,
   },
   profileName: {
     color: COLORS.text,
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
   },
-  profileLevel: {
+  profileSub: {
     color: COLORS.textSecondary,
-    fontSize: 15,
-    marginTop: 4,
+    fontSize: 13,
+    marginTop: 2,
   },
-  profileGrid: {
-    marginTop: 18,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  profileTile: {
-    width: '48%',
-    borderRadius: BORDER_RADIUS.m,
+  settingCard: {
     backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 18,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
-    marginBottom: 14,
   },
-  tileValue: {
+  settingLabel: {
     color: COLORS.text,
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
   },
-  tileLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  lockedCard: {
+  langToggleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 18,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 14,
+    padding: 4,
   },
-  lockedCopy: {
+  langBtn: {
     flex: 1,
-    marginLeft: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  langBtnActive: {
+    backgroundColor: COLORS.amber,
+  },
+  langBtnText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  langBtnTextActive: {
+    color: COLORS.black,
   },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
-import { Clock, LucideIcon } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../theme/colors';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { ChevronRight, Check } from 'lucide-react-native';
+import { COLORS, BORDER_RADIUS } from '../theme/colors';
 
 interface ScenarioCardProps {
   title: string;
@@ -10,55 +10,63 @@ interface ScenarioCardProps {
   time: string;
   imageUri: any;
   color?: string;
-  Icon?: LucideIcon;
+  subtitle?: string;
+  sentencesCount?: number;
+  isCompleted?: boolean;
   onPress?: () => void;
   isSmall?: boolean;
 }
 
-export const ScenarioCard = ({
+export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   title,
   level,
   progress,
   time,
   imageUri,
-  color = COLORS.primary,
-  Icon,
+  subtitle,
+  sentencesCount = 24,
+  isCompleted = false,
   onPress,
-  isSmall = false,
-}: ScenarioCardProps) => {
+}) => {
+  const imageSource = typeof imageUri === 'string' ? { uri: imageUri } : imageUri;
+
   return (
     <TouchableOpacity
-      activeOpacity={0.86}
+      activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.card, isSmall ? styles.smallCard : styles.largeCard]}
+      style={styles.card}
     >
-      <ImageBackground
-        source={imageUri}
-        style={styles.image}
-        imageStyle={styles.imageStyle}
-      >
-        <View style={styles.scrim} />
-        <View style={[styles.iconBox, { backgroundColor: color }]}>
-          {Icon ? <Icon color={COLORS.white} size={isSmall ? 22 : 26} /> : null}
+      {/* THUMBNAIL */}
+      <Image source={imageSource} style={styles.thumbnail} />
+
+      {/* CONTENT INFO */}
+      <View style={styles.content}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>{level}</Text>
+          </View>
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
-          <View style={styles.metaRow}>
-            <View style={styles.badge}>
-              <View style={styles.levelDot} />
-              <Text style={styles.badgeText}>{level}</Text>
-            </View>
-            <View style={[styles.progressRing, { borderColor: progress > 0 ? color : COLORS.border }]}>
-              <Text style={styles.progressText}>{progress}%</Text>
-            </View>
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {subtitle || title}
+        </Text>
+
+        <Text style={styles.metaText}>
+          {sentencesCount} sentences · {time}
+        </Text>
+      </View>
+
+      {/* ACTION RIGHT */}
+      <View style={styles.actionRight}>
+        {isCompleted || progress >= 100 ? (
+          <View style={styles.completedBadge}>
+            <Check size={16} color={COLORS.white} />
           </View>
-          <View style={styles.timeRow}>
-            <Clock size={12} color={COLORS.textSecondary} />
-            <Text style={styles.timeText}>{time}</Text>
-          </View>
-        </View>
-      </ImageBackground>
+        ) : (
+          <ChevronRight size={20} color={COLORS.textSecondary} />
+        )}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -66,99 +74,67 @@ export const ScenarioCard = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    overflow: 'hidden',
-    marginBottom: SPACING.m,
+    borderRadius: 24,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  largeCard: {
-    width: '100%',
-    height: 210,
-  },
-  smallCard: {
-    width: '48%',
-    height: 176,
-  },
-  image: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  imageStyle: {
-    borderRadius: BORDER_RADIUS.m,
-  },
-  scrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(2, 8, 20, 0.5)',
-  },
-  iconBox: {
-    position: 'absolute',
-    left: 14,
-    top: 14,
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  thumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceLight,
   },
   content: {
-    padding: 14,
+    flex: 1,
+    marginLeft: 14,
+    justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  metaRow: {
-    minHeight: 42,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  badge: {
-    backgroundColor: 'rgba(17, 26, 44, 0.86)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  levelDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.accent,
+    fontSize: 16,
+    fontWeight: '700',
     marginRight: 6,
   },
-  badgeText: {
-    color: COLORS.text,
-    fontSize: 12,
+  levelBadge: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  levelText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
     fontWeight: '600',
   },
-  progressRing: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 4,
+  subtitle: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  metaText: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  actionRight: {
+    marginLeft: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(5, 11, 24, 0.74)',
   },
-  progressText: {
-    color: COLORS.text,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  timeRow: {
-    alignSelf: 'flex-end',
-    flexDirection: 'row',
+  completedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
     alignItems: 'center',
-    marginTop: 8,
-  },
-  timeText: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginLeft: 4,
+    justifyContent: 'center',
   },
 });

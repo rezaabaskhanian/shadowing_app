@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,27 +10,27 @@ import {
 import {
   ArrowLeft,
   Eye,
+  EyeOff,
   Lock,
   Mail,
   Mic,
-  User,
+  Phone,
+  ShieldCheck,
 } from 'lucide-react-native';
-import { BORDER_RADIUS, COLORS, SPACING } from '../theme/colors';
+import { COLORS } from '../theme/colors';
+import { useLanguage } from '../data/i18n';
 
-type AuthMode = 'login' | 'register' | 'reset';
+type AuthMode = 'login' | 'otp' | 'reset';
 
 interface AuthScreensProps {
   onComplete: () => void;
 }
 
-const loginImage =
-  'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop';
-
 export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
   const [mode, setMode] = useState<AuthMode>('login');
 
-  if (mode === 'register') {
-    return <RegisterScreen onBack={() => setMode('login')} onComplete={onComplete} />;
+  if (mode === 'otp') {
+    return <OtpAuthScreen onBack={() => setMode('login')} onComplete={onComplete} />;
   }
 
   if (mode === 'reset') {
@@ -41,136 +40,208 @@ export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
   return (
     <LoginScreen
       onComplete={onComplete}
-      onRegister={() => setMode('register')}
+      onOtp={() => setMode('otp')}
       onReset={() => setMode('reset')}
     />
   );
 };
 
+// PASSWORD LOGIN SCREEN
 const LoginScreen = ({
   onComplete,
-  onRegister,
+  onOtp,
   onReset,
 }: {
   onComplete: () => void;
-  onRegister: () => void;
+  onOtp: () => void;
   onReset: () => void;
-}) => (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
-    <Text style={styles.authTitle}>Welcome Back! 👋</Text>
-    <Text style={styles.authSub}>Login to continue your{'\n'}learning journey</Text>
+}) => {
+  const { t } = useLanguage();
+  const [showPassword, setShowPassword] = useState(false);
 
-    <ImageBackground source={{ uri: loginImage }} style={styles.loginArtwork} imageStyle={styles.loginArtworkImage}>
-      <View style={styles.artworkScrim} />
-      <View style={styles.micOrb}>
-        <Mic color={COLORS.white} size={28} />
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+      {/* Brand Header */}
+      <View style={styles.brandHeader}>
+        <View style={styles.brandBadge}>
+          <Mic color={COLORS.black} size={28} />
+        </View>
+        <Text style={styles.authTitle}>{t('welcomeBack')}</Text>
+        <Text style={styles.authSub}>{t('loginSub')}</Text>
       </View>
-    </ImageBackground>
 
-    <AuthInput icon={<Mail color={COLORS.textSecondary} size={20} />} placeholder="Email or Username" />
-    <AuthInput icon={<Lock color={COLORS.textSecondary} size={20} />} placeholder="Password" secure />
+      {/* Input Fields */}
+      <AuthInput
+        icon={<Mail color={COLORS.textSecondary} size={20} />}
+        placeholder={t('emailOrPhone')}
+      />
 
-    <TouchableOpacity style={styles.forgotButton} onPress={onReset}>
-      <Text style={styles.linkText}>Forgot Password?</Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
-      <Text style={styles.primaryButtonText}>Login</Text>
-    </TouchableOpacity>
-
-    <DividerText text="or continue with" />
-
-    <View style={styles.socialRow}>
-      <TouchableOpacity style={styles.socialButton}>
-        <Text style={styles.googleText}>G</Text>
-        <Text style={styles.socialText}>Google</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.socialButton}>
-        <Text style={styles.appleText}>●</Text>
-        <Text style={styles.socialText}>Apple</Text>
-      </TouchableOpacity>
-    </View>
-
-    <View style={styles.bottomPrompt}>
-      <Text style={styles.promptText}>Don’t have an account? </Text>
-      <TouchableOpacity onPress={onRegister}>
-        <Text style={styles.linkText}>Register</Text>
-      </TouchableOpacity>
-    </View>
-  </ScrollView>
-);
-
-const RegisterScreen = ({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) => (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
-    <BackButton onPress={onBack} />
-    <Text style={styles.authTitle}>Create Account ✨</Text>
-    <Text style={styles.authSub}>Join millions of learners{'\n'}on their journey</Text>
-
-    <View style={styles.registerHero}>
-      <View style={styles.heroPlanet} />
-      <View style={styles.characterCircle}>
-        <User color={COLORS.white} size={60} />
+      <View style={styles.inputWrap}>
+        <Lock color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('password')}
+          placeholderTextColor={COLORS.textSecondary}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          {showPassword ? (
+            <EyeOff color={COLORS.textSecondary} size={19} />
+          ) : (
+            <Eye color={COLORS.textSecondary} size={19} />
+          )}
+        </TouchableOpacity>
       </View>
-    </View>
 
-    <AuthInput icon={<User color={COLORS.textSecondary} size={20} />} placeholder="Full Name" />
-    <AuthInput icon={<Mail color={COLORS.textSecondary} size={20} />} placeholder="Email" />
-    <AuthInput icon={<User color={COLORS.textSecondary} size={20} />} placeholder="Username" />
-    <AuthInput icon={<Lock color={COLORS.textSecondary} size={20} />} placeholder="Password" secure />
-    <AuthInput icon={<Lock color={COLORS.textSecondary} size={20} />} placeholder="Confirm Password" secure />
-
-    <View style={styles.termsRow}>
-      <View style={styles.checkbox} />
-      <Text style={styles.termsText}>
-        I agree to the <Text style={styles.inlineLink}>Terms of Use</Text> and <Text style={styles.inlineLink}>Privacy Policy</Text>
-      </Text>
-    </View>
-
-    <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
-      <Text style={styles.primaryButtonText}>Create Account</Text>
-    </TouchableOpacity>
-
-    <View style={styles.bottomPrompt}>
-      <Text style={styles.promptText}>Already have an account? </Text>
-      <TouchableOpacity onPress={onBack}>
-        <Text style={styles.linkText}>Login</Text>
+      <TouchableOpacity style={styles.forgotButton} onPress={onReset}>
+        <Text style={styles.linkText}>{t('forgotPassword')}</Text>
       </TouchableOpacity>
-    </View>
-  </ScrollView>
-);
 
-const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
-    <BackButton onPress={onBack} />
-    <Text style={styles.authTitle}>Reset Password 🔒</Text>
-    <Text style={styles.authSub}>No worries! We’ll help you{'\n'}get back in.</Text>
+      {/* Password Login CTA */}
+      <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
+        <Text style={styles.primaryButtonText}>{t('login')}</Text>
+      </TouchableOpacity>
 
-    <View style={styles.mailArtwork}>
-      <View style={styles.envelopeBack} />
-      <View style={styles.envelopeFront}>
-        <Lock color={COLORS.primary} size={42} />
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
       </View>
-    </View>
 
-    <Text style={styles.resetCopy}>Enter your email address and we’ll send you a link to reset your password.</Text>
+      {/* SMS OTP Access Button */}
+      <TouchableOpacity style={styles.secondaryButton} onPress={onOtp}>
+        <Phone color={COLORS.amber} size={18} />
+        <Text style={styles.secondaryButtonText}>{t('signUpOtp')}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
 
-    <AuthInput icon={<Mail color={COLORS.textSecondary} size={20} />} placeholder="Email Address" />
+// SMS OTP AUTHENTICATION / REGISTRATION SCREEN
+const OtpAuthScreen = ({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+}) => {
+  const { t } = useLanguage();
+  const [step, setStep] = useState<'phone' | 'verify'>('phone');
+  const [phone, setPhone] = useState('');
+  const [otpCode, setOtpCode] = useState(['', '', '', '']);
 
-    <TouchableOpacity style={styles.primaryButton}>
-      <Text style={styles.primaryButtonText}>Send Reset Link</Text>
-    </TouchableOpacity>
+  const handleSendOtp = () => {
+    if (phone.length >= 10) {
+      setStep('verify');
+    }
+  };
 
-    <TouchableOpacity style={styles.backToLogin} onPress={onBack}>
-      <Text style={styles.linkText}>Back to Login</Text>
-    </TouchableOpacity>
-  </ScrollView>
-);
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity style={styles.backButton} onPress={step === 'verify' ? () => setStep('phone') : onBack}>
+        <ArrowLeft color={COLORS.white} size={22} />
+      </TouchableOpacity>
 
-const BackButton = ({ onPress }: { onPress: () => void }) => (
-  <TouchableOpacity style={styles.backButton} onPress={onPress}>
-    <ArrowLeft color={COLORS.white} size={25} />
-  </TouchableOpacity>
-);
+      <View style={styles.brandHeader}>
+        <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
+          {step === 'phone' ? (
+            <Phone color={COLORS.amber} size={28} />
+          ) : (
+            <ShieldCheck color={COLORS.amber} size={28} />
+          )}
+        </View>
+        <Text style={styles.authTitle}>
+          {step === 'phone' ? t('signUpOtp') : t('enterOtp')}
+        </Text>
+        <Text style={styles.authSub}>
+          {step === 'phone'
+            ? 'We will send a 4-digit verification code to your mobile phone number.'
+            : `Enter the 4-digit code sent to ${phone || 'your phone'}.`}
+        </Text>
+      </View>
+
+      {step === 'phone' ? (
+        <>
+          <View style={styles.inputWrap}>
+            <Phone color={COLORS.textSecondary} size={20} />
+            <TextInput
+              placeholder={t('phoneNumber')}
+              placeholderTextColor={COLORS.textSecondary}
+              style={styles.input}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp}>
+            <Text style={styles.primaryButtonText}>{t('sendOtp')}</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <View style={styles.otpBoxesRow}>
+            {[0, 1, 2, 3].map((idx) => (
+              <TextInput
+                key={idx}
+                style={styles.otpBox}
+                keyboardType="number-pad"
+                maxLength={1}
+                value={otpCode[idx]}
+                onChangeText={(val) => {
+                  const newCode = [...otpCode];
+                  newCode[idx] = val;
+                  setOtpCode(newCode);
+                }}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
+            <Text style={styles.primaryButtonText}>{t('verifyAndLogin')}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      <View style={styles.bottomPrompt}>
+        <Text style={styles.promptText}>{t('alreadyHaveAccount')} </Text>
+        <TouchableOpacity onPress={onBack}>
+          <Text style={styles.linkText}>{t('login')}</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+};
+
+// RESET PASSWORD SCREEN
+const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
+  const { t } = useLanguage();
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <ArrowLeft color={COLORS.white} size={22} />
+      </TouchableOpacity>
+
+      <Text style={styles.authTitle}>Reset Password 🔒</Text>
+      <Text style={styles.authSub}>Enter your email to receive a password reset link.</Text>
+
+      <AuthInput
+        icon={<Mail color={COLORS.textSecondary} size={20} />}
+        placeholder="Email Address"
+      />
+
+      <TouchableOpacity style={styles.primaryButton}>
+        <Text style={styles.primaryButtonText}>Send Link</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.forgotButton} onPress={onBack}>
+        <Text style={styles.linkText}>Back to Login</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
 
 const AuthInput = ({
   icon,
@@ -190,15 +261,6 @@ const AuthInput = ({
       style={styles.input}
       autoCapitalize="none"
     />
-    {secure ? <Eye color={COLORS.textSecondary} size={19} /> : null}
-  </View>
-);
-
-const DividerText = ({ text }: { text: string }) => (
-  <View style={styles.dividerRow}>
-    <View style={styles.dividerLine} />
-    <Text style={styles.dividerText}>{text}</Text>
-    <View style={styles.dividerLine} />
   </View>
 );
 
@@ -208,95 +270,111 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   authContent: {
-    minHeight: '100%',
-    paddingHorizontal: SPACING.l,
-    paddingTop: 58,
-    paddingBottom: 38,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  brandHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  brandBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: COLORS.amber,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
   authTitle: {
     color: COLORS.text,
-    fontSize: 27,
-    fontWeight: '900',
+    fontSize: 26,
+    fontWeight: '800',
     textAlign: 'center',
-    marginTop: 20,
+    marginBottom: 6,
   },
   authSub: {
     color: COLORS.textSecondary,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 10,
-  },
-  loginArtwork: {
-    height: 224,
-    borderRadius: BORDER_RADIUS.l,
-    overflow: 'hidden',
-    marginTop: 28,
-    marginBottom: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginArtworkImage: {
-    borderRadius: BORDER_RADIUS.l,
-  },
-  artworkScrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 11, 24, 0.34)',
-  },
-  micOrb: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: 'rgba(124, 61, 255, 0.82)',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 10,
   },
   inputWrap: {
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    height: 56,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 12,
   },
   input: {
     flex: 1,
     color: COLORS.text,
     fontSize: 15,
-    marginLeft: 12,
   },
   forgotButton: {
     alignSelf: 'flex-end',
-    marginTop: 2,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   linkText: {
-    color: COLORS.primary,
-    fontSize: 15,
-    fontWeight: '800',
+    color: COLORS.amber,
+    fontSize: 13,
+    fontWeight: '700',
   },
   primaryButton: {
-    height: 58,
-    borderRadius: 14,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.amber,
+    borderRadius: 28,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginBottom: 16,
   },
   primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '900',
+    color: COLORS.black,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 28,
+    height: 56,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 10,
+  },
+  secondaryButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '700',
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 28,
+    marginVertical: 20,
+    gap: 12,
   },
   dividerLine: {
     flex: 1,
@@ -304,139 +382,34 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   dividerText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    marginHorizontal: 18,
+    color: COLORS.muted,
+    fontSize: 12,
   },
-  socialRow: {
+  otpBoxesRow: {
     flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
   },
-  socialButton: {
-    flex: 1,
-    height: 54,
-    borderRadius: 12,
+  otpBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleText: {
-    color: COLORS.orange,
-    fontSize: 19,
-    fontWeight: '900',
-    marginRight: 10,
-  },
-  appleText: {
-    color: COLORS.white,
-    fontSize: 16,
-    marginRight: 10,
-  },
-  socialText: {
     color: COLORS.text,
-    fontSize: 15,
+    fontSize: 22,
     fontWeight: '800',
+    textAlign: 'center',
   },
   bottomPrompt: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 34,
+    marginTop: 28,
   },
   promptText: {
     color: COLORS.textSecondary,
     fontSize: 14,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -8,
-  },
-  registerHero: {
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 20,
-  },
-  heroPlanet: {
-    position: 'absolute',
-    width: 158,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(124, 61, 255, 0.26)',
-    transform: [{ rotate: '-18deg' }],
-  },
-  characterCircle: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  checkbox: {
-    width: 21,
-    height: 21,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: COLORS.textSecondary,
-    marginRight: 10,
-  },
-  termsText: {
-    flex: 1,
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  inlineLink: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  mailArtwork: {
-    height: 230,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  envelopeBack: {
-    position: 'absolute',
-    width: 174,
-    height: 128,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary,
-    transform: [{ rotate: '-9deg' }],
-    opacity: 0.78,
-  },
-  envelopeFront: {
-    width: 190,
-    height: 130,
-    borderRadius: 24,
-    backgroundColor: '#E7E1FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resetCopy: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: 'center',
-    marginBottom: 28,
-  },
-  backToLogin: {
-    alignSelf: 'center',
-    marginTop: 28,
   },
 });

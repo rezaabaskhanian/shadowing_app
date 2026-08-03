@@ -10,6 +10,7 @@ import {
 import { Check, Trash2, X, RotateCcw, Eye, Clock } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { useVocab, MAX_LEVEL, isDue, dueLabel } from '../data/VocabContext';
+import { useLanguage } from '../data/i18n';
 
 interface LeitnerBoxModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ interface LeitnerBoxModalProps {
 // با دکمه‌ی کوچک «معنی» نمایش داده می‌شود. هر بار که جعبه باز شود همه دوباره مخفی می‌شوند.
 export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
   const { box, promote, demote, remove } = useVocab();
+  const { t, language } = useLanguage();
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [dueOnly, setDueOnly] = useState(true);
 
@@ -43,14 +45,14 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.screen}>
         <View style={styles.topBar}>
-          <Text style={styles.title}>جعبه‌ی لایتنر</Text>
+          <Text style={styles.title}>{t('leitnerBoxTitle')}</Text>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <X color={COLORS.text} size={20} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.subtitle}>
-          {box.length} واژه — با «بلد بودم» سطح بالا می‌رود و مرور بعدی دیرتر می‌شود؛ با «بلد نبودم» به سطح ۱ و مرور زودتر برمی‌گردد.
+          {t('leitnerSubtitle')}
         </Text>
 
         {/* فیلتر امروز / همه */}
@@ -60,7 +62,7 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
             onPress={() => setDueOnly(true)}
           >
             <Text style={[styles.tabText, dueOnly ? styles.tabTextActive : null]}>
-              امروز ({dueCount})
+              {t('today')} ({dueCount})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -68,7 +70,7 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
             onPress={() => setDueOnly(false)}
           >
             <Text style={[styles.tabText, !dueOnly ? styles.tabTextActive : null]}>
-              همه ({box.length})
+              {t('all')} ({box.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -76,11 +78,11 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
         <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
           {box.length === 0 ? (
             <Text style={styles.empty}>
-              هنوز واژه‌ای اضافه نکرده‌ای. از داخل هر دیالوگ روی «واژه‌ها» بزن و واژه‌ها را به جعبه اضافه کن.
+              {t('leitnerEmptyText')}
             </Text>
           ) : list.length === 0 ? (
             <Text style={styles.empty}>
-              🎉 امروز واژه‌ای برای مرور نداری! از تب «همه» می‌توانی بقیه را ببینی.
+              {t('leitnerNoDueText')}
             </Text>
           ) : (
             list.map((item) => (
@@ -96,14 +98,14 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
                         onPress={() => toggleReveal(item.word)}
                       >
                         <Eye color={COLORS.textSecondary} size={13} />
-                        <Text style={styles.revealText}>معنی</Text>
+                        <Text style={styles.revealText}>{t('showMeaning')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                   <View style={styles.badges}>
                     <View style={styles.levelBadge}>
                       <Text style={styles.levelText}>
-                        سطح {item.level}/{MAX_LEVEL}
+                        {t('level')} {item.level}/{MAX_LEVEL}
                       </Text>
                     </View>
                     <View style={[styles.dueBadge, isDue(item) ? styles.dueBadgeNow : null]}>
@@ -114,7 +116,7 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
                       <Text
                         style={[styles.dueText, isDue(item) ? styles.dueTextNow : null]}
                       >
-                        {dueLabel(item)}
+                        {dueLabel(item, language)}
                       </Text>
                     </View>
                   </View>
@@ -126,14 +128,14 @@ export const LeitnerBoxModal = ({ visible, onClose }: LeitnerBoxModalProps) => {
                     onPress={() => promote(item.word)}
                   >
                     <Check color={COLORS.white} size={16} />
-                    <Text style={styles.actionText}>بلد بودم</Text>
+                    <Text style={styles.actionText}>{t('knewIt')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionBtn, styles.forgotBtn]}
                     onPress={() => demote(item.word)}
                   >
                     <RotateCcw color={COLORS.white} size={16} />
-                    <Text style={styles.actionText}>بلد نبودم</Text>
+                    <Text style={styles.actionText}>{t('forgotIt')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.removeBtn} onPress={() => remove(item.word)}>
                     <Trash2 color={COLORS.error} size={18} />
