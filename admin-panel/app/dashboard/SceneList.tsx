@@ -12,9 +12,11 @@ import type { SceneResp } from "@/lib/types";
 export default function SceneList({
   notify,
   reloadKey,
+  onEdit,
 }: {
   notify: (msg: string, type?: "ok" | "err") => void;
   reloadKey: number;
+  onEdit: (scene: SceneResp) => void;
 }) {
   const [scenes, setScenes] = useState<SceneResp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,17 @@ export default function SceneList({
     try {
       const s = await getScene(id);
       setDetail(s);
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
+
+  // صحنه‌ی کامل (همراه هات‌اسپات‌ها/دیالوگ‌ها) را واکشی و به فرم ویرایش می‌فرستد.
+  async function handleEdit(id: string) {
+    try {
+      const s = await getScene(id);
+      setDetail(null);
+      onEdit(s);
     } catch (err: any) {
       notify(err.message, "err");
     }
@@ -90,6 +103,16 @@ export default function SceneList({
                 <h3>{s.title || "-"}</h3>
                 <span>{s.status}</span>
               </div>
+              <button
+                className="btn btn-sm"
+                style={{ margin: "0 8px 8px" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(s.id);
+                }}
+              >
+                ✏️ ویرایش
+              </button>
             </div>
           ))}
         </div>
@@ -178,12 +201,20 @@ export default function SceneList({
               </div>
             ))}
 
-            <button
-              className="btn btn-danger"
-              onClick={() => handleDelete(detail.id)}
-            >
-              🗑 حذف این صحنه
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="btn"
+                onClick={() => handleEdit(detail.id)}
+              >
+                ✏️ ویرایش این صحنه
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDelete(detail.id)}
+              >
+                🗑 حذف این صحنه
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -128,6 +128,15 @@ export async function getScene(id: string): Promise<SceneResp> {
   return jsonOrThrow(res) as Promise<SceneResp>;
 }
 
+export async function updateScene(id: string, payload: CreateScenePayload) {
+  const res = await authFetch(`/v1/admin/scenes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return jsonOrThrow(res);
+}
+
 export async function deleteScene(id: string) {
   const res = await authFetch(`/v1/admin/scenes/${id}`, { method: "DELETE" });
   return jsonOrThrow(res);

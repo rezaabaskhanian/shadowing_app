@@ -32,8 +32,8 @@ func NewDialogue(hotspotID HotspotID, order int, speaker SpeakerType,
 	if originalText == "" {
 		return Dialogue{}, errors.New("original text is required")
 	}
-	if speaker != SpeakerCustomer && speaker != SpeakerClerk && speaker != SpeakerNPC {
-		return Dialogue{}, errors.New("invalid speaker type")
+	if speaker == "" {
+		return Dialogue{}, errors.New("speaker is required")
 	}
 
 	uidDialogue := NewDialogueID()

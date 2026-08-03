@@ -5,7 +5,7 @@ type Scene struct {
 	Title              string    `json:"title"`
 	Description        string    `json:"description"`
 	BackgroundImageURL string    `json:"backgroundImageURL"`
-	Difficulty         string    `json:"difficulty "`
+	Difficulty         string    `json:"difficulty"`
 	Status             string    `json:"status"`
 	Hotspots           []Hotspot `json:"hotspots"`
 	Order              int       `json:"order"`

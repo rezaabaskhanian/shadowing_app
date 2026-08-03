@@ -50,6 +50,26 @@ func (h Handler) GetScene(c echo.Context) error {
 	return c.JSON(http.StatusOK, scene)
 }
 
+// UpdateScene یک صحنه‌ی موجود را همراه با هات‌اسپات‌ها و دیالوگ‌هایش به‌روزرسانی می‌کند.
+func (h Handler) UpdateScene(c echo.Context) error {
+	sceneID := c.Param("sceneID")
+
+	var req dto.CreateSceneRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":   "invalid_request",
+			"message": "درخواست نامعتبر است",
+		})
+	}
+
+	scene, err := h.learningSvc.UpdateScene(c.Request().Context(), sceneID, req)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+
+	return c.JSON(http.StatusOK, scene)
+}
+
 // DeleteScene یک صحنه را حذف می‌کند.
 func (h Handler) DeleteScene(c echo.Context) error {
 	sceneID := c.Param("sceneID")

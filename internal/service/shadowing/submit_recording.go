@@ -7,6 +7,7 @@ import (
 
 	"shadowing-backend/internal/pkg/richerror"
 	"shadowing-backend/internal/service/shadowing/dto"
+	"shadowing-backend/internal/service/speecheval"
 
 	"github.com/google/uuid"
 )
@@ -49,6 +50,10 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 		recType = domainRecording.RecordingTypeRecord
 	}
 
+	// ارزیابی صوتی تلفظ و روانی گفتار
+	evaluator := speecheval.NewHybridEvaluator()
+	evalResult := evaluator.Evaluate(ctx, currentStep.DisplayText, req.Duration, 5)
+
 	// 6️⃣ ذخیره ضبط
 	newRecording, err := domainRecording.NewRecording(
 		sess.UserID,
@@ -62,6 +67,10 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+
+	newRecording.PronunciationScore = evalResult.PronunciationScore
+	newRecording.FluencyScore = evalResult.FluencyScore
+	newRecording.OverallScore = evalResult.OverallScore
 
 	if err := s.recordingRepo.Create(ctx, newRecording); err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("failed to save recording")
@@ -95,9 +104,12 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 
 	// 🔟 ساخت پاسخ
 	return &dto.SubmitRecordingResponse{
-		RecordingID: newRecording.ID.String(),
-		StepNumber:  int(currentStep.StepType),
-		NextStep:    nextStep,
-		IsComplete:  isComplete,
+		RecordingID:        newRecording.ID.String(),
+		StepNumber:         int(currentStep.StepType),
+		NextStep:           nextStep,
+		IsComplete:         isComplete,
+		PronunciationScore: evalResult.PronunciationScore,
+		FluencyScore:       evalResult.FluencyScore,
+		OverallScore:       evalResult.OverallScore,
 	}, nil
 }

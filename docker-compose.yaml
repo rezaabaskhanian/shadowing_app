@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: shadowing-pg
+    environment:
+      POSTGRES_USER: reza_abasi
+      POSTGRES_PASSWORD: r1367R1367
+      POSTGRES_DB: shadowing-backend_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:

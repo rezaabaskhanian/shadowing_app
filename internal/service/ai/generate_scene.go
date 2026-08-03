@@ -64,7 +64,7 @@ Rules:
       "dialogues": [
         {
           "order": number (1-based within the hotspot),
-          "speaker": "customer" | "clerk" | "npc",
+          "speaker": string (role of speaker, e.g. "customer", "clerk", "doctor", "patient", "passenger", "receptionist", "teacher", "friend", etc.),
           "original_text": string (natural spoken English, short),
           "translation": string (accurate Persian translation),
           "display_type": "full",

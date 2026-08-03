@@ -33,18 +33,9 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	}
 
 	// ========== 2️⃣ تبدیل Difficulty به نوع دامین ==========
-	var difficultyLevel scene.DifficultyLevel
-	switch req.Difficulty {
-	case "beginner":
-		difficultyLevel = scene.DifficultyBeginner
-	case "intermediate":
-		difficultyLevel = scene.DifficultyIntermediate
-	case "advanced":
-		difficultyLevel = scene.DifficultyAdvanced
-	default:
-		return dto.Scene{}, richerror.New(op).
-			WithMessage("سطح سختی نامعتبر است. مقادیر مجاز: beginner, intermediate, advanced").
-			WithKind(richerror.KindForbidden)
+	difficultyLevel, err := toDifficulty(op, req.Difficulty)
+	if err != nil {
+		return dto.Scene{}, err
 	}
 
 	// ========== 3️⃣ ساخت Entity Scene ==========
@@ -62,92 +53,12 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	}
 
 	// ========== 4️⃣ اضافه کردن هات‌اسپات‌ها با دیالوگ‌ها ==========
-	for _, hReq := range req.Hotspots {
-		// ساخت هات‌اسپات
-		hotspot := scene.NewHotspot(
-			hReq.Name,
-			hReq.XPosition,
-			hReq.YPosition,
-			hReq.Order,
-		)
-
-		// اضافه کردن دیالوگ‌ها به هات‌اسپات
-		for _, dReq := range hReq.Dialogues {
-			// تبدیل Speaker به نوع دامین
-			var speaker scene.SpeakerType
-			switch dReq.Speaker {
-			case "customer":
-				speaker = scene.SpeakerCustomer
-			case "clerk":
-				speaker = scene.SpeakerClerk
-			case "npc":
-				speaker = scene.SpeakerNPC
-			default:
-				return dto.Scene{}, richerror.New(op).
-					WithMessage("نوع گوینده نامعتبر است. مقادیر مجاز: customer, clerk, npc").
-					WithKind(richerror.KindForbidden)
-			}
-
-			// تبدیل DisplayType به نوع دامین
-			var displayType scene.DisplayType
-			switch dReq.DisplayType {
-			case "full":
-				displayType = scene.DisplayFull
-			case "partial":
-				displayType = scene.DisplayPartial
-			case "none":
-				displayType = scene.DisplayNone
-			default:
-				return dto.Scene{}, richerror.New(op).
-					WithMessage("نوع نمایش نامعتبر است. مقادیر مجاز: full, partial, none").
-					WithKind(richerror.KindForbidden)
-			}
-
-			// ساخت دیالوگ
-			dialog, err := scene.NewDialogue(
-				hotspot.ID,
-				dReq.Order,
-				speaker,
-				dReq.OriginalText,
-				dReq.Translation,
-				displayType,
-			)
-			if err != nil {
-				return dto.Scene{}, richerror.New(op).
-					WithErr(err).
-					WithMessage("خطا در ساخت دیالوگ").
-					WithKind(richerror.KindForbidden)
-			}
-
-			// تنظیمات اختیاری
-			if dReq.AudioURL != "" {
-				dialog.AudioURL = dReq.AudioURL
-			}
-			if dReq.PartialHint != "" {
-				dialog.PartialHint = dReq.PartialHint
-			}
-			if dReq.WaitDuration > 0 {
-				dialog.WaitDuration = dReq.WaitDuration
-			}
-
-			// واژه‌های دیالوگ (انگلیسی + معنی)
-			if len(dReq.Words) > 0 {
-				words := make([]scene.DialogueWord, 0, len(dReq.Words))
-				for _, w := range dReq.Words {
-					if w.Word == "" {
-						continue
-					}
-					words = append(words, scene.DialogueWord{Word: w.Word, Meaning: w.Meaning})
-				}
-				dialog.Words = words
-			}
-
-			// ✅ اضافه کردن دیالوگ به هات‌اسپات
-			hotspot.AddDialogue(dialog)
-		}
-
-		// ✅ اضافه کردن هات‌اسپات به سناریو
-		newScene.AddHotspot(hotspot)
+	hotspots, err := buildHotspots(op, req.Hotspots)
+	if err != nil {
+		return dto.Scene{}, err
+	}
+	for _, h := range hotspots {
+		newScene.AddHotspot(h)
 	}
 
 	// ========== 5️⃣ ذخیره در دیتابیس ==========

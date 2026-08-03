@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearSession, getName, getRole, getToken } from "@/lib/api";
+import type { SceneResp } from "@/lib/types";
 import SceneCreator from "./SceneCreator";
 import SceneList from "./SceneList";
 
@@ -14,6 +15,8 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>("create");
   const [name, setName] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  // صحنه‌ای که در حال ویرایش است (اگر null باشد، فرم در حالت ساخت جدید است)
+  const [editScene, setEditScene] = useState<SceneResp | null>(null);
 
   // توست ساده
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
@@ -52,7 +55,7 @@ export default function DashboardPage() {
             className={`tab-btn ${tab === "create" ? "active" : ""}`}
             onClick={() => setTab("create")}
           >
-            ➕ ساخت صحنه
+            {editScene ? "✏️ ویرایش صحنه" : "➕ ساخت صحنه"}
           </button>
           <button
             className={`tab-btn ${tab === "list" ? "active" : ""}`}
@@ -74,9 +77,18 @@ export default function DashboardPage() {
           <SceneCreator
             notify={notify}
             onSaved={() => setReloadKey((k) => k + 1)}
+            editScene={editScene}
+            onCancelEdit={() => setEditScene(null)}
           />
         ) : (
-          <SceneList notify={notify} reloadKey={reloadKey} />
+          <SceneList
+            notify={notify}
+            reloadKey={reloadKey}
+            onEdit={(scene) => {
+              setEditScene(scene);
+              setTab("create");
+            }}
+          />
         )}
       </main>
 

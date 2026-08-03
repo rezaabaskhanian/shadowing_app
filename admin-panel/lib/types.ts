@@ -1,4 +1,4 @@
-export type Speaker = "customer" | "clerk" | "npc";
+export type Speaker = string;
 export type DisplayType = "full" | "partial" | "none";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
@@ -73,6 +73,7 @@ export interface DialogueResp {
   display_type: string;
   partial_hint: string;
   wait_duration: number;
+  words?: WordInput[];
 }
 
 export interface HotspotResp {
@@ -89,7 +90,7 @@ export interface SceneResp {
   title: string;
   description: string;
   backgroundImageURL: string;
-  // توجه: کلید difficulty در بک‌اند فاصله‌ی انتهایی دارد ("difficulty ")
+  difficulty: string;
   status: string;
   order: number;
   hotspots: HotspotResp[] | null;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   API_BASE,
   createScene,
   generateScene,
+  updateScene,
   uploadAudio,
   uploadImage,
 } from "@/lib/api";
@@ -13,13 +14,24 @@ import type {
   Difficulty,
   DisplayType,
   HotspotInput,
+  SceneResp,
   Speaker,
   WordInput,
 } from "@/lib/types";
 
-const SPEAKERS: { v: Speaker; l: string }[] = [
+const PRESET_SPEAKERS: { v: string; l: string }[] = [
   { v: "customer", l: "مشتری (customer)" },
   { v: "clerk", l: "فروشنده (clerk)" },
+  { v: "doctor", l: "پزشک (doctor)" },
+  { v: "patient", l: "بیمار (patient)" },
+  { v: "passenger", l: "مسافر (passenger)" },
+  { v: "receptionist", l: "پذیرش / رزرو (receptionist)" },
+  { v: "teacher", l: "معلم (teacher)" },
+  { v: "student", l: "دانش‌آموز (student)" },
+  { v: "guide", l: "راهنما (guide)" },
+  { v: "friend", l: "دوست (friend)" },
+  { v: "driver", l: "راننده (driver)" },
+  { v: "waiter", l: "گارسون (waiter)" },
   { v: "npc", l: "شخصیت دیگر (npc)" },
 ];
 const DISPLAY_TYPES: { v: DisplayType; l: string }[] = [
@@ -42,12 +54,37 @@ function newDialogue(order: number): DialogueInput {
   };
 }
 
+// hotspotsFromScene هات‌اسپات‌های دریافتی از بک‌اند را به ورودی‌های فرم تبدیل می‌کند.
+function hotspotsFromScene(scene: SceneResp): HotspotInput[] {
+  return (scene.hotspots || []).map((h, hi) => ({
+    name: h.name || `نقطه ${hi + 1}`,
+    x_position: h.x_position ?? 50,
+    y_position: h.y_position ?? 50,
+    order: h.order ?? hi + 1,
+    dialogues: (h.dialogues || []).map((d, di) => ({
+      order: d.order ?? di + 1,
+      speaker: (d.speaker as Speaker) || "customer",
+      original_text: d.original_text || "",
+      translation: d.translation || "",
+      audio_url: d.audio_url || "",
+      display_type: (d.display_type as DisplayType) || "full",
+      partial_hint: d.partial_hint || "",
+      wait_duration: d.wait_duration || 5,
+      words: d.words || [],
+    })),
+  }));
+}
+
 export default function SceneCreator({
   notify,
   onSaved,
+  editScene,
+  onCancelEdit,
 }: {
   notify: (msg: string, type?: "ok" | "err") => void;
   onSaved: () => void;
+  editScene?: SceneResp | null;
+  onCancelEdit?: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -60,6 +97,22 @@ export default function SceneCreator({
   const [aiPrompt, setAiPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // در حالت ویرایش، فرم را با اطلاعات صحنه‌ی موجود پر می‌کنیم.
+  useEffect(() => {
+    if (!editScene) return;
+    setTitle(editScene.title || "");
+    setDescription(editScene.description || "");
+    setDifficulty((editScene.difficulty as Difficulty) || "beginner");
+    setImageUrl(editScene.backgroundImageURL || null);
+    const hs = hotspotsFromScene(editScene);
+    setHotspots(hs);
+    setSelected(hs.length > 0 ? 0 : null);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editScene]);
 
   // ---------- تولید با هوش مصنوعی (فرم را پر می‌کند؛ ذخیره نمی‌کند) ----------
   async function handleGenerate() {
@@ -111,8 +164,12 @@ export default function SceneCreator({
     try {
       const url = await uploadImage(file);
       setImageUrl(url);
-      setHotspots([]);
-      setSelected(null);
+      // در حالت ساخت، آپلود تصویر جدید نقاط قبلی را پاک می‌کند؛
+      // اما در حالت ویرایش نقاط موجود حفظ می‌شوند (فقط تصویر عوض می‌شود).
+      if (!editScene) {
+        setHotspots([]);
+        setSelected(null);
+      }
       notify("تصویر آپلود شد", "ok");
     } catch (err: any) {
       notify(err.message, "err");
@@ -257,16 +314,25 @@ export default function SceneCreator({
     }
     setSaving(true);
     try {
-      await createScene({
+      const payload = {
         title: title.trim(),
         description: description.trim(),
         background_image_url: imageUrl!,
         difficulty,
         hotspots,
-      });
-      notify("صحنه با موفقیت ذخیره شد ✅", "ok");
-      resetForm();
-      onSaved();
+      };
+      if (editScene) {
+        await updateScene(editScene.id, payload);
+        notify("صحنه با موفقیت ویرایش شد ✅", "ok");
+        onSaved();
+        onCancelEdit?.();
+        resetForm();
+      } else {
+        await createScene(payload);
+        notify("صحنه با موفقیت ذخیره شد ✅", "ok");
+        resetForm();
+        onSaved();
+      }
     } catch (e: any) {
       notify(e.message, "err");
     } finally {
@@ -287,6 +353,32 @@ export default function SceneCreator({
 
   return (
     <div>
+      {/* بنر حالت ویرایش */}
+      {editScene && (
+        <div
+          className="card"
+          style={{
+            borderColor: "#F59E0B",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 16 }}>
+            ✏️ در حال ویرایش صحنه: «{editScene.title}»
+          </h2>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              onCancelEdit?.();
+              resetForm();
+            }}
+          >
+            انصراف از ویرایش
+          </button>
+        </div>
+      )}
+
       {/* تولید با هوش مصنوعی (اختیاری — فرم را پر می‌کند) */}
       <div className="card" style={{ borderColor: "#7C3DFF" }}>
         <h2 style={{ marginTop: 0 }}>🤖 تولید با هوش مصنوعی (اختیاری)</h2>
@@ -479,21 +571,33 @@ export default function SceneCreator({
 
                   <div className="row">
                     <div>
-                      <label>گوینده</label>
-                      <select
-                        value={d.speaker}
-                        onChange={(e) =>
-                          updateDialogue(selected, di, {
-                            speaker: e.target.value as Speaker,
-                          })
-                        }
-                      >
-                        {SPEAKERS.map((s) => (
-                          <option key={s.v} value={s.v}>
-                            {s.l}
-                          </option>
-                        ))}
-                      </select>
+                      <label>گوینده (نقش/شخصیت)</label>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <select
+                          style={{ flex: 1, minWidth: 130 }}
+                          value={PRESET_SPEAKERS.some((s) => s.v === d.speaker) ? d.speaker : "custom"}
+                          onChange={(e) => {
+                            if (e.target.value !== "custom") {
+                              updateDialogue(selected, di, { speaker: e.target.value });
+                            }
+                          }}
+                        >
+                          {PRESET_SPEAKERS.map((s) => (
+                            <option key={s.v} value={s.v}>
+                              {s.l}
+                            </option>
+                          ))}
+                          <option value="custom">✍️ نقش دلخواه...</option>
+                        </select>
+                        <input
+                          style={{ flex: 1, minWidth: 120 }}
+                          placeholder="نام/نقش گوینده"
+                          value={d.speaker}
+                          onChange={(e) =>
+                            updateDialogue(selected, di, { speaker: e.target.value })
+                          }
+                        />
+                      </div>
                     </div>
                     <div>
                       <label>نوع نمایش متن</label>
@@ -634,10 +738,20 @@ export default function SceneCreator({
       {/* ذخیره */}
       <div className="card">
         <button className="btn" onClick={handleSave} disabled={saving}>
-          {saving ? "در حال ذخیره..." : "💾 ذخیره صحنه"}
+          {saving
+            ? "در حال ذخیره..."
+            : editScene
+            ? "💾 ذخیره تغییرات"
+            : "💾 ذخیره صحنه"}
         </button>{" "}
-        <button className="btn btn-ghost" onClick={resetForm}>
-          پاک‌کردن فرم
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            if (editScene) onCancelEdit?.();
+            resetForm();
+          }}
+        >
+          {editScene ? "انصراف" : "پاک‌کردن فرم"}
         </button>
       </div>
     </div>

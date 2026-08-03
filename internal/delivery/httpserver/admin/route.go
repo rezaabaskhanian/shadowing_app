@@ -27,5 +27,6 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/scenes", h.CreateScene)
 	g.GET("/scenes", h.ListScenes)
 	g.GET("/scenes/:sceneID", h.GetScene)
+	g.PUT("/scenes/:sceneID", h.UpdateScene)
 	g.DELETE("/scenes/:sceneID", h.DeleteScene)
 }

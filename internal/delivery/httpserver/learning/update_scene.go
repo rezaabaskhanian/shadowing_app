@@ -10,7 +10,6 @@ import (
 
 func (h Handler) UpdateScene(c echo.Context) error {
 
-	const op = "learninghandler.UpdateScene"
 	var req dto.Scene
 
 	if err := c.Bind(&req); err != nil {
@@ -21,15 +20,18 @@ func (h Handler) UpdateScene(c echo.Context) error {
 		})
 	}
 
-	err := h.learningSvc.UpdateScene(c.Request().Context(), req)
+	updateReq := dto.CreateSceneRequest{
+		Title:              req.Title,
+		Description:        req.Description,
+		BackgroundImageURL: req.BackgroundImageURL,
+		Difficulty:         req.Difficulty,
+		Hotspots:           req.Hotspots,
+	}
 
+	scene, err := h.learningSvc.UpdateScene(c.Request().Context(), req.ID, updateReq)
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"error":   "status_ok",
-		"message": "درخواست با موفقیت آپدیت شد",
-	})
-
+	return c.JSON(http.StatusOK, scene)
 }

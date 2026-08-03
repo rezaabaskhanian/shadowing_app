@@ -342,7 +342,7 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 	for _, h := range scene.Hotspots {
 		hotspotQuery := `INSERT INTO hotspots (
 			id, scene_id, name, x_position, y_position, order_index, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		) VALUES ($1, $2, $3, $4, $5, $6, now(), now())`
 
 		_, err = tx.Exec(ctx, hotspotQuery,
 			h.ID, scene.ID, h.Name, h.XPosition, h.YPosition,
@@ -354,15 +354,23 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 
 		// درج دیالوگ‌های جدید
 		for _, d := range h.Dialogues {
+			// واژه‌ها به‌صورت JSON ذخیره می‌شوند (پیش‌فرض آرایه‌ی خالی)
+			wordsJSON := []byte("[]")
+			if len(d.Words) > 0 {
+				if b, mErr := json.Marshal(d.Words); mErr == nil {
+					wordsJSON = b
+				}
+			}
+
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+				audio_url, display_type, partial_hint, wait_duration, words, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID, h.ID, d.Order, d.Speaker, d.OriginalText,
 				d.Translation, d.AudioURL, d.DisplayType,
-				d.PartialHint, d.WaitDuration, d.CreatedAt,
+				d.PartialHint, d.WaitDuration, wordsJSON,
 			)
 			if err != nil {
 				return richerror.New(op).WithErr(err).WithMessage("failed to insert dialogue")

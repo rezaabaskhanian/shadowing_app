@@ -45,10 +45,13 @@ type SubmitRecordingRequest struct {
 }
 
 type SubmitRecordingResponse struct {
-	RecordingID string `json:"recording_id"`
-	StepNumber  int    `json:"step_number"`
-	NextStep    int    `json:"next_step"`
-	IsComplete  bool   `json:"is_complete"`
+	RecordingID        string  `json:"recording_id"`
+	StepNumber         int     `json:"step_number"`
+	NextStep           int     `json:"next_step"`
+	IsComplete         bool    `json:"is_complete"`
+	PronunciationScore float64 `json:"pronunciation_score"`
+	FluencyScore       float64 `json:"fluency_score"`
+	OverallScore       float64 `json:"overall_score"`
 }
 
 // ============================================

@@ -17,15 +17,18 @@ const (
 
 // Recording - ضبط صدا
 type Recording struct {
-	ID            uuid.UUID     `json:"id"`
-	UserID        uuid.UUID     `json:"user_id"`
-	SessionID     uuid.UUID     `json:"session_id"`
-	DialogueID    uuid.UUID     `json:"dialogue_id"`
-	StepType      int           `json:"step_type"`      // 1-4
-	RecordingType RecordingType `json:"recording_type"` // shadow / record
-	AudioPath     string        `json:"audio_path"`     // مسیر محلی
-	Duration      int           `json:"duration"`       // ثانیه
-	CreatedAt     time.Time     `json:"created_at"`
+	ID                 uuid.UUID     `json:"id"`
+	UserID             uuid.UUID     `json:"user_id"`
+	SessionID          uuid.UUID     `json:"session_id"`
+	DialogueID         uuid.UUID     `json:"dialogue_id"`
+	StepType           int           `json:"step_type"`          // 1-4
+	RecordingType      RecordingType `json:"recording_type"`     // shadow / record
+	AudioPath          string        `json:"audio_path"`         // مسیر محلی
+	Duration           int           `json:"duration"`           // ثانیه
+	PronunciationScore float64       `json:"pronunciation_score"` // 0-100
+	FluencyScore       float64       `json:"fluency_score"`       // 0-100
+	OverallScore       float64       `json:"overall_score"`       // 0-100
+	CreatedAt          time.Time     `json:"created_at"`
 }
 
 // ============================================

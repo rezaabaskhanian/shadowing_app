@@ -16,12 +16,13 @@ func (r DB) Create(ctx context.Context, rec *recording.Recording) error {
 	const op = "postgres.RecordingRepository.Create"
 
 	query := `INSERT INTO shadowing_recordings (
-        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, pronunciation_score, fluency_score, overall_score, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 
 	_, err := r.conn.Exec(ctx, query,
 		rec.ID, rec.UserID, rec.SessionID, rec.DialogueID,
-		rec.StepType, rec.RecordingType, rec.AudioPath, rec.Duration, rec.CreatedAt,
+		rec.StepType, rec.RecordingType, rec.AudioPath, rec.Duration,
+		rec.PronunciationScore, rec.FluencyScore, rec.OverallScore, rec.CreatedAt,
 	)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to save recording")
@@ -37,14 +38,14 @@ func (r DB) GetByID(ctx context.Context, id uuid.UUID) (*recording.Recording, er
 	const op = "postgres.RecordingRepository.GetByID"
 
 	query := `SELECT 
-        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, created_at
+        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, pronunciation_score, fluency_score, overall_score, created_at
     FROM shadowing_recordings WHERE id = $1`
 
 	var rec recording.Recording
 	err := r.conn.QueryRow(ctx, query, id).Scan(
 		&rec.ID, &rec.UserID, &rec.SessionID, &rec.DialogueID,
 		&rec.StepType, &rec.RecordingType, &rec.AudioPath,
-		&rec.Duration, &rec.CreatedAt,
+		&rec.Duration, &rec.PronunciationScore, &rec.FluencyScore, &rec.OverallScore, &rec.CreatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -65,7 +66,7 @@ func (r DB) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]recordin
 	const op = "postgres.RecordingRepository.GetBySessionID"
 
 	query := `SELECT 
-        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, created_at
+        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, pronunciation_score, fluency_score, overall_score, created_at
     FROM shadowing_recordings WHERE session_id = $1 ORDER BY created_at DESC`
 
 	rows, err := r.conn.Query(ctx, query, sessionID)
@@ -80,7 +81,7 @@ func (r DB) GetBySessionID(ctx context.Context, sessionID uuid.UUID) ([]recordin
 		err := rows.Scan(
 			&rec.ID, &rec.UserID, &rec.SessionID, &rec.DialogueID,
 			&rec.StepType, &rec.RecordingType, &rec.AudioPath,
-			&rec.Duration, &rec.CreatedAt,
+			&rec.Duration, &rec.PronunciationScore, &rec.FluencyScore, &rec.OverallScore, &rec.CreatedAt,
 		)
 		if err != nil {
 			return nil, richerror.New(op).WithErr(err)
@@ -98,7 +99,7 @@ func (r DB) GetByUserAndDialogue(ctx context.Context, userID, dialogueID uuid.UU
 	const op = "postgres.RecordingRepository.GetByUserAndDialogue"
 
 	query := `SELECT 
-        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, created_at
+        id, user_id, session_id, dialogue_id, step_type, recording_type, audio_path, duration, pronunciation_score, fluency_score, overall_score, created_at
     FROM shadowing_recordings 
     WHERE user_id = $1 AND dialogue_id = $2
     ORDER BY created_at DESC`
@@ -115,7 +116,7 @@ func (r DB) GetByUserAndDialogue(ctx context.Context, userID, dialogueID uuid.UU
 		err := rows.Scan(
 			&rec.ID, &rec.UserID, &rec.SessionID, &rec.DialogueID,
 			&rec.StepType, &rec.RecordingType, &rec.AudioPath,
-			&rec.Duration, &rec.CreatedAt,
+			&rec.Duration, &rec.PronunciationScore, &rec.FluencyScore, &rec.OverallScore, &rec.CreatedAt,
 		)
 		if err != nil {
 			return nil, richerror.New(op).WithErr(err)

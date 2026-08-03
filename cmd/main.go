@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"shadowing-backend/internal/config"
 	"shadowing-backend/internal/delivery/httpserver"
 
@@ -29,6 +31,29 @@ import (
 	"time"
 )
 
+func loadEnv(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			val = strings.Trim(val, `"'`)
+			os.Setenv(key, val)
+		}
+	}
+}
+
 const (
 	JwtSignKey = "jwt_token"
 
@@ -40,6 +65,8 @@ const (
 )
 
 func main() {
+	loadEnv(".env")
+
 	cfg := config.Config{
 
 		MyPostgres: postgres.Config{
