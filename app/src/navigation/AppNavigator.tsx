@@ -18,6 +18,8 @@ import {
   User,
 } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { FONT_FAMILY } from '../theme/typography';
+import { SHADOWS } from '../theme/elevation';
 import { HomeScreen } from '../screens/Home';
 import {
   ProgressScreen,
@@ -26,16 +28,21 @@ import {
 } from '../screens/Placeholders';
 import { LeitnerScreen } from '../screens/LeitnerScreen';
 import { SceneScreen } from '../screens/SceneScreen';
+import { SubmitSceneScreen } from '../screens/SubmitSceneScreen';
+import { MySubmissionsScreen } from '../screens/MySubmissionsScreen';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
 
+// روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
+const HIDDEN_TAB_BAR_ROUTES = ['Shadowing', 'SubmitScene', 'MySubmissions'];
+
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { t } = useLanguage();
 
-  // Hide tab bar on scene practice detail screen
+  // Hide tab bar on detail/flow screens (scene practice, scene submission)
   const currentRouteName = state.routes[state.index]?.name;
-  if (currentRouteName === 'Shadowing') {
+  if (HIDDEN_TAB_BAR_ROUTES.includes(currentRouteName)) {
     return null;
   }
 
@@ -43,7 +50,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
     <View style={styles.tabBarWrapper}>
       <View style={styles.tabBarContainer}>
         {state.routes.map((route, index) => {
-          if (route.name === 'Shadowing') return null;
+          if (HIDDEN_TAB_BAR_ROUTES.includes(route.name)) return null;
 
           const isFocused = state.index === index;
           const isHome = route.name === 'Home';
@@ -90,7 +97,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                 activeOpacity={0.85}
               >
                 <View style={[styles.centerCircle, isFocused && styles.centerCircleActive]}>
-                  <HomeIcon color={COLORS.black} size={24} fill={COLORS.black} />
+                  <HomeIcon color={COLORS.white} size={24} fill={COLORS.white} />
                 </View>
                 <Text style={[styles.tabLabel, styles.centerLabel, isFocused && styles.activeLabel]}>
                   {labelText}
@@ -100,7 +107,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           }
 
           const renderIcon = () => {
-            const color = isFocused ? COLORS.amber : COLORS.textSecondary;
+            const color = isFocused ? COLORS.primary : COLORS.textSecondary;
             const size = 20;
 
             switch (route.name) {
@@ -159,6 +166,20 @@ export const AppNavigator = () => {
           tabBarButton: () => null,
         }}
       />
+      <Tab.Screen
+        name="SubmitScene"
+        component={SubmitSceneScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="MySubmissions"
+        component={MySubmissionsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
     </Tab.Navigator>
   );
 };
@@ -184,11 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 12,
+    ...SHADOWS.level2,
   },
   tabItem: {
     flex: 1,
@@ -206,19 +223,15 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.amber,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
     borderWidth: 3,
     borderColor: COLORS.background,
+    ...SHADOWS.level2,
   },
   centerCircleActive: {
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
     transform: [{ scale: 1.05 }],
   },
   iconContainer: {
@@ -229,21 +242,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeIconContainer: {
-    backgroundColor: 'rgba(255, 160, 28, 0.12)',
+    backgroundColor: COLORS.primaryLight,
   },
   tabLabel: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 10,
-    fontWeight: '700',
     marginTop: 2,
   },
   centerLabel: {
-    color: COLORS.amber,
-    fontWeight: '800',
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
     marginTop: 3,
   },
   activeLabel: {
-    color: COLORS.amber,
-    fontWeight: '800',
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
   },
 });

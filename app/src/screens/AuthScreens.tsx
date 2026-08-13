@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,15 +13,18 @@ import {
   Eye,
   EyeOff,
   Lock,
-  Mail,
   Mic,
   Phone,
   ShieldCheck,
+  User,
 } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
+import { useAuth } from '../data/AuthContext';
+import { resetPassword as resetPasswordApi } from '../api/auth';
 
-type AuthMode = 'login' | 'otp' | 'reset';
+type AuthMode = 'login' | 'register' | 'reset';
 
 interface AuthScreensProps {
   onComplete: () => void;
@@ -29,8 +33,8 @@ interface AuthScreensProps {
 export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
   const [mode, setMode] = useState<AuthMode>('login');
 
-  if (mode === 'otp') {
-    return <OtpAuthScreen onBack={() => setMode('login')} onComplete={onComplete} />;
+  if (mode === 'register') {
+    return <RegisterScreen onBack={() => setMode('login')} />;
   }
 
   if (mode === 'reset') {
@@ -39,8 +43,7 @@ export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
 
   return (
     <LoginScreen
-      onComplete={onComplete}
-      onOtp={() => setMode('otp')}
+      onRegister={() => setMode('register')}
       onReset={() => setMode('reset')}
     />
   );
@@ -48,33 +51,60 @@ export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
 
 // PASSWORD LOGIN SCREEN
 const LoginScreen = ({
-  onComplete,
-  onOtp,
+  onRegister,
   onReset,
 }: {
-  onComplete: () => void;
-  onOtp: () => void;
+  onRegister: () => void;
   onReset: () => void;
 }) => {
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!phone.trim() || !password) {
+      setError(t('fillAllFields'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await login(phone.trim(), password);
+    } catch (e: any) {
+      setError(e?.message || t('loginFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
       {/* Brand Header */}
       <View style={styles.brandHeader}>
         <View style={styles.brandBadge}>
-          <Mic color={COLORS.black} size={28} />
+          <Mic color={COLORS.white} size={28} />
         </View>
         <Text style={styles.authTitle}>{t('welcomeBack')}</Text>
         <Text style={styles.authSub}>{t('loginSub')}</Text>
       </View>
 
       {/* Input Fields */}
-      <AuthInput
-        icon={<Mail color={COLORS.textSecondary} size={20} />}
-        placeholder={t('emailOrPhone')}
-      />
+      <View style={styles.inputWrap}>
+        <Phone color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('phoneNumber')}
+          placeholderTextColor={COLORS.textSecondary}
+          style={styles.input}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+          autoCapitalize="none"
+        />
+      </View>
 
       <View style={styles.inputWrap}>
         <Lock color={COLORS.textSecondary} size={20} />
@@ -84,6 +114,8 @@ const LoginScreen = ({
           secureTextEntry={!showPassword}
           style={styles.input}
           autoCapitalize="none"
+          value={password}
+          onChangeText={setPassword}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
           {showPassword ? (
@@ -94,13 +126,19 @@ const LoginScreen = ({
         </TouchableOpacity>
       </View>
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <TouchableOpacity style={styles.forgotButton} onPress={onReset}>
         <Text style={styles.linkText}>{t('forgotPassword')}</Text>
       </TouchableOpacity>
 
       {/* Password Login CTA */}
-      <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
-        <Text style={styles.primaryButtonText}>{t('login')}</Text>
+      <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <Text style={styles.primaryButtonText}>{t('login')}</Text>
+        )}
       </TouchableOpacity>
 
       <View style={styles.dividerRow}>
@@ -109,100 +147,129 @@ const LoginScreen = ({
         <View style={styles.dividerLine} />
       </View>
 
-      {/* SMS OTP Access Button */}
-      <TouchableOpacity style={styles.secondaryButton} onPress={onOtp}>
-        <Phone color={COLORS.amber} size={18} />
-        <Text style={styles.secondaryButtonText}>{t('signUpOtp')}</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={onRegister}>
+        <User color={COLORS.primary} size={18} />
+        <Text style={styles.secondaryButtonText}>{t('signUp')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 };
 
-// SMS OTP AUTHENTICATION / REGISTRATION SCREEN
-const OtpAuthScreen = ({
-  onBack,
-  onComplete,
-}: {
-  onBack: () => void;
-  onComplete: () => void;
-}) => {
+// REGISTRATION SCREEN
+const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
   const { t } = useLanguage();
-  const [step, setStep] = useState<'phone' | 'verify'>('phone');
+  const { register } = useAuth();
+  const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
-  const [otpCode, setOtpCode] = useState(['', '', '', '']);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSendOtp = () => {
-    if (phone.length >= 10) {
-      setStep('verify');
+  const handleRegister = async () => {
+    if (!nickname.trim() || phone.trim().length < 10 || !password) {
+      setError(t('fillAllFields'));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(t('passwordMismatch'));
+      return;
+    }
+    if (password.length < 8) {
+      setError(t('weakPassword'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await register(nickname.trim(), phone.trim(), password);
+    } catch (e: any) {
+      setError(e?.message || t('registerFailed'));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity style={styles.backButton} onPress={step === 'verify' ? () => setStep('phone') : onBack}>
-        <ArrowLeft color={COLORS.white} size={22} />
+      <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <ArrowLeft color={COLORS.text} size={22} />
       </TouchableOpacity>
 
       <View style={styles.brandHeader}>
         <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
-          {step === 'phone' ? (
-            <Phone color={COLORS.amber} size={28} />
-          ) : (
-            <ShieldCheck color={COLORS.amber} size={28} />
-          )}
+          <User color={COLORS.primary} size={28} />
         </View>
-        <Text style={styles.authTitle}>
-          {step === 'phone' ? t('signUpOtp') : t('enterOtp')}
-        </Text>
-        <Text style={styles.authSub}>
-          {step === 'phone'
-            ? 'We will send a 4-digit verification code to your mobile phone number.'
-            : `Enter the 4-digit code sent to ${phone || 'your phone'}.`}
-        </Text>
+        <Text style={styles.authTitle}>{t('signUp')}</Text>
+        <Text style={styles.authSub}>{t('registerSub')}</Text>
       </View>
 
-      {step === 'phone' ? (
-        <>
-          <View style={styles.inputWrap}>
-            <Phone color={COLORS.textSecondary} size={20} />
-            <TextInput
-              placeholder={t('phoneNumber')}
-              placeholderTextColor={COLORS.textSecondary}
-              style={styles.input}
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
+      <View style={styles.inputWrap}>
+        <User color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('nicknameLabel')}
+          placeholderTextColor={COLORS.textSecondary}
+          style={styles.input}
+          value={nickname}
+          onChangeText={setNickname}
+        />
+      </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp}>
-            <Text style={styles.primaryButtonText}>{t('sendOtp')}</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <View style={styles.otpBoxesRow}>
-            {[0, 1, 2, 3].map((idx) => (
-              <TextInput
-                key={idx}
-                style={styles.otpBox}
-                keyboardType="number-pad"
-                maxLength={1}
-                value={otpCode[idx]}
-                onChangeText={(val) => {
-                  const newCode = [...otpCode];
-                  newCode[idx] = val;
-                  setOtpCode(newCode);
-                }}
-              />
-            ))}
-          </View>
+      <View style={styles.inputWrap}>
+        <Phone color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('phoneNumber')}
+          placeholderTextColor={COLORS.textSecondary}
+          style={styles.input}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+      </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={onComplete}>
-            <Text style={styles.primaryButtonText}>{t('verifyAndLogin')}</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      <View style={styles.inputWrap}>
+        <Lock color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('password')}
+          placeholderTextColor={COLORS.textSecondary}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+          autoCapitalize="none"
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          {showPassword ? (
+            <EyeOff color={COLORS.textSecondary} size={19} />
+          ) : (
+            <Eye color={COLORS.textSecondary} size={19} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.inputWrap}>
+        <Lock color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('confirmNewPassword')}
+          placeholderTextColor={COLORS.textSecondary}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+          autoCapitalize="none"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+      </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <Text style={styles.primaryButtonText}>{t('signUp')}</Text>
+        )}
+      </TouchableOpacity>
 
       <View style={styles.bottomPrompt}>
         <Text style={styles.promptText}>{t('alreadyHaveAccount')} </Text>
@@ -214,55 +281,147 @@ const OtpAuthScreen = ({
   );
 };
 
-// RESET PASSWORD SCREEN
+// RESET PASSWORD SCREEN (2-step: enter nickname + new password -> success)
 const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
   const { t } = useLanguage();
+  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [nickname, setNickname] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleUpdatePassword = async () => {
+    if (!nickname.trim() || !newPassword) {
+      setError(t('fillAllFields'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError(t('passwordMismatch'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await resetPasswordApi(nickname.trim(), newPassword, confirmPassword);
+      setStep('success');
+    } catch (e: any) {
+      setError(e?.message || t('registerFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <ArrowLeft color={COLORS.white} size={22} />
-      </TouchableOpacity>
+      {step !== 'success' && (
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <ArrowLeft color={COLORS.text} size={22} />
+        </TouchableOpacity>
+      )}
 
-      <Text style={styles.authTitle}>Reset Password 🔒</Text>
-      <Text style={styles.authSub}>Enter your email to receive a password reset link.</Text>
+      {step === 'form' && (
+        <>
+          <View style={styles.brandHeader}>
+            <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
+              <Lock color={COLORS.primary} size={28} />
+            </View>
+            <Text style={styles.authTitle}>{t('resetPasswordTitle')}</Text>
+            <Text style={styles.authSub}>{t('resetPasswordSub')}</Text>
+          </View>
 
-      <AuthInput
-        icon={<Mail color={COLORS.textSecondary} size={20} />}
-        placeholder="Email Address"
-      />
+          <View style={styles.inputWrap}>
+            <User color={COLORS.textSecondary} size={20} />
+            <TextInput
+              placeholder={t('nicknameLabel')}
+              placeholderTextColor={COLORS.textSecondary}
+              style={styles.input}
+              value={nickname}
+              onChangeText={setNickname}
+              autoCapitalize="none"
+            />
+          </View>
 
-      <TouchableOpacity style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>Send Link</Text>
-      </TouchableOpacity>
+          <View style={styles.inputWrap}>
+            <Lock color={COLORS.textSecondary} size={20} />
+            <TextInput
+              placeholder={t('newPassword')}
+              placeholderTextColor={COLORS.textSecondary}
+              secureTextEntry={!showNewPass}
+              style={styles.input}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity onPress={() => setShowNewPass(!showNewPass)}>
+              {showNewPass ? (
+                <EyeOff color={COLORS.textSecondary} size={19} />
+              ) : (
+                <Eye color={COLORS.textSecondary} size={19} />
+              )}
+            </TouchableOpacity>
+          </View>
 
-      <TouchableOpacity style={styles.forgotButton} onPress={onBack}>
-        <Text style={styles.linkText}>Back to Login</Text>
-      </TouchableOpacity>
+          <View style={styles.inputWrap}>
+            <Lock color={COLORS.textSecondary} size={20} />
+            <TextInput
+              placeholder={t('confirmNewPassword')}
+              placeholderTextColor={COLORS.textSecondary}
+              secureTextEntry={!showConfirmPass}
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)}>
+              {showConfirmPass ? (
+                <EyeOff color={COLORS.textSecondary} size={19} />
+              ) : (
+                <Eye color={COLORS.textSecondary} size={19} />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleUpdatePassword} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.primaryButtonText}>{t('updatePassword')}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.forgotButton} onPress={onBack}>
+            <Text style={styles.linkText}>{t('backToLogin')}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {step === 'success' && (
+        <View style={{ alignItems: 'center', paddingTop: 20 }}>
+          <View
+            style={[
+              styles.brandBadge,
+              { backgroundColor: COLORS.tertiary, width: 80, height: 80, borderRadius: 40, marginBottom: 24 },
+            ]}
+          >
+            <ShieldCheck color={COLORS.white} size={40} />
+          </View>
+
+          <Text style={styles.authTitle}>{t('resetSuccessTitle')}</Text>
+          <Text style={[styles.authSub, { marginBottom: 32 }]}>{t('resetSuccessSub')}</Text>
+
+          <TouchableOpacity style={[styles.primaryButton, { width: '100%' }]} onPress={onBack}>
+            <Text style={styles.primaryButtonText}>{t('backToLogin')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 };
-
-const AuthInput = ({
-  icon,
-  placeholder,
-  secure = false,
-}: {
-  icon: React.ReactNode;
-  placeholder: string;
-  secure?: boolean;
-}) => (
-  <View style={styles.inputWrap}>
-    {icon}
-    <TextInput
-      placeholder={placeholder}
-      placeholderTextColor={COLORS.textSecondary}
-      secureTextEntry={secure}
-      style={styles.input}
-      autoCapitalize="none"
-    />
-  </View>
-);
 
 const styles = StyleSheet.create({
   screen: {
@@ -291,11 +450,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: COLORS.amber,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -303,13 +462,14 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 26,
-    fontWeight: '800',
     textAlign: 'center',
     marginBottom: 6,
   },
   authSub: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -330,19 +490,27 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 15,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
+    marginBottom: 14,
+    textAlign: 'center',
   },
   forgotButton: {
     alignSelf: 'flex-end',
     marginBottom: 24,
   },
   linkText: {
-    color: COLORS.amber,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   primaryButton: {
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
     borderRadius: 28,
     height: 56,
     alignItems: 'center',
@@ -350,9 +518,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryButtonText: {
-    color: COLORS.black,
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
-    fontWeight: '800',
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -367,8 +535,8 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
-    fontWeight: '700',
   },
   dividerRow: {
     flexDirection: 'row',
@@ -383,25 +551,8 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
-  },
-  otpBoxesRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 24,
-  },
-  otpBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
   },
   bottomPrompt: {
     flexDirection: 'row',
@@ -410,6 +561,7 @@ const styles = StyleSheet.create({
   },
   promptText: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
   },
 });

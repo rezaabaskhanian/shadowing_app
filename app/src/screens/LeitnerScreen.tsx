@@ -1,33 +1,52 @@
-import React, { useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Check, Trash2, RotateCcw, Eye, Clock, BookOpen, Sparkles } from 'lucide-react-native';
-import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
-import { useVocab, MAX_LEVEL, isDue, dueLabel } from '../data/VocabContext';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { BookOpen, Check, Clock, Sparkles, Trash2, X } from 'lucide-react-native';
+import { COLORS, BORDER_RADIUS } from '../theme/colors';
+import { FONT_FAMILY } from '../theme/typography';
+import { SHADOWS } from '../theme/elevation';
+import { ProgressRing } from '../components/ProgressRing';
+import { useVocab, MAX_LEVEL, isDue, dueLabel, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
+
+const SWIPE_THRESHOLD = 120;
 
 export const LeitnerScreen = () => {
   const { box, promote, demote, remove } = useVocab();
   const { t, language } = useLanguage();
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [dueOnly, setDueOnly] = useState(true);
-
-  const toggleReveal = (word: string) =>
-    setRevealed((prev) => ({ ...prev, [word]: !prev[word] }));
+  const [index, setIndex] = useState(0);
 
   const dueCount = box.filter(isDue).length;
   const list = (dueOnly ? box.filter(isDue) : box).sort(
     (a, b) => a.level - b.level || a.nextReview - b.nextReview
   );
 
+  useEffect(() => {
+    setIndex(0);
+  }, [dueOnly, box.length]);
+
+  const current = list[index];
+  const isDone = list.length > 0 && index >= list.length;
+
+  const handleAdvance = (direction: 'know' | 'forgot') => {
+    if (!current) return;
+    if (direction === 'know') promote(current.word);
+    else demote(current.word);
+    setIndex((i) => i + 1);
+  };
+
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.scrollContent}>
         {/* Top Header */}
         <View style={styles.header}>
           <View>
@@ -35,14 +54,12 @@ export const LeitnerScreen = () => {
             <Text style={styles.headerTitle}>{t('leitnerBoxTitle')}</Text>
           </View>
           <View style={styles.badge}>
-            <BookOpen size={16} color={COLORS.amber} />
+            <BookOpen size={16} color={COLORS.primary} />
             <Text style={styles.badgeText}>{box.length} {t('wordsUnit')}</Text>
           </View>
         </View>
 
-        <Text style={styles.subtitle}>
-          {t('leitnerSubtitle')}
-        </Text>
+        <Text style={styles.subtitle}>{t('leitnerSubtitle')}</Text>
 
         {/* Today vs All Filter Tabs */}
         <View style={styles.filterRow}>
@@ -51,7 +68,7 @@ export const LeitnerScreen = () => {
             onPress={() => setDueOnly(true)}
             activeOpacity={0.8}
           >
-            <Clock size={14} color={dueOnly ? COLORS.black : COLORS.amber} />
+            <Clock size={14} color={dueOnly ? COLORS.white : COLORS.primary} />
             <Text style={[styles.filterTabText, dueOnly && styles.filterTabTextActive]}>
               {t('today')} ({dueCount})
             </Text>
@@ -62,103 +79,215 @@ export const LeitnerScreen = () => {
             onPress={() => setDueOnly(false)}
             activeOpacity={0.8}
           >
-            <Sparkles size={14} color={!dueOnly ? COLORS.black : COLORS.teal} />
+            <Sparkles size={14} color={!dueOnly ? COLORS.white : COLORS.tertiary} />
             <Text style={[styles.filterTabText, !dueOnly && styles.filterTabTextActive]}>
               {t('all')} ({box.length})
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Word Card List */}
+        {/* Body */}
         {box.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <BookOpen size={44} color={COLORS.muted} style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyTitle}>{t('leitnerEmptyTitle')}</Text>
-            <Text style={styles.emptyText}>
-              {t('leitnerEmptyText')}
-            </Text>
-          </View>
+          <EmptyState
+            icon={<BookOpen size={44} color={COLORS.muted} />}
+            title={t('leitnerEmptyTitle')}
+            text={t('leitnerEmptyText')}
+          />
         ) : list.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Sparkles size={44} color={COLORS.teal} style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyTitle}>{t('leitnerNoDueTitle')}</Text>
-            <Text style={styles.emptyText}>
-              {t('leitnerNoDueText')}
-            </Text>
+          <EmptyState
+            icon={<Sparkles size={44} color={COLORS.tertiary} />}
+            title={t('leitnerNoDueTitle')}
+            text={t('leitnerNoDueText')}
+          />
+        ) : isDone ? (
+          <View style={styles.doneWrap}>
+            <EmptyState
+              icon={<Sparkles size={44} color={COLORS.tertiary} />}
+              title={t('leitnerDoneTitle')}
+              text={t('leitnerDoneText')}
+            />
+            <TouchableOpacity style={styles.reviewAgainBtn} onPress={() => setIndex(0)}>
+              <Text style={styles.reviewAgainText}>{t('reviewAgain')}</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          list.map((item) => (
-            <View key={item.word} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.word}>{item.word}</Text>
-                  {revealed[item.word] ? (
-                    <Text style={styles.meaning}>{item.meaning}</Text>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.revealBtn}
-                      onPress={() => toggleReveal(item.word)}
-                    >
-                      <Eye color={COLORS.textSecondary} size={13} />
-                      <Text style={styles.revealText}>{t('showMeaning')}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.badgesColumn}>
-                  <View style={styles.levelBadge}>
-                    <Text style={styles.levelText}>
-                      {t('level')} {item.level}/{MAX_LEVEL}
-                    </Text>
-                  </View>
-                  <View style={[styles.dueBadge, isDue(item) && styles.dueBadgeNow]}>
-                    <Clock
-                      color={isDue(item) ? COLORS.orange : COLORS.textSecondary}
-                      size={11}
-                    />
-                    <Text
-                      style={[styles.dueText, isDue(item) && styles.dueTextNow]}
-                    >
-                      {dueLabel(item, language)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.knewBtn]}
-                  onPress={() => promote(item.word)}
-                  activeOpacity={0.8}
-                >
-                  <Check color={COLORS.white} size={16} />
-                  <Text style={styles.actionText}>{t('knewIt')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.forgotBtn]}
-                  onPress={() => demote(item.word)}
-                  activeOpacity={0.8}
-                >
-                  <RotateCcw color={COLORS.white} size={16} />
-                  <Text style={styles.actionText}>{t('forgotIt')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.removeBtn}
-                  onPress={() => remove(item.word)}
-                  activeOpacity={0.7}
-                >
-                  <Trash2 color={COLORS.error} size={18} />
-                </TouchableOpacity>
-              </View>
+          <>
+            <View style={styles.progressRow}>
+              <ProgressRing percent={(index / list.length) * 100} size={44} strokeWidth={5}>
+                <Text style={styles.progressRingText}>
+                  {index + 1}/{list.length}
+                </Text>
+              </ProgressRing>
+              <TouchableOpacity
+                style={styles.removeLink}
+                onPress={() => {
+                  remove(current.word);
+                  setIndex((i) => Math.min(i, Math.max(0, list.length - 2)));
+                }}
+              >
+                <Trash2 color={COLORS.muted} size={14} />
+                <Text style={styles.removeLinkText}>{t('removeWord')}</Text>
+              </TouchableOpacity>
             </View>
-          ))
-        )}
 
-        <View style={{ height: 110 }} />
-      </ScrollView>
+            <Flashcard
+              key={current.word}
+              item={current}
+              language={language}
+              onSwipeKnow={() => handleAdvance('know')}
+              onSwipeForgot={() => handleAdvance('forgot')}
+            />
+
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.forgotBtn]}
+                onPress={() => handleAdvance('forgot')}
+                activeOpacity={0.85}
+              >
+                <X color={COLORS.white} size={20} />
+                <Text style={styles.actionText}>{t('forgotIt')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.knewBtn]}
+                onPress={() => handleAdvance('know')}
+                activeOpacity={0.85}
+              >
+                <Check color={COLORS.white} size={20} />
+                <Text style={styles.actionText}>{t('knewIt')}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
     </View>
+  );
+};
+
+const EmptyState = ({
+  icon,
+  title,
+  text,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+}) => (
+  <View style={styles.emptyContainer}>
+    <View style={{ marginBottom: 12 }}>{icon}</View>
+    <Text style={styles.emptyTitle}>{title}</Text>
+    <Text style={styles.emptyText}>{text}</Text>
+  </View>
+);
+
+// SINGLE FLASHCARD: tap to flip word/meaning, swipe right = knew it, swipe left = forgot
+const Flashcard = ({
+  item,
+  language,
+  onSwipeKnow,
+  onSwipeForgot,
+}: {
+  item: BoxWord;
+  language: 'en' | 'fa';
+  onSwipeKnow: () => void;
+  onSwipeForgot: () => void;
+}) => {
+  const { t } = useLanguage();
+  const translateX = useSharedValue(0);
+  const flip = useSharedValue(0);
+
+  const toggleFlip = () => {
+    flip.value = withTiming(flip.value === 0 ? 1 : 0, { duration: 320 });
+  };
+
+  const pan = Gesture.Pan()
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (e.translationX > SWIPE_THRESHOLD) {
+        translateX.value = withTiming(600, { duration: 220 }, () => {
+          runOnJS(onSwipeKnow)();
+        });
+      } else if (e.translationX < -SWIPE_THRESHOLD) {
+        translateX.value = withTiming(-600, { duration: 220 }, () => {
+          runOnJS(onSwipeForgot)();
+        });
+      } else {
+        translateX.value = withSpring(0);
+      }
+    });
+
+  const tap = Gesture.Tap().onEnd(() => {
+    runOnJS(toggleFlip)();
+  });
+
+  const gesture = Gesture.Race(pan, tap);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      {
+        rotate: `${interpolate(translateX.value, [-300, 0, 300], [-12, 0, 12])}deg`,
+      },
+    ],
+  }));
+
+  const frontStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 1200 },
+      { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` },
+    ],
+    opacity: flip.value < 0.5 ? 1 : 0,
+  }));
+
+  const backStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 1200 },
+      { rotateY: `${interpolate(flip.value, [0, 1], [-180, 0])}deg` },
+    ],
+    opacity: flip.value >= 0.5 ? 1 : 0,
+  }));
+
+  const knowLabelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [10, SWIPE_THRESHOLD], [0, 1]),
+  }));
+
+  const forgotLabelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, -10], [1, 0]),
+  }));
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={[styles.cardWrap, cardStyle]}>
+        <Animated.View style={[styles.swipeLabel, styles.knowLabel, knowLabelStyle]}>
+          <Text style={styles.swipeLabelText}>{t('knewIt')}</Text>
+        </Animated.View>
+        <Animated.View style={[styles.swipeLabel, styles.forgotLabel, forgotLabelStyle]}>
+          <Text style={styles.swipeLabelText}>{t('forgotIt')}</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>
+              {t('level')} {item.level}/{MAX_LEVEL}
+            </Text>
+          </View>
+          <Text style={styles.word}>{item.word}</Text>
+          <View style={[styles.dueBadge, isDue(item) && styles.dueBadgeNow]}>
+            <Clock color={isDue(item) ? COLORS.primary : COLORS.textSecondary} size={11} />
+            <Text style={[styles.dueText, isDue(item) && styles.dueTextNow]}>
+              {dueLabel(item, language)}
+            </Text>
+          </View>
+          <Text style={styles.tapHint}>{t('tapToReveal')}</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, backStyle]}>
+          <Text style={styles.meaning}>{item.meaning}</Text>
+        </Animated.View>
+      </Animated.View>
+    </GestureDetector>
   );
 };
 
@@ -168,6 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scrollContent: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 54,
   },
@@ -178,15 +308,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   kicker: {
-    color: COLORS.amber,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
-    fontWeight: '800',
     letterSpacing: 1,
   },
   headerTitle: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 26,
-    fontWeight: '800',
     marginTop: 2,
   },
   badge: {
@@ -202,11 +332,12 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
-    fontWeight: '700',
   },
   subtitle: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     marginBottom: 20,
     lineHeight: 20,
@@ -229,16 +360,16 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   filterTabActive: {
-    backgroundColor: COLORS.amber,
-    borderColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterTabText: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
-    fontWeight: '800',
   },
   filterTabTextActive: {
-    color: COLORS.black,
+    color: COLORS.white,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -252,63 +383,105 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
-    fontWeight: '800',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyText: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
   },
+  doneWrap: {
+    alignItems: 'center',
+  },
+  reviewAgainBtn: {
+    marginTop: 20,
+    backgroundColor: COLORS.primary,
+    borderRadius: 28,
+    height: 52,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewAgainText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  progressRingText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+  },
+  removeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  removeLinkText: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+  },
+  cardWrap: {
+    flex: 1,
+    minHeight: 340,
+  },
   card: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    borderRadius: BORDER_RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 12,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backfaceVisibility: 'hidden',
+    ...SHADOWS.level1,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  cardFace: {
+    gap: 14,
+  },
+  cardBack: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   word: {
     color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '900',
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 30,
+    textAlign: 'center',
   },
   meaning: {
-    color: COLORS.accent,
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 6,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 24,
+    textAlign: 'center',
   },
-  revealBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: COLORS.backgroundSoft,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  revealText: {
-    color: COLORS.textSecondary,
+  tapHint: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
-    fontWeight: '700',
-  },
-  badgesColumn: {
-    alignItems: 'flex-end',
-    gap: 6,
+    position: 'absolute',
+    bottom: 20,
   },
   levelBadge: {
+    position: 'absolute',
+    top: 20,
     backgroundColor: COLORS.backgroundSoft,
     borderRadius: 14,
     paddingHorizontal: 10,
@@ -318,8 +491,8 @@ const styles = StyleSheet.create({
   },
   levelText: {
     color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 11,
-    fontWeight: '800',
   },
   dueBadge: {
     flexDirection: 'row',
@@ -333,49 +506,67 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.backgroundSoft,
   },
   dueBadgeNow: {
-    borderColor: COLORS.orange,
+    borderColor: COLORS.primary,
   },
   dueText: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
     fontSize: 11,
-    fontWeight: '700',
   },
   dueTextNow: {
-    color: COLORS.orange,
+    color: COLORS.primary,
+  },
+  swipeLabel: {
+    position: 'absolute',
+    top: 24,
+    zIndex: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  knowLabel: {
+    right: 20,
+    borderColor: COLORS.tertiary,
+    backgroundColor: COLORS.tertiaryLight,
+    transform: [{ rotate: '12deg' }],
+  },
+  forgotLabel: {
+    left: 20,
+    borderColor: COLORS.error,
+    backgroundColor: 'rgba(186,26,26,0.1)',
+    transform: [{ rotate: '-12deg' }],
+  },
+  swipeLabelText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: COLORS.text,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 14,
+    gap: 14,
+    marginTop: 20,
+    marginBottom: 24,
   },
   actionBtn: {
     flex: 1,
-    height: 42,
-    borderRadius: 21,
+    height: 56,
+    borderRadius: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
   },
   knewBtn: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.tertiary,
   },
   forgotBtn: {
-    backgroundColor: COLORS.orange,
+    backgroundColor: COLORS.error,
   },
   actionText: {
     color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  removeBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
   },
 });

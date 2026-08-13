@@ -16,13 +16,21 @@ import {
   Globe,
   Mic,
   Play,
+  Repeat,
   Sparkles,
 } from 'lucide-react-native';
 import { ScenarioCard } from '../components/ScenarioCard';
+import { ProgressRing } from '../components/ProgressRing';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { COLORS } from '../theme/colors';
+import { FONT_FAMILY } from '../theme/typography';
+
+const TODAY_REPS = 38;
+const TODAY_REPS_TARGET = 60;
+const TODAY_MINUTES = 11;
+const TODAY_FLUENCY = 72;
 
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -57,6 +65,8 @@ export const HomeScreen = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
   };
 
+  const todayPercent = Math.round((TODAY_REPS / TODAY_REPS_TARGET) * 100);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -73,13 +83,13 @@ export const HomeScreen = () => {
           <View style={styles.headerActions}>
             {/* Language Selector */}
             <TouchableOpacity style={styles.langBadge} onPress={toggleLanguage}>
-              <Globe size={14} color={COLORS.amber} />
+              <Globe size={14} color={COLORS.primary} />
               <Text style={styles.langBadgeText}>{language.toUpperCase()}</Text>
             </TouchableOpacity>
 
             {/* Streak Badge */}
             <View style={styles.streakBadge}>
-              <Flame size={16} color={COLORS.amber} fill={COLORS.amber} />
+              <Flame size={16} color={COLORS.secondary} fill={COLORS.secondary} />
               <Text style={styles.streakText}>14</Text>
             </View>
           </View>
@@ -87,29 +97,33 @@ export const HomeScreen = () => {
 
         {/* TODAY'S SHADOWING PROGRESS CARD */}
         <View style={styles.progressCard}>
-          <View style={styles.progressCardHeader}>
-            <View style={styles.progressTitleRow}>
-              <Mic size={18} color={COLORS.teal} />
+          <View style={styles.progressTopRow}>
+            <ProgressRing percent={todayPercent} size={88} strokeWidth={8} color={COLORS.primary}>
+              <Text style={styles.ringPercentText}>{todayPercent}%</Text>
+            </ProgressRing>
+            <View style={styles.progressTextCol}>
               <Text style={styles.progressCardTitle}>{t('todaysShadowing')}</Text>
+              <Text style={styles.repsText}>
+                {TODAY_REPS} / {TODAY_REPS_TARGET} <Text style={styles.repsUnit}>{t('repsCount')}</Text>
+              </Text>
             </View>
-            <Text style={styles.repsText}>
-              38 / 60 <Text style={styles.repsUnit}>{t('repsCount')}</Text>
-            </Text>
           </View>
 
-          {/* Teal Progress Bar */}
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: '63%' }]} />
-          </View>
-
-          <View style={styles.progressCardFooter}>
-            <View style={styles.statInfoItem}>
-              <Clock size={14} color={COLORS.textSecondary} />
-              <Text style={styles.statInfoText}>11 {t('min')}</Text>
+          <View style={styles.statChipsRow}>
+            <View style={styles.statChip}>
+              <Repeat size={16} color={COLORS.primary} />
+              <Text style={styles.statChipValue}>{TODAY_REPS}</Text>
+              <Text style={styles.statChipLabel}>{t('repsCount')}</Text>
             </View>
-            <View style={styles.statInfoItem}>
-              <Sparkles size={14} color={COLORS.teal} />
-              <Text style={styles.statInfoText}>{t('fluency')} 72%</Text>
+            <View style={styles.statChip}>
+              <Clock size={16} color={COLORS.secondary} />
+              <Text style={styles.statChipValue}>{TODAY_MINUTES}</Text>
+              <Text style={styles.statChipLabel}>{t('min')}</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Sparkles size={16} color={COLORS.tertiary} />
+              <Text style={styles.statChipValue}>{TODAY_FLUENCY}%</Text>
+              <Text style={styles.statChipLabel}>{t('fluency')}</Text>
             </View>
           </View>
         </View>
@@ -117,16 +131,18 @@ export const HomeScreen = () => {
         {/* QUICK ACCESS: SHADOWING & LEITNER BOX */}
         <View style={styles.quickActionsRow}>
           <TouchableOpacity
-            style={styles.quickCard}
+            style={[styles.quickCard, styles.quickCardPrimary]}
             onPress={() => navigation.navigate('Shadowing', { scenarioId: primaryScenario.id })}
             activeOpacity={0.85}
           >
-            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.amber }]}>
-              <Mic size={20} color={COLORS.black} />
+            <View style={[styles.quickIconCircle, { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+              <Mic size={20} color={COLORS.white} />
             </View>
             <View style={styles.quickTextContainer}>
-              <Text style={styles.quickCardTitle}>{t('shadowing')}</Text>
-              <Text style={styles.quickCardSub}>{t('continueStory')}</Text>
+              <Text style={[styles.quickCardTitle, { color: COLORS.white }]}>{t('shadowing')}</Text>
+              <Text style={[styles.quickCardSub, { color: 'rgba(255,255,255,0.8)' }]}>
+                {t('continueStory')}
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -135,8 +151,8 @@ export const HomeScreen = () => {
             onPress={() => navigation.navigate('Leitner')}
             activeOpacity={0.85}
           >
-            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.teal }]}>
-              <BookOpen size={20} color={COLORS.black} />
+            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.primaryLight }]}>
+              <BookOpen size={20} color={COLORS.primary} />
             </View>
             <View style={styles.quickTextContainer}>
               <Text style={styles.quickCardTitle}>{t('leitner')}</Text>
@@ -184,7 +200,7 @@ export const HomeScreen = () => {
 
             {/* Play Circle CTA Overlay */}
             <View style={styles.playOverlayBtn}>
-              <Play size={22} color={COLORS.black} fill={COLORS.black} />
+              <Play size={22} color={COLORS.white} fill={COLORS.white} />
             </View>
           </ImageBackground>
         </TouchableOpacity>
@@ -235,13 +251,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
     fontSize: 14,
-    fontWeight: '500',
   },
   headerTitle: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 26,
-    fontWeight: '800',
     marginTop: 2,
     letterSpacing: -0.5,
   },
@@ -263,8 +279,8 @@ const styles = StyleSheet.create({
   },
   langBadgeText: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
-    fontWeight: '700',
   },
   streakBadge: {
     flexDirection: 'row',
@@ -279,8 +295,8 @@ const styles = StyleSheet.create({
   },
   streakText: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
-    fontWeight: '700',
   },
   progressCard: {
     backgroundColor: COLORS.surface,
@@ -290,65 +306,65 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: 24,
   },
-  progressCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  progressCardTitle: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  repsText: {
-    color: COLORS.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  repsUnit: {
-    color: COLORS.textSecondary,
-    fontWeight: '400',
-    fontSize: 12,
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.teal,
-    borderRadius: 4,
-  },
-  progressCardFooter: {
+  progressTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    marginBottom: 16,
   },
-  statInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  ringPercentText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
   },
-  statInfoText: {
+  progressTextCol: {
+    flex: 1,
+  },
+  progressCardTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  repsText: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
     fontSize: 13,
+  },
+  repsUnit: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+  },
+  statChipsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statChip: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundSoft,
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statChipValue: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+  },
+  statChipLabel: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
   },
   sectionHeader: {
     marginBottom: 12,
   },
   sectionLabel: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
-    fontWeight: '700',
     letterSpacing: 1.1,
   },
   storyCard: {
@@ -376,16 +392,16 @@ const styles = StyleSheet.create({
     paddingRight: 80,
   },
   storyCategory: {
-    color: COLORS.amber,
+    color: COLORS.onPrimaryContainer,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 11,
-    fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 4,
   },
   storyTitle: {
-    color: COLORS.text,
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 22,
-    fontWeight: '800',
     marginBottom: 14,
   },
   storyProgressBg: {
@@ -397,7 +413,7 @@ const styles = StyleSheet.create({
   },
   storyProgressFill: {
     height: '100%',
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primaryContainer,
     borderRadius: 2,
   },
   playOverlayBtn: {
@@ -407,10 +423,10 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: COLORS.amber,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.amber,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -435,6 +451,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     gap: 10,
   },
+  quickCardPrimary: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
   quickIconCircle: {
     width: 40,
     height: 40,
@@ -447,13 +467,13 @@ const styles = StyleSheet.create({
   },
   quickCardTitle: {
     color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
-    fontWeight: '800',
   },
   quickCardSub: {
     color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
     fontSize: 11,
-    fontWeight: '500',
     marginTop: 2,
   },
 });

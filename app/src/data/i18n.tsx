@@ -45,6 +45,14 @@ export const translations: Translations = {
     fa: 'عالی بود! همه‌ی واژه‌های امروز را مرور کردی. از تب «همه» می‌توانی بقیه را ببینی.'
   },
   showMeaning: { en: 'Show Meaning', fa: 'نمایش معنی' },
+  tapToReveal: { en: 'Tap card to reveal meaning', fa: 'برای دیدن معنی، کارت را لمس کن' },
+  leitnerDoneTitle: { en: 'Review complete! 🎉', fa: 'مرور تمام شد! 🎉' },
+  leitnerDoneText: {
+    en: 'You went through all the cards in this list.',
+    fa: 'همه‌ی کارت‌های این لیست را مرور کردی.',
+  },
+  reviewAgain: { en: 'Review Again', fa: 'مرور دوباره' },
+  removeWord: { en: 'Remove from box', fa: 'حذف از جعبه' },
   level: { en: 'Level', fa: 'سطح' },
   knewIt: { en: 'Knew it', fa: 'بلد بودم' },
   forgotIt: { en: 'Forgot', fa: 'بلد نبودم' },
@@ -57,6 +65,10 @@ export const translations: Translations = {
   // Scenes Screen
   chooseScenarioTitle: { en: 'Choose Your Scenario', fa: 'سناریوی خود را انتخاب کنید' },
   chooseScenarioSub: { en: 'Practice natural conversations in real places.', fa: 'مکالمات طبیعی را در محیط‌های واقعی تمرین کنید.' },
+  categoryBusiness: { en: 'Business', fa: 'کاری' },
+  categoryTravel: { en: 'Travel', fa: 'سفر' },
+  categoryDaily: { en: 'Daily', fa: 'روزمره' },
+  noScenariosInCategory: { en: 'No scenarios in this category yet.', fa: 'هنوز سناریویی در این دسته نیست.' },
 
   // Progress Screen
   greatJobTitle: { en: 'Great Job!', fa: 'عالی بود!' },
@@ -64,12 +76,69 @@ export const translations: Translations = {
   overallScore: { en: 'Overall Score', fa: 'نمره کل' },
   pronunciation: { en: 'Pronunciation', fa: 'تلفظ' },
   compareAudio: { en: 'Compare Audio', fa: 'مقایسه صدا' },
+  vocabulary: { en: 'Vocabulary', fa: 'دایره واژگان' },
+  listening: { en: 'Listening', fa: 'شنیداری' },
+  weeklyActivity: { en: 'Weekly Activity', fa: 'فعالیت هفتگی' },
+  weeklyActivitySub: { en: 'Minutes practiced per day', fa: 'دقیقه‌های تمرین در هر روز' },
+  skillBreakdown: { en: 'Skill Breakdown', fa: 'تفکیک مهارت‌ها' },
+  achievementsTitle: { en: 'Achievements', fa: 'دستاوردها' },
+  achievementFirstScene: { en: 'First Scene', fa: 'اولین صحنه' },
+  achievementFirstSceneSub: { en: 'Completed your first scene', fa: 'اولین صحنه را کامل کردی' },
+  achievementStreak7: { en: '7-Day Streak', fa: 'استریک ۷ روزه' },
+  achievementStreak7Sub: { en: 'Practiced 7 days in a row', fa: '۷ روز پشت‌سرهم تمرین کردی' },
+  achievementWords50: { en: '50 Words Mastered', fa: '۵۰ واژه یاد گرفته شد' },
+  achievementWords50Sub: { en: 'Reached Leitner level 5 on 50 words', fa: 'به سطح ۵ لایتنر برای ۵۰ واژه رسیدی' },
+  achievementPerfectPron: { en: 'Perfect Pronunciation', fa: 'تلفظ بی‌نقص' },
+  achievementPerfectPronSub: { en: 'Scored 100% on a scene', fa: 'در یک صحنه نمره ۱۰۰ گرفتی' },
 
   // Profile Screen
   profileTitle: { en: 'Profile', fa: 'حساب کاربری' },
   profileSub: { en: 'Manage your account and preferences.', fa: 'مدیریت حساب و تنظیمات' },
   learnerLevel: { en: 'Level A2 Learner', fa: 'زبان‌آموز سطح A2' },
   appLanguage: { en: 'App Language', fa: 'زبان برنامه' },
+  helpFaq: { en: 'Help & FAQ', fa: 'راهنما و سوالات متداول' },
+  logout: { en: 'Log Out', fa: 'خروج از حساب کاربری' },
+
+  // Submit Scene
+  submitSceneTitle: { en: 'Suggest a Scene', fa: 'پیشنهاد یک صحنه' },
+  submitSceneSub: {
+    en: 'Suggest a situation and dialogue — our team will review it, complete the details, and publish it. You earn points if it gets approved.',
+    fa: 'یک موقعیت و دیالوگ پیشنهاد بده — تیم ما بررسی، تکمیل و منتشرش می‌کند. اگر تایید شود امتیاز می‌گیری.',
+  },
+  submitScenePhoto: { en: 'Photo (optional)', fa: 'عکس (اختیاری)' },
+  submitScenePhotoAdd: { en: 'Add Photo', fa: 'افزودن عکس' },
+  submitScenePhotoRemove: { en: 'Remove Photo', fa: 'حذف عکس' },
+  submitSceneSituation: { en: 'Describe the situation', fa: 'موقعیت را توضیح بده' },
+  submitSceneSituationPlaceholder: {
+    en: 'e.g. Ordering coffee at a busy cafe...',
+    fa: 'مثلاً: سفارش قهوه در یک کافه شلوغ...',
+  },
+  submitSceneDialogues: { en: 'Dialogue lines', fa: 'خط‌های دیالوگ' },
+  submitSceneSpeaker: { en: 'Speaker (optional)', fa: 'گوینده (اختیاری)' },
+  submitSceneLine: { en: 'What they say', fa: 'چی میگه' },
+  submitSceneAddLine: { en: '+ Add line', fa: '+ افزودن خط' },
+  submitSceneSubmit: { en: 'Submit for Review', fa: 'ارسال برای بررسی' },
+  submitSceneSuccess: {
+    en: 'Thanks! Your suggestion was submitted for review.',
+    fa: 'ممنون! پیشنهادت برای بررسی ارسال شد.',
+  },
+  submitSceneFillFields: {
+    en: 'Please describe the situation and add at least one dialogue line',
+    fa: 'لطفاً موقعیت را توضیح بده و حداقل یک خط دیالوگ اضافه کن',
+  },
+  mySubmissionsTitle: { en: 'My Suggestions', fa: 'پیشنهادهای من' },
+  mySubmissionsEmpty: { en: 'You haven\'t suggested a scene yet.', fa: 'هنوز صحنه‌ای پیشنهاد نداده‌ای.' },
+  mySubmissionsCta: { en: '+ Suggest a Scene', fa: '+ پیشنهاد صحنه جدید' },
+  statusPending: { en: 'Pending review', fa: 'در انتظار بررسی' },
+  statusApproved: { en: 'Approved', fa: 'تایید شد' },
+  statusRejected: { en: 'Rejected', fa: 'رد شد' },
+  pointsEarned: { en: 'points earned', fa: 'امتیاز گرفتی' },
+  myPoints: { en: 'My Points', fa: 'امتیازهای من' },
+  myPointsSub: {
+    en: 'Every 100 points = 20,000 Toman off a subscription',
+    fa: 'هر ۱۰۰ امتیاز = ۲۰,۰۰۰ تومان تخفیف اشتراک',
+  },
+  viewMySubmissions: { en: 'My Suggestions', fa: 'پیشنهادهای من' },
   
   // Scene Intro / Preview
   hotspots: { en: 'Hotspots', fa: 'موقعیت' },
@@ -81,6 +150,9 @@ export const translations: Translations = {
     fa: 'هر جمله ۷ بار در مراحل شنیدن → سایه‌زنی → مقایسه → سایه‌زنی آزاد تمرین می‌شود.'
   },
   enterScene: { en: 'Enter the scene', fa: 'ورود به صحنه' },
+  fourStepMethodTitle: { en: 'The 4-Step Method', fa: 'روش ۴ مرحله‌ای' },
+  dialoguePreview: { en: 'Dialogue Preview', fa: 'پیش‌نمایش گفتگو' },
+  moreSentencesSuffix: { en: 'more sentences', fa: 'جمله‌ی دیگر' },
   
   // Player Screen
   shadowThisLine: { en: 'Shadow this line', fa: 'این جمله را تکرار کن' },
@@ -89,6 +161,36 @@ export const translations: Translations = {
   recordStep: { en: 'Step 3: Independent Record', fa: 'گام ۳: ضبط مستقل' },
   compareStep: { en: 'Step 4: Compare & Master', fa: 'گام ۴: مقایسه و تسلط' },
   autoPlay: { en: 'Auto', fa: 'خودکار' },
+  tabListen: { en: 'Listen', fa: 'گوش دادن' },
+  tabShadow: { en: 'Shadow', fa: 'سایه زدن' },
+  tabRecord: { en: 'Record', fa: 'ضبط کردن' },
+  tabCompare: { en: 'Compare', fa: 'مقایسه' },
+  repeatAlongBanner: { en: 'Repeat along with the audio', fa: 'همزمان با صدا تکرار کنید' },
+  startShadowing: { en: 'Start Shadowing', fa: 'شروع سایه‌زنی' },
+  stopShadowing: { en: 'Stop Shadowing', fa: 'توقف سایه‌زنی' },
+  replayMaster: { en: 'Replay Master', fa: 'پخش دوباره صدای اصلی' },
+  holdToRecord: { en: 'Hold to Record', fa: 'برای ضبط نگه دارید' },
+  masterAudio: { en: 'Master Audio', fa: 'صدای اصلی' },
+  yourRecording: { en: 'Your Recording', fa: 'صدای شما' },
+  checkWordPrefix: { en: 'Check', fa: 'بررسی کنید' },
+  playBoth: { en: 'Play Both', fa: 'پخش هر دو' },
+  retry: { en: 'Retry', fa: 'تلاش دوباره' },
+  finishSession: { en: 'Finish Session', fa: 'پایان جلسه' },
+  addToLeitner: { en: 'Add to Leitner', fa: 'افزودن به لایتنر' },
+
+  // Session Result Screen
+  rhythm: { en: 'Rhythm', fa: 'ریتم' },
+  sentenceAnalysis: { en: 'Sentence Analysis', fa: 'تحلیل جمله' },
+  aiCoachInsight: { en: 'AI Coach Insight', fa: 'تحلیل هوشمند مربی' },
+  aiCoachInsightBody: {
+    en: "You're doing great with vowels, but try to stress the key words a bit more.",
+    fa: 'صداهای مصوت را خوب تلفظ می‌کنید، اما سعی کنید روی کلمات کلیدی بیشتر تاکید کنید.',
+  },
+  practiceAgain: { en: 'Practice Again', fa: 'تمرین دوباره' },
+  nextLesson: { en: 'Next Lesson', fa: 'درس بعدی' },
+  wordExcellent: { en: 'Excellent', fa: 'عالی' },
+  wordGood: { en: 'Good', fa: 'خوب' },
+  wordNeedsPractice: { en: 'Needs practice', fa: 'نیاز به تمرین' },
   
   // Auth Screen
   welcomeBack: { en: 'Log in to ShadowTalk', fa: 'ورود به شادوتالک' },
@@ -105,6 +207,51 @@ export const translations: Translations = {
   signUp: { en: 'Sign Up', fa: 'ثبت‌نام' },
   signUpOtp: { en: 'Sign Up with Phone (OTP)', fa: 'ثبت‌نام با شماره موبایل (کد پیامکی)' },
   phoneNumber: { en: 'Phone Number (e.g. 0912...)', fa: 'شماره موبایل (مثلاً ۰۹۱۲...)' },
+  nicknameLabel: { en: 'Nickname', fa: 'نام کاربری' },
+  registerSub: { en: 'Create an account to start practicing', fa: 'برای شروع تمرین، یک حساب کاربری بسازید' },
+  fillAllFields: { en: 'Please fill in all fields', fa: 'لطفاً همه فیلدها را پر کنید' },
+  loginFailed: { en: 'Login failed. Check your phone and password.', fa: 'ورود ناموفق بود. شماره و رمز عبور را بررسی کنید.' },
+  registerFailed: { en: 'Something went wrong. Please try again.', fa: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.' },
+  passwordMismatch: { en: 'Passwords do not match', fa: 'رمز عبور و تکرار آن مطابقت ندارند' },
+  weakPassword: { en: 'Password must be at least 8 characters', fa: 'رمز عبور باید حداقل ۸ کاراکتر باشد' },
+
+  // Reset Password Screen
+  resetPasswordTitle: { en: 'Reset Password', fa: 'بازیابی رمز عبور' },
+  resetPasswordSub: {
+    en: 'Enter your nickname and choose a new password.',
+    fa: 'نام کاربری خود را وارد کرده و رمز عبور جدید انتخاب کنید.'
+  },
+  sendResetCode: { en: 'Send Reset Code', fa: 'ارسال کد بازیابی' },
+  newPassword: { en: 'New Password', fa: 'رمز عبور جدید' },
+  confirmNewPassword: { en: 'Confirm New Password', fa: 'تکرار رمز عبور جدید' },
+  updatePassword: { en: 'Update Password', fa: 'ثبت رمز عبور جدید' },
+  resetSuccessTitle: { en: 'Password Updated! 🎉', fa: 'رمز عبور تغییر یافت! 🎉' },
+  resetSuccessSub: {
+    en: 'Your password has been reset successfully. You can now log in with your new password.',
+    fa: 'رمز عبور شما با موفقیت تغییر کرد. اکنون می‌توانید با رمز جدید وارد شوید.'
+  },
+  backToLogin: { en: 'Back to Login', fa: 'بازگشت به صفحه ورود' },
+
+  // Notifications & Reminders Settings
+  notificationsTitle: { en: 'Notifications & Reminders', fa: 'اعلانات و یادآوری‌ها' },
+  studyReminder: { en: 'Daily Study Reminder', fa: 'یادآوری درس‌خواندن' },
+  studyReminderSub: {
+    en: 'Get daily alerts to keep your learning streak active.',
+    fa: 'دریافت یادآوری روزانه برای حفظ استریک و استمرار در تمرین.'
+  },
+  reminderTime: { en: 'Reminder Time', fa: 'زمان یادآوری روزانه' },
+  contentNotification: { en: 'Sentence & Vocab Alerts', fa: 'نوتیفیکیشن واژه‌ها و جملات' },
+  contentNotificationSub: {
+    en: 'Receive banner notifications featuring your Leitner words or lesson sentences.',
+    fa: 'نمایش بنر نوتیفیکیشن حاوی واژگان جعبه لایتنر یا جملات مکالمات.'
+  },
+  notificationSource: { en: 'Notification Content Source', fa: 'منبع محتوای نوتیفیکیشن' },
+  sourceLeitner: { en: 'Leitner Words', fa: 'واژگان لایتنر' },
+  sourceSentences: { en: 'Lesson Sentences', fa: 'جملات درس‌ها' },
+  sourceMixed: { en: 'Both (Mixed)', fa: 'ترکیب واژه‌ها و جملات' },
+  sendTestNotification: { en: 'Send Test Notification Banner', fa: 'ارسال نوتیفیکیشن آزمایشی' },
+  testNotificationSent: { en: 'Test notification displayed!', fa: 'نوتیفیکیشن آزمایشی نمایش داده شد!' },
+  viewContent: { en: 'Review Now', fa: 'مشاهده و مرور' },
 };
 
 interface LanguageContextType {

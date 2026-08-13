@@ -8,10 +8,50 @@ import { AuthScreens } from './src/screens/AuthScreens';
 import { ScenesProvider } from './src/data/ScenesContext';
 import { VocabProvider } from './src/data/VocabContext';
 import { LanguageProvider } from './src/data/i18n';
+import { AuthProvider, useAuth } from './src/data/AuthContext';
+
+import { NotificationProvider } from './src/data/NotificationContext';
+import { NotificationBanner } from './src/components/NotificationBanner';
+
+function AppContent({ showSplash }: { showSplash: boolean }) {
+  const { isAuthenticated, isRestoring } = useAuth();
+
+  if (showSplash || isRestoring) {
+    return (
+      <>
+        <StatusBar barStyle="light-content" />
+        <SplashScreen />
+      </>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <NotificationProvider>
+        <StatusBar barStyle="light-content" />
+        <NotificationBanner />
+        <AuthScreens onComplete={() => {}} />
+      </NotificationProvider>
+    );
+  }
+
+  return (
+    <NotificationProvider>
+      <ScenesProvider>
+        <VocabProvider>
+          <NavigationContainer>
+            <StatusBar barStyle="light-content" />
+            <NotificationBanner />
+            <AppNavigator />
+          </NavigationContainer>
+        </VocabProvider>
+      </ScenesProvider>
+    </NotificationProvider>
+  );
+}
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const splashTimer = setTimeout(() => {
@@ -21,37 +61,12 @@ export default function App() {
     return () => clearTimeout(splashTimer);
   }, []);
 
-  if (showSplash) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar barStyle="light-content" />
-        <SplashScreen />
-      </GestureHandlerRootView>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <LanguageProvider>
-          <StatusBar barStyle="light-content" />
-          <AuthScreens onComplete={() => setIsAuthenticated(true)} />
-        </LanguageProvider>
-      </GestureHandlerRootView>
-    );
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LanguageProvider>
-        <ScenesProvider>
-          <VocabProvider>
-            <NavigationContainer>
-              <StatusBar barStyle="light-content" />
-              <AppNavigator />
-            </NavigationContainer>
-          </VocabProvider>
-        </ScenesProvider>
+        <AuthProvider>
+          <AppContent showSplash={showSplash} />
+        </AuthProvider>
       </LanguageProvider>
     </GestureHandlerRootView>
   );

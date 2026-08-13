@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { MessageCircle } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { FONT_FAMILY } from '../theme/typography';
 
 const splashImage =
   'https://images.unsplash.com/photo-1436491865332-7a61a109c0f3?q=80&w=1200&auto=format&fit=crop';
@@ -101,15 +102,15 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 56,
-    fontWeight: '900',
     textAlign: 'center',
   },
   subtitle: {
     color: COLORS.white,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 24,
     lineHeight: 31,
-    fontWeight: '700',
     textAlign: 'center',
     marginTop: 8,
   },

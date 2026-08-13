@@ -54,6 +54,8 @@ export interface DialogueItem {
   words?: WordEntry[];
 }
 
+export type ScenarioCategory = 'business' | 'travel' | 'daily';
+
 export interface Scenario {
   id: string;
   title: string;
@@ -66,7 +68,7 @@ export interface Scenario {
   imageUri: any;
   hotspots: Hotspot[];
   description?: string;
-  category?: string;
+  category?: ScenarioCategory;
   sentencesCount?: number;
 }
 
@@ -120,6 +122,7 @@ export const SCENARIOS: Scenario[] = [
     color: COLORS.primary,
     imageUri: imgClothes,
     description: 'Practice buying clothes, asking about sizes, materials, prices, and restocking.',
+    category: 'daily',
     sentencesCount: 10,
     hotspots: [
       {
@@ -259,6 +262,7 @@ export const SCENARIOS: Scenario[] = [
     color: COLORS.orange,
     imageUri: imgHotel,
     description: 'Practice checking in, asking for room views, amenities, and buffet hours.',
+    category: 'travel',
     sentencesCount: 10,
     hotspots: [
       {
@@ -398,6 +402,7 @@ export const SCENARIOS: Scenario[] = [
     color: COLORS.teal,
     imageUri: imgDriving,
     description: 'Practice driving instructions, traffic lights, speed limits, and road signals.',
+    category: 'daily',
     sentencesCount: 10,
     hotspots: [
       {
@@ -536,6 +541,7 @@ export const SCENARIOS: Scenario[] = [
     color: COLORS.pink,
     imageUri: imgWeightLoss,
     description: 'Practice talking to a nutritionist about dieting, exercise, sweets, and healthy habits.',
+    category: 'daily',
     sentencesCount: 10,
     hotspots: [
       {
