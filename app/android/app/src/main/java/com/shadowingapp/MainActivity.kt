@@ -1,5 +1,7 @@
 package com.shadowingapp
 
+import android.os.Bundle
+import androidx.core.view.WindowCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +21,13 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    // بدون این خط، روی اندروید نسخه‌های قدیمی‌تر از ۱۵، پراپ translucent
+    // خودِ StatusBar در جاوااسکریپت اثر واقعی ندارد و محتوا هیچ‌وقت زیر نوار
+    // وضعیت نمی‌رود — چون تصمیم‌گیری نهایی درباره‌ی edge-to-edge در سطح
+    // native و پنجره‌ی اکتیویتی است، نه در RN.
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    super.onCreate(null)
+  }
 }
