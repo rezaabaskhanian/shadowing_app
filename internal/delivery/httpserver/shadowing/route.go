@@ -1,10 +1,14 @@
 package shadowinghandler
 
-import "github.com/labstack/echo/v4"
+import (
+	"shadowing-backend/internal/delivery/middlware"
+
+	"github.com/labstack/echo/v4"
+)
 
 func (h Handler) SetShadowingRoutes(e *echo.Echo) {
 	// گروه اصلی
-	g := e.Group("/v1/shadowing")
+	g := e.Group("/v1/shadowing", middlware.Auth(h.authSvc, h.authConfig))
 
 	// روت‌ها
 	g.POST("/session", h.StartSession)

@@ -102,3 +102,66 @@ export interface LoginResponse {
   user: { id: string; nickname: string; phone: string; role: string };
   tokens: { access_token: string; refresh_token: string };
 }
+
+// ---------- تنظیمات (کلیدهای API) ----------
+export interface SettingItem {
+  set: boolean;
+  masked: string;
+}
+
+export interface SettingsResp {
+  ai_provider: string;
+  anthropic_api_key: SettingItem;
+  claude_model: string;
+  gemini_api_key: SettingItem;
+  gemini_model: string;
+  elevenlabs_api_key: SettingItem;
+  elevenlabs_voice_id: SettingItem;
+  fcm_service_account_json: SettingItem;
+}
+
+// ---------- نوتیفیکیشن‌ها ----------
+export interface NotificationStatsResp {
+  total_users: number;
+  daily_reminder_opt_in: number;
+  content_notif_opt_in: number;
+  fcm_configured: boolean;
+}
+
+export interface BroadcastItem {
+  id: string;
+  title: string;
+  body: string;
+  sent_count: number;
+  created_at: string;
+}
+
+// ---------- پیشنهاد صحنه توسط کاربر ----------
+export interface SubmissionDialogueLine {
+  speaker: string;
+  text: string;
+}
+
+export interface SceneSubmission {
+  id: string;
+  user_id: string;
+  image_url: string;
+  situation_text: string;
+  dialogues: SubmissionDialogueLine[] | null;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string;
+  points_awarded: number | null;
+  scene_id: string;
+  reviewed_by: string;
+  reviewed_at: string;
+  created_at: string;
+}
+
+// ---------- طرح‌های اشتراک ----------
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  duration_days: number;
+  price_toman: number;
+  created_at: string;
+}

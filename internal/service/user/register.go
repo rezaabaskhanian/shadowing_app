@@ -24,12 +24,13 @@ func (s Service) Register(req dto.RegisterRequest) (dto.RegisterResponse, error)
 		return dto.RegisterResponse{}, errors.New(errmesg.ErrorMsgPhoneNumberIsNotUniqe)
 	}
 
-	if err != pgx.ErrNoRows {
+	if !errors.Is(err, pgx.ErrNoRows) {
 		// یک خطای واقعی دیتابیس (غیر از "یافت نشد")
 		return dto.RegisterResponse{}, fmt.Errorf("database error: %w", err)
 	}
+	// نقش همیشه "user" است؛ کلاینت نمی‌تواند از طریق ثبت‌نام عمومی نقش ادمین بگیرد.
 	user, err := domain.NewUser(
-		req.Nickname, req.Password, req.Phone, req.Role,
+		req.Nickname, req.Password, req.Phone, "user",
 	)
 
 	if err != nil {

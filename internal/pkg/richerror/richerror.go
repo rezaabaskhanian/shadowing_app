@@ -57,6 +57,12 @@ func (r RichError) Error() string {
 	return r.message
 }
 
+// Unwrap لایه‌ی خطای اصلی (مثلاً pgx.ErrNoRows) را برمی‌گرداند تا errors.Is/errors.As
+// بتوانند از میان RichError عبور کنند.
+func (r RichError) Unwrap() error {
+	return r.wrappedError
+}
+
 func (r RichError) Kind() Kind {
 	if r.kind != 0 {
 		return r.kind

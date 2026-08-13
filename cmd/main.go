@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"shadowing-backend/internal/config"
 	"shadowing-backend/internal/delivery/httpserver"
@@ -12,24 +13,56 @@ import (
 	"shadowing-backend/internal/repository/postgres"
 
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
+	postgresnotification "shadowing-backend/internal/repository/postgres/notification"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
 	postgressstreak "shadowing-backend/internal/repository/postgres/progress/streak"
 	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
+	postgressettings "shadowing-backend/internal/repository/postgres/settings"
+	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
+	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
+
+	"shadowing-backend/internal/worker"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
+	"context"
+
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	notificationservice "shadowing-backend/internal/service/notification"
 	progressservice "shadowing-backend/internal/service/progress"
+	pushservice "shadowing-backend/internal/service/push"
+	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
+	submissionservice "shadowing-backend/internal/service/submission"
+	subscriptionservice "shadowing-backend/internal/service/subscription"
 
 	userservice "shadowing-backend/internal/service/user"
 
 	"time"
 )
+
+func getEnv(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return fallback
+	}
+	return n
+}
 
 func loadEnv(filename string) {
 	file, err := os.Open(filename)
@@ -55,8 +88,6 @@ func loadEnv(filename string) {
 }
 
 const (
-	JwtSignKey = "jwt_token"
-
 	AccessTokenSubject  = "as"
 	RefreshTokenSubject = "rs"
 
@@ -70,14 +101,14 @@ func main() {
 	cfg := config.Config{
 
 		MyPostgres: postgres.Config{
-			UserName: "reza_abasi",
-			Password: "r1367R1367",
-			Port:     5435,
-			Host:     "localhost",
-			DBName:   "shadowing-backend_db",
+			UserName: getEnv("DB_USERNAME", "reza_abasi"),
+			Password: getEnv("DB_PASSWORD", "r1367R1367"),
+			Port:     getEnvInt("DB_PORT", 5435),
+			Host:     getEnv("DB_HOST", "localhost"),
+			DBName:   getEnv("DB_NAME", "shadowing-backend_db"),
 		},
 		Auth: authservice.Config{
-			SignKey:               JwtSignKey,
+			SignKey:               getEnv("JWT_SIGN_KEY", "jwt_token"),
 			AccessExpirationTime:  AccessTokenExpirationDuration,
 			RefreshExpirationTime: RefreshTokenExpirationDuration,
 
@@ -96,16 +127,19 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc := setupservice(cfg)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc)
+	go worker.RunNotificationScheduler(context.Background(), notificationSvc)
+
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc)
 
 	server.Server()
 
 }
 
 func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
-	learningservice.Service, shadowingservice.Service, progressservice.Service) {
+	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
+	notificationservice.Service, submissionservice.Service, subscriptionservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -130,7 +164,23 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo)
 
+	settingsRepo := postgressettings.New(MyPostgresgresRepo.DB)
+	settingsSvc := settingsservice.New(settingsRepo)
+	if err := settingsSvc.LoadAll(context.Background()); err != nil {
+		fmt.Println("warning: failed to load settings from db:", err)
+	}
+
+	notificationRepo := postgresnotification.New(MyPostgresgresRepo.DB)
+	pushSvc := pushservice.New(settingsSvc)
+	notificationSvc := notificationservice.New(notificationRepo, pushSvc)
+
+	submissionRepo := postgressubmission.New(MyPostgresgresRepo.DB)
+	submissionSvc := submissionservice.New(submissionRepo)
+
+	subscriptionRepo := postgressubscription.New(MyPostgresgresRepo.DB)
+	subscriptionSvc := subscriptionservice.New(subscriptionRepo)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc
 }

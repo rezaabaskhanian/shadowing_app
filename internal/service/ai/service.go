@@ -1,32 +1,49 @@
 package aiservice
 
 import (
-	"os"
+	"context"
+	"strings"
 
-	"github.com/anthropics/anthropic-sdk-go"
+	settingsservice "shadowing-backend/internal/service/settings"
 )
 
-// Service تولید محتوای صحنه با کمک مدل Claude را انجام می‌دهد.
+// provider رابط مشترک بین ارائه‌دهنده‌های مختلف هوش مصنوعی (Claude, Gemini) است.
+type provider interface {
+	generateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error)
+	enabled() bool
+}
+
+// Service تولید محتوای صحنه با کمک یک مدل هوش مصنوعی را انجام می‌دهد.
+// ارائه‌دهنده‌ی فعال از تنظیمات (AI_PROVIDER در پنل ادمین یا .env) خوانده می‌شود:
+// anthropic (پیش‌فرض) یا gemini. چون هر دو provider کلید/مدل را در لحظه‌ی هر
+// درخواست از settings می‌خوانند، تغییر از پنل ادمین بدون ری‌استارت سرور اعمال می‌شود.
 type Service struct {
-	client anthropic.Client
-	model  anthropic.Model
+	settings  *settingsservice.Service
+	anthropic *anthropicProvider
+	gemini    *geminiProvider
 }
 
-// New یک سرویس AI می‌سازد. کلید API از متغیر محیطی ANTHROPIC_API_KEY خوانده می‌شود
-// و مدل از CLAUDE_MODEL (پیش‌فرض: Opus 4.8) — برای تست ارزان می‌توان روی
-// claude-haiku-4-5 یا claude-sonnet-4-6 گذاشت.
-func New() Service {
-	model := anthropic.Model(os.Getenv("CLAUDE_MODEL"))
-	if model == "" {
-		model = anthropic.ModelClaudeOpus4_8
-	}
+func New(settings *settingsservice.Service) Service {
 	return Service{
-		client: anthropic.NewClient(), // ANTHROPIC_API_KEY را خودکار می‌خواند
-		model:  model,
+		settings:  settings,
+		anthropic: newAnthropicProvider(settings),
+		gemini:    newGeminiProvider(settings),
 	}
 }
 
-// Enabled مشخص می‌کند آیا کلید API تنظیم شده است یا نه.
+func (s Service) activeProvider() provider {
+	if strings.ToLower(strings.TrimSpace(s.settings.Get(settingsservice.KeyAIProvider))) == "gemini" {
+		return s.gemini
+	}
+	return s.anthropic
+}
+
+// Enabled مشخص می‌کند آیا کلید API ارائه‌دهنده‌ی فعال تنظیم شده است یا نه.
 func (s Service) Enabled() bool {
-	return os.Getenv("ANTHROPIC_API_KEY") != ""
+	return s.activeProvider().enabled()
+}
+
+// GenerateScene محتوای یک صحنه را با ارائه‌دهنده‌ی فعال تولید می‌کند.
+func (s Service) GenerateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error) {
+	return s.activeProvider().generateScene(ctx, prompt, difficulty)
 }

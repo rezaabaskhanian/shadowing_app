@@ -2,6 +2,7 @@ package shadowinghandler
 
 import (
 	"net/http"
+	"shadowing-backend/internal/pkg/claims"
 	"shadowing-backend/internal/pkg/errorhandling"
 	"shadowing-backend/internal/service/shadowing/dto"
 
@@ -31,13 +32,17 @@ func (h *Handler) StartSession(c echo.Context) error {
 		})
 	}
 
-	// اعتبارسنجی اولیه
-	if req.UserID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error":   "user_id_required",
-			"message": "شناسه کاربر الزامی است",
+	// شناسه‌ی کاربر همیشه از توکن JWT خوانده می‌شود، نه از بدنه‌ی درخواست،
+	// تا کاربری نتواند به‌جای کاربر دیگری session بسازد.
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error":   "unauthorized",
+			"message": "احراز هویت ناموفق",
 		})
 	}
+	req.UserID = userClaims.UserID
+
 	if req.DialogueID == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "dialogue_id_required",

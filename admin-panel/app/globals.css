@@ -235,12 +235,18 @@ main.container {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
 }
 .hotspot.selected {
   background: var(--success);
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
+}
+.hotspot.dragging {
+  cursor: grabbing;
+  z-index: 5;
+  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.45);
 }
 
 .hs-item {

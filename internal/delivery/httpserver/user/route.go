@@ -17,4 +17,8 @@ func (h Handler) SetUserRoutes(e *echo.Echo) {
 
 	userGroup.POST("/reset-pass", h.ResetPass)
 
+	userGroup.GET("/notification-settings", h.GetNotificationSettings, middlware.Auth(h.authSvc, h.authConfig))
+	userGroup.PUT("/notification-settings", h.UpdateNotificationSettings, middlware.Auth(h.authSvc, h.authConfig))
+	userGroup.POST("/device-token", h.RegisterDeviceToken, middlware.Auth(h.authSvc, h.authConfig))
+
 }

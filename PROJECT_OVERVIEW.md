@@ -170,13 +170,16 @@ cd app && npm install && npm run ios   # یا npm run android
 1. **Pointer receiver**: متدهای `Scene.AddHotspot/Publish`، `Hotspot.AddDialogue`، `Dialogue.Set*` به pointer receiver تبدیل شدند — پیش‌تر هات‌اسپات‌ها/دیالوگ‌ها اصلاً ذخیره نمی‌شدند.
 2. **ذخیره‌ی `audio_url` دیالوگ**: در [create_scene.go](internal/service/learning/create_scene.go) اضافه شد (قبلاً نادیده گرفته می‌شد).
 3. **احراز هویت پنل**: روت‌های `/v1/admin/*` پشت JWT + AdminOnly قرار گرفتند.
+4. **register باز**: نقش کاربر در [register.go](internal/service/user/register.go) همیشه ثابت `"user"` است؛ فیلد `role` ارسالی از کلاینت دیگر نادیده گرفته می‌شود.
+5. **باگ توکن**: `CreateRefreshToken` در [auth.go](internal/service/auth/auth.go) اصلاح شد تا از `RefreshSubject`/`RefreshExpirationTime` (به‌جای مقادیر access token) استفاده کند.
+6. **مسیرهای shadowing** پشت میدل‌ور JWT قرار گرفتند ([shadowing/route.go](internal/delivery/httpserver/shadowing/route.go)).
+7. **اعتماد به `user_id` ارسالی در بدنه‌ی درخواست shadowing**: [start_session.go](internal/delivery/httpserver/shadowing/start_session.go) حالا `UserID` را از claims توکن (`claims.GetClaims(c)`) می‌خواند، نه از بدنه‌ی درخواست.
+8. **اطلاعات حساس hard-code** در [cmd/main.go](cmd/main.go): رمز/یوزر DB و `JwtSignKey` به env منتقل شدند (`DB_USERNAME`, `DB_PASSWORD`, `DB_PORT`, `DB_HOST`, `DB_NAME`, `JWT_SIGN_KEY` در [.env](.env))؛ کد فقط مقادیر دیفالت local dev را به‌عنوان fallback نگه می‌دارد.
 
 ### ⚠️ باقی‌مانده برای بهبود
-1. **اطلاعات حساس hard-code** در [cmd/main.go](cmd/main.go) (رمز DB و `JwtSignKey`) — بهتر است به env منتقل شوند.
-2. **باگ توکن**: `CreateRefreshToken` در [auth.go](internal/service/auth/auth.go) از subject/expiration مربوط به access token استفاده می‌کند.
-3. **register باز**: هرکسی می‌تواند با `role: "admin"` ثبت‌نام کند — باید محدود شود.
-4. **مسیرهای shadowing** بدون احراز هویت‌اند.
-5. **غلط‌های املایی نام‌گذاری**: پوشه‌ی `middlware`، متغیر `MyPostgresgresRepo`.
+1. **صداهای seed سوپرمارکت** هنوز لینک voca.ro (غیرقابل‌پخش) هستند.
+2. **غلط‌های املایی نام‌گذاری**: پوشه‌ی `middlware`، متغیر `MyPostgresgresRepo`.
+3. **کلید Anthropic لو‌رفته** در [.env](.env) هنوز Revoke نشده — باید در پنل Anthropic باطل و با کلید جدید جایگزین شود.
 
 ---
 

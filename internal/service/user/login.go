@@ -23,7 +23,7 @@ func (s Service) Login(req dto.LoginRequest) (dto.LoginResponse, error) {
 	// 2️⃣ جستجوی کاربر
 	user, err := s.repo.GetUserByPhoneNumber(req.PhoneNumber)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return dto.LoginResponse{}, errors.New("کاربری با این شماره تلفن یافت نشد")
 		}
 		return dto.LoginResponse{}, richerror.New(op).WithErr(err).WithMessage("خطا در جستجوی کاربر")

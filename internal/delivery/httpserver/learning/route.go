@@ -14,4 +14,13 @@ func (h Handler) SetLearningRoutes(e *echo.Echo) {
 	learningGroup.GET("/get-scene/sceneID", h.GetScene, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.POST("/get-list", h.ListScene, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.PUT("/update-scene", h.UpdateScene, middlware.Auth(h.authSvc, h.authConfig))
+
+	// پیشنهاد صحنه توسط کاربر عادی (بررسی و انتشار توسط ادمین)
+	learningGroup.POST("/upload-image", h.UploadImage, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.POST("/scene-submissions", h.CreateSceneSubmission, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.GET("/scene-submissions/mine", h.MySceneSubmissions, middlware.Auth(h.authSvc, h.authConfig))
+
+	// امتیاز و طرح‌های اشتراک
+	learningGroup.GET("/points", h.MyPoints, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.GET("/subscription-plans", h.SubscriptionPlans, middlware.Auth(h.authSvc, h.authConfig))
 }

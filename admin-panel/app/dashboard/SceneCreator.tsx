@@ -3,18 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import {
   API_BASE,
+  approveSceneSubmission,
   createScene,
+  generateAudio,
   generateScene,
+  listTTSVoices,
   updateScene,
   uploadAudio,
   uploadImage,
 } from "@/lib/api";
+import type { TTSVoice } from "@/lib/api";
 import type {
   DialogueInput,
   Difficulty,
   DisplayType,
   HotspotInput,
   SceneResp,
+  SceneSubmission,
   Speaker,
   WordInput,
 } from "@/lib/types";
@@ -80,11 +85,17 @@ export default function SceneCreator({
   onSaved,
   editScene,
   onCancelEdit,
+  fromSubmission,
+  onApproved,
+  onCancelReview,
 }: {
   notify: (msg: string, type?: "ok" | "err") => void;
   onSaved: () => void;
   editScene?: SceneResp | null;
   onCancelEdit?: () => void;
+  fromSubmission?: SceneSubmission | null;
+  onApproved?: () => void;
+  onCancelReview?: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -97,6 +108,16 @@ export default function SceneCreator({
   const [aiPrompt, setAiPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // صداهای در دسترس ElevenLabs (برای انتخاب مرد/زن هنگام تولید صدای هر دیالوگ)
+  const [voices, setVoices] = useState<TTSVoice[]>([]);
+  const [voiceChoice, setVoiceChoice] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    listTTSVoices()
+      .then(setVoices)
+      .catch(() => setVoices([])); // اگر کلید ElevenLabs ست نشده باشد، ساکت نادیده می‌گیریم
+  }, []);
 
   // در حالت ویرایش، فرم را با اطلاعات صحنه‌ی موجود پر می‌کنیم.
   useEffect(() => {
@@ -113,6 +134,37 @@ export default function SceneCreator({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editScene]);
+
+  // در حالت بررسیِ پیشنهاد کاربر، فرم را با موقعیت/عکس/دیالوگ‌های پیشنهادی پر
+  // می‌کنیم؛ ادمین باقی موارد (عنوان، جای هات‌اسپات، ترجمه، صدا) را کامل می‌کند.
+  useEffect(() => {
+    if (!fromSubmission) return;
+    setTitle("");
+    setDescription(fromSubmission.situation_text || "");
+    setDifficulty("beginner");
+    setImageUrl(fromSubmission.image_url || null);
+    const dialogues: DialogueInput[] = (fromSubmission.dialogues || []).map((d, di) => ({
+      order: di + 1,
+      speaker: (d.speaker as Speaker) || "customer",
+      original_text: d.text || "",
+      translation: "",
+      audio_url: "",
+      display_type: "full",
+      partial_hint: "",
+      wait_duration: 5,
+      words: [],
+    }));
+    setHotspots(
+      dialogues.length > 0
+        ? [{ name: "نقطه ۱", x_position: 50, y_position: 50, order: 1, dialogues }]
+        : []
+    );
+    setSelected(dialogues.length > 0 ? 0 : null);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromSubmission]);
 
   // ---------- تولید با هوش مصنوعی (فرم را پر می‌کند؛ ذخیره نمی‌کند) ----------
   async function handleGenerate() {
@@ -197,6 +249,40 @@ export default function SceneCreator({
 
   function updateHotspot(i: number, patch: Partial<HotspotInput>) {
     setHotspots((hs) => hs.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
+  }
+
+  // ---------- جابه‌جا کردن نقطه با درگ روی تصویر ----------
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const draggedRef = useRef(false);
+
+  function positionFromPointer(e: { clientX: number; clientY: number }) {
+    const rect = imgRef.current!.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    return {
+      x: Math.min(100, Math.max(0, Math.round(x * 100) / 100)),
+      y: Math.min(100, Math.max(0, Math.round(y * 100) / 100)),
+    };
+  }
+
+  function handleHotspotPointerDown(e: React.PointerEvent, i: number) {
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    draggedRef.current = false;
+    setDraggingIndex(i);
+    setSelected(i);
+  }
+
+  function handleHotspotPointerMove(e: React.PointerEvent, i: number) {
+    if (draggingIndex !== i || !imgRef.current) return;
+    draggedRef.current = true;
+    const { x, y } = positionFromPointer(e);
+    updateHotspot(i, { x_position: x, y_position: y });
+  }
+
+  function handleHotspotPointerUp(e: React.PointerEvent) {
+    (e.target as Element).releasePointerCapture(e.pointerId);
+    setDraggingIndex(null);
   }
   function removeHotspot(i: number) {
     setHotspots((hs) =>
@@ -292,6 +378,28 @@ export default function SceneCreator({
     }
   }
 
+  // ---------- تولید صدای دیالوگ با هوش مصنوعی (ElevenLabs) ----------
+  const [generatingAudioFor, setGeneratingAudioFor] = useState<string | null>(null);
+
+  async function handleGenerateDialogueAudio(hi: number, di: number) {
+    const text = hotspots[hi]?.dialogues[di]?.original_text?.trim();
+    if (!text) {
+      notify("اول متن انگلیسی دیالوگ را بنویس", "err");
+      return;
+    }
+    const audioKey = `${hi}-${di}`;
+    setGeneratingAudioFor(audioKey);
+    try {
+      const url = await generateAudio(text, voiceChoice[audioKey]);
+      updateDialogue(hi, di, { audio_url: url });
+      notify("صدا با هوش مصنوعی ساخته شد ✅", "ok");
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setGeneratingAudioFor(null);
+    }
+  }
+
   // ---------- ذخیره ----------
   function validate(): string | null {
     if (!title.trim()) return "عنوان صحنه الزامی است";
@@ -321,7 +429,12 @@ export default function SceneCreator({
         difficulty,
         hotspots,
       };
-      if (editScene) {
+      if (fromSubmission) {
+        const res = await approveSceneSubmission(fromSubmission.id, payload);
+        notify(`صحنه منتشر شد و ${res.points_awarded} امتیاز به کاربر داده شد ✅`, "ok");
+        resetForm();
+        onApproved?.();
+      } else if (editScene) {
         await updateScene(editScene.id, payload);
         notify("صحنه با موفقیت ویرایش شد ✅", "ok");
         onSaved();
@@ -353,6 +466,25 @@ export default function SceneCreator({
 
   return (
     <div>
+      {/* بنر حالت بررسی پیشنهاد کاربر */}
+      {fromSubmission && (
+        <div
+          className="card"
+          style={{
+            borderColor: "#22c55e",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 16 }}>
+            📩 بررسی پیشنهاد کاربر — موقعیت و دیالوگ‌ها از کاربر پرشده؛ عنوان، جای
+            هات‌اسپات، ترجمه و صدا را کامل کن و «ذخیره» را بزن تا منتشر و امتیاز
+            کاربر اهدا شود.
+          </h2>
+        </div>
+      )}
+
       {/* بنر حالت ویرایش */}
       {editScene && (
         <div
@@ -457,7 +589,8 @@ export default function SceneCreator({
         <div className="card">
           <h2 style={{ marginTop: 0 }}>۲) نقاط هات‌اسپات و دیالوگ‌ها</h2>
           <p className="hint">
-            روی تصویر کلیک کنید تا نقطه اضافه شود، سپس از سمت چپ نقطه را انتخاب و
+            روی تصویر کلیک کنید تا نقطه اضافه شود؛ برای جابه‌جا کردن نقطه‌ی موجود
+            آن را با موس بگیرید و بکشید. از سمت چپ هم می‌توانید نقطه را انتخاب و
             دیالوگ‌هایش را با متن و صدا وارد کنید.
           </p>
           <div className="editor-grid">
@@ -468,12 +601,17 @@ export default function SceneCreator({
                 {hotspots.map((h, i) => (
                   <div
                     key={i}
-                    className={`hotspot ${selected === i ? "selected" : ""}`}
+                    className={`hotspot ${selected === i ? "selected" : ""} ${
+                      draggingIndex === i ? "dragging" : ""
+                    }`}
                     style={{ left: `${h.x_position}%`, top: `${h.y_position}%` }}
                     title={h.name}
+                    onPointerDown={(e) => handleHotspotPointerDown(e, i)}
+                    onPointerMove={(e) => handleHotspotPointerMove(e, i)}
+                    onPointerUp={handleHotspotPointerUp}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelected(i);
+                      if (!draggedRef.current) setSelected(i);
                     }}
                   >
                     {i + 1}
@@ -528,13 +666,40 @@ export default function SceneCreator({
                     }
                   />
                 </div>
-                <div style={{ maxWidth: 160, flex: "0 0 auto" }}>
-                  <label>موقعیت</label>
-                  <input
-                    disabled
-                    value={`x:${sel.x_position}%  y:${sel.y_position}%`}
-                    dir="ltr"
-                  />
+                <div style={{ maxWidth: 200, flex: "0 0 auto" }}>
+                  <label>موقعیت (٪) — قابل ویرایش دستی</label>
+                  <div style={{ display: "flex", gap: 6 }} dir="ltr">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      value={sel.x_position}
+                      onChange={(e) =>
+                        updateHotspot(selected, {
+                          x_position: Math.min(
+                            100,
+                            Math.max(0, Number(e.target.value) || 0)
+                          ),
+                        })
+                      }
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      value={sel.y_position}
+                      onChange={(e) =>
+                        updateHotspot(selected, {
+                          y_position: Math.min(
+                            100,
+                            Math.max(0, Number(e.target.value) || 0)
+                          ),
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -673,12 +838,49 @@ export default function SceneCreator({
                       />
                     </div>
                     <div>
-                      <label>🎙 صدای دیالوگ (آپلود ویس)</label>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        onChange={(e) => handleDialogueAudio(selected, di, e)}
-                      />
+                      <label>🎙 صدای دیالوگ</label>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          style={{ flex: 1, minWidth: 160 }}
+                          onChange={(e) => handleDialogueAudio(selected, di, e)}
+                        />
+                        {voices.length > 0 && (
+                          <select
+                            value={voiceChoice[`${selected}-${di}`] ?? ""}
+                            onChange={(e) =>
+                              setVoiceChoice((s) => ({
+                                ...s,
+                                [`${selected}-${di}`]: e.target.value,
+                              }))
+                            }
+                            style={{ minWidth: 170 }}
+                          >
+                            <option value="">صدای پیش‌فرض</option>
+                            {voices.map((v) => (
+                              <option key={v.voice_id} value={v.voice_id}>
+                                {v.gender === "male"
+                                  ? "👨"
+                                  : v.gender === "female"
+                                  ? "👩"
+                                  : "🎙"}{" "}
+                                {v.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => handleGenerateDialogueAudio(selected, di)}
+                          disabled={generatingAudioFor === `${selected}-${di}`}
+                        >
+                          {generatingAudioFor === `${selected}-${di}`
+                            ? "در حال ساخت..."
+                            : "🔊 تولید با AI"}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -740,6 +942,8 @@ export default function SceneCreator({
         <button className="btn" onClick={handleSave} disabled={saving}>
           {saving
             ? "در حال ذخیره..."
+            : fromSubmission
+            ? "✅ انتشار و اهدای امتیاز"
             : editScene
             ? "💾 ذخیره تغییرات"
             : "💾 ذخیره صحنه"}
@@ -747,11 +951,12 @@ export default function SceneCreator({
         <button
           className="btn btn-ghost"
           onClick={() => {
-            if (editScene) onCancelEdit?.();
+            if (fromSubmission) onCancelReview?.();
+            else if (editScene) onCancelEdit?.();
             resetForm();
           }}
         >
-          {editScene ? "انصراف" : "پاک‌کردن فرم"}
+          {fromSubmission ? "انصراف از بررسی" : editScene ? "انصراف" : "پاک‌کردن فرم"}
         </button>
       </div>
     </div>

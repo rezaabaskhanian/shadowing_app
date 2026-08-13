@@ -6,8 +6,13 @@ import { clearSession, getName, getRole, getToken } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
 import SceneCreator from "./SceneCreator";
 import SceneList from "./SceneList";
+import SettingsPanel from "./SettingsPanel";
+import NotificationsPanel from "./NotificationsPanel";
+import SceneReviewQueue from "./SceneReviewQueue";
+import SubscriptionPlansPanel from "./SubscriptionPlansPanel";
+import type { SceneSubmission } from "@/lib/types";
 
-type Tab = "create" | "list";
+type Tab = "create" | "list" | "settings" | "notifications" | "review" | "subscriptions";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -17,6 +22,9 @@ export default function DashboardPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // صحنه‌ای که در حال ویرایش است (اگر null باشد، فرم در حالت ساخت جدید است)
   const [editScene, setEditScene] = useState<SceneResp | null>(null);
+  // پیشنهادی که در حال بررسی است (فرم را از روی آن پر می‌کند)
+  const [reviewSubmission, setReviewSubmission] = useState<SceneSubmission | null>(null);
+  const [submissionReloadKey, setSubmissionReloadKey] = useState(0);
 
   // توست ساده
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
@@ -55,13 +63,37 @@ export default function DashboardPage() {
             className={`tab-btn ${tab === "create" ? "active" : ""}`}
             onClick={() => setTab("create")}
           >
-            {editScene ? "✏️ ویرایش صحنه" : "➕ ساخت صحنه"}
+            {reviewSubmission ? "📩 بررسی پیشنهاد" : editScene ? "✏️ ویرایش صحنه" : "➕ ساخت صحنه"}
           </button>
           <button
             className={`tab-btn ${tab === "list" ? "active" : ""}`}
             onClick={() => setTab("list")}
           >
             📋 لیست صحنه‌ها
+          </button>
+          <button
+            className={`tab-btn ${tab === "settings" ? "active" : ""}`}
+            onClick={() => setTab("settings")}
+          >
+            ⚙️ تنظیمات
+          </button>
+          <button
+            className={`tab-btn ${tab === "notifications" ? "active" : ""}`}
+            onClick={() => setTab("notifications")}
+          >
+            🔔 نوتیفیکیشن‌ها
+          </button>
+          <button
+            className={`tab-btn ${tab === "review" ? "active" : ""}`}
+            onClick={() => setTab("review")}
+          >
+            📩 پیشنهادهای کاربران
+          </button>
+          <button
+            className={`tab-btn ${tab === "subscriptions" ? "active" : ""}`}
+            onClick={() => setTab("subscriptions")}
+          >
+            💳 اشتراک‌ها
           </button>
         </div>
         <div className="userbox">
@@ -73,14 +105,23 @@ export default function DashboardPage() {
       </div>
 
       <main className="container">
-        {tab === "create" ? (
+        {tab === "create" && (
           <SceneCreator
             notify={notify}
             onSaved={() => setReloadKey((k) => k + 1)}
             editScene={editScene}
             onCancelEdit={() => setEditScene(null)}
+            fromSubmission={reviewSubmission}
+            onApproved={() => {
+              setReviewSubmission(null);
+              setReloadKey((k) => k + 1);
+              setSubmissionReloadKey((k) => k + 1);
+              setTab("review");
+            }}
+            onCancelReview={() => setReviewSubmission(null)}
           />
-        ) : (
+        )}
+        {tab === "list" && (
           <SceneList
             notify={notify}
             reloadKey={reloadKey}
@@ -90,6 +131,20 @@ export default function DashboardPage() {
             }}
           />
         )}
+        {tab === "settings" && <SettingsPanel notify={notify} />}
+        {tab === "notifications" && <NotificationsPanel notify={notify} />}
+        {tab === "review" && (
+          <SceneReviewQueue
+            notify={notify}
+            reloadKey={submissionReloadKey}
+            onReview={(submission) => {
+              setReviewSubmission(submission);
+              setEditScene(null);
+              setTab("create");
+            }}
+          />
+        )}
+        {tab === "subscriptions" && <SubscriptionPlansPanel notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}

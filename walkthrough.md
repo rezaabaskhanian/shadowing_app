@@ -77,6 +77,28 @@ export const COLORS = {
      - Send SMS code button (`Send SMS Code`).
      - 4-Digit OTP verification boxes.
      - Verify and sign in (`Verify & Sign In`).
+  3. **3-Step Interactive Reset Password Flow (`ResetPasswordScreen`)**:
+     - **Step 1 (Request)**: Enter registered Email or Phone number + `Send Reset Code`.
+     - **Step 2 (Verify & Reset)**: Enter 4-digit verification code + New Password + Confirm New Password with eye toggle visibility.
+     - **Step 3 (Success)**: Celebration screen with success badge and direct `Back to Login` action.
+     - Full bilingual i18n support (`EN` / `FA`).
+
+---
+
+## 🔔 6. Notifications & Study Reminders (`NotificationContext.tsx` & `NotificationBanner.tsx`)
+
+- **Daily Study Reminders (یادآوری درس‌خواندن)**:
+  - Toggle switch to turn daily learning alerts ON/OFF.
+  - Interactive reminder time selector (`09:00 AM`, `02:00 PM`, `08:00 PM`).
+- **Sentence & Vocab Banner Alerts (نوتیفیکیشن واژه‌ها و جملات)**:
+  - Toggle switch for periodic content notification banners.
+  - **Notification Content Source Selector**:
+    - `Leitner Words` (واژگان جعبه لایتنر)
+    - `Lesson Sentences` (جملات مکالمات درس‌ها)
+    - `Both (Mixed)` (ترکیب لایتنر و جملات درس)
+- **Interactive Top Banner Notification Preview (`NotificationBanner.tsx`)**:
+  - `Send Test Notification Banner` button to instantly simulate receiving a banner notification.
+  - Floating top overlay showing sentence/word, Persian translation, source badge, and direct `Review Now` CTA.
 
 ---
 

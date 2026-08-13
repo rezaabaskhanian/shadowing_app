@@ -33,7 +33,7 @@ func (s Service) CreateAccessToken(user domain.User) (string, error) {
 }
 
 func (s Service) CreateRefreshToken(user domain.User) (string, error) {
-	return s.createToken(string(user.ID), user.Role, s.config.AccessSubject, s.config.AccessExpirationTime)
+	return s.createToken(string(user.ID), user.Role, s.config.RefreshSubject, s.config.RefreshExpirationTime)
 }
 
 func (s Service) ParseToken(authHeader string) (*Claims, error) {

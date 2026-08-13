@@ -14,8 +14,13 @@ import (
 	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	notificationservice "shadowing-backend/internal/service/notification"
 	progressservice "shadowing-backend/internal/service/progress"
+	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
+	submissionservice "shadowing-backend/internal/service/submission"
+	subscriptionservice "shadowing-backend/internal/service/subscription"
+	ttsservice "shadowing-backend/internal/service/tts"
 
 	"fmt"
 	userservice "shadowing-backend/internal/service/user"
@@ -48,18 +53,34 @@ func New(cfg config.Config, userSvc userservice.Service,
 	learningSvc learningservice.Service,
 	shadowingSvc shadowingservice.Service,
 	progressSvc progressservice.Service,
+	settingsSvc *settingsservice.Service,
+	notificationSvc notificationservice.Service,
+	submissionSvc submissionservice.Service,
+	subscriptionSvc subscriptionservice.Service,
 
 ) Service {
 
 	return Service{cfg: cfg,
-		userHandler:     userhandler.New(userSvc, authSvc, authConfig, cfg.Auth.SignKey),
-		learningHandler: learninghandler.New(learningSvc, authSvc, authConfig),
+		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, authConfig, cfg.Auth.SignKey),
+		learningHandler: learninghandler.New(
+			learningSvc, submissionSvc, subscriptionSvc, authSvc, authConfig, uploadDir, uploadURLPath,
+		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig),
 
 		progressHndler: progresshandler.New(progressSvc, authSvc, authConfig),
 
-		adminHandler: adminhandler.New(learningSvc, aiservice.New(), authSvc, authConfig, uploadDir, uploadURLPath),
+		adminHandler: adminhandler.New(
+			learningSvc,
+			aiservice.New(settingsSvc),
+			ttsservice.New(settingsSvc),
+			settingsSvc,
+			notificationSvc,
+			submissionSvc,
+			subscriptionSvc,
+			userSvc,
+			authSvc, authConfig, uploadDir, uploadURLPath,
+		),
 	}
 }
 

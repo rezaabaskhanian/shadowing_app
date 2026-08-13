@@ -1,15 +1,6 @@
 package aiservice
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"strings"
-
-	"shadowing-backend/internal/pkg/richerror"
-
-	"github.com/anthropics/anthropic-sdk-go"
-)
+import "strings"
 
 // ---- شکل خروجیِ تولیدشده (کلیدهای JSON با فرم پنل ادمین یکی است) ----
 
@@ -44,6 +35,8 @@ type GeneratedScene struct {
 	Hotspots    []GeneratedHotspot `json:"hotspots"`
 }
 
+// sceneSystemPrompt هم برای Claude و هم برای Gemini استفاده می‌شود تا خروجی هر دو
+// ارائه‌دهنده دقیقاً با یک اسکیمای JSON مطابقت داشته باشد.
 const sceneSystemPrompt = `You generate content for an English-conversation "shadowing" learning app.
 Given a short situation prompt (in Persian or English), produce a realistic scene with 2-3 hotspots (interaction points) and, for each hotspot, a natural back-and-forth dialogue.
 
@@ -82,54 +75,6 @@ Guidance:
 - For "words", pick 1-3 important content words from each line (skip trivial words like "the", "is").
 - Spread hotspot x/y positions across the image (roughly 20-80).
 - Persian translations must be accurate and natural.`
-
-// GenerateScene با یک پرامپت ساده، یک صحنه‌ی کامل (دیالوگ‌ها + ترجمه + واژه‌ها) می‌سازد.
-func (s Service) GenerateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error) {
-	const op = "aiservice.GenerateScene"
-
-	userText := fmt.Sprintf("Situation: %s", strings.TrimSpace(prompt))
-	if difficulty != "" {
-		userText += fmt.Sprintf("\nDifficulty: %s", difficulty)
-	}
-
-	resp, err := s.client.Messages.New(ctx, anthropic.MessageNewParams{
-		Model:     s.model,
-		MaxTokens: 8000,
-		System: []anthropic.TextBlockParam{{
-			Text: sceneSystemPrompt,
-		}},
-		Thinking: anthropic.ThinkingConfigParamUnion{
-			OfAdaptive: &anthropic.ThinkingConfigAdaptiveParam{},
-		},
-		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(userText)),
-		},
-	})
-	if err != nil {
-		return GeneratedScene{}, richerror.New(op).WithErr(err).
-			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی: %v", err))
-	}
-
-	// متن نهایی را از بلاک‌های پاسخ جمع می‌کنیم (بلاک‌های thinking نادیده گرفته می‌شوند)
-	var raw strings.Builder
-	for _, block := range resp.Content {
-		if b, ok := block.AsAny().(anthropic.TextBlock); ok {
-			raw.WriteString(b.Text)
-		}
-	}
-
-	jsonStr := extractJSON(raw.String())
-	var scene GeneratedScene
-	if err := json.Unmarshal([]byte(jsonStr), &scene); err != nil {
-		return GeneratedScene{}, richerror.New(op).WithErr(err).
-			WithMessage("پاسخ مدل قابل پردازش نبود")
-	}
-
-	if difficulty != "" {
-		scene.Difficulty = difficulty
-	}
-	return scene, nil
-}
 
 // extractJSON اولین شیء JSON را از متن بیرون می‌کشد (اگر مدل fence یا متن اضافه گذاشت).
 func extractJSON(text string) string {

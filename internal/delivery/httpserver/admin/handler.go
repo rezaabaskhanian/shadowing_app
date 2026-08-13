@@ -4,12 +4,24 @@ import (
 	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
 	learningservice "shadowing-backend/internal/service/learning"
+	notificationservice "shadowing-backend/internal/service/notification"
+	settingsservice "shadowing-backend/internal/service/settings"
+	submissionservice "shadowing-backend/internal/service/submission"
+	subscriptionservice "shadowing-backend/internal/service/subscription"
+	ttsservice "shadowing-backend/internal/service/tts"
+	userservice "shadowing-backend/internal/service/user"
 )
 
 // Handler پنل ادمین را سرویس‌دهی می‌کند: آپلود تصویر/صدا و مدیریت صحنه‌ها/هات‌اسپات‌ها/دیالوگ‌ها
 type Handler struct {
-	learningSvc learningservice.Service
-	aiSvc       aiservice.Service
+	learningSvc     learningservice.Service
+	aiSvc           aiservice.Service
+	ttsSvc          ttsservice.Service
+	settingsSvc     *settingsservice.Service
+	notificationSvc notificationservice.Service
+	submissionSvc   submissionservice.Service
+	subscriptionSvc subscriptionservice.Service
+	userSvc         userservice.Service
 
 	authSvc    authservice.Service
 	authConfig authservice.Config
@@ -24,16 +36,28 @@ type Handler struct {
 func New(
 	learningSvc learningservice.Service,
 	aiSvc aiservice.Service,
+	ttsSvc ttsservice.Service,
+	settingsSvc *settingsservice.Service,
+	notificationSvc notificationservice.Service,
+	submissionSvc submissionservice.Service,
+	subscriptionSvc subscriptionservice.Service,
+	userSvc userservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	uploadDir, publicPath string,
 ) Handler {
 	return Handler{
-		learningSvc: learningSvc,
-		aiSvc:       aiSvc,
-		authSvc:     authSvc,
-		authConfig:  authConfig,
-		uploadDir:   uploadDir,
-		publicPath:  publicPath,
+		learningSvc:     learningSvc,
+		aiSvc:           aiSvc,
+		ttsSvc:          ttsSvc,
+		settingsSvc:     settingsSvc,
+		notificationSvc: notificationSvc,
+		submissionSvc:   submissionSvc,
+		subscriptionSvc: subscriptionSvc,
+		userSvc:         userSvc,
+		authSvc:         authSvc,
+		authConfig:      authConfig,
+		uploadDir:       uploadDir,
+		publicPath:      publicPath,
 	}
 }
