@@ -1,11 +1,24 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Sparkles } from 'lucide-react-native';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Mic,
+  Pause,
+  Play,
+  Plus,
+  Repeat,
+  RotateCcw,
+  Sparkles,
+} from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
-import type { DialogueItem } from '../../data/scenarios';
+import { useVocab } from '../../data/VocabContext';
+import type { DialogueItem, WordEntry } from '../../data/scenarios';
 import type { AudioActionCommand } from './types';
 
 type StepKey = 'tabListen' | 'tabShadow' | 'tabRecord' | 'tabCompare';
@@ -41,6 +54,57 @@ const HighlightedDialogueText: React.FC<{ text: string; words?: { word: string }
   );
 };
 
+/**
+ * لغت‌های همین جمله (که از API می‌آیند) را زیر جمله نشان می‌دهد: هر چیپ شامل
+ * خود واژه و معنی‌اش است و با زدن روی آن، واژه به جعبه‌ی لایتنر اضافه (یا در
+ * صورت وجود، از آن حذف) می‌شود.
+ */
+const DialogueVocabChips: React.FC<{
+  words?: WordEntry[];
+  onOpenLeitner: () => void;
+  t: (key: string) => string;
+}> = ({ words, onOpenLeitner, t }) => {
+  const { has, add, remove, box } = useVocab();
+
+  if (!words || words.length === 0) return null;
+
+  return (
+    <View style={styles.vocabBlock}>
+      <View style={styles.vocabChipsRow}>
+        {words.map((w, idx) => {
+          const added = has(w.word);
+          return (
+            <TouchableOpacity
+              key={`${w.word}-${idx}`}
+              activeOpacity={0.8}
+              style={[styles.vocabChip, added ? styles.vocabChipAdded : null]}
+              onPress={() => (added ? remove(w.word) : add(w))}
+            >
+              {added ? (
+                <Check size={13} color={COLORS.tertiary} />
+              ) : (
+                <Plus size={13} color={COLORS.primary} />
+              )}
+              <Text style={[styles.vocabChipWord, added ? styles.vocabChipWordAdded : null]}>
+                {w.word}
+              </Text>
+              <Text style={styles.vocabChipMeaning}>{w.meaning}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* میان‌بر به جعبه‌ی لایتنر (جایگزین لینکی که در WordsSheet بود) */}
+      <TouchableOpacity style={styles.leitnerBoxLink} onPress={onOpenLeitner}>
+        <Layers size={14} color={COLORS.primary} />
+        <Text style={styles.leitnerBoxLinkText}>
+          {t('leitnerBoxTitle')} ({box.length})
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const WaveBars: React.FC<{ active: boolean; color: string }> = ({ active, color }) => (
   <View style={styles.waveformRow}>
     {Array.from({ length: 24 }).map((_, idx) => (
@@ -68,6 +132,10 @@ interface ShadowingPracticePanelProps {
   onPrevDialogue: () => void;
   onNextDialogue: () => void;
   onReplay: () => void;
+  onOpenLeitner: () => void;
+  /** چندمین دورِ پخش دیالوگ‌ها در مرحله‌ی فعلی (۱ تا totalRepeats). */
+  repeatCount: number;
+  totalRepeats: number;
 }
 
 /**
@@ -91,6 +159,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   onPrevDialogue,
   onNextDialogue,
   onReplay,
+  onOpenLeitner,
+  repeatCount,
+  totalRepeats,
 }) => {
   const orderedStepTabs = language === 'fa' ? [...STEP_TABS].reverse() : STEP_TABS;
 
@@ -117,6 +188,23 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         })}
       </View>
 
+      {/* شمارنده‌ی دور: هر مرحله چند بار کامل تکرار می‌شود و بعد خودکار به
+          مرحله‌ی بعد می‌رود. نقطه‌های پرشده = دورهای انجام‌شده. */}
+      <View style={styles.repeatRow}>
+        <Repeat size={13} color={COLORS.textSecondary} />
+        <Text style={styles.repeatText}>
+          {repeatCount}/{totalRepeats}
+        </Text>
+        <View style={styles.repeatDotsRow}>
+          {Array.from({ length: totalRepeats }).map((_, idx) => (
+            <View
+              key={idx}
+              style={[styles.repeatDot, idx < repeatCount ? styles.repeatDotActive : null]}
+            />
+          ))}
+        </View>
+      </View>
+
       {/* Dialogue Sentence with vocab-word highlight + translation */}
       <View style={styles.dialogueBox}>
         <HighlightedDialogueText
@@ -124,6 +212,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
           words={currentDialogue.words}
         />
         <Text style={styles.translationText}>{currentDialogue.translation}</Text>
+
+        {/* لغت‌های همین جمله؛ با زدن روی هرکدام به جعبه‌ی لایتنر می‌رود */}
+        <DialogueVocabChips words={currentDialogue.words} onOpenLeitner={onOpenLeitner} t={t} />
 
         {activeStepIndex === 1 && (
           <View style={styles.shadowBannerPill}>
@@ -273,6 +364,33 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: COLORS.primary,
   },
+  repeatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  repeatText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+  },
+  repeatDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 2,
+  },
+  repeatDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.border,
+  },
+  repeatDotActive: {
+    backgroundColor: COLORS.primary,
+  },
   dialogueBox: {
     alignItems: 'center',
     marginBottom: 10,
@@ -299,6 +417,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  vocabBlock: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  leitnerBoxLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 10,
+  },
+  leitnerBoxLinkText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+  },
+  vocabChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  vocabChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  vocabChipAdded: {
+    backgroundColor: COLORS.tertiaryLight,
+    borderColor: COLORS.tertiary,
+  },
+  vocabChipWord: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+  },
+  vocabChipWordAdded: {
+    color: COLORS.tertiary,
+  },
+  vocabChipMeaning: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
   },
   shadowBannerPill: {
     flexDirection: 'row',

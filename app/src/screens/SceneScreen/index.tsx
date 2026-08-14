@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
 import { AudioPlayer } from '../../components/AudioPlayer';
-import { WordsSheet } from '../../components/WordsSheet';
 import { SessionResultScreen } from '../../components/SessionResultScreen';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
 import { useScenes } from '../../data/ScenesContext';
@@ -26,6 +25,11 @@ const SESSION_RHYTHM = 83;
 
 // عدد استریک هنوز از بک‌اند نمی‌آید؛ مثل Home مقدار نمایشی ثابت است.
 const STREAK_COUNT = 14;
+
+// در هر مرحله‌ی تمرین، کل دیالوگ‌های صحنه این تعداد بار از اول تا آخر پخش
+// می‌شوند؛ بعد از آن، خودکار به مرحله‌ی بعد می‌رویم (مگر اینکه کاربر خودش
+// زودتر مرحله را عوض کند).
+const REPEATS_PER_STEP = 3;
 
 // تصویرهای صحنه landscape هستند؛ تا وقتی ابعاد واقعی تصویر لود نشده از این
 // نسبت استفاده می‌شود تا فریم اول هم تقریباً درست باشد و تصویر نپرد.
@@ -96,9 +100,13 @@ export const SceneScreen = () => {
   // نباید دوباره تکرار شود و دوربین باید در حالت خارج از زوم بماند.
   const [sceneFinished, setSceneFinished] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [wordsSheetVisible, setWordsSheetVisible] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [actionCommand, setActionCommand] = useState<AudioActionCommand>('none');
+  // شمارنده‌ای که فقط برای «دوباره فرستادن همان دستور» به AudioPlayer بالا
+  // می‌رود؛ لازم است چون شروع دوباره‌ی دور، همان دیالوگ اول را دوباره می‌خواهد.
+  const [audioNonce, setAudioNonce] = useState(0);
+  // چندمین دور پخش دیالوگ‌ها در مرحله‌ی فعلی هستیم (۱ تا REPEATS_PER_STEP).
+  const [repeatCount, setRepeatCount] = useState(1);
 
   const currentDialogue = dialogueItems[activeIndex] || {
     dialogue: 'Great. Can I pay by card?',
@@ -126,17 +134,6 @@ export const SceneScreen = () => {
     }, [resetToHome])
   );
 
-  const handleEnterScene = () => {
-    setInScene(true);
-    setSceneFinished(false);
-    setActiveIndex(0);
-    if (currentDialogue.audioUrl) {
-      setAudioUri(currentDialogue.audioUrl);
-      setActionCommand('play_original');
-      setPlaying(true);
-    }
-  };
-
   const autoTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
@@ -145,39 +142,73 @@ export const SceneScreen = () => {
     };
   }, []);
 
+  /**
+   * تنها نقطه‌ای که خط دیالوگ فعال را عوض و صدایش را پخش می‌کند. همه‌ی مسیرها
+   * (بعدی، قبلی، پرش به هات‌اسپات، شروع دوباره‌ی دور) از همین‌جا رد می‌شوند تا
+   * رفتار پخش همه‌جا یکسان بماند.
+   */
+  const playDialogueAt = useCallback(
+    (idx: number) => {
+      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+      const target = dialogueItems[idx];
+      if (!target) return;
+      setSceneFinished(false);
+      setActiveIndex(idx);
+      setAudioUri(target.audioUrl || null);
+      setActionCommand('play_original');
+      setPlaying(true);
+      // حتی اگر همان دیالوگ قبلی باشد، این عدد باعث می‌شود دستور پخش دوباره
+      // به پلیر برسد و صدا از اول شروع شود.
+      setAudioNonce((n) => n + 1);
+    },
+    [dialogueItems]
+  );
+
+  const handleEnterScene = () => {
+    setInScene(true);
+    setRepeatCount(1);
+    playDialogueAt(0);
+  };
+
+  // رفتن به مرحله‌ی بعدی تمرین؛ روی مرحله‌ی آخر، جلسه تمام‌شده تلقی می‌شود.
+  const goToNextStep = useCallback(() => {
+    if (activeStepIndex < 3) {
+      setActiveStepIndex(activeStepIndex + 1);
+    } else {
+      setShowResult(true);
+    }
+  }, [activeStepIndex]);
+
   const handleNextDialogue = useCallback(() => {
+    const nextIdx = activeIndex + 1;
+    if (nextIdx < dialogueItems.length) {
+      playDialogueAt(nextIdx);
+      return;
+    }
+
+    // ——— یک دور کامل دیالوگ‌ها تمام شد ———
     if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-    setActiveIndex((prevIdx) => {
-      // اگر روی آخرین هات‌اسپات هستیم، دیگر به هات‌اسپات اول برنگرد؛ فقط اعلام
-      // کن که صحنه تمام شده تا افکت زوم، یک‌بار زوم اوت کند و دیگر تکرار نشود.
-      if (prevIdx + 1 >= dialogueItems.length) {
-        setSceneFinished(true);
-        return prevIdx;
-      }
-      const nextIdx = prevIdx + 1;
-      const nextDialogue = dialogueItems[nextIdx];
-      if (nextDialogue?.audioUrl) {
-        setAudioUri(nextDialogue.audioUrl);
-        setActionCommand('play_original');
-        setPlaying(true);
-      }
-      return nextIdx;
-    });
-  }, [dialogueItems]);
+
+    // بیرون از حالت تمرین، فقط اعلام می‌کنیم صحنه تمام شده تا دوربین زوم اوت
+    // کند و دیگر تکرار نشود.
+    if (!isShadowingMode) {
+      setSceneFinished(true);
+      return;
+    }
+
+    // داخل حالت تمرین: تا REPEATS_PER_STEP بار دوباره از اولین هات‌اسپات شروع
+    // می‌کنیم و بعد از آن خودکار به مرحله‌ی بعد می‌رویم.
+    if (repeatCount < REPEATS_PER_STEP) {
+      setRepeatCount(repeatCount + 1);
+      playDialogueAt(0);
+    } else {
+      goToNextStep();
+    }
+  }, [activeIndex, dialogueItems, isShadowingMode, repeatCount, playDialogueAt, goToNextStep]);
 
   const handlePrevDialogue = useCallback(() => {
-    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-    setActiveIndex((prevIdx) => {
-      const nextIdx = prevIdx > 0 ? prevIdx - 1 : 0;
-      const nextDialogue = dialogueItems[nextIdx];
-      if (nextDialogue?.audioUrl) {
-        setAudioUri(nextDialogue.audioUrl);
-        setActionCommand('play_original');
-        setPlaying(true);
-      }
-      return nextIdx;
-    });
-  }, [dialogueItems]);
+    playDialogueAt(activeIndex > 0 ? activeIndex - 1 : 0);
+  }, [activeIndex, playDialogueAt]);
 
   // ——— ناوبری در سطح هات‌اسپات (نه تک‌تک خطوط دیالوگ) ———
   // اندیس هات‌اسپاتی که خط دیالوگ فعلی به آن تعلق دارد.
@@ -193,24 +224,23 @@ export const SceneScreen = () => {
       if (!target) return;
       const firstIdx = dialogueItems.findIndex((d) => d.hotspotId === target.id);
       if (firstIdx === -1) return;
-      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-      setSceneFinished(false);
-      setActiveIndex(firstIdx);
-      const nextDialogue = dialogueItems[firstIdx];
-      if (nextDialogue?.audioUrl) {
-        setAudioUri(nextDialogue.audioUrl);
-        setActionCommand('play_original');
-        setPlaying(true);
-      }
+      playDialogueAt(firstIdx);
     },
-    [sceneHotspots, dialogueItems]
+    [sceneHotspots, dialogueItems, playDialogueAt]
   );
 
   const handleReplay = useCallback(() => {
-    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-    setActionCommand('play_original');
-    setPlaying(true);
-  }, []);
+    playDialogueAt(activeIndex);
+  }, [activeIndex, playDialogueAt]);
+
+  // با ورود به تمرین و با هر تعویض مرحله (چه دستی با تب/فلش، چه خودکار بعد از
+  // پایان دورها)، همه‌چیز از اول شروع می‌شود: دیالوگ اول، هات‌اسپات اول،
+  // دوربین دوباره روی همان زوم می‌کند و شمارنده‌ی دور صفر می‌شود.
+  useEffect(() => {
+    if (!isShadowingMode) return;
+    setRepeatCount(1);
+    playDialogueAt(0);
+  }, [isShadowingMode, activeStepIndex, playDialogueAt]);
 
   const toggleSpeed = () => {
     const speeds = [1.0, 0.75, 1.25, 1.5];
@@ -226,11 +256,7 @@ export const SceneScreen = () => {
   // دکمه‌ی فلش روی تصویر: مرحله‌ی بعدی را باز می‌کند؛ روی آخرین مرحله، از
   // صحنه خارج شده و نتیجه‌ی جلسه نمایش داده می‌شود.
   const handleHeaderForwardPress = () => {
-    if (activeStepIndex < 3) {
-      setActiveStepIndex(activeStepIndex + 1);
-    } else {
-      setShowResult(true);
-    }
+    goToNextStep();
   };
 
   const defaultCoverUri =
@@ -311,6 +337,7 @@ export const SceneScreen = () => {
         playbackRate={playbackRate}
         textHint={currentDialogue.dialogue}
         actionCommand={actionCommand}
+        actionNonce={audioNonce}
         onPlaybackStatusUpdate={(status) => {
           if (status === 'finished' && autoMode) {
             if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
@@ -336,15 +363,12 @@ export const SceneScreen = () => {
           insetsTop={insets.top}
           activeTarget={activeCameraTarget}
           sceneFinished={sceneFinished}
+          // با تعویض مرحله‌ی تمرین و همچنین شروع هر دور تکرار، دوربین دوباره
+          // روی هات‌اسپات زوم می‌کند.
+          refocusKey={isShadowingMode ? `${activeStepIndex}-${repeatCount}` : undefined}
           isShadowingMode={isShadowingMode}
           streakCount={STREAK_COUNT}
-          onBack={resetToHome}
           onForward={handleHeaderForwardPress}
-          showAddToLeitner={Boolean(
-            isShadowingMode && currentDialogue.words && currentDialogue.words.length > 0
-          )}
-          addToLeitnerLabel={t('addToLeitner')}
-          onAddToLeitnerPress={() => setWordsSheetVisible(true)}
         />
 
         {/* Bottom Sheet Dialogue Card */}
@@ -377,21 +401,13 @@ export const SceneScreen = () => {
               onPrevDialogue={handlePrevDialogue}
               onNextDialogue={handleNextDialogue}
               onReplay={handleReplay}
+              onOpenLeitner={() => navigation.navigate('Leitner')}
+              repeatCount={repeatCount}
+              totalRepeats={REPEATS_PER_STEP}
             />
           )}
         </View>
       </ScrollView>
-
-      <WordsSheet
-        visible={wordsSheetVisible}
-        onClose={() => setWordsSheetVisible(false)}
-        dialogueText={currentDialogue.dialogue}
-        backendWords={currentDialogue.words}
-        onOpenBox={() => {
-          setWordsSheetVisible(false);
-          navigation.navigate('Leitner');
-        }}
-      />
     </View>
   );
 };

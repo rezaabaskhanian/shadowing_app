@@ -9,6 +9,13 @@ interface AudioPlayerProps {
   onPlaybackStatusUpdate?: (status: 'loading' | 'playing' | 'paused' | 'finished' | 'error') => void;
   onRecordingStatusUpdate?: (status: 'recording' | 'stopped' | 'error', recordedDataUrl?: string) => void;
   actionCommand?: 'none' | 'start_record' | 'stop_record' | 'play_recording' | 'play_original';
+  /**
+   * با هر بار تغییر این عدد، دستور فعلی دوباره به WebView فرستاده می‌شود. برای
+   * وقتی لازم است که همان دیالوگ قبلی دوباره از اول پخش شود (مثلاً شروع دوباره‌ی
+   * دور تکرار)؛ چون در آن حالت نه uri عوض می‌شود نه actionCommand، و بدون این
+   * کلید هیچ‌وقت افکت پایین دوباره اجرا نمی‌شد.
+   */
+  actionNonce?: number;
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
@@ -19,6 +26,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   onPlaybackStatusUpdate,
   onRecordingStatusUpdate,
   actionCommand = 'none',
+  actionNonce = 0,
 }) => {
   const webViewRef = useRef<any>(null);
 
@@ -40,7 +48,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         JSON.stringify({ cmd: shouldPlay ? 'play_original' : 'pause', uri: uri, rate: playbackRate, text: textHint })
       );
     }
-  }, [shouldPlay, actionCommand, uri, playbackRate, textHint]);
+  }, [shouldPlay, actionCommand, uri, playbackRate, textHint, actionNonce]);
 
   const onMessage = useCallback(
     (event: any) => {
