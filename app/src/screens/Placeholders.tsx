@@ -252,7 +252,8 @@ export const ProgressScreen = () => {
 
 import { useNotifications, ReminderTime, ContentSource } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Clock, LogOut, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Clock, LogOut, Mic, Repeat, Sparkles } from 'lucide-react-native';
+import { usePracticeSettings, REPEAT_OPTIONS } from '../data/PracticeSettingsContext';
 import { useAuth } from '../data/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMyPoints } from '../api/submissions';
@@ -272,6 +273,7 @@ export const ProfileScreen = () => {
     setContentSource,
     triggerTestNotification,
   } = useNotifications();
+  const { repeatsPerStep, setRepeatsPerStep } = usePracticeSettings();
 
   const [points, setPoints] = React.useState(0);
 
@@ -334,6 +336,47 @@ export const ProfileScreen = () => {
           >
             <Text style={[styles.langBtnText, language === 'fa' ? styles.langBtnTextActive : null]}>فارسی</Text>
           </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* میان‌بر به صداهای ضبط‌شده‌ی کاربر روی گوشی */}
+      <TouchableOpacity
+        style={[styles.pointsCard, { marginTop: 12 }]}
+        onPress={() => navigation.navigate('MyRecordings')}
+        activeOpacity={0.85}
+      >
+        <View style={styles.pointsIconWrap}>
+          <Mic color={COLORS.primary} size={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pointsValue}>{t('myRecordings')}</Text>
+          <Text style={styles.pointsSub}>{t('myRecordingsSub')}</Text>
+        </View>
+        <ChevronRight color={COLORS.muted} size={18} />
+      </TouchableOpacity>
+
+      {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
+      <View style={[styles.settingCard, { marginTop: 16 }]}>
+        <View style={styles.sectionHeaderRow}>
+          <Repeat color={COLORS.primary} size={20} />
+          <Text style={styles.settingCardTitle}>{t('practiceSettingsTitle')}</Text>
+        </View>
+
+        <Text style={styles.optionTitle}>{t('repeatsPerStepLabel')}</Text>
+        <Text style={styles.optionSub}>{t('repeatsPerStepSub')}</Text>
+
+        <View style={[styles.pillGroup, { marginTop: 10 }]}>
+          {REPEAT_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={[styles.pillBtn, repeatsPerStep === option && styles.pillBtnActive]}
+              onPress={() => setRepeatsPerStep(option)}
+            >
+              <Text style={[styles.pillText, repeatsPerStep === option && styles.pillTextActive]}>
+                {option === 0 ? '∞' : `${option}×`}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 

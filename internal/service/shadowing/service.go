@@ -3,8 +3,10 @@ package shadowingservice
 import (
 	"context"
 
+	scene "shadowing-backend/internal/domain/learning/scene"
 	domainRecord "shadowing-backend/internal/domain/shadowing/recording"
 	domainSession "shadowing-backend/internal/domain/shadowing/session"
+	"shadowing-backend/internal/service/speecheval"
 
 	"github.com/google/uuid"
 )
@@ -61,15 +63,41 @@ type RecordingRepository interface {
 // ============================================
 // Service - با Pointer
 // ============================================
+// ============================================
+// DialogueRepository - خواندن متن دیالوگ
+// ============================================
+type DialogueRepository interface {
+	// GetDialogueByID - متن و صدای مرجع یک دیالوگ، برای ساختن مراحل جلسه
+	GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, error)
+}
+
+// ============================================
+// Service - با Pointer
+// ============================================
 type Service struct {
 	sessionRepo   SessionRepository
 	recordingRepo RecordingRepository
+	dialogueRepo  DialogueRepository
+	evaluator     speecheval.Evaluator
 }
 
 // New - سازنده با بازگشت Pointer
-func New(sessionRepo SessionRepository, recordingRepo RecordingRepository) *Service {
+//
+// evaluator می‌تواند nil باشد؛ در آن صورت ارزیابی تخمینی (بدون تشخیص گفتار)
+// انجام می‌شود تا سرویس بدون سایدکار STT هم بالا بیاید.
+func New(
+	sessionRepo SessionRepository,
+	recordingRepo RecordingRepository,
+	dialogueRepo DialogueRepository,
+	evaluator speecheval.Evaluator,
+) *Service {
+	if evaluator == nil {
+		evaluator = speecheval.NewHybridEvaluator()
+	}
 	return &Service{
 		sessionRepo:   sessionRepo,
 		recordingRepo: recordingRepo,
+		dialogueRepo:  dialogueRepo,
+		evaluator:     evaluator,
 	}
 }

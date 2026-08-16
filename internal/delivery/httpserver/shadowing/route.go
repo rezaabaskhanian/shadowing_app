@@ -16,4 +16,8 @@ func (h Handler) SetShadowingRoutes(e *echo.Echo) {
 	g.POST("/session/:id/recording", h.SubmitRecording)
 	g.GET("/session/:id/status", h.GetSessionStatus)
 	g.POST("/session/:id/reset", h.ResetSession)
+
+	// نمره‌دهی تلفظ بدون جلسه — اپ در مرحله‌های ضبط/مقایسه از این استفاده
+	// می‌کند تا بتواند هر جمله را هرچندبار که کاربر خواست ارزیابی کند.
+	g.POST("/evaluate", h.EvaluateRecording)
 }

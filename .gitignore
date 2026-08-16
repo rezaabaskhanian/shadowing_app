@@ -12,3 +12,6 @@
 # فایل محیطی
 .env
 *.env
+
+# مدل‌های whisper — با whisper-service/download-model.sh دانلود می‌شوند
+whisper-service/models/

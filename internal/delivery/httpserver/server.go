@@ -66,7 +66,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			learningSvc, submissionSvc, subscriptionSvc, authSvc, authConfig, uploadDir, uploadURLPath,
 		),
 
-		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig),
+		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
 
 		progressHndler: progresshandler.New(progressSvc, authSvc, authConfig),
 

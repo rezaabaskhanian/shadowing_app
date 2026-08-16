@@ -30,12 +30,13 @@ import { LeitnerScreen } from '../screens/LeitnerScreen';
 import { SceneScreen } from '../screens/SceneScreen';
 import { SubmitSceneScreen } from '../screens/SubmitSceneScreen';
 import { MySubmissionsScreen } from '../screens/MySubmissionsScreen';
+import { MyRecordingsScreen } from '../screens/MyRecordingsScreen';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
-const HIDDEN_TAB_BAR_ROUTES = ['Shadowing', 'SubmitScene', 'MySubmissions'];
+const HIDDEN_TAB_BAR_ROUTES = ['Shadowing', 'SubmitScene', 'MySubmissions', 'MyRecordings'];
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { t } = useLanguage();
@@ -176,6 +177,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="MySubmissions"
         component={MySubmissionsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="MyRecordings"
+        component={MyRecordingsScreen}
         options={{
           tabBarButton: () => null,
         }}

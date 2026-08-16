@@ -1,237 +1,233 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { WebView } from 'react-native-webview';
+import type React from 'react';
+import { useEffect } from 'react';
+import * as RNFS from '@dr.pogodin/react-native-fs';
+import TrackPlayer, { Event, State } from 'react-native-track-player';
+import Sound from 'react-native-nitro-sound';
+
+import { ensureTrackPlayerSetup } from '../services/audio/trackPlayerSetup';
+
+/**
+ * موتور صدای اپ: دو مسیر کاملاً جدا با دو کتابخانه‌ی native.
+ *
+ *  - صدای مرجع (سرور) → `react-native-track-player`. این کتابخانه برای پخش
+ *    ساخته شده و مستقیم از URL شبکه می‌خواند؛ چون یک ماژول native است نه
+ *    وب‌ویو، محدودیت origin/mixed-content که قبلاً کل این کامپوننت را پیچیده
+ *    کرده بود اصلاً وجود ندارد.
+ *  - ضبط صدای کاربر و پخش دوباره‌ی آن → `react-native-nitro-sound`. برخلاف
+ *    نسخه‌ی قبلی (MediaRecorder داخل وب‌ویو که خروجی‌اش دیتا-یو‌آر‌ال بود)،
+ *    این کتابخانه مستقیم روی دیسک می‌نویسد و مسیر فایل را برمی‌گرداند — دیگر
+ *    نیازی به تبدیل base64 نیست.
+ *
+ * این کامپوننت هیچ UI ای رندر نمی‌کند؛ فقط state بیرونی را به دستور واقعی
+ * ترجمه می‌کند، شبیه یک ref imperitive که با props کنترل می‌شود.
+ */
 
 interface AudioPlayerProps {
+  /** آدرس صدای مرجع (از سرور). */
   uri: string | null;
   shouldPlay: boolean;
   playbackRate?: number;
-  textHint?: string;
-  onPlaybackStatusUpdate?: (status: 'loading' | 'playing' | 'paused' | 'finished' | 'error') => void;
-  onRecordingStatusUpdate?: (status: 'recording' | 'stopped' | 'error', recordedDataUrl?: string) => void;
+  onPlaybackStatusUpdate?: (
+    status: 'loading' | 'playing' | 'paused' | 'finished' | 'error'
+  ) => void;
+  /**
+   * پایان پخشِ صدای ضبط‌شده‌ی کاربر (جدا از صدای اصلی). برای پخش پشت‌سرهمِ
+   * چند ضبط لازم است تا بدانیم کِی نوبت بعدی است.
+   */
+  onRecordedPlaybackEnd?: () => void;
+  onRecordingStatusUpdate?: (
+    status: 'recording' | 'stopped' | 'error',
+    filePath?: string,
+    mimeType?: string
+  ) => void;
   actionCommand?: 'none' | 'start_record' | 'stop_record' | 'play_recording' | 'play_original';
   /**
-   * با هر بار تغییر این عدد، دستور فعلی دوباره به WebView فرستاده می‌شود. برای
-   * وقتی لازم است که همان دیالوگ قبلی دوباره از اول پخش شود (مثلاً شروع دوباره‌ی
-   * دور تکرار)؛ چون در آن حالت نه uri عوض می‌شود نه actionCommand، و بدون این
-   * کلید هیچ‌وقت افکت پایین دوباره اجرا نمی‌شد.
+   * مسیر فایلِ ضبطی که دستور `play_recording` باید پخشش کند. اگر خالی باشد
+   * یعنی برای این جمله هنوز ضبطی نیست.
+   */
+  loadedRecordingPath?: string | null;
+  /**
+   * با هر بار تغییر این عدد، دستور فعلی دوباره اجرا می‌شود. برای وقتی لازم
+   * است همان صدا دوباره از اول پخش شود (مثلاً شروع دوباره‌ی دور تکرار) بدون
+   * اینکه uri یا actionCommand عوض شوند.
    */
   actionNonce?: number;
 }
+
+/** آدرس مرجع TrackPlayer، برای تشخیص «همین صداست یا صدای جدید». */
+const MASTER_TRACK_ID = 'master';
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   uri,
   shouldPlay,
   playbackRate = 1.0,
-  textHint = '',
   onPlaybackStatusUpdate,
   onRecordingStatusUpdate,
+  onRecordedPlaybackEnd,
   actionCommand = 'none',
   actionNonce = 0,
+  loadedRecordingPath = null,
 }) => {
-  const webViewRef = useRef<any>(null);
+  // ============================================================
+  // صدای مرجع — TrackPlayer
+  // ============================================================
 
   useEffect(() => {
-    if (!webViewRef.current) return;
+    ensureTrackPlayerSetup().catch((err) =>
+      console.warn('[AudioPlayer] TrackPlayer setup failed:', err)
+    );
+  }, []);
 
-    if (actionCommand === 'start_record') {
-      webViewRef.current.postMessage(JSON.stringify({ cmd: 'start_record' }));
-    } else if (actionCommand === 'stop_record') {
-      webViewRef.current.postMessage(JSON.stringify({ cmd: 'stop_record' }));
-    } else if (actionCommand === 'play_recording') {
-      webViewRef.current.postMessage(JSON.stringify({ cmd: 'play_recording', rate: playbackRate }));
-    } else if (actionCommand === 'play_original') {
-      webViewRef.current.postMessage(
-        JSON.stringify({ cmd: 'play_original', uri: uri, rate: playbackRate, text: textHint })
-      );
-    } else {
-      webViewRef.current.postMessage(
-        JSON.stringify({ cmd: shouldPlay ? 'play_original' : 'pause', uri: uri, rate: playbackRate, text: textHint })
-      );
-    }
-  }, [shouldPlay, actionCommand, uri, playbackRate, textHint, actionNonce]);
-
-  const onMessage = useCallback(
-    (event: any) => {
-      const raw = event.nativeEvent.data;
-      if (raw.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed.type === 'record_complete') {
-            onRecordingStatusUpdate?.('stopped', parsed.dataUrl);
-          } else if (parsed.type === 'record_status') {
-            onRecordingStatusUpdate?.(parsed.status);
-          }
-        } catch (e) {}
-      } else {
-        if (
-          raw === 'playing' ||
-          raw === 'paused' ||
-          raw === 'finished' ||
-          raw === 'loading' ||
-          raw === 'error'
-        ) {
-          onPlaybackStatusUpdate?.(raw as any);
-        }
+  useEffect(() => {
+    const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (data) => {
+      if (data.state === State.Playing) onPlaybackStatusUpdate?.('playing');
+      else if (data.state === State.Paused) onPlaybackStatusUpdate?.('paused');
+      else if (data.state === State.Error) onPlaybackStatusUpdate?.('error');
+      else if (data.state === State.Loading || data.state === State.Buffering) {
+        onPlaybackStatusUpdate?.('loading');
       }
-    },
-    [onPlaybackStatusUpdate, onRecordingStatusUpdate]
-  );
-
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0">
-<script>
-  function send(data){ 
-    try { 
-      window.ReactNativeWebView.postMessage(typeof data === 'string' ? data : JSON.stringify(data)); 
-    } catch(e){} 
-  }
-
-  var currentUri = ${JSON.stringify(uri || '')};
-  var currentText = ${JSON.stringify(textHint || '')};
-  var originalAudio = new Audio(currentUri);
-  var recordedAudio = new Audio();
-  var mediaRecorder = null;
-  var audioChunks = [];
-
-  function speakFallbackText(txt) {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      var utter = new SpeechSynthesisUtterance(txt || currentText || 'Hello');
-      utter.lang = 'en-US';
-      utter.rate = ${playbackRate};
-      utter.onstart = function() { send('playing'); };
-      utter.onend = function() { send('finished'); };
-      utter.onerror = function() { send('finished'); };
-      window.speechSynthesis.speak(utter);
-    } else {
-      setTimeout(function() { send('finished'); }, 2000);
-    }
-  }
-
-  function playWithFallback(audioObj, txt) {
-    if (!audioObj || !audioObj.src) {
-      speakFallbackText(txt);
-      return;
-    }
-    var promise = audioObj.play();
-    if (promise && promise.catch) {
-      promise.catch(function(err) {
-        speakFallbackText(txt);
-      });
-    }
-  }
-
-  function attachOriginalEvents() {
-    originalAudio.onplaying = function(){ send('playing'); };
-    originalAudio.onpause = function(){ send('paused'); };
-    originalAudio.onended = function(){ send('finished'); };
-    originalAudio.onerror = function(){
-      speakFallbackText(currentText);
+    });
+    // پایان صف = پایان صدای مرجع؛ چون همیشه فقط یک track در صف داریم.
+    const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      onPlaybackStatusUpdate?.('finished');
+    });
+    return () => {
+      stateSub.remove();
+      endedSub.remove();
     };
-  }
-  attachOriginalEvents();
+  }, [onPlaybackStatusUpdate]);
 
-  recordedAudio.onplaying = function(){ send('recorded_playing'); };
-  recordedAudio.onended = function(){ send('recorded_finished'); };
+  // این دستورها مال ضبط/پخشِ ضبط‌اند، نه صدای مرجع؛ افکت پایین باید نادیده
+  // بگیردشان تا با اجرای هم‌زمانشان به هم برخورد نکنند.
+  const isRecordingCommand =
+    actionCommand === 'start_record' ||
+    actionCommand === 'stop_record' ||
+    actionCommand === 'play_recording';
 
-  if (${JSON.stringify(shouldPlay)} && currentUri) {
-    originalAudio.playbackRate = ${playbackRate};
-    playWithFallback(originalAudio, currentText);
-  }
+  useEffect(() => {
+    if (isRecordingCommand) return;
 
-  window.addEventListener('message', function(e){
-    var raw = String(e.data || '');
-    var msg = {};
-    try { msg = JSON.parse(raw); } catch(err){ msg = { cmd: raw }; }
+    let cancelled = false;
+    (async () => {
+      await ensureTrackPlayerSetup();
+      if (cancelled) return;
 
-    var cmd = msg.cmd || raw;
-    var newUri = msg.uri || currentUri;
-    var rate = msg.rate || 1.0;
-    if (msg.text) currentText = msg.text;
+      if (!uri) {
+        await TrackPlayer.pause();
+        return;
+      }
 
-    if (newUri && newUri !== currentUri) {
-      currentUri = newUri;
-      originalAudio.pause();
-      originalAudio = new Audio(currentUri);
-      attachOriginalEvents();
+      // فقط وقتی صدا واقعاً عوض شده صف را از نو می‌سازیم؛ وگرنه (مثلاً فقط
+      // rate عوض شده یا actionNonce برای پخشِ دوباره زیاد شده) همان track را
+      // نگه می‌داریم و فقط seek/rate را به‌روز می‌کنیم — این‌طور صدا هر بار
+      // با یک تلق کوتاهِ reload نمی‌پرد.
+      const active = await TrackPlayer.getActiveTrack();
+      if (active?.url !== uri) {
+        await TrackPlayer.reset();
+        await TrackPlayer.add({ id: MASTER_TRACK_ID, url: uri });
+      } else {
+        await TrackPlayer.seekTo(0);
+      }
+      if (cancelled) return;
+
+      await TrackPlayer.setRate(playbackRate);
+
+      const wantsPlay = actionCommand === 'play_original' || (actionCommand === 'none' && shouldPlay);
+      if (wantsPlay) {
+        await TrackPlayer.play();
+      } else {
+        await TrackPlayer.pause();
+      }
+    })().catch((err) => {
+      console.warn('[AudioPlayer] master playback failed:', err);
+      onPlaybackStatusUpdate?.('error');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uri, shouldPlay, actionCommand, actionNonce, playbackRate, isRecordingCommand]);
+
+  // ============================================================
+  // ضبط صدای کاربر و پخش دوباره‌ی آن — nitro-sound
+  // ============================================================
+
+  useEffect(() => {
+    Sound.addPlaybackEndListener(() => {
+      onRecordedPlaybackEnd?.();
+    });
+    return () => {
+      Sound.removePlaybackEndListener();
+    };
+  }, [onRecordedPlaybackEnd]);
+
+  useEffect(() => {
+    if (actionCommand === 'start_record') {
+      let cancelled = false;
+      (async () => {
+        // صدای مرجع و ضبط قبلی نباید هم‌زمان با شروع ضبط پخش بمانند.
+        await TrackPlayer.pause().catch(() => {});
+        await Sound.stopPlayer().catch(() => {});
+
+        // مسیر صریح می‌دهیم (نه پیش‌فرض کتابخانه) تا بدانیم دقیقاً کجاست؛
+        // پسوند m4a چون هم اندروید (AAC/MPEG_4) و هم iOS به‌طور طبیعی همین
+        // را تولید می‌کنند.
+        const path = `${RNFS.DocumentDirectoryPath}/tmp_recording_${Date.now()}.m4a`;
+        try {
+          await Sound.startRecorder(path, undefined, false);
+          if (!cancelled) onRecordingStatusUpdate?.('recording');
+        } catch (err) {
+          console.warn('[AudioPlayer] startRecorder failed:', err);
+          if (!cancelled) onRecordingStatusUpdate?.('error');
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
-    originalAudio.playbackRate = rate;
-    recordedAudio.playbackRate = rate;
-
-    if (cmd === 'pause') {
-      originalAudio.pause();
-      recordedAudio.pause();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    } else if (cmd === 'play_original') {
-      recordedAudio.pause();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      if (currentUri) {
-        originalAudio.currentTime = 0;
-        playWithFallback(originalAudio, currentText);
-      } else {
-        speakFallbackText(currentText);
-      }
-    } else if (cmd === 'start_record') {
-      originalAudio.pause();
-      recordedAudio.pause();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
-          audioChunks = [];
-          mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.ondataavailable = function(evt) {
-            if (evt.data.size > 0) audioChunks.push(evt.data);
-          };
-          mediaRecorder.onstop = function() {
-            var blob = new Blob(audioChunks, { type: 'audio/mp3' });
-            var reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = function() {
-              var base64data = reader.result;
-              recordedAudio.src = base64data;
-              send({ type: 'record_complete', dataUrl: base64data });
-            };
-          };
-          mediaRecorder.start();
-          send({ type: 'record_status', status: 'recording' });
-        }).catch(function(err){
-          send({ type: 'record_status', status: 'error', error: err.message });
-        });
-      } else {
-        send({ type: 'record_status', status: 'error', error: 'MediaDevices not supported' });
-      }
-    } else if (cmd === 'stop_record') {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        send({ type: 'record_status', status: 'stopped' });
-      }
-    } else if (cmd === 'play_recording') {
-      originalAudio.pause();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      if (recordedAudio.src) {
-        recordedAudio.currentTime = 0;
-        playWithFallback(recordedAudio, '');
-      }
+    if (actionCommand === 'stop_record') {
+      let cancelled = false;
+      (async () => {
+        try {
+          const filePath = await Sound.stopRecorder();
+          if (!cancelled) onRecordingStatusUpdate?.('stopped', filePath, 'audio/m4a');
+        } catch (err) {
+          console.warn('[AudioPlayer] stopRecorder failed:', err);
+          if (!cancelled) onRecordingStatusUpdate?.('error');
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
-  });
-</script>
-</body>
-</html>`;
 
-  return (
-    <WebView
-      ref={webViewRef}
-      originWhitelist={['*']}
-      source={{ html: htmlContent }}
-      onMessage={onMessage}
-      style={{ position: 'absolute', width: 1, height: 1, top: -100, opacity: 0.01 }}
-      javaScriptEnabled
-      mediaPlaybackRequiresUserAction={false}
-      allowsInlineMediaPlayback={true}
-    />
-  );
+    if (actionCommand === 'play_recording') {
+      let cancelled = false;
+      (async () => {
+        if (!loadedRecordingPath) {
+          // ضبطی برای این جمله نیست؛ باید خبر بدهیم وگرنه پخشِ پشت‌سرهم
+          // برای همیشه منتظر پایانی می‌ماند که هرگز نمی‌آید.
+          onRecordedPlaybackEnd?.();
+          return;
+        }
+        try {
+          await TrackPlayer.pause().catch(() => {});
+          await Sound.stopPlayer().catch(() => {});
+          await Sound.startPlayer(loadedRecordingPath);
+        } catch (err) {
+          console.warn('[AudioPlayer] playback of recording failed:', err);
+          if (!cancelled) onRecordedPlaybackEnd?.();
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionCommand, actionNonce, loadedRecordingPath]);
+
+  // این کامپوننت چیزی رندر نمی‌کند؛ کاملاً imperative است.
+  return null;
 };

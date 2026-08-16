@@ -12,5 +12,27 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
+  # سرویس تشخیص گفتار برای نمره‌دهی تلفظ. بک‌اند Go با WHISPER_URL به آن وصل
+  # می‌شود؛ اگر بالا نباشد، نمره‌دهی به حالت محلی (تخمینی) برمی‌گردد و اپ
+  # خطا نمی‌دهد.
+  whisper:
+    build: ./whisper-service
+    container_name: shadowing-whisper
+    ports:
+      - "9000:9000"
+    environment:
+      # مسیر مدل محلی داده می‌شود نه اسم مدل: دانلود از HuggingFace داخل
+      # کانتینر از ایران گیر می‌کند. فایل‌های مدل با اسکریپت زیر یک بار روی
+      # خود سیستم دانلود و اینجا mount می‌شوند:
+      #   ./whisper-service/download-model.sh
+      # اگر شبکه‌ات آزاد است می‌توانی به‌جای مسیر، اسم مدل بگذاری (base.en /
+      # small.en / tiny.en) تا خودش دانلود کند.
+      WHISPER_MODEL: /models/base.en
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+    volumes:
+      - ./whisper-service/models:/models:ro
+    restart: always
+
 volumes:
   postgres_data:

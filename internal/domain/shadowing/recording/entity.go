@@ -15,20 +15,42 @@ const (
 	RecordingTypeRecord RecordingType = "record" // ضبط مرحله مستقل
 )
 
+// WordScore - نمره‌ی یک کلمه از جمله‌ی هدف، برای نمایش کلمه‌به‌کلمه در
+// مرحله‌ی مقایسه (Compare). Status یکی از ok / weak / missing است.
+type WordScore struct {
+	Word   string  `json:"word"`
+	Index  int     `json:"index"`
+	Score  float64 `json:"score"`
+	Status string  `json:"status"`
+	Heard  string  `json:"heard,omitempty"`
+}
+
 // Recording - ضبط صدا
 type Recording struct {
 	ID                 uuid.UUID     `json:"id"`
 	UserID             uuid.UUID     `json:"user_id"`
 	SessionID          uuid.UUID     `json:"session_id"`
 	DialogueID         uuid.UUID     `json:"dialogue_id"`
-	StepType           int           `json:"step_type"`          // 1-4
-	RecordingType      RecordingType `json:"recording_type"`     // shadow / record
-	AudioPath          string        `json:"audio_path"`         // مسیر محلی
-	Duration           int           `json:"duration"`           // ثانیه
+	StepType           int           `json:"step_type"`           // 1-4
+	RecordingType      RecordingType `json:"recording_type"`      // shadow / record
+	AudioPath          string        `json:"audio_path"`          // مسیر محلی
+	Duration           int           `json:"duration"`            // ثانیه
 	PronunciationScore float64       `json:"pronunciation_score"` // 0-100
 	FluencyScore       float64       `json:"fluency_score"`       // 0-100
 	OverallScore       float64       `json:"overall_score"`       // 0-100
-	CreatedAt          time.Time     `json:"created_at"`
+
+	// Transcript متنی که واقعاً از کاربر شنیده شده؛ اگر تشخیص گفتار در دسترس
+	// نبوده خالی است.
+	Transcript string `json:"transcript,omitempty"`
+
+	// WordScores نمره‌ی تک‌تک کلمه‌های جمله‌ی هدف
+	WordScores []WordScore `json:"word_scores,omitempty"`
+
+	// IsEstimated یعنی نمره از روی صدای واقعی نیست و فقط تخمینی از مدت ضبط
+	// است (سرویس تشخیص گفتار در دسترس نبوده).
+	IsEstimated bool `json:"is_estimated"`
+
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // ============================================
@@ -63,6 +85,9 @@ func NewRecording(userID, sessionID, dialogueID uuid.UUID, stepType int, recType
 		RecordingType: recType,
 		AudioPath:     audioPath,
 		Duration:      duration,
-		CreatedAt:     time.Now(),
+		// تا وقتی ارزیابی واقعی روی این ضبط انجام نشده، نمره‌اش تخمینی است.
+		IsEstimated: true,
+		WordScores:  []WordScore{},
+		CreatedAt:   time.Now(),
 	}, nil
 }

@@ -18,9 +18,13 @@
     # مرحله دوم: ساخت ایمیج سبک نهایی
     # -----------------------------
     FROM alpine:latest
-    
+
+    # ffmpeg برای تبدیل ضبط کاربر (webm/opus) به WAV 16k mono، پیش‌نیاز
+    # نمره‌دهی تلفظ. بدون آن نمره‌ها به حالت تخمینی برمی‌گردند.
+    RUN apk add --no-cache ffmpeg
+
     WORKDIR /root/
-    
+
     COPY --from=builder /app/main .
     
     # کپی migrations (با مسیر کامل)

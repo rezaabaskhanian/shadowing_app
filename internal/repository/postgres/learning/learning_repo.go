@@ -3,6 +3,7 @@ package postgreslearning
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	domain "shadowing-backend/internal/domain/learning/scene"
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/richerror"
@@ -380,4 +381,40 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 
 	return tx.Commit(ctx)
 
+}
+
+// GetDialogueByID یک دیالوگ را مستقیم با شناسه‌اش می‌خواند.
+//
+// سرویس shadowing به این نیاز دارد تا متن واقعی هر مرحله را از دیتابیس
+// بگیرد؛ بدون آن، نمره‌دهی تلفظ صدای کاربر را با جمله‌ی اشتباه مقایسه می‌کند.
+func (r DB) GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, error) {
+	const op = "postgres.LearningRepository.GetDialogueByID"
+
+	query := `SELECT
+		id, hotspot_id, "order", speaker, original_text, COALESCE(translation, ''),
+		COALESCE(audio_url, ''), display_type, COALESCE(partial_hint, ''), wait_duration,
+		COALESCE(words, '[]'::jsonb), created_at
+	FROM dialogues WHERE id = $1`
+
+	var d scene.Dialogue
+	var wordsJSON []byte
+	err := r.conn.QueryRow(ctx, query, id).Scan(
+		&d.ID, &d.HotspotID, &d.Order, &d.Speaker, &d.OriginalText,
+		&d.Translation, &d.AudioURL, &d.DisplayType,
+		&d.PartialHint, &d.WaitDuration, &wordsJSON, &d.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return scene.Dialogue{}, richerror.New(op).
+				WithMessage("dialogue not found").
+				WithKind(richerror.KindNotFound)
+		}
+		return scene.Dialogue{}, richerror.New(op).WithErr(err)
+	}
+
+	if len(wordsJSON) > 0 {
+		_ = json.Unmarshal(wordsJSON, &d.Words)
+	}
+
+	return d, nil
 }

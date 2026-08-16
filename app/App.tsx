@@ -9,6 +9,7 @@ import { ScenesProvider } from './src/data/ScenesContext';
 import { VocabProvider } from './src/data/VocabContext';
 import { LanguageProvider } from './src/data/i18n';
 import { AuthProvider, useAuth } from './src/data/AuthContext';
+import { PracticeSettingsProvider } from './src/data/PracticeSettingsContext';
 
 import { NotificationProvider } from './src/data/NotificationContext';
 import { NotificationBanner } from './src/components/NotificationBanner';
@@ -39,11 +40,13 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
     <NotificationProvider>
       <ScenesProvider>
         <VocabProvider>
-          <NavigationContainer>
-            <StatusBar barStyle="light-content" />
-            <NotificationBanner />
-            <AppNavigator />
-          </NavigationContainer>
+          <PracticeSettingsProvider>
+            <NavigationContainer>
+              <StatusBar barStyle="light-content" />
+              <NotificationBanner />
+              <AppNavigator />
+            </NavigationContainer>
+          </PracticeSettingsProvider>
         </VocabProvider>
       </ScenesProvider>
     </NotificationProvider>

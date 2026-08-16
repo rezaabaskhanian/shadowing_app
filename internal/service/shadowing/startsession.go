@@ -44,8 +44,11 @@ func (s Service) StartSession(ctx context.Context, req dto.StartSessionRequest) 
 		return nil, richerror.New(op).WithErr(err)
 	}
 
-	// 4️⃣ ایجاد ۴ مرحله
-	steps := s.createSteps(newSession.ID, dialogueID)
+	// 4️⃣ ایجاد ۴ مرحله از روی متن واقعی دیالوگ
+	steps, err := s.createSteps(ctx, newSession.ID, dialogueID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
 	if err := newSession.AddSteps(steps); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -70,13 +73,23 @@ func (s Service) StartSession(ctx context.Context, req dto.StartSessionRequest) 
 	}, nil
 }
 
-// createSteps - ایجاد ۴ مرحله برای جلسه
-func (s *Service) createSteps(sessionID, dialogueID uuid.UUID) []session.Step {
-	// در حالت واقعی، این اطلاعات از دیتابیس یا سرویس دیگر می‌آید
-	// برای نمونه، یک دیالوگ نمونه می‌سازیم
-	displayText := "How much is this can of tuna?"
-	translation := "این کنسرو تن ماهی چند است؟"
-	audioURL := "https://cdn.example.com/audio/dialogue_123.mp3"
+// createSteps - ایجاد ۴ مرحله برای جلسه از روی متن واقعی دیالوگ.
+//
+// قبلاً این متن هاردکد بود ("can of tuna")، یعنی همه‌ی جلسه‌ها صرف‌نظر از
+// صحنه همان یک جمله را نشان می‌دادند — و از وقتی نمره‌دهی تلفظ اضافه شد این
+// دیگر فقط یک اشکال نمایشی نیست: ارزیاب صدای کاربر را با جمله‌ی اشتباه
+// مقایسه می‌کرد.
+func (s *Service) createSteps(ctx context.Context, sessionID, dialogueID uuid.UUID) ([]session.Step, error) {
+	const op = "shadowing.createSteps"
+
+	dialogue, err := s.dialogueRepo.GetDialogueByID(ctx, dialogueID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("dialogue not found")
+	}
+
+	displayText := dialogue.OriginalText
+	translation := dialogue.Translation
+	audioURL := dialogue.AudioURL
 
 	steps := make([]session.Step, 0, 4)
 
@@ -99,5 +112,5 @@ func (s *Service) createSteps(sessionID, dialogueID uuid.UUID) []session.Step {
 		steps = append(steps, *step)
 	}
 
-	return steps
+	return steps, nil
 }

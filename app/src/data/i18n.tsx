@@ -166,12 +166,77 @@ export const translations: Translations = {
   tabRecord: { en: 'Record', fa: 'ضبط کردن' },
   tabCompare: { en: 'Compare', fa: 'مقایسه' },
   repeatAlongBanner: { en: 'Repeat along with the audio', fa: 'همزمان با صدا تکرار کنید' },
+  autoRepeatHint: { en: 'auto — skip anytime', fa: 'خودکار — هر وقت خواستی رد کن' },
+  unlimitedRepeatHint: { en: 'loops until you continue', fa: 'تا وقتی خودت ادامه ندهی تکرار می‌شود' },
+  practiceSettingsTitle: { en: 'Practice', fa: 'تمرین' },
+  savingRecording: { en: 'Saving your recording…', fa: 'در حال ذخیره‌ی صدای شما…' },
+  recordingSaved: { en: 'Saved to your phone', fa: 'روی گوشی ذخیره شد' },
+  recordingSaveFailed: { en: "Couldn't save the recording", fa: 'ذخیره‌ی صدا انجام نشد' },
+  myRecordings: { en: 'My Recordings', fa: 'ضبط‌های من' },
+  myRecordingsSub: {
+    en: 'Your saved voice recordings — listen back anytime',
+    fa: 'صداهای ضبط‌شده‌ات روی گوشی — هر وقت خواستی دوباره گوش بده',
+  },
+  noRecordingsYet: {
+    en: 'No recordings yet. Record yourself in a scene to see them here.',
+    fa: 'هنوز چیزی ضبط نکرده‌ای. در مرحله‌ی ضبطِ یک صحنه صدایت را ضبط کن.',
+  },
+  deleteRecording: { en: 'Delete recording?', fa: 'این ضبط حذف شود؟' },
+  cancel: { en: 'Cancel', fa: 'انصراف' },
+  delete: { en: 'Delete', fa: 'حذف' },
+  lineLabel: { en: 'line', fa: 'جمله' },
+  repeatsPerStepLabel: { en: 'Repeats per step', fa: 'تعداد تکرار هر مرحله' },
+  repeatsPerStepSub: {
+    en: 'How many times Listen and Shadow loop before moving on. ∞ waits for you.',
+    fa: 'مرحله‌های گوش دادن و سایه زدن چند بار تکرار شوند و بعد خودکار جلو بروند. ∞ یعنی منتظر خودت می‌ماند.',
+  },
+  selfPacedHint: { en: 'Take your time — continue when ready', fa: 'هر چقدر خواستی تمرین کن' },
+  nextStep: { en: 'Next step', fa: 'مرحله بعد' },
   startShadowing: { en: 'Start Shadowing', fa: 'شروع سایه‌زنی' },
   stopShadowing: { en: 'Stop Shadowing', fa: 'توقف سایه‌زنی' },
   replayMaster: { en: 'Replay Master', fa: 'پخش دوباره صدای اصلی' },
   holdToRecord: { en: 'Hold to Record', fa: 'برای ضبط نگه دارید' },
   masterAudio: { en: 'Master Audio', fa: 'صدای اصلی' },
   yourRecording: { en: 'Your Recording', fa: 'صدای شما' },
+
+  // ---- نمره‌دهی تلفظ ----
+  scoringInProgress: { en: 'Scoring your pronunciation…', fa: 'در حال بررسی تلفظ شما…' },
+  scoringFailed: {
+    en: "Couldn't score this recording. Check your connection.",
+    fa: 'نمره‌دهی انجام نشد. اتصال اینترنت را بررسی کنید.',
+  },
+  recordToSeeScore: {
+    en: 'Record yourself to see your pronunciation score',
+    fa: 'صدایت را ضبط کن تا نمره‌ی تلفظت را ببینی',
+  },
+  scoreEstimatedNote: {
+    en: 'Rough estimate — pronunciation service unavailable, so words are not checked.',
+    fa: 'نمره تقریبی است — سرویس بررسی تلفظ در دسترس نبود، پس کلمه‌ها بررسی نشده‌اند.',
+  },
+  scoreOverall: { en: 'Overall', fa: 'کل' },
+  scorePronunciation: { en: 'Pronunciation', fa: 'تلفظ' },
+  scoreFluency: { en: 'Fluency', fa: 'روانی' },
+  weHeard: { en: 'We heard:', fa: 'آنچه شنیدیم:' },
+  checkPronunciation: { en: 'Check my pronunciation', fa: 'تلفظم را بررسی کن' },
+  tryAgain: { en: 'Try again', fa: 'تلاش دوباره' },
+  noRecordingForLine: {
+    en: 'Not recorded yet',
+    fa: 'هنوز ضبط نشده',
+  },
+
+  // ---- متن مخفی در مرحله‌ی ضبط ----
+  recordingUnavailable: {
+    en: "This device can't record audio here. Please report it.",
+    fa: 'ضبط صدا روی این دستگاه ممکن نیست. لطفاً اطلاع بده.',
+  },
+  showText: { en: 'Show me the text', fa: 'متن را نشانم بده' },
+  hideText: { en: 'Hide the text', fa: 'متن را مخفی کن' },
+
+  // ---- لیست ضبط‌های صحنه ----
+  myLinesTitle: { en: 'My recordings', fa: 'ضبط‌های من' },
+  playAllMine: { en: 'Play all', fa: 'پخش همه' },
+  stopPlayAll: { en: 'Stop', fa: 'توقف' },
+  playConversation: { en: 'Play conversation', fa: 'پخش کل مکالمه' },
   checkWordPrefix: { en: 'Check', fa: 'بررسی کنید' },
   playBoth: { en: 'Play Both', fa: 'پخش هر دو' },
   retry: { en: 'Retry', fa: 'تلاش دوباره' },

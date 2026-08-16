@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"shadowing-backend/internal/config"
 	"shadowing-backend/internal/delivery/httpserver"
+	"strconv"
+	"strings"
 
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
@@ -17,9 +17,9 @@ import (
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
 	postgressstreak "shadowing-backend/internal/repository/postgres/progress/streak"
+	postgressettings "shadowing-backend/internal/repository/postgres/settings"
 	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
-	postgressettings "shadowing-backend/internal/repository/postgres/settings"
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
@@ -37,6 +37,7 @@ import (
 	pushservice "shadowing-backend/internal/service/push"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
+	"shadowing-backend/internal/service/speecheval"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 
@@ -156,7 +157,19 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	sessionRepo := postgressession.New(MyPostgresgresRepo.DB)
 	recordingRepo := postgresrecording.New(MyPostgresgresRepo.DB)
 
-	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo)
+	// نمره‌دهی تلفظ از سایدکار تشخیص گفتار استفاده می‌کند. اگر WHISPER_URL
+	// تنظیم نشده باشد یا سرویس بالا نباشد، ارزیاب خودش به نمره‌ی تخمینی
+	// برمی‌گردد و ضبط کاربر با خطا رد نمی‌شود.
+	var evaluator speecheval.Evaluator
+	if whisperURL := getEnv("WHISPER_URL", ""); whisperURL != "" {
+		evaluator = speecheval.NewWhisperEvaluator(whisperURL)
+		fmt.Println("speech evaluation: whisper at", whisperURL)
+	} else {
+		evaluator = speecheval.NewHybridEvaluator()
+		fmt.Println("speech evaluation: WHISPER_URL not set, scores will be estimates only")
+	}
+
+	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo, learnningRepo, evaluator)
 
 	streakRepo := postgressstreak.NewStreakRepository(MyPostgresgresRepo.DB)
 	achievementRepo := postgresachievement.NewAchievementRepository(MyPostgresgresRepo.DB)

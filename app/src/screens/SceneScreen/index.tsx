@@ -9,15 +9,18 @@ import { SessionResultScreen } from '../../components/SessionResultScreen';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
 import { useScenes } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
+import { usePracticeSettings } from '../../data/PracticeSettingsContext';
+import { saveRecording } from '../../services/RecordingsService';
+import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
 
 import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
-import { ShadowingPracticePanel } from './ShadowingPracticePanel';
+import { ShadowingPracticePanel } from './shadowing';
 import type { AudioActionCommand } from './types';
 
-// امتیازهای پایان جلسه هنوز از تحلیل صوتی واقعی نمی‌آیند و مانند بقیه‌ی
-// معیارهای اپ (مثل Home) مقادیر ثابت نمایشی هستند.
+// امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
+// باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
 const SESSION_SCORE = 85;
 const SESSION_PRONUNCIATION = 80;
 const SESSION_FLUENCY = 92;
@@ -26,14 +29,32 @@ const SESSION_RHYTHM = 83;
 // عدد استریک هنوز از بک‌اند نمی‌آید؛ مثل Home مقدار نمایشی ثابت است.
 const STREAK_COUNT = 14;
 
-// در هر مرحله‌ی تمرین، کل دیالوگ‌های صحنه این تعداد بار از اول تا آخر پخش
-// می‌شوند؛ بعد از آن، خودکار به مرحله‌ی بعد می‌رویم (مگر اینکه کاربر خودش
-// زودتر مرحله را عوض کند).
-const REPEATS_PER_STEP = 3;
+// فقط مرحله‌های ورودی (Listen و Shadow) دور خودکار دارند: چند دور کامل پخش
+// می‌شوند و بعد خودکار مرحله‌ی بعد. این اجبار نیست — کاربر هر لحظه می‌تواند با
+// تب یا دکمه‌ی «مرحله بعد» جلو برود، و تعداد دور را هم در تنظیمات عوض کند.
+// مرحله‌های ضبط و مقایسه همیشه با سرعت خودِ کاربر پیش می‌روند (نه دور خودکار،
+// نه پرش خودکار)، چون آنجا کاربر تصمیم می‌گیرد کِی راضی شده — رفتار رایج
+// اپ‌های شدوئینگ.
+const AUTO_REPEAT_STEPS = [0, 1];
 
 // تصویرهای صحنه landscape هستند؛ تا وقتی ابعاد واقعی تصویر لود نشده از این
 // نسبت استفاده می‌شود تا فریم اول هم تقریباً درست باشد و تصویر نپرد.
 const DEFAULT_SCENE_ASPECT = 16 / 9;
+
+// مدت تقریبی یک جمله‌ی دیالوگ به ثانیه. مبنای سنجش روانی گفتار است: اگر کاربر
+// خیلی کندتر یا تندتر از این بگوید نمره‌ی روانی پایین می‌آید. مقدار واقعی هر
+// جمله در بک‌اند (`wait_duration`) هست و وقتی dialogue_id بفرستیم همان
+// استفاده می‌شود؛ این فقط پشتیبان است.
+const DEFAULT_LINE_SECONDS = 3;
+
+/** ضبط کاربر برای یک جمله، همان‌طور که در حافظه‌ی این صفحه نگه داشته می‌شود. */
+interface LineRecording {
+  /** مسیر فایل روی دیسک (همان چیزی که در «ضبط‌های من» هم ذخیره شده). */
+  filePath: string;
+  mimeType?: string;
+  /** مدت واقعی ضبط به ثانیه؛ ورودی نمره‌دهی روانی است. */
+  duration: number;
+}
 
 /**
  * صفحه‌ی صحنه (Scene). این فایل فقط هماهنگ‌کننده‌ی state/داده است؛ بخش‌های
@@ -50,6 +71,7 @@ export const SceneScreen = () => {
   const { scenarioId } = route.params || {};
   const { getScene } = useScenes();
   const { language, t } = useLanguage();
+  const { repeatsPerStep } = usePracticeSettings();
   // ابعاد صفحه به‌صورت زنده (نه فقط یک‌بار در زمان لود) تا با چرخش گوشی به
   // حالت عرضی، اندازه‌ی ناحیه‌ی تصویر درست محاسبه شود و تصویر کشیده/بریده
   // نمایش داده نشود.
@@ -105,8 +127,47 @@ export const SceneScreen = () => {
   // شمارنده‌ای که فقط برای «دوباره فرستادن همان دستور» به AudioPlayer بالا
   // می‌رود؛ لازم است چون شروع دوباره‌ی دور، همان دیالوگ اول را دوباره می‌خواهد.
   const [audioNonce, setAudioNonce] = useState(0);
-  // چندمین دور پخش دیالوگ‌ها در مرحله‌ی فعلی هستیم (۱ تا REPEATS_PER_STEP).
+  // چندمین دور پخش دیالوگ‌ها در مرحله‌ی فعلی هستیم (۱ تا targetRepeats).
   const [repeatCount, setRepeatCount] = useState(1);
+  // وضعیت ذخیره‌ی صدای ضبط‌شده روی گوشی + نام فایلی که ساخته شد.
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [savedFileName, setSavedFileName] = useState<string | null>(null);
+  // نتیجه‌ی نمره‌دهی تلفظ برای هر جمله، کلید = اندیس جمله در dialogueItems.
+  // به‌ازای جمله نگه می‌داریم (نه یک مقدار واحد) تا با جابه‌جا شدن بین جمله‌ها
+  // بازخورد جمله‌ی قبلی روی جمله‌ی جدید نماند.
+  const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
+  const [evalState, setEvalState] = useState<'idle' | 'scoring' | 'done' | 'error'>('idle');
+  const [evalError, setEvalError] = useState<string | null>(null);
+  // کدام جمله وضعیت نمره‌دهی بالا مال اوست. بدون این، اگر کاربر وسط
+  // نمره‌دهی جمله را عوض کند، حالتِ «در حال بررسی» یا خطا روی جمله‌ی اشتباه
+  // نشان داده می‌شود.
+  const [evalLineIndex, setEvalLineIndex] = useState<number | null>(null);
+  // زمان شروع ضبط، برای اینکه مدت واقعی ضبط را به سرور بدهیم؛ نمره‌ی روانی
+  // بدون آن قابل محاسبه نیست.
+  const recordStartedAtRef = useRef<number>(0);
+
+  // ضبط کاربر برای هر جمله (کلید = اندیس جمله). در حافظه نگه داشته می‌شود تا
+  // بشود هر جمله را جدا یا همه را پشت‌سرهم پخش کرد؛ نسخه‌ی ماندگارش هم روی
+  // گوشی ذخیره می‌شود.
+  const [recordings, setRecordings] = useState<Record<number, LineRecording>>({});
+  // ضبطی که همین حالا باید پخش شود؛ به AudioPlayer داده می‌شود.
+  const [playingRecordingUrl, setPlayingRecordingUrl] = useState<string | null>(null);
+  // صفِ پخشِ پشت‌سرهم؛ خالی یعنی پخش دنباله‌ای در جریان نیست.
+  const [playAllQueue, setPlayAllQueue] = useState<number[]>([]);
+  // در مرحله‌ی ضبط، متن پیش‌فرض مخفی است تا کاربر از حفظ بگوید. این مجموعه
+  // جمله‌هایی است که خودش خواسته ببیند.
+  const [revealedLines, setRevealedLines] = useState<number[]>([]);
+  // false فقط بعد از یک شکست واقعی در native module (مثلاً مجوز میکروفن رد
+  // شده) می‌شود؛ تا آن لحظه فرض می‌کنیم ضبط ممکن است.
+  const [canRecord, setCanRecord] = useState(true);
+  // مرحله‌هایی که کاربر تا آخر رفته (دورهای پیشنهادی را کامل کرده یا خودش
+  // اعلام پایان کرده). فقط برای نشان‌دادن تیک روی تب است، نه قفل‌کردن مسیر.
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  // آیا مرحله‌ی فعلی دور خودکار دارد یا دست خود کاربر است.
+  const isAutoStep = AUTO_REPEAT_STEPS.includes(activeStepIndex);
+  // تعداد دور پیشنهادی مرحله‌ی فعلی (از تنظیمات کاربر)؛ ۰ یعنی بی‌نهایت.
+  const targetRepeats = repeatsPerStep;
 
   const currentDialogue = dialogueItems[activeIndex] || {
     dialogue: 'Great. Can I pay by card?',
@@ -114,6 +175,59 @@ export const SceneScreen = () => {
     speaker: 'CU CUSTOMER',
     audioUrl: '',
   };
+
+  // نتیجه‌ی نمره‌دهی همین جمله (اگر ضبطی ارزیابی شده باشد).
+  const currentEvaluation = evaluations[activeIndex];
+
+  // وضعیت نمره‌دهی فقط وقتی به این جمله مربوط است که برای خودش شروع شده
+  // باشد؛ در غیر این صورت انگار هیچ نمره‌دهی‌ای در جریان نیست.
+  const currentEvalState = evalLineIndex === activeIndex ? evalState : 'idle';
+
+  // اندیس جمله‌هایی که ضبط دارند — برای علامت‌زدن در لیست ضبط‌ها.
+  const recordedLineNumbers = useMemo(
+    () => Object.keys(recordings).map(Number),
+    [recordings]
+  );
+
+  // برچسب کوتاه هر جمله برای لیست؛ خودِ متن‌ها ممکن است بلند باشند و لیست را
+  // شلوغ کنند، پس در همان‌جا کوتاه می‌شوند.
+  const dialogueLineLabels = useMemo(
+    () => dialogueItems.map((d) => d.dialogue),
+    [dialogueItems]
+  );
+
+  /**
+   * نمره‌ی پایان جلسه = میانگین نمره‌های واقعی همه‌ی جمله‌هایی که کاربر ضبط
+   * کرده. نمره‌های تخمینی (وقتی سرویس تشخیص گفتار در دسترس نبوده) کنار
+   * گذاشته می‌شوند، چون میانگین‌گرفتن از حدس، حدسِ دقیق‌تری نمی‌سازد.
+   *
+   * اگر هیچ ضبط ارزیابی‌شده‌ای نباشد، همان مقادیر نمایشی قبلی می‌مانند تا
+   * صفحه‌ی نتیجه خالی نباشد.
+   */
+  const sessionScores = useMemo(() => {
+    const real = Object.values(evaluations).filter((e) => !e.is_estimated);
+    if (real.length === 0) {
+      return {
+        score: SESSION_SCORE,
+        pronunciation: SESSION_PRONUNCIATION,
+        fluency: SESSION_FLUENCY,
+        rhythm: SESSION_RHYTHM,
+      };
+    }
+
+    const avg = (pick: (e: EvaluationResult) => number) =>
+      Math.round(real.reduce((sum, e) => sum + pick(e), 0) / real.length);
+
+    const fluency = avg((e) => e.fluency_score);
+    return {
+      score: avg((e) => e.overall_score),
+      pronunciation: avg((e) => e.pronunciation_score),
+      fluency,
+      // «ریتم» معیار جدایی در بک‌اند ندارد؛ روانی از روی مکث‌ها و سرعت گفتار
+      // حساب می‌شود که همان چیزی است که ریتم را می‌سنجد.
+      rhythm: fluency,
+    };
+  }, [evaluations]);
 
   const resetToHome = useCallback(() => {
     navigation.reset({
@@ -153,6 +267,9 @@ export const SceneScreen = () => {
       const target = dialogueItems[idx];
       if (!target) return;
       setSceneFinished(false);
+      // نوار «ذخیره شد» مال جمله‌ی قبلی است؛ با عوض‌شدن جمله باید برود.
+      setSaveState('idle');
+      setSavedFileName(null);
       setActiveIndex(idx);
       setAudioUri(target.audioUrl || null);
       setActionCommand('play_original');
@@ -171,13 +288,23 @@ export const SceneScreen = () => {
   };
 
   // رفتن به مرحله‌ی بعدی تمرین؛ روی مرحله‌ی آخر، جلسه تمام‌شده تلقی می‌شود.
-  const goToNextStep = useCallback(() => {
-    if (activeStepIndex < 3) {
-      setActiveStepIndex(activeStepIndex + 1);
-    } else {
-      setShowResult(true);
-    }
-  }, [activeStepIndex]);
+  // `markDone` فقط وقتی true است که مرحله واقعاً تمام شده باشد (دورها کامل شده
+  // یا خود کاربر دکمه‌ی «مرحله بعد» را زده)، نه وقتی صرفاً روی تب دیگری پریده.
+  const goToNextStep = useCallback(
+    (markDone = true) => {
+      if (markDone) {
+        setCompletedSteps((prev) =>
+          prev.includes(activeStepIndex) ? prev : [...prev, activeStepIndex]
+        );
+      }
+      if (activeStepIndex < 3) {
+        setActiveStepIndex(activeStepIndex + 1);
+      } else {
+        setShowResult(true);
+      }
+    },
+    [activeStepIndex]
+  );
 
   const handleNextDialogue = useCallback(() => {
     const nextIdx = activeIndex + 1;
@@ -196,15 +323,32 @@ export const SceneScreen = () => {
       return;
     }
 
-    // داخل حالت تمرین: تا REPEATS_PER_STEP بار دوباره از اولین هات‌اسپات شروع
-    // می‌کنیم و بعد از آن خودکار به مرحله‌ی بعد می‌رویم.
-    if (repeatCount < REPEATS_PER_STEP) {
+    // مرحله‌های دست‌کاربر (ضبط/مقایسه): نه دور خودکار، نه پرش خودکار — همین‌جا
+    // می‌ایستیم تا خودش تصمیم بگیرد.
+    if (!isAutoStep) {
+      setSceneFinished(true);
+      return;
+    }
+
+    // داخل حالت تمرین: تا targetRepeats بار دوباره از اولین هات‌اسپات شروع
+    // می‌کنیم و بعد از آن خودکار به مرحله‌ی بعد می‌رویم. targetRepeats صفر یعنی
+    // کاربر «بی‌نهایت» را انتخاب کرده و پرش خودکاری در کار نیست.
+    if (targetRepeats === 0 || repeatCount < targetRepeats) {
       setRepeatCount(repeatCount + 1);
       playDialogueAt(0);
     } else {
       goToNextStep();
     }
-  }, [activeIndex, dialogueItems, isShadowingMode, repeatCount, playDialogueAt, goToNextStep]);
+  }, [
+    activeIndex,
+    dialogueItems,
+    isShadowingMode,
+    isAutoStep,
+    repeatCount,
+    targetRepeats,
+    playDialogueAt,
+    goToNextStep,
+  ]);
 
   const handlePrevDialogue = useCallback(() => {
     playDialogueAt(activeIndex > 0 ? activeIndex - 1 : 0);
@@ -232,6 +376,205 @@ export const SceneScreen = () => {
   const handleReplay = useCallback(() => {
     playDialogueAt(activeIndex);
   }, [activeIndex, playDialogueAt]);
+
+  /**
+   * پایان ضبط: صدا در حافظه‌ی صفحه (برای پخش دوباره) و روی گوشی (برای
+   * «ضبط‌های من») می‌نشیند.
+   *
+   * نمره‌دهی اینجا انجام *نمی‌شود* — کاربر در مرحله‌ی مقایسه خودش دکمه‌اش را
+   * می‌زند. این‌طور مرحله‌ی ضبط سریع و آفلاین می‌ماند و ضبط‌های پشت‌سرهم،
+   * درخواست‌های بی‌مصرف به سرور نمی‌فرستند.
+   */
+  const handleRecordingStatus = useCallback(
+    (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
+      if (status === 'recording') {
+        recordStartedAtRef.current = Date.now();
+        setSaveState('idle');
+        return;
+      }
+      if (status === 'error') {
+        // اگر native module اصلاً نتوانسته ضبط کند (مثلاً مجوز میکروفن رد
+        // شده)، به کاربر بگوییم به‌جای اینکه دکمه بی‌صدا کار نکند.
+        setCanRecord(false);
+        return;
+      }
+      if (status !== 'stopped' || !filePath) return;
+
+      // مدت واقعی ضبط؛ اگر به هر دلیل شروع را از دست دادیم، سراغ مدت مرجع
+      // جمله می‌رویم تا نمره‌ی روانی از یک عدد بی‌معنی حساب نشود.
+      const elapsedSeconds = recordStartedAtRef.current
+        ? (Date.now() - recordStartedAtRef.current) / 1000
+        : 0;
+      const duration = Math.max(1, Math.round(elapsedSeconds || DEFAULT_LINE_SECONDS));
+
+      const lineIndex = activeIndex;
+      setRecordings((prev) => ({ ...prev, [lineIndex]: { filePath, mimeType, duration } }));
+      // ضبط دوباره یعنی نمره‌ی قبلی این جمله دیگر معتبر نیست.
+      setEvaluations((prev) => {
+        if (!(lineIndex in prev)) return prev;
+        const next = { ...prev };
+        delete next[lineIndex];
+        return next;
+      });
+      setEvalState('idle');
+      setEvalError(null);
+
+      setSaveState('saving');
+      saveRecording({
+        sourcePath: filePath,
+        mimeType,
+        sceneId: String(scenarioId ?? scenario?.id ?? 'scene'),
+        sceneTitle: scenario?.title || 'scene',
+        lineNumber: lineIndex + 1,
+        text: currentDialogue.dialogue,
+      })
+        .then((meta) => {
+          setSavedFileName(meta.fileName);
+          setSaveState('saved');
+          // بعد از move شدن فایل به مسیر نهایی، حافظه‌ی این جمله هم باید
+          // مسیر جدید را بداند وگرنه پخش/نمره‌دهی سراغ فایلی می‌رود که دیگر
+          // آنجا نیست.
+          setRecordings((prev) =>
+            prev[lineIndex]?.filePath === filePath
+              ? { ...prev, [lineIndex]: { ...prev[lineIndex], filePath: meta.path } }
+              : prev
+          );
+        })
+        .catch((err) => {
+          console.warn('[SceneScreen] failed to save recording:', err);
+          setSaveState('error');
+        });
+    },
+    [scenarioId, scenario, activeIndex, currentDialogue.dialogue]
+  );
+
+  /** پخش ضبط یک جمله‌ی مشخص (یا جمله‌ی جاری). */
+  const playRecordingOfLine = useCallback(
+    (lineIndex: number) => {
+      const rec = recordings[lineIndex];
+      if (!rec) return;
+      setPlaying(false);
+      setPlayingRecordingUrl(rec.filePath);
+      setActionCommand('play_recording');
+      setAudioNonce((n) => n + 1);
+    },
+    [recordings]
+  );
+
+  /** پخش صدای مرجع همین جمله (بدون تغییر مرحله). */
+  const playOriginalOfLine = useCallback(() => {
+    setPlayingRecordingUrl(null);
+    setActionCommand('play_original');
+    setAudioNonce((n) => n + 1);
+  }, []);
+
+  /** پخش پشت‌سرهمِ همه‌ی ضبط‌های این صحنه، به ترتیب جمله‌ها. */
+  const playAllRecordings = useCallback(() => {
+    const recorded = dialogueItems
+      .map((_, idx) => idx)
+      .filter((idx) => recordings[idx]);
+    if (recorded.length === 0) return;
+
+    setPlaying(false);
+    // اولی را همین حالا پخش می‌کنیم و بقیه در صف می‌مانند تا با پایان هرکدام
+    // نوبت بعدی برسد.
+    setPlayAllQueue(recorded.slice(1));
+    playRecordingOfLine(recorded[0]);
+  }, [dialogueItems, recordings, playRecordingOfLine]);
+
+  const stopPlayAll = useCallback(() => {
+    setPlayAllQueue([]);
+    // دستور 'none' با playing=false در AudioPlayer به pause ترجمه می‌شود.
+    setPlaying(false);
+    setActionCommand('none');
+    setAudioNonce((n) => n + 1);
+  }, []);
+
+  /**
+   * فرستادن ضبط جمله‌ی جاری به بک‌اند برای نمره‌دهی تلفظ. از مرحله‌ی مقایسه
+   * دستی صدا زده می‌شود.
+   */
+  const scoreCurrentLine = useCallback(() => {
+    const rec = recordings[activeIndex];
+    if (!rec || evalState === 'scoring') return;
+
+    // اندیس را همین‌جا می‌بندیم: تا وقتی پاسخ سرور برسد ممکن است کاربر جمله
+    // را عوض کرده باشد، و نتیجه باید به جمله‌ی درست بچسبد.
+    const lineIndex = activeIndex;
+    const dialogue = dialogueItems[lineIndex];
+
+    setEvalState('scoring');
+    setEvalLineIndex(lineIndex);
+    setEvalError(null);
+    evaluateRecording({
+      filePath: rec.filePath,
+      mimeType: rec.mimeType,
+      dialogueId: dialogue?.id,
+      targetText: dialogue?.dialogue,
+      duration: rec.duration,
+      expectedDuration: DEFAULT_LINE_SECONDS,
+    })
+      .then((result) => {
+        setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
+        setEvalState('done');
+      })
+      .catch((err) => {
+        console.warn('[SceneScreen] pronunciation scoring failed:', err);
+        setEvalError(err?.message || null);
+        setEvalState('error');
+      });
+  }, [recordings, activeIndex, dialogueItems, evalState]);
+
+  /**
+   * انتخاب یک جمله از لیست ضبط‌ها. عمداً پخش را شروع نمی‌کند: کاربر آمده که
+   * دوباره ضبط کند، نه اینکه صدای مرجع پخش شود.
+   */
+  const selectLine = useCallback(
+    (lineIndex: number) => {
+      if (lineIndex < 0 || lineIndex >= dialogueItems.length) return;
+      setPlaying(false);
+      setPlayAllQueue([]);
+      setActiveIndex(lineIndex);
+    },
+    [dialogueItems.length]
+  );
+
+  const toggleRevealText = useCallback(() => {
+    setRevealedLines((prev) =>
+      prev.includes(activeIndex) ? prev.filter((i) => i !== activeIndex) : [...prev, activeIndex]
+    );
+  }, [activeIndex]);
+
+  /**
+   * با عوض شدن صحنه، هرچه به «اندیس جمله» کلید خورده باید پاک شود.
+   *
+   * بدون این، اگر بدون unmount شدن صفحه صحنه عوض شود، ضبط و نمره‌ی جمله‌ی
+   * سوم صحنه‌ی قبلی روی جمله‌ی سوم صحنه‌ی جدید می‌نشیند — یعنی کاربر صدای
+   * یک جمله‌ی دیگر را زیر جمله‌ی فعلی می‌بیند و می‌شنود.
+   */
+  useEffect(() => {
+    setRecordings({});
+    setEvaluations({});
+    setRevealedLines([]);
+    setPlayAllQueue([]);
+    setPlayingRecordingUrl(null);
+    setEvalState('idle');
+    setEvalLineIndex(null);
+    setEvalError(null);
+    setSaveState('idle');
+    setSavedFileName(null);
+  }, [scenarioId]);
+
+  /** با پایان هر ضبط، اگر صفی هست نوبت بعدی را پخش می‌کند. */
+  const handleRecordedPlaybackEnd = useCallback(() => {
+    setPlayAllQueue((queue) => {
+      if (queue.length === 0) return queue;
+      const [next, ...rest] = queue;
+      // خودِ پخش نمی‌تواند داخل setState انجام شود؛ به تیک بعدی موکولش می‌کنیم.
+      setTimeout(() => playRecordingOfLine(next), 350);
+      return rest;
+    });
+  }, [playRecordingOfLine]);
 
   // با ورود به تمرین و با هر تعویض مرحله (چه دستی با تب/فلش، چه خودکار بعد از
   // پایان دورها)، همه‌چیز از اول شروع می‌شود: دیالوگ اول، هات‌اسپات اول،
@@ -296,10 +639,10 @@ export const SceneScreen = () => {
   if (showResult) {
     return (
       <SessionResultScreen
-        score={SESSION_SCORE}
-        pronunciation={SESSION_PRONUNCIATION}
-        fluency={SESSION_FLUENCY}
-        rhythm={SESSION_RHYTHM}
+        score={sessionScores.score}
+        pronunciation={sessionScores.pronunciation}
+        fluency={sessionScores.fluency}
+        rhythm={sessionScores.rhythm}
         englishText={currentDialogue.dialogue}
         translation={currentDialogue.translation}
         words={currentDialogue.words}
@@ -329,17 +672,21 @@ export const SceneScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-      {/* Audio Engine */}
-      <View style={styles.audioPlayerWrapper}>
+      {/* موتور صدا — کاملاً imperative، هیچ UI ای رندر نمی‌کند. */}
       <AudioPlayer
         uri={audioUri}
         shouldPlay={playing}
         playbackRate={playbackRate}
-        textHint={currentDialogue.dialogue}
         actionCommand={actionCommand}
         actionNonce={audioNonce}
+        loadedRecordingPath={playingRecordingUrl}
+        onRecordingStatusUpdate={handleRecordingStatus}
+        onRecordedPlaybackEnd={handleRecordedPlaybackEnd}
         onPlaybackStatusUpdate={(status) => {
-          if (status === 'finished' && autoMode) {
+          // در مرحله‌های دست‌کاربر (ضبط/مقایسه) بعد از پایان صدای اصلی خودکار
+          // نمی‌پریم؛ کاربر باید فرصت ضبط و گوش‌دادن داشته باشد.
+          const autoAdvance = !isShadowingMode || isAutoStep;
+          if (status === 'finished' && autoMode && autoAdvance) {
             if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
             autoTimeoutRef.current = setTimeout(() => {
               handleNextDialogue();
@@ -347,7 +694,6 @@ export const SceneScreen = () => {
           }
         }}
       />
-    </View>
 
       <ScrollView
         style={{ flex: 1 }}
@@ -402,8 +748,34 @@ export const SceneScreen = () => {
               onNextDialogue={handleNextDialogue}
               onReplay={handleReplay}
               onOpenLeitner={() => navigation.navigate('Leitner')}
+              onOpenRecordings={() => navigation.navigate('MyRecordings')}
+              saveState={saveState}
+              savedFileName={savedFileName}
+              evaluation={currentEvaluation}
+              evalState={currentEvalState}
+              evalError={evalError}
+              onScoreCurrentLine={scoreCurrentLine}
+              // ---- ضبط‌ها ----
+              recordedLines={recordedLineNumbers}
+              hasRecordingForCurrentLine={!!recordings[activeIndex]}
+              onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
+              onPlayRecordingOfLine={playRecordingOfLine}
+              onPlayOriginal={playOriginalOfLine}
+              onPlayAllRecordings={playAllRecordings}
+              onStopPlayAll={stopPlayAll}
+              isPlayingAll={playAllQueue.length > 0}
+              dialogueLines={dialogueLineLabels}
+              activeLineIndex={activeIndex}
+              onSelectLine={selectLine}
+              // ---- مخفی‌کردن متن ----
+              textRevealed={revealedLines.includes(activeIndex)}
+              onToggleRevealText={toggleRevealText}
+              recordingUnavailable={!canRecord}
               repeatCount={repeatCount}
-              totalRepeats={REPEATS_PER_STEP}
+              totalRepeats={targetRepeats}
+              autoRepeat={isAutoStep}
+              completedSteps={completedSteps}
+              onNextStep={() => goToNextStep(true)}
             />
           )}
         </View>
@@ -440,15 +812,5 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
     alignSelf: 'center',
     marginBottom: 8,
-  },
-
-  audioPlayerWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 0, // یا 1 برای اینکه کاملاً مخفی شود
-    opacity: 0,
-    zIndex: -1,
   },
 });

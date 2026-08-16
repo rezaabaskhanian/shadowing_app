@@ -2,6 +2,9 @@ package shadowingservice
 
 import (
 	"context"
+	"log/slog"
+	"os"
+
 	domainRecording "shadowing-backend/internal/domain/shadowing/recording"
 	domainSession "shadowing-backend/internal/domain/shadowing/session"
 
@@ -15,6 +18,16 @@ import (
 // SubmitRecording - ارسال ضبط برای مرحله فعلی
 func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingRequest) (*dto.SubmitRecordingResponse, error) {
 	const op = "shadowing.SubmitRecording"
+
+	// فایل صوتی فقط برای نمره‌دهی به سرور می‌آید؛ در هر مسیر خروجی (چه موفق و
+	// چه خطا) پاک می‌شود. نسخه‌ی اصلی روی گوشی کاربر می‌ماند.
+	if req.LocalAudioPath != "" {
+		defer func() {
+			if err := os.Remove(req.LocalAudioPath); err != nil && !os.IsNotExist(err) {
+				slog.Warn("could not remove temporary recording", "path", req.LocalAudioPath, "err", err)
+			}
+		}()
+	}
 
 	// 1️⃣ تبدیل ID
 	sessionID, err := uuid.Parse(req.SessionID)
@@ -50,9 +63,13 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 		recType = domainRecording.RecordingTypeRecord
 	}
 
-	// ارزیابی صوتی تلفظ و روانی گفتار
-	evaluator := speecheval.NewHybridEvaluator()
-	evalResult := evaluator.Evaluate(ctx, currentStep.DisplayText, req.Duration, 5)
+	// ارزیابی تلفظ و روانی گفتار از روی صدای واقعی کاربر
+	evalResult := s.evaluator.Evaluate(ctx, speecheval.Input{
+		TargetText:              currentStep.DisplayText,
+		AudioPath:               req.LocalAudioPath,
+		DurationSeconds:         req.Duration,
+		ExpectedDurationSeconds: req.ExpectedDuration,
+	})
 
 	// 6️⃣ ذخیره ضبط
 	newRecording, err := domainRecording.NewRecording(
@@ -71,6 +88,9 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 	newRecording.PronunciationScore = evalResult.PronunciationScore
 	newRecording.FluencyScore = evalResult.FluencyScore
 	newRecording.OverallScore = evalResult.OverallScore
+	newRecording.Transcript = evalResult.Transcript
+	newRecording.IsEstimated = evalResult.Estimated
+	newRecording.WordScores = toDomainWordScores(evalResult.Words)
 
 	if err := s.recordingRepo.Create(ctx, newRecording); err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("failed to save recording")
@@ -111,5 +131,36 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 		PronunciationScore: evalResult.PronunciationScore,
 		FluencyScore:       evalResult.FluencyScore,
 		OverallScore:       evalResult.OverallScore,
+		Transcript:         evalResult.Transcript,
+		IsEstimated:        evalResult.Estimated,
+		Words:              toDTOWordScores(evalResult.Words),
 	}, nil
+}
+
+func toDomainWordScores(words []speecheval.WordScore) []domainRecording.WordScore {
+	out := make([]domainRecording.WordScore, 0, len(words))
+	for _, w := range words {
+		out = append(out, domainRecording.WordScore{
+			Word:   w.Word,
+			Index:  w.Index,
+			Score:  w.Score,
+			Status: string(w.Status),
+			Heard:  w.Heard,
+		})
+	}
+	return out
+}
+
+func toDTOWordScores(words []speecheval.WordScore) []dto.WordScore {
+	out := make([]dto.WordScore, 0, len(words))
+	for _, w := range words {
+		out = append(out, dto.WordScore{
+			Word:   w.Word,
+			Index:  w.Index,
+			Score:  w.Score,
+			Status: string(w.Status),
+			Heard:  w.Heard,
+		})
+	}
+	return out
 }
