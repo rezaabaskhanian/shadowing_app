@@ -1,14 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Clock, GraduationCap, Plane, Gauge } from 'lucide-react-native';
+import { Clock, GraduationCap, Plane, Gauge, Lock, Check } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
+import { useLanguage } from '../data/i18n';
+
+export const LEVEL_LABEL_KEY: Record<string, string> = {
+  Beginner: 'levelBeginner',
+  Intermediate: 'levelIntermediate',
+  Advanced: 'levelAdvanced',
+};
 
 interface SceneListCardProps {
   title: string;
   level: string;
   time: string;
   imageUri: any;
+  isLocked?: boolean;
+  isCompleted?: boolean;
   onPress?: () => void;
 }
 
@@ -18,22 +27,34 @@ export const LEVEL_BADGE_STYLE: Record<string, { bg: string; text: string; Icon:
   Advanced: { bg: COLORS.error, text: COLORS.white, Icon: Gauge },
 };
 
-export function SceneListCard({ title, level, time, imageUri, onPress }: SceneListCardProps) {
+export function SceneListCard({ title, level, time, imageUri, isLocked, isCompleted, onPress }: SceneListCardProps) {
+  const { t } = useLanguage();
   const levelStyle = LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner;
   const LevelIcon = levelStyle.Icon;
+  const levelLabel = t(LEVEL_LABEL_KEY[level] || LEVEL_LABEL_KEY.Beginner);
 
   return (
     <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={onPress}>
       <Image
         source={typeof imageUri === 'string' ? { uri: imageUri } : imageUri}
-        style={styles.image}
+        style={[styles.image, isLocked && styles.imageLocked]}
       />
       <View style={styles.scrim} />
 
-      <View style={[styles.levelBadge, { backgroundColor: levelStyle.bg }]}>
-        <LevelIcon size={12} color={levelStyle.text} />
-        <Text style={[styles.levelBadgeText, { color: levelStyle.text }]}>{level}</Text>
-      </View>
+      {isLocked ? (
+        <View style={styles.lockBadge}>
+          <Lock size={14} color={COLORS.white} />
+        </View>
+      ) : isCompleted ? (
+        <View style={styles.completedBadge}>
+          <Check size={14} color={COLORS.white} />
+        </View>
+      ) : (
+        <View style={[styles.levelBadge, { backgroundColor: levelStyle.bg }]}>
+          <LevelIcon size={12} color={levelStyle.text} />
+          <Text style={[styles.levelBadgeText, { color: levelStyle.text }]}>{levelLabel}</Text>
+        </View>
+      )}
 
       <View style={styles.bottomRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -56,6 +77,31 @@ const styles = StyleSheet.create({
   image: {
     ...StyleSheet.absoluteFill,
     resizeMode: 'cover',
+  },
+  imageLocked: {
+    opacity: 0.5,
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.success,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrim: {
     position: 'absolute',

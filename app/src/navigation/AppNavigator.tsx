@@ -31,12 +31,29 @@ import { SceneScreen } from '../screens/SceneScreen';
 import { SubmitSceneScreen } from '../screens/SubmitSceneScreen';
 import { MySubmissionsScreen } from '../screens/MySubmissionsScreen';
 import { MyRecordingsScreen } from '../screens/MyRecordingsScreen';
+import { LanguageHabitScreen } from '../screens/LanguageHabit/LanguageHabitScreen';
+import { HabitMissionPracticeScreen } from '../screens/LanguageHabit/HabitMissionPracticeScreen';
+import { HabitMissionResultScreen } from '../screens/LanguageHabit/HabitMissionResultScreen';
+import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
+import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
+import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
-const HIDDEN_TAB_BAR_ROUTES = ['Shadowing', 'SubmitScene', 'MySubmissions', 'MyRecordings'];
+const HIDDEN_TAB_BAR_ROUTES = [
+  'Shadowing',
+  'SubmitScene',
+  'MySubmissions',
+  'MyRecordings',
+  'LanguageHabit',
+  'HabitMissionPractice',
+  'HabitMissionResult',
+  'TopicSuggestion',
+  'ContactUs',
+  'Paywall',
+];
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { t } = useLanguage();
@@ -150,6 +167,7 @@ export const AppNavigator = () => {
   return (
     <Tab.Navigator
       initialRouteName="Home"
+      backBehavior="initialRoute"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -184,6 +202,48 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="MyRecordings"
         component={MyRecordingsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="LanguageHabit"
+        component={LanguageHabitScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="HabitMissionPractice"
+        component={HabitMissionPracticeScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="HabitMissionResult"
+        component={HabitMissionResultScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="TopicSuggestion"
+        component={TopicSuggestionScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="ContactUs"
+        component={ContactUsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="Paywall"
+        component={PaywallScreen}
         options={{
           tabBarButton: () => null,
         }}

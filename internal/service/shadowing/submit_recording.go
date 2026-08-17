@@ -120,6 +120,17 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 		}
 		isComplete = true
 		nextStep = 0
+
+		// ثبت پیشرفت صحنه: خطای این مرحله جریان اصلی شدوئینگ را خراب نمی‌کند،
+		// فقط لاگ می‌شود — کاربر نباید به‌خاطر یک مشکل جانبی در ثبت پیشرفت،
+		// نتواند تمرینش را کامل کند.
+		if s.progressSvc != nil {
+			if _, err := s.progressSvc.RecordDialogueProgress(
+				ctx, sess.UserID.String(), sess.SceneID.String(), sess.DialogueID.String(), evalResult.OverallScore,
+			); err != nil {
+				slog.Warn("shadowing: failed to record scene progress", "err", err)
+			}
+		}
 	}
 
 	// 🔟 ساخت پاسخ

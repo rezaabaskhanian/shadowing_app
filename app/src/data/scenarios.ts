@@ -70,6 +70,11 @@ export interface Scenario {
   description?: string;
   category?: ScenarioCategory;
   sentencesCount?: number;
+  // آیا این صحنه بیرون از سقف رایگانه و کاربر اشتراک فعال نداره — بک‌اند
+  // تعیینش می‌کنه (وابسته به کاربره)، نه چیز ثابتی روی خودِ صحنه.
+  isLocked?: boolean;
+  // پیشرفت واقعی همین کاربر در این صحنه (از scene_progress بک‌اند)
+  isCompleted?: boolean;
 }
 
 export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[] {

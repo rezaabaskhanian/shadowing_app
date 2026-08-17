@@ -8,6 +8,8 @@ import React, {
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as leitnerApi from '../api/leitner';
+import type { BackendLeitnerWord } from '../api/leitner';
 
 // جعبه‌ی لایتنر ساده با ۵ سطح و زمان‌بندی مرور. در AsyncStorage ذخیره می‌شود
 // تا با بستن/باز کردن اپ باقی بماند.
@@ -44,6 +46,20 @@ export interface BoxWord {
   level: number; // 1..MAX_LEVEL
   addedAt: number;
   nextReview: number; // زمان (ms) موعد مرور بعدی
+  // id فقط برای کلمه‌هایی که از سرور همگام شده‌اند پر می‌شود؛ برای
+  // promote/demote/remove روی سرور لازم است.
+  id?: string;
+}
+
+function fromBackend(w: BackendLeitnerWord): BoxWord {
+  return {
+    id: w.id,
+    word: w.word,
+    meaning: w.meaning,
+    level: w.level,
+    addedAt: w.created_at,
+    nextReview: w.next_review,
+  };
 }
 
 interface VocabContextValue {
@@ -69,8 +85,16 @@ const key = (w: string) => w.trim().toLowerCase();
 export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
   const [box, setBox] = useState<BoxWord[]>([]);
   const loaded = useRef(false);
+  // برای خوندن آخرین state داخل callback هایی که deps خالی دارن (برای پایدار
+  // موندن رفرنس‌شون)، بدون نیاز به اضافه‌کردن box به deps.
+  const boxRef = useRef<BoxWord[]>([]);
+  useEffect(() => {
+    boxRef.current = box;
+  }, [box]);
 
-  // بارگذاری جعبه از حافظه‌ی دائمی هنگام شروع
+  // بارگذاری جعبه: اول از حافظه‌ی محلی (نمایش فوری، بدون پرش)، بعد از سرور
+  // (اگر آنلاین بودیم، منبع درست همیشه سرور است). دقیقاً همان الگوی
+  // offline-first که ScenesContext برای صحنه‌ها استفاده می‌کند.
   useEffect(() => {
     (async () => {
       try {
@@ -92,6 +116,13 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
       } finally {
         loaded.current = true;
       }
+
+      try {
+        const words = await leitnerApi.listWords();
+        setBox(words.map(fromBackend));
+      } catch {
+        // آفلاین یا سرور در دسترس نیست — همون داده‌ی محلی می‌مونه
+      }
     })();
   }, []);
 
@@ -106,8 +137,12 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
     [box]
   );
 
+  // همه‌ی جهش‌ها (add/remove/promote/demote) اول state لوکال را فوری
+  // (optimistic) آپدیت می‌کنند — تجربه‌ی کاربر هیچ‌وقت قفل شبکه نیست — و
+  // موازی درخواست سرور را هم می‌فرستند؛ اگر سرور fail شد فقط لاگ می‌شود.
   const add = useCallback((entry: { word: string; meaning: string }) => {
     const w = key(entry.word);
+    if (boxRef.current.some((b) => b.word === w)) return;
     setBox((prev) => {
       if (prev.some((b) => b.word === w)) return prev;
       return [
@@ -121,15 +156,26 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
         ...prev,
       ];
     });
+    leitnerApi
+      .addWord(w, entry.meaning)
+      .then((backendWord) => {
+        setBox((prev) => prev.map((b) => (b.word === w ? fromBackend(backendWord) : b)));
+      })
+      .catch((err) => console.warn('[VocabContext] addWord failed:', err));
   }, []);
 
   const remove = useCallback((word: string) => {
     const w = key(word);
+    const existing = boxRef.current.find((b) => b.word === w);
     setBox((prev) => prev.filter((b) => b.word !== w));
+    if (existing?.id) {
+      leitnerApi.removeWord(existing.id).catch((err) => console.warn('[VocabContext] removeWord failed:', err));
+    }
   }, []);
 
   const promote = useCallback((word: string) => {
     const w = key(word);
+    const existing = boxRef.current.find((b) => b.word === w);
     setBox((prev) =>
       prev.map((b) => {
         if (b.word !== w) return b;
@@ -137,15 +183,22 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
         return { ...b, level, nextReview: nextReviewFor(level) };
       })
     );
+    if (existing?.id) {
+      leitnerApi.promoteWord(existing.id).catch((err) => console.warn('[VocabContext] promoteWord failed:', err));
+    }
   }, []);
 
   const demote = useCallback((word: string) => {
     const w = key(word);
+    const existing = boxRef.current.find((b) => b.word === w);
     setBox((prev) =>
       prev.map((b) =>
         b.word === w ? { ...b, level: 1, nextReview: nextReviewFor(1) } : b
       )
     );
+    if (existing?.id) {
+      leitnerApi.demoteWord(existing.id).catch((err) => console.warn('[VocabContext] demoteWord failed:', err));
+    }
   }, []);
 
   const value = useMemo(

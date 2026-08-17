@@ -6,6 +6,7 @@ import (
 	scene "shadowing-backend/internal/domain/learning/scene"
 	domainRecord "shadowing-backend/internal/domain/shadowing/recording"
 	domainSession "shadowing-backend/internal/domain/shadowing/session"
+	progressservice "shadowing-backend/internal/service/progress"
 	"shadowing-backend/internal/service/speecheval"
 
 	"github.com/google/uuid"
@@ -79,6 +80,7 @@ type Service struct {
 	recordingRepo RecordingRepository
 	dialogueRepo  DialogueRepository
 	evaluator     speecheval.Evaluator
+	progressSvc   *progressservice.Service
 }
 
 // New - سازنده با بازگشت Pointer
@@ -90,6 +92,7 @@ func New(
 	recordingRepo RecordingRepository,
 	dialogueRepo DialogueRepository,
 	evaluator speecheval.Evaluator,
+	progressSvc *progressservice.Service,
 ) *Service {
 	if evaluator == nil {
 		evaluator = speecheval.NewHybridEvaluator()
@@ -99,5 +102,6 @@ func New(
 		recordingRepo: recordingRepo,
 		dialogueRepo:  dialogueRepo,
 		evaluator:     evaluator,
+		progressSvc:   progressSvc,
 	}
 }

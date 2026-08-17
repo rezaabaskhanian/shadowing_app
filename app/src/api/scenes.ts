@@ -1,7 +1,18 @@
 import { MapPin } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import type { Dialogue, Hotspot, Scenario } from '../data/scenarios';
-import { API_BASE, absUrl } from './config';
+import { absUrl } from './config';
+import { authFetch } from './client';
+
+// وقتی GetScene برای صحنه‌ی قفل‌شده ۴۰۳ برمی‌گردونه، به‌جای پرت‌کردن یه خطای
+// عمومی، این کلاس رو throw می‌کنیم تا صفحه بتونه به‌جای toast خطا، مستقیم
+// پی‌وال (Paywall) رو باز کنه.
+export class SceneLockedError extends Error {
+  constructor() {
+    super('این صحنه قفل است؛ برای دسترسی باید اشتراک فعال داشته باشید');
+    this.name = 'SceneLockedError';
+  }
+}
 
 // ---- شکل پاسخ بک‌اند ----
 interface BackendWord {
@@ -37,6 +48,9 @@ interface BackendScene {
   order: number;
   hotspots: BackendHotspot[] | null;
   difficulty?: string;
+  is_locked?: boolean;
+  progress?: number;
+  is_completed?: boolean;
 }
 
 function difficultyToLevel(d?: string): string {
@@ -96,7 +110,7 @@ function mapScene(s: BackendScene): Scenario {
     title: s.title,
     lesson: s.description || '',
     level: difficultyToLevel(s.difficulty),
-    progress: 0,
+    progress: s.progress ?? 0,
     time: '12 min',
     icon: MapPin,
     color: COLORS.primary,
@@ -104,12 +118,14 @@ function mapScene(s: BackendScene): Scenario {
     hotspots,
     // بک‌اند فعلاً دسته‌بندی صحنه را ذخیره نمی‌کند؛ تا اضافه شدن آن فیلد، مقدار پیش‌فرض قرار می‌گیرد
     category: 'daily',
+    isLocked: !!s.is_locked,
+    isCompleted: !!s.is_completed,
   };
 }
 
 // لیست صحنه‌ها (بدون هات‌اسپات - سبک)
 export async function fetchScenes(): Promise<Scenario[]> {
-  const res = await fetch(`${API_BASE}/v1/scenes`);
+  const res = await authFetch('/v1/scenes', { method: 'GET' });
   if (!res.ok) throw new Error('failed to fetch scenes');
   const data = (await res.json()) as BackendScene[] | null;
   return (data || []).map(mapScene);
@@ -117,7 +133,12 @@ export async function fetchScenes(): Promise<Scenario[]> {
 
 // یک صحنه با هات‌اسپات‌ها و دیالوگ‌هایش
 export async function fetchScene(id: string): Promise<Scenario> {
-  const res = await fetch(`${API_BASE}/v1/scenes/${id}`);
+  const res = await authFetch(`/v1/scenes/${id}`, { method: 'GET' });
+  if (res.status === 403) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.is_locked) throw new SceneLockedError();
+    throw new Error(body?.message || 'دسترسی به این صحنه مجاز نیست');
+  }
   if (!res.ok) throw new Error('failed to fetch scene');
   const data = (await res.json()) as BackendScene;
   return mapScene(data);

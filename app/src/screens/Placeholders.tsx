@@ -6,14 +6,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Coins, HelpCircle, Play, PlusCircle, Settings, User as UserIcon } from 'lucide-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Play, PlusCircle, Settings, User as UserIcon } from 'lucide-react-native';
 import { SceneListCard } from '../components/SceneListCard';
 import { useScenes } from '../data/ScenesContext';
 import type { ScenarioCategory } from '../data/scenarios';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
+import { useAuth } from '../data/AuthContext';
+import {
+  getUserSummary,
+  getUserAchievements,
+  getWeeklyActivity,
+  getSkillsBreakdown,
+  type Achievement,
+  type DayActivity,
+  type SkillsBreakdown,
+} from '../api/progress';
 
 export { HomeScreen } from './Home';
 
@@ -89,7 +99,13 @@ export const ScenesScreen = () => {
               level={scenario.level}
               time={scenario.time}
               imageUri={scenario.imageUri}
-              onPress={() => navigation.navigate('Shadowing', { scenarioId: scenario.id })}
+              isLocked={scenario.isLocked}
+              isCompleted={scenario.isCompleted}
+              onPress={() =>
+                scenario.isLocked
+                  ? navigation.navigate('Paywall')
+                  : navigation.navigate('Shadowing', { scenarioId: scenario.id })
+              }
             />
           ))}
         </View>
@@ -98,33 +114,61 @@ export const ScenesScreen = () => {
   );
 };
 
-const WEEK_DAYS: { en: string; fa: string; minutes: number }[] = [
-  { en: 'Mon', fa: 'ش', minutes: 12 },
-  { en: 'Tue', fa: 'ی', minutes: 18 },
-  { en: 'Wed', fa: 'د', minutes: 9 },
-  { en: 'Thu', fa: 'س', minutes: 24 },
-  { en: 'Fri', fa: 'چ', minutes: 15 },
-  { en: 'Sat', fa: 'پ', minutes: 30 },
-  { en: 'Sun', fa: 'ج', minutes: 21 },
-];
-const WEEKLY_ACTIVITY_MAX = 30;
+// نام کوتاه هر روز هفته بر اساس Date.getDay() (۰=یکشنبه..۶=شنبه) — چون
+// تاریخ‌ها واقعی از بک‌اند می‌آیند، نه ثابت.
+const WEEKDAY_LABELS: Record<number, { en: string; fa: string }> = {
+  0: { en: 'Sun', fa: 'ج' },
+  1: { en: 'Mon', fa: 'ش' },
+  2: { en: 'Tue', fa: 'ی' },
+  3: { en: 'Wed', fa: 'د' },
+  4: { en: 'Thu', fa: 'س' },
+  5: { en: 'Fri', fa: 'چ' },
+  6: { en: 'Sat', fa: 'پ' },
+};
 
-const SKILLS: { key: 'pronunciation' | 'fluency' | 'vocabulary' | 'listening'; percent: number; color: string }[] = [
-  { key: 'pronunciation', percent: 90, color: COLORS.primary },
-  { key: 'fluency', percent: 83, color: COLORS.tertiary },
-  { key: 'vocabulary', percent: 76, color: COLORS.secondary },
-  { key: 'listening', percent: 88, color: COLORS.primary },
-];
-
-const ACHIEVEMENTS: { titleKey: string; subKey: string; earned: boolean }[] = [
-  { titleKey: 'achievementFirstScene', subKey: 'achievementFirstSceneSub', earned: true },
-  { titleKey: 'achievementStreak7', subKey: 'achievementStreak7Sub', earned: true },
-  { titleKey: 'achievementWords50', subKey: 'achievementWords50Sub', earned: false },
-  { titleKey: 'achievementPerfectPron', subKey: 'achievementPerfectPronSub', earned: false },
-];
+const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary', string> = {
+  pronunciation: COLORS.primary,
+  fluency: COLORS.tertiary,
+  vocabulary: COLORS.secondary,
+};
 
 export const ProgressScreen = () => {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const [overallProgress, setOverallProgress] = React.useState(0);
+  const [achievements, setAchievements] = React.useState<Achievement[]>([]);
+  const [weeklyActivity, setWeeklyActivity] = React.useState<DayActivity[]>([]);
+  const [skills, setSkills] = React.useState<SkillsBreakdown>({ pronunciation: 0, fluency: 0, vocabulary: 0 });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user?.id) return;
+      let active = true;
+      getUserSummary(user.id)
+        .then((s) => active && setOverallProgress(s.overall_progress))
+        .catch(() => {});
+      getUserAchievements(user.id)
+        .then((list) => active && setAchievements(list))
+        .catch(() => {});
+      getWeeklyActivity()
+        .then((days) => active && setWeeklyActivity(days))
+        .catch(() => {});
+      getSkillsBreakdown()
+        .then((s) => active && setSkills(s))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [user?.id])
+  );
+
+  const skillItems: { key: 'pronunciation' | 'fluency' | 'vocabulary'; percent: number; color: string }[] = [
+    { key: 'pronunciation', percent: skills.pronunciation, color: SKILL_COLORS.pronunciation },
+    { key: 'fluency', percent: skills.fluency, color: SKILL_COLORS.fluency },
+    { key: 'vocabulary', percent: skills.vocabulary, color: SKILL_COLORS.vocabulary },
+  ];
+  const weeklyActivityMax = Math.max(1, ...weeklyActivity.map((d) => d.minutes));
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -133,16 +177,16 @@ export const ProgressScreen = () => {
 
       <View style={styles.scoreCard}>
         <View style={styles.scoreRing}>
-          <Text style={styles.scoreValue}>87</Text>
+          <Text style={styles.scoreValue}>{overallProgress}</Text>
           <Text style={styles.scoreLabel}>{t('overallScore')}</Text>
         </View>
         <View style={styles.scoreRow}>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>90%</Text>
+            <Text style={styles.metricValue}>{skills.pronunciation}%</Text>
             <Text style={styles.metricLabel}>{t('pronunciation')}</Text>
           </View>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>83%</Text>
+            <Text style={styles.metricValue}>{skills.fluency}%</Text>
             <Text style={styles.metricLabel}>{t('fluency')}</Text>
           </View>
         </View>
@@ -180,11 +224,13 @@ export const ProgressScreen = () => {
         <Text style={styles.optionSub}>{t('weeklyActivitySub')}</Text>
 
         <View style={styles.weekChartRow}>
-          {WEEK_DAYS.map((day, i) => {
-            const heightPct = Math.max(6, (day.minutes / WEEKLY_ACTIVITY_MAX) * 100);
-            const isToday = i === WEEK_DAYS.length - 2;
+          {weeklyActivity.map((day) => {
+            const heightPct = Math.max(6, (day.minutes / weeklyActivityMax) * 100);
+            const isToday = day.date === todayStr;
+            const weekday = new Date(day.date + 'T00:00:00').getDay();
+            const label = WEEKDAY_LABELS[weekday] || WEEKDAY_LABELS[0];
             return (
-              <View key={day.en} style={styles.weekBarCol}>
+              <View key={day.date} style={styles.weekBarCol}>
                 <View style={styles.weekBarTrack}>
                   <View
                     style={[
@@ -194,7 +240,7 @@ export const ProgressScreen = () => {
                   />
                 </View>
                 <Text style={[styles.weekBarLabel, isToday && styles.weekBarLabelActive]}>
-                  {language === 'fa' ? day.fa : day.en}
+                  {language === 'fa' ? label.fa : label.en}
                 </Text>
               </View>
             );
@@ -209,7 +255,7 @@ export const ProgressScreen = () => {
           <Text style={styles.settingCardTitle}>{t('skillBreakdown')}</Text>
         </View>
 
-        {SKILLS.map((skill) => (
+        {skillItems.map((skill) => (
           <View key={skill.key} style={styles.skillRow}>
             <View style={styles.skillLabelRow}>
               <Text style={styles.skillLabel}>{t(skill.key)}</Text>
@@ -229,22 +275,21 @@ export const ProgressScreen = () => {
           <Text style={styles.settingCardTitle}>{t('achievementsTitle')}</Text>
         </View>
 
-        <View style={styles.achievementGrid}>
-          {ACHIEVEMENTS.map((a) => (
-            <View
-              key={a.titleKey}
-              style={[styles.achievementCard, !a.earned && styles.achievementCardLocked]}
-            >
-              <View style={[styles.achievementBadge, !a.earned && styles.achievementBadgeLocked]}>
-                <Award color={a.earned ? COLORS.white : COLORS.muted} size={20} />
+        {achievements.length === 0 ? (
+          <Text style={styles.optionSub}>{t('achievementsEmpty')}</Text>
+        ) : (
+          <View style={styles.achievementGrid}>
+            {achievements.map((a) => (
+              <View key={a.id} style={styles.achievementCard}>
+                <View style={styles.achievementBadge}>
+                  <Text style={{ fontSize: 20 }}>{a.icon || '🏆'}</Text>
+                </View>
+                <Text style={styles.achievementTitle}>{a.name}</Text>
+                <Text style={styles.achievementSub}>{a.description}</Text>
               </View>
-              <Text style={[styles.achievementTitle, !a.earned && styles.achievementTitleLocked]}>
-                {t(a.titleKey)}
-              </Text>
-              <Text style={styles.achievementSub}>{t(a.subKey)}</Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -252,16 +297,13 @@ export const ProgressScreen = () => {
 
 import { useNotifications, ReminderTime, ContentSource } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Clock, LogOut, Mic, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Clock, Mic, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS } from '../data/PracticeSettingsContext';
-import { useAuth } from '../data/AuthContext';
-import { useFocusEffect } from '@react-navigation/native';
-import { getMyPoints } from '../api/submissions';
 
 export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
   const { language, setLanguage, t } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const {
     studyReminderEnabled,
     setStudyReminderEnabled,
@@ -275,20 +317,6 @@ export const ProfileScreen = () => {
   } = useNotifications();
   const { repeatsPerStep, setRepeatsPerStep } = usePracticeSettings();
 
-  const [points, setPoints] = React.useState(0);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      let active = true;
-      getMyPoints()
-        .then((p) => active && setPoints(p))
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.pageTitle}>{t('profileTitle')}</Text>
@@ -301,24 +329,6 @@ export const ProfileScreen = () => {
         <Text style={styles.profileName}>{user?.nickname || ''}</Text>
         <Text style={styles.profileSub}>{user?.phone || t('learnerLevel')}</Text>
       </View>
-
-      {/* Points & Scene Suggestions Card */}
-      <TouchableOpacity
-        style={styles.pointsCard}
-        onPress={() => navigation.navigate('MySubmissions')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.pointsIconWrap}>
-          <Coins color={COLORS.secondary} size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pointsValue}>
-            {points} · {t('myPoints')}
-          </Text>
-          <Text style={styles.pointsSub}>{t('myPointsSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
 
       {/* Language Setting Card */}
       <View style={styles.settingCard}>
@@ -477,25 +487,6 @@ export const ProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Support & Actions */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <TouchableOpacity style={styles.helpRow} activeOpacity={0.7}>
-          <View style={styles.helpRowLeft}>
-            <HelpCircle color={COLORS.primary} size={20} />
-            <Text style={styles.helpRowText}>{t('helpFaq')}</Text>
-          </View>
-          <ChevronRight color={COLORS.muted} size={18} />
-        </TouchableOpacity>
-
-        <View style={styles.dividerLine} />
-
-        <TouchableOpacity style={styles.helpRow} activeOpacity={0.7} onPress={() => logout()}>
-          <View style={styles.helpRowLeft}>
-            <LogOut color={COLORS.error} size={20} />
-            <Text style={[styles.helpRowText, { color: COLORS.error }]}>{t('logout')}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 };
@@ -975,9 +966,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  achievementCardLocked: {
-    opacity: 0.55,
-  },
   achievementBadge: {
     width: 40,
     height: 40,
@@ -987,17 +975,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
-  achievementBadgeLocked: {
-    backgroundColor: COLORS.surfaceLight,
-  },
   achievementTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
     marginBottom: 4,
-  },
-  achievementTitleLocked: {
-    color: COLORS.textSecondary,
   },
   achievementSub: {
     color: COLORS.textSecondary,

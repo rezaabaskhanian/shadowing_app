@@ -14,6 +14,7 @@ import {
   Clock,
   Flame,
   Globe,
+  Menu,
   Mic,
   Play,
   Repeat,
@@ -21,9 +22,12 @@ import {
 } from 'lucide-react-native';
 import { ScenarioCard } from '../components/ScenarioCard';
 import { ProgressRing } from '../components/ProgressRing';
+import { AppDrawer } from '../components/AppDrawer';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
+import { useAuth } from '../data/AuthContext';
+import { getUserStreak } from '../api/progress';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
@@ -36,8 +40,24 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
+  const { user } = useAuth();
   const { box } = useVocab();
   const dueCount = box.filter(isDue).length;
+  const [drawerVisible, setDrawerVisible] = React.useState(false);
+  const [streak, setStreak] = React.useState(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user?.id) return;
+      let active = true;
+      getUserStreak(user.id)
+        .then((s) => active && setStreak(s.current_streak))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [user?.id])
+  );
 
   // Exit app when pressing hardware back button on Home screen
   useFocusEffect(
@@ -65,6 +85,16 @@ export const HomeScreen = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
   };
 
+  // اگه صحنه قفله (خارج از سقف رایگان و بدون اشتراک فعال)، به‌جای رفتن
+  // مستقیم به تمرین، پی‌وال (Paywall) باز میشه.
+  const openScene = (scenario: { id: string; isLocked?: boolean }) => {
+    if (scenario.isLocked) {
+      navigation.navigate('Paywall');
+      return;
+    }
+    navigation.navigate('Shadowing', { scenarioId: scenario.id });
+  };
+
   const todayPercent = Math.round((TODAY_REPS / TODAY_REPS_TARGET) * 100);
 
   return (
@@ -90,10 +120,17 @@ export const HomeScreen = () => {
             {/* Streak Badge */}
             <View style={styles.streakBadge}>
               <Flame size={16} color={COLORS.secondary} fill={COLORS.secondary} />
-              <Text style={styles.streakText}>14</Text>
+              <Text style={styles.streakText}>{streak}</Text>
             </View>
+
+            {/* Drawer Trigger */}
+            <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
+              <Menu size={18} color={COLORS.text} />
+            </TouchableOpacity>
           </View>
         </View>
+
+        <AppDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
 
         {/* TODAY'S SHADOWING PROGRESS CARD */}
         <View style={styles.progressCard}>
@@ -132,7 +169,7 @@ export const HomeScreen = () => {
         <View style={styles.quickActionsRow}>
           <TouchableOpacity
             style={[styles.quickCard, styles.quickCardPrimary]}
-            onPress={() => navigation.navigate('Shadowing', { scenarioId: primaryScenario.id })}
+            onPress={() => openScene(primaryScenario)}
             activeOpacity={0.85}
           >
             <View style={[styles.quickIconCircle, { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
@@ -216,13 +253,14 @@ export const HomeScreen = () => {
               key={scenario.id || index}
               title={scenario.title}
               level={scenario.level || 'A2'}
-              progress={scenario.progress || (index === 1 ? 100 : 0)}
+              progress={scenario.progress || 0}
               time={scenario.time || '12 min'}
               imageUri={scenario.imageUri}
               subtitle={scenario.lesson || scenario.title}
               sentencesCount={scenario.sentencesCount || 24}
-              isCompleted={index === 1}
-              onPress={() => navigation.navigate('Shadowing', { scenarioId: scenario.id })}
+              isCompleted={!!scenario.isCompleted}
+              isLocked={scenario.isLocked}
+              onPress={() => openScene(scenario)}
             />
           ))}
         </View>
@@ -297,6 +335,16 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
+  },
+  menuBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   progressCard: {
     backgroundColor: COLORS.surface,

@@ -5,6 +5,7 @@ import (
 	sceneprogress "shadowing-backend/internal/domain/progress/scene_progress"
 	"shadowing-backend/internal/pkg/richerror"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -143,6 +144,58 @@ func (r *SceneProgressRepository) Update(ctx context.Context, p *sceneprogress.S
 	}
 
 	return nil
+}
+
+// ============================================
+// RecordDialogueCompletion - ثبت idempotent تکمیل یک دیالوگ (کلید یکتا
+// user_id+dialogue_id، پس تکرار تمرین همان دیالوگ دوباره شمارش نمی‌شود)
+// ============================================
+func (r *SceneProgressRepository) RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64) error {
+	const op = "postgres.SceneProgressRepository.RecordDialogueCompletion"
+
+	query := `INSERT INTO scene_dialogue_progress (user_id, scene_id, dialogue_id, score, completed_at)
+        VALUES ($1, $2, $3, $4, now())
+        ON CONFLICT (user_id, dialogue_id) DO UPDATE SET
+            score = GREATEST(scene_dialogue_progress.score, excluded.score),
+            completed_at = now()`
+
+	if _, err := r.db.Exec(ctx, query, userID, sceneID, dialogueID, score); err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to record dialogue completion")
+	}
+	return nil
+}
+
+// ============================================
+// CountCompletedDialogues - تعداد دیالوگ‌های واقعاً کامل‌شده‌ی کاربر در یک
+// صحنه + میانگین نمره‌شان
+// ============================================
+func (r *SceneProgressRepository) CountCompletedDialogues(ctx context.Context, userID, sceneID uuid.UUID) (int, float64, error) {
+	const op = "postgres.SceneProgressRepository.CountCompletedDialogues"
+
+	query := `SELECT COUNT(*), COALESCE(AVG(score), 0)
+        FROM scene_dialogue_progress WHERE user_id = $1 AND scene_id = $2`
+
+	var count int
+	var avgScore float64
+	if err := r.db.QueryRow(ctx, query, userID, sceneID).Scan(&count, &avgScore); err != nil {
+		return 0, 0, richerror.New(op).WithErr(err)
+	}
+	return count, avgScore, nil
+}
+
+// ============================================
+// CountTotalDialogues - تعداد کل دیالوگ‌های یک صحنه
+// ============================================
+func (r *SceneProgressRepository) CountTotalDialogues(ctx context.Context, sceneID uuid.UUID) (int, error) {
+	const op = "postgres.SceneProgressRepository.CountTotalDialogues"
+
+	query := `SELECT COUNT(*) FROM dialogues d JOIN hotspots h ON h.id = d.hotspot_id WHERE h.scene_id = $1`
+
+	var count int
+	if err := r.db.QueryRow(ctx, query, sceneID).Scan(&count); err != nil {
+		return 0, richerror.New(op).WithErr(err)
+	}
+	return count, nil
 }
 
 // ============================================

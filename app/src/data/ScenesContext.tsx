@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { fetchScene, fetchScenes } from '../api/scenes';
+import { fetchScene, fetchScenes, SceneLockedError } from '../api/scenes';
 import { SCENARIOS, type Scenario } from './scenarios';
 
 interface ScenesContextValue {
@@ -62,8 +62,11 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
         const full = await fetchScene(id);
         detailCache.current.set(id, full);
         return full;
-      } catch {
-        // fallback: صحنه از لیست جاری یا داده‌ی محلی
+      } catch (e) {
+        // قفل‌بودن یعنی واقعاً نباید محتوا نشون داده بشه — به‌جای fallback
+        // بی‌صدا، به صدازننده اجازه می‌دیم خودش هندلش کنه (مثلاً باز کردن Paywall).
+        if (e instanceof SceneLockedError) throw e;
+        // بقیه‌ی خطاها (مثلاً قطعی شبکه): fallback به صحنه‌ی لیست جاری یا داده‌ی محلی
         return (
           scenes.find((s) => s.id === id) ??
           SCENARIOS.find((s) => s.id === id)

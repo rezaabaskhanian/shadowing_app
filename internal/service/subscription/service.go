@@ -24,7 +24,9 @@ type repository interface {
 	ListPlans(ctx context.Context) ([]postgressubscription.Plan, error)
 	CreatePlan(ctx context.Context, name string, durationDays, priceToman int) (postgressubscription.Plan, error)
 	DeletePlan(ctx context.Context, id string) error
-	GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int) error
+	GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int, provider, purchaseToken string) error
+	HasActiveSubscription(ctx context.Context, userID string) (bool, error)
+	PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error)
 }
 
 type Service struct {
@@ -51,11 +53,23 @@ func (s Service) DeletePlan(ctx context.Context, id string) error {
 
 // Grant یک اشتراک را برای کاربر فعال می‌کند؛ pointsToRedeem تعیین می‌کند چقدر
 // امتیاز کاربر صرف تخفیف شود (باید از قبل توسط فراخوان اعتبارسنجی شده باشد که
-// کاربر آن مقدار امتیاز را دارد).
-func (s Service) Grant(ctx context.Context, userID string, plan Plan, pointsToRedeem int) error {
+// کاربر آن مقدار امتیاز را دارد). provider/purchaseToken برای گرنت دستی ادمین
+// خالی می‌مانند؛ برای پرداخت واقعی (مثل کافه‌بازار) پر می‌شوند.
+func (s Service) Grant(ctx context.Context, userID string, plan Plan, pointsToRedeem int, provider, purchaseToken string) error {
 	discount := DiscountForPoints(pointsToRedeem)
 	if discount > plan.PriceToman {
 		discount = plan.PriceToman
 	}
-	return s.repo.GrantSubscription(ctx, userID, plan.ID, pointsToRedeem, discount, plan.DurationDays)
+	return s.repo.GrantSubscription(ctx, userID, plan.ID, pointsToRedeem, discount, plan.DurationDays, provider, purchaseToken)
+}
+
+// HasActiveSubscription می‌گوید آیا کاربر اشتراک فعال دارد — مبنای قفل‌کردن
+// صحنه‌های غیررایگان.
+func (s Service) HasActiveSubscription(ctx context.Context, userID string) (bool, error) {
+	return s.repo.HasActiveSubscription(ctx, userID)
+}
+
+// PurchaseTokenUsed می‌گوید آیا این purchaseToken قبلاً verify شده.
+func (s Service) PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error) {
+	return s.repo.PurchaseTokenUsed(ctx, purchaseToken)
 }

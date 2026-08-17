@@ -47,9 +47,18 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/scene-submissions/:id/approve", h.ApproveSceneSubmission)
 	g.POST("/scene-submissions/:id/reject", h.RejectSceneSubmission)
 
+	// بررسی پیشنهادهای موضوع کاربران
+	g.GET("/topic-suggestions", h.ListTopicSuggestions)
+	g.GET("/topic-suggestions/:id", h.GetTopicSuggestion)
+	g.POST("/topic-suggestions/:id/approve", h.ApproveTopicSuggestion)
+	g.POST("/topic-suggestions/:id/reject", h.RejectTopicSuggestion)
+
 	// طرح‌های اشتراک و فعال‌سازی دستی
 	g.GET("/subscription-plans", h.ListSubscriptionPlans)
 	g.POST("/subscription-plans", h.CreateSubscriptionPlan)
 	g.DELETE("/subscription-plans/:id", h.DeleteSubscriptionPlan)
 	g.POST("/subscriptions/grant", h.GrantSubscription)
+
+	// لیست کاربرها + خلاصه‌ی فعالیتشون
+	g.GET("/users", h.ListUsers)
 }

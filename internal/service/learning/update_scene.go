@@ -9,7 +9,7 @@ import (
 )
 
 // UpdateScene یک صحنه‌ی موجود را با اطلاعات جدید (شامل هات‌اسپات‌ها و دیالوگ‌ها) به‌روزرسانی می‌کند.
-// وضعیت (status)، ترتیب (order) و زمان ساخت از رکورد فعلی حفظ می‌شوند.
+// وضعیت (status)، ترتیب (order) و زمان ساخت از رکورد فعلی حفظ می‌شوند؛ IsLocked از درخواست گرفته می‌شود (ادمین می‌تواند تغییرش دهد).
 func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateSceneRequest) (dto.Scene, error) {
 	const op = "learningservice.UpdateScene"
 
@@ -62,6 +62,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 		Status:             existing.Status,
 		Hotspots:           hotspots,
 		Order:              existing.Order,
+		IsLocked:           req.IsLocked,
 		CreatedAt:          existing.CreatedAt,
 		UpdatedAt:          existing.UpdatedAt,
 	}

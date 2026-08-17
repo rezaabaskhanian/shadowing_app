@@ -3,6 +3,8 @@ package httpserver
 import (
 	"shadowing-backend/internal/config"
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
+	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
+	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
@@ -13,13 +15,17 @@ import (
 
 	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
+	billingservice "shadowing-backend/internal/service/billing"
+	habitservice "shadowing-backend/internal/service/habit"
 	learningservice "shadowing-backend/internal/service/learning"
+	leitnerservice "shadowing-backend/internal/service/leitner"
 	notificationservice "shadowing-backend/internal/service/notification"
 	progressservice "shadowing-backend/internal/service/progress"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 
 	"fmt"
@@ -46,6 +52,10 @@ type Service struct {
 	progressHndler progresshandler.Handler
 
 	adminHandler adminhandler.Handler
+
+	habitHandler habithandler.Handler
+
+	leitnerHandler leitnerhandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -57,13 +67,17 @@ func New(cfg config.Config, userSvc userservice.Service,
 	notificationSvc notificationservice.Service,
 	submissionSvc submissionservice.Service,
 	subscriptionSvc subscriptionservice.Service,
+	topicSuggestionSvc topicsuggestionservice.Service,
+	habitSvc habitservice.Service,
+	billingSvc billingservice.Service,
+	leitnerSvc leitnerservice.Service,
 
 ) Service {
 
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
-			learningSvc, submissionSvc, subscriptionSvc, authSvc, authConfig, uploadDir, uploadURLPath,
+			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, billingSvc, &progressSvc, authSvc, authConfig, uploadDir, uploadURLPath,
 		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
@@ -78,9 +92,14 @@ func New(cfg config.Config, userSvc userservice.Service,
 			notificationSvc,
 			submissionSvc,
 			subscriptionSvc,
+			topicSuggestionSvc,
 			userSvc,
 			authSvc, authConfig, uploadDir, uploadURLPath,
 		),
+
+		habitHandler: habithandler.New(habitSvc, authSvc, authConfig, uploadDir),
+
+		leitnerHandler: leitnerhandler.New(leitnerSvc, authSvc, authConfig),
 	}
 }
 
@@ -128,6 +147,10 @@ func (s Service) Server() {
 	s.progressHndler.SetProgressRoutes(e)
 
 	s.adminHandler.SetAdminRoutes(e)
+
+	s.habitHandler.SetHabitRoutes(e)
+
+	s.leitnerHandler.SetLeitnerRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

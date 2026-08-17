@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   API_BASE,
   approveSceneSubmission,
+  approveTopicSuggestion,
   createScene,
   generateAudio,
   generateScene,
@@ -21,6 +22,7 @@ import type {
   SceneResp,
   SceneSubmission,
   Speaker,
+  TopicSuggestion,
   WordInput,
 } from "@/lib/types";
 
@@ -88,6 +90,9 @@ export default function SceneCreator({
   fromSubmission,
   onApproved,
   onCancelReview,
+  fromTopicSuggestion,
+  onTopicApproved,
+  onCancelTopicReview,
 }: {
   notify: (msg: string, type?: "ok" | "err") => void;
   onSaved: () => void;
@@ -96,10 +101,14 @@ export default function SceneCreator({
   fromSubmission?: SceneSubmission | null;
   onApproved?: () => void;
   onCancelReview?: () => void;
+  fromTopicSuggestion?: TopicSuggestion | null;
+  onTopicApproved?: () => void;
+  onCancelTopicReview?: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
+  const [isLocked, setIsLocked] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hotspots, setHotspots] = useState<HotspotInput[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -125,6 +134,7 @@ export default function SceneCreator({
     setTitle(editScene.title || "");
     setDescription(editScene.description || "");
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
+    setIsLocked(!!editScene.is_locked);
     setImageUrl(editScene.backgroundImageURL || null);
     const hs = hotspotsFromScene(editScene);
     setHotspots(hs);
@@ -142,6 +152,7 @@ export default function SceneCreator({
     setTitle("");
     setDescription(fromSubmission.situation_text || "");
     setDifficulty("beginner");
+    setIsLocked(false);
     setImageUrl(fromSubmission.image_url || null);
     const dialogues: DialogueInput[] = (fromSubmission.dialogues || []).map((d, di) => ({
       order: di + 1,
@@ -165,6 +176,25 @@ export default function SceneCreator({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromSubmission]);
+
+  // در حالت بررسیِ پیشنهاد موضوع، فرم را خالی می‌کنیم و فقط پرامپت هوش مصنوعی
+  // را از روی موضوع پیشنهادی پر می‌کنیم؛ ادمین با دکمه‌ی «تولید با هوش
+  // مصنوعی» موجود، صحنه را از روی همین پرامپت می‌سازد (یا کاملاً دستی).
+  useEffect(() => {
+    if (!fromTopicSuggestion) return;
+    setTitle("");
+    setDescription("");
+    setDifficulty("beginner");
+    setIsLocked(false);
+    setImageUrl(null);
+    setHotspots([]);
+    setSelected(null);
+    setAiPrompt(fromTopicSuggestion.topic_text || "");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromTopicSuggestion]);
 
   // ---------- تولید با هوش مصنوعی (فرم را پر می‌کند؛ ذخیره نمی‌کند) ----------
   async function handleGenerate() {
@@ -428,12 +458,18 @@ export default function SceneCreator({
         background_image_url: imageUrl!,
         difficulty,
         hotspots,
+        is_locked: isLocked,
       };
       if (fromSubmission) {
         const res = await approveSceneSubmission(fromSubmission.id, payload);
         notify(`صحنه منتشر شد و ${res.points_awarded} امتیاز به کاربر داده شد ✅`, "ok");
         resetForm();
         onApproved?.();
+      } else if (fromTopicSuggestion) {
+        const res = await approveTopicSuggestion(fromTopicSuggestion.id, payload);
+        notify(`صحنه منتشر شد و ${res.points_awarded} امتیاز به کاربر داده شد ✅`, "ok");
+        resetForm();
+        onTopicApproved?.();
       } else if (editScene) {
         await updateScene(editScene.id, payload);
         notify("صحنه با موفقیت ویرایش شد ✅", "ok");
@@ -457,6 +493,7 @@ export default function SceneCreator({
     setTitle("");
     setDescription("");
     setDifficulty("beginner");
+    setIsLocked(false);
     setImageUrl(null);
     setHotspots([]);
     setSelected(null);
@@ -481,6 +518,25 @@ export default function SceneCreator({
             📩 بررسی پیشنهاد کاربر — موقعیت و دیالوگ‌ها از کاربر پرشده؛ عنوان، جای
             هات‌اسپات، ترجمه و صدا را کامل کن و «ذخیره» را بزن تا منتشر و امتیاز
             کاربر اهدا شود.
+          </h2>
+        </div>
+      )}
+
+      {/* بنر حالت بررسی پیشنهاد موضوع */}
+      {fromTopicSuggestion && (
+        <div
+          className="card"
+          style={{
+            borderColor: "#22c55e",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 16 }}>
+            💡 بررسی پیشنهاد موضوع — پرامپت «تولید با هوش مصنوعی» از روی موضوع
+            پیشنهادی پر شده؛ می‌توانی همان را بزنی یا کاملاً دستی صحنه بسازی، سپس
+            «ذخیره» را بزن تا منتشر و امتیاز کاربر اهدا شود.
           </h2>
         </div>
       )}
@@ -558,12 +614,21 @@ export default function SceneCreator({
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value as Difficulty)}
             >
-              <option value="beginner">مبتدی</option>
+              <option value="beginner">آسان</option>
               <option value="intermediate">متوسط</option>
-              <option value="advanced">پیشرفته</option>
+              <option value="advanced">حرفه‌ای</option>
             </select>
           </div>
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={isLocked}
+            onChange={(e) => setIsLocked(e.target.checked)}
+            style={{ width: "auto" }}
+          />
+          این صحنه قفل باشد (فقط با اشتراک فعال باز می‌شود)
+        </label>
         <label>توضیحات</label>
         <textarea
           value={description}
@@ -942,7 +1007,7 @@ export default function SceneCreator({
         <button className="btn" onClick={handleSave} disabled={saving}>
           {saving
             ? "در حال ذخیره..."
-            : fromSubmission
+            : fromSubmission || fromTopicSuggestion
             ? "✅ انتشار و اهدای امتیاز"
             : editScene
             ? "💾 ذخیره تغییرات"
@@ -952,11 +1017,16 @@ export default function SceneCreator({
           className="btn btn-ghost"
           onClick={() => {
             if (fromSubmission) onCancelReview?.();
+            else if (fromTopicSuggestion) onCancelTopicReview?.();
             else if (editScene) onCancelEdit?.();
             resetForm();
           }}
         >
-          {fromSubmission ? "انصراف از بررسی" : editScene ? "انصراف" : "پاک‌کردن فرم"}
+          {fromSubmission || fromTopicSuggestion
+            ? "انصراف از بررسی"
+            : editScene
+            ? "انصراف"
+            : "پاک‌کردن فرم"}
         </button>
       </div>
     </div>

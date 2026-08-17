@@ -87,7 +87,7 @@ func (h Handler) GrantSubscription(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "طرح اشتراک پیدا نشد"})
 	}
 
-	if err := h.subscriptionSvc.Grant(c.Request().Context(), targetUserID, *selected, req.PointsToRedeem); err != nil {
+	if err := h.subscriptionSvc.Grant(c.Request().Context(), targetUserID, *selected, req.PointsToRedeem, "", ""); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در فعال‌سازی اشتراک"})
 	}
 

@@ -54,6 +54,9 @@ export const translations: Translations = {
   reviewAgain: { en: 'Review Again', fa: 'مرور دوباره' },
   removeWord: { en: 'Remove from box', fa: 'حذف از جعبه' },
   level: { en: 'Level', fa: 'سطح' },
+  levelBeginner: { en: 'Easy', fa: 'آسان' },
+  levelIntermediate: { en: 'Medium', fa: 'متوسط' },
+  levelAdvanced: { en: 'Professional', fa: 'حرفه‌ای' },
   knewIt: { en: 'Knew it', fa: 'بلد بودم' },
   forgotIt: { en: 'Forgot', fa: 'بلد نبودم' },
   wordsDue: { en: 'due for review', fa: 'آماده مرور' },
@@ -82,14 +85,10 @@ export const translations: Translations = {
   weeklyActivitySub: { en: 'Minutes practiced per day', fa: 'دقیقه‌های تمرین در هر روز' },
   skillBreakdown: { en: 'Skill Breakdown', fa: 'تفکیک مهارت‌ها' },
   achievementsTitle: { en: 'Achievements', fa: 'دستاوردها' },
-  achievementFirstScene: { en: 'First Scene', fa: 'اولین صحنه' },
-  achievementFirstSceneSub: { en: 'Completed your first scene', fa: 'اولین صحنه را کامل کردی' },
-  achievementStreak7: { en: '7-Day Streak', fa: 'استریک ۷ روزه' },
-  achievementStreak7Sub: { en: 'Practiced 7 days in a row', fa: '۷ روز پشت‌سرهم تمرین کردی' },
-  achievementWords50: { en: '50 Words Mastered', fa: '۵۰ واژه یاد گرفته شد' },
-  achievementWords50Sub: { en: 'Reached Leitner level 5 on 50 words', fa: 'به سطح ۵ لایتنر برای ۵۰ واژه رسیدی' },
-  achievementPerfectPron: { en: 'Perfect Pronunciation', fa: 'تلفظ بی‌نقص' },
-  achievementPerfectPronSub: { en: 'Scored 100% on a scene', fa: 'در یک صحنه نمره ۱۰۰ گرفتی' },
+  achievementsEmpty: {
+    en: "No achievements yet — keep practicing to unlock your first one!",
+    fa: 'هنوز دستاوردی نداری — به تمرین ادامه بده تا اولینش رو باز کنی!',
+  },
 
   // Profile Screen
   profileTitle: { en: 'Profile', fa: 'حساب کاربری' },
@@ -277,6 +276,7 @@ export const translations: Translations = {
   fillAllFields: { en: 'Please fill in all fields', fa: 'لطفاً همه فیلدها را پر کنید' },
   loginFailed: { en: 'Login failed. Check your phone and password.', fa: 'ورود ناموفق بود. شماره و رمز عبور را بررسی کنید.' },
   registerFailed: { en: 'Something went wrong. Please try again.', fa: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.' },
+  networkError: { en: 'Could not reach the server. Check your connection and try again.', fa: 'ارتباط با سرور برقرار نشد. اتصال اینترنت خود را بررسی کنید.' },
   passwordMismatch: { en: 'Passwords do not match', fa: 'رمز عبور و تکرار آن مطابقت ندارند' },
   weakPassword: { en: 'Password must be at least 8 characters', fa: 'رمز عبور باید حداقل ۸ کاراکتر باشد' },
 
@@ -317,6 +317,122 @@ export const translations: Translations = {
   sendTestNotification: { en: 'Send Test Notification Banner', fa: 'ارسال نوتیفیکیشن آزمایشی' },
   testNotificationSent: { en: 'Test notification displayed!', fa: 'نوتیفیکیشن آزمایشی نمایش داده شد!' },
   viewContent: { en: 'Review Now', fa: 'مشاهده و مرور' },
+
+  // ---- Language Habit ----
+  habitCardTitle: { en: 'Language Habit', fa: 'عادت زبانی' },
+  habitRealSituations: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
+  habitSuggestTopic: { en: 'Suggest a Topic', fa: 'پیشنهاد موضوع' },
+  habitContactUs: { en: 'Contact Us', fa: 'ارتباط با ما' },
+
+  habitScreenTitle: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
+  habitTodaysMission: { en: "Today's Mission", fa: 'ماموریت امروز' },
+  habitPracticeWhile: { en: 'Practice this dialogue while', fa: 'این دیالوگ را همزمان با' },
+  habitStartMission: { en: 'Start Mission', fa: 'شروع ماموریت' },
+  habitHistoryTitle: { en: 'Your Progress', fa: 'پیشرفت شما' },
+  habitCompletedMissions: { en: 'Completed missions', fa: 'ماموریت‌های انجام‌شده' },
+  habitCurrentStreak: { en: 'Current streak', fa: 'استریک فعلی' },
+  habitTotalPracticeTime: { en: 'Total practice time', fa: 'کل زمان تمرین' },
+  habitNoMissionToday: {
+    en: 'No mission today. Check back tomorrow!',
+    fa: 'امروز ماموریتی نیست. فردا دوباره سر بزن!',
+  },
+  habitDaysStreakSuffix: { en: 'day streak', fa: 'روز استریک' },
+  habitMissionKicker: {
+    en: "Today's Real Situation",
+    fa: 'موقعیت واقعی امروز',
+  },
+  habitPurposeText: {
+    en: "This is a real situation you'll actually run into — say this dialogue from memory while you're in it. The more you practice it, the more automatic it gets, until it comes out without thinking.",
+    fa: 'این یک موقعیت واقعیه — باید این دیالوگ را از حفظ، توی همون موقعیت بگی. هرچی بیشتر تمرینش کنی، خودکارتر می‌شه، تا جایی که بدون فکر کردن از دهنت میاد بیرون.',
+  },
+  habitHowItWorksTitle: { en: 'How this mission works', fa: 'این ماموریت چطور کار می‌کند' },
+  habitHowItWorks1: {
+    en: 'First you get to see the full dialogue and memorize it.',
+    fa: 'اول متن کامل دیالوگ را می‌بینی و فرصت داری حفظش کنی.',
+  },
+  habitHowItWorks2: {
+    en: "Then the text is hidden and you say it from memory while you record.",
+    fa: 'بعد متن مخفی می‌شود و باید حین ضبط، آن را از حفظ بگویی.',
+  },
+  habitHowItWorks3: {
+    en: "At the end, you'll see your accuracy and earn points.",
+    fa: 'در پایان، دقت گفتارت و امتیازی که گرفتی را می‌بینی.',
+  },
+
+  habitStudyTitle: { en: 'Memorize this dialogue', fa: 'این دیالوگ را حفظ کن' },
+  habitStudySubtitle: {
+    en: "Take a moment to read it. Once you start, the text will be hidden and you'll say it from memory.",
+    fa: 'یک لحظه وقت بگذار و آن را بخوان. بعد از شروع، متن مخفی می‌شود و باید از حفظ بگویی.',
+  },
+  habitStudyReadyBtn: { en: "I'm ready, start", fa: 'آماده‌ام، شروع کن' },
+  habitStartRecording: { en: 'Start', fa: 'شروع' },
+  habitStopRecording: { en: 'Stop', fa: 'پایان' },
+  habitUploading: { en: 'Uploading your practice…', fa: 'در حال ارسال تمرین…' },
+  habitAnalyzing: { en: 'Analyzing…', fa: 'در حال تحلیل…' },
+  habitUploadFailed: {
+    en: "Couldn't upload your practice. Check your connection.",
+    fa: 'ارسال تمرین انجام نشد. اتصال اینترنت را بررسی کن.',
+  },
+
+  habitMissionComplete: { en: 'Mission Complete', fa: 'ماموریت کامل شد' },
+  habitYouRemembered: { en: 'You remembered', fa: 'به یاد آوردی' },
+  habitWordsLabel: { en: 'Words', fa: 'کلمات' },
+  habitAccuracyLabel: { en: 'Accuracy', fa: 'دقت' },
+  habitYouPracticed: { en: 'You practiced', fa: 'تمرین کردی' },
+  habitDoneBtn: { en: 'Done', fa: 'پایان' },
+  habitPracticeAgainBtn: { en: 'Practice Again', fa: 'دوباره تمرین کن' },
+
+  // ---- Topic Suggestion ----
+  topicSuggestionTitle: { en: 'Suggest a Topic', fa: 'پیشنهاد موضوع' },
+  topicSuggestionPlaceholder: {
+    en: 'e.g. Ordering food at a restaurant',
+    fa: 'مثلاً: سفارش غذا در رستوران',
+  },
+  topicSuggestionSubmit: { en: 'Submit', fa: 'ارسال' },
+  topicSuggestionNote: {
+    en: 'We review this manually and may add it as a new scene.',
+    fa: 'این پیشنهاد را به‌صورت دستی بررسی می‌کنیم و ممکن است به‌عنوان صحنه‌ی جدید اضافه شود.',
+  },
+  topicSuggestionMineTitle: { en: 'My Suggestions', fa: 'پیشنهادهای من' },
+  topicSuggestionEmpty: { en: 'No suggestions yet.', fa: 'هنوز پیشنهادی ثبت نشده.' },
+  topicSuggestionFillField: { en: 'Please write a topic', fa: 'لطفاً یک موضوع بنویس' },
+
+  // ---- Paywall (خرید کافه‌بازاری / باز کردن صحنه‌های قفل) ----
+  paywallTitle: { en: 'Unlock All Scenes', fa: 'باز کردن همه‌ی صحنه‌ها' },
+  paywallSubtitle: {
+    en: 'The first 30 scenes are always free. Get every scene for a full year with one payment.',
+    fa: 'سی صحنه‌ی اول همیشه رایگانه. با یه پرداخت، همه‌ی صحنه‌ها رو یک سال کامل باز کن.',
+  },
+  paywallYourPoints: { en: 'Your points', fa: 'امتیازهای تو' },
+  paywallPriceLabel: { en: 'Price', fa: 'قیمت' },
+  paywallDiscountApplied: {
+    en: 'Discount applied from your points',
+    fa: 'تخفیف امتیازهات اعمال شد',
+  },
+  paywallBuyButton: { en: 'Buy — 1 Year Access', fa: 'خرید — دسترسی یک‌ساله' },
+  paywallProcessing: { en: 'Processing your purchase…', fa: 'در حال پردازش خرید…' },
+  paywallSuccessTitle: { en: 'Subscription activated!', fa: 'اشتراک فعال شد!' },
+  paywallSuccessSub: {
+    en: 'All scenes are unlocked for the next year.',
+    fa: 'همه‌ی صحنه‌ها برای یک سال آینده باز شدن.',
+  },
+  paywallSuccessBtn: { en: "Great, let's go", fa: 'عالی، بریم' },
+  paywallErrorGeneric: {
+    en: "Couldn't complete the purchase. Please try again.",
+    fa: 'خرید کامل نشد. دوباره امتحان کن.',
+  },
+  lockedBadge: { en: 'Locked', fa: 'قفل' },
+
+  // ---- Contact Us ----
+  contactUsTitle: { en: 'Contact Us', fa: 'ارتباط با ما' },
+  contactUsSub: {
+    en: 'Questions, feedback, or an issue? Reach out.',
+    fa: 'سوال، بازخورد یا مشکلی داری؟ باهامون در ارتباط باش.',
+  },
+  contactUsEmailLabel: { en: 'Email', fa: 'ایمیل' },
+  contactUsCopy: { en: 'Copy', fa: 'کپی' },
+  contactUsCopied: { en: 'Copied!', fa: 'کپی شد!' },
+  contactUsOpenEmail: { en: 'Open Email App', fa: 'باز کردن اپ ایمیل' },
 };
 
 interface LanguageContextType {

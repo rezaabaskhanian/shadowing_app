@@ -11,7 +11,6 @@ import { DialogueSentenceBox } from './DialogueSentenceBox';
 import { PracticeWaveformCard } from './PracticeWaveformCard';
 import { RecordingSaveStatus } from './RecordingSaveStatus';
 import { RecordingsList } from './RecordingsList';
-import { PlayerControlsBar } from './PlayerControlsBar';
 
 interface ShadowingPracticePanelProps {
   language: string;
@@ -21,14 +20,6 @@ interface ShadowingPracticePanelProps {
   currentDialogue: DialogueItem;
   playing: boolean;
   actionCommand: AudioActionCommand;
-  setActionCommand: (cmd: AudioActionCommand) => void;
-  setPlaying: (playing: boolean) => void;
-  playbackRate: number;
-  toggleSpeed: () => void;
-  togglePlay: () => void;
-  onPrevDialogue: () => void;
-  onNextDialogue: () => void;
-  onReplay: () => void;
   onOpenLeitner: () => void;
   /** رفتن به صفحه‌ی «ضبط‌های من» برای گوش‌دادن دوباره به ضبط‌های قبلی. */
   onOpenRecordings: () => void;
@@ -96,7 +87,11 @@ interface ShadowingPracticePanelProps {
  *  - PracticeWaveformCard  → کارت وسط (شامل CompareAudioSection برای مرحله ۴)
  *  - RecordingSaveStatus   → راهنما/هشدار ضبط + وضعیت ذخیره‌ی روی گوشی
  *  - RecordingsList        → لیست جمله‌های صحنه با وضعیت ضبطشان
- *  - PlayerControlsBar     → ردیف کنترل‌های پایین
+ *
+ * دکمه‌های کنترل (`PlayerControlsBar`) اینجا رندر نمی‌شوند — SceneScreen آن‌ها
+ * را به‌همراه جمله‌ی جاری به‌صورت نواری ثابت پایین صفحه نگه می‌دارد تا با
+ * اسکرول‌شدنِ این پنل (مثلاً وقتی لیست جمله‌ها در مرحله‌ی ضبط زیاد می‌شود)
+ * ناپدید نشوند.
  */
 export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   language,
@@ -106,14 +101,6 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   currentDialogue,
   playing,
   actionCommand,
-  setActionCommand,
-  setPlaying,
-  playbackRate,
-  toggleSpeed,
-  togglePlay,
-  onPrevDialogue,
-  onNextDialogue,
-  onReplay,
   onOpenLeitner,
   onOpenRecordings,
   saveState,
@@ -206,22 +193,6 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
           t={t}
         />
       )}
-
-      <PlayerControlsBar
-        activeStepIndex={activeStepIndex}
-        playing={playing}
-        actionCommand={actionCommand}
-        setActionCommand={setActionCommand}
-        setPlaying={setPlaying}
-        playbackRate={playbackRate}
-        toggleSpeed={toggleSpeed}
-        togglePlay={togglePlay}
-        onPrevDialogue={onPrevDialogue}
-        onNextDialogue={onNextDialogue}
-        onReplay={onReplay}
-        hasRecordingForCurrentLine={hasRecordingForCurrentLine}
-        onPlayMyRecording={onPlayMyRecording}
-      />
     </View>
   );
 };

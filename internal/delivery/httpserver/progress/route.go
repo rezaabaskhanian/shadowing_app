@@ -15,6 +15,7 @@ func (h Handler) SetProgressRoutes(e *echo.Echo) {
 	group.GET("/achievements/:userID", h.GetUserAchievements, middlware.Auth(h.authSvc, h.authConfig))
 	group.POST("/achievement/unlock", h.UnlockAchievement, middlware.Auth(h.authSvc, h.authConfig))
 	group.GET("/summary/:userID", h.GetUserSummary, middlware.Auth(h.authSvc, h.authConfig))
-	// group.PUT("/scene", h.UpdateSceneProgress, middlware.Auth(h.authSvc, h.authConfig))
+	group.GET("/weekly-activity", h.GetWeeklyActivity, middlware.Auth(h.authSvc, h.authConfig))
+	group.GET("/skills", h.GetSkillsBreakdown, middlware.Auth(h.authSvc, h.authConfig))
 
 }

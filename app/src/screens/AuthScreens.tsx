@@ -26,6 +26,10 @@ import { resetPassword as resetPasswordApi } from '../api/auth';
 
 type AuthMode = 'login' | 'register' | 'reset';
 
+// خطای سطح شبکه (سرور در دسترس نیست) را از خطای منطقی سرور جدا می‌کند.
+const isNetworkError = (e: any) =>
+  e instanceof TypeError || /network request failed/i.test(e?.message || '');
+
 interface AuthScreensProps {
   onComplete: () => void;
 }
@@ -75,7 +79,7 @@ const LoginScreen = ({
     try {
       await login(phone.trim(), password);
     } catch (e: any) {
-      setError(e?.message || t('loginFailed'));
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -185,7 +189,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
     try {
       await register(nickname.trim(), phone.trim(), password);
     } catch (e: any) {
-      setError(e?.message || t('registerFailed'));
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
     } finally {
       setLoading(false);
     }
@@ -308,7 +312,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
       await resetPasswordApi(nickname.trim(), newPassword, confirmPassword);
       setStep('success');
     } catch (e: any) {
-      setError(e?.message || t('registerFailed'));
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
     } finally {
       setLoading(false);
     }

@@ -8,20 +8,22 @@ import (
 	settingsservice "shadowing-backend/internal/service/settings"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 	userservice "shadowing-backend/internal/service/user"
 )
 
 // Handler پنل ادمین را سرویس‌دهی می‌کند: آپلود تصویر/صدا و مدیریت صحنه‌ها/هات‌اسپات‌ها/دیالوگ‌ها
 type Handler struct {
-	learningSvc     learningservice.Service
-	aiSvc           aiservice.Service
-	ttsSvc          ttsservice.Service
-	settingsSvc     *settingsservice.Service
-	notificationSvc notificationservice.Service
-	submissionSvc   submissionservice.Service
-	subscriptionSvc subscriptionservice.Service
-	userSvc         userservice.Service
+	learningSvc        learningservice.Service
+	aiSvc              aiservice.Service
+	ttsSvc             ttsservice.Service
+	settingsSvc        *settingsservice.Service
+	notificationSvc    notificationservice.Service
+	submissionSvc      submissionservice.Service
+	subscriptionSvc    subscriptionservice.Service
+	topicSuggestionSvc topicsuggestionservice.Service
+	userSvc            userservice.Service
 
 	authSvc    authservice.Service
 	authConfig authservice.Config
@@ -41,23 +43,25 @@ func New(
 	notificationSvc notificationservice.Service,
 	submissionSvc submissionservice.Service,
 	subscriptionSvc subscriptionservice.Service,
+	topicSuggestionSvc topicsuggestionservice.Service,
 	userSvc userservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	uploadDir, publicPath string,
 ) Handler {
 	return Handler{
-		learningSvc:     learningSvc,
-		aiSvc:           aiSvc,
-		ttsSvc:          ttsSvc,
-		settingsSvc:     settingsSvc,
-		notificationSvc: notificationSvc,
-		submissionSvc:   submissionSvc,
-		subscriptionSvc: subscriptionSvc,
-		userSvc:         userSvc,
-		authSvc:         authSvc,
-		authConfig:      authConfig,
-		uploadDir:       uploadDir,
-		publicPath:      publicPath,
+		learningSvc:        learningSvc,
+		aiSvc:              aiSvc,
+		ttsSvc:             ttsSvc,
+		settingsSvc:        settingsSvc,
+		notificationSvc:    notificationSvc,
+		submissionSvc:      submissionSvc,
+		subscriptionSvc:    subscriptionSvc,
+		topicSuggestionSvc: topicSuggestionSvc,
+		userSvc:            userSvc,
+		authSvc:            authSvc,
+		authConfig:         authConfig,
+		uploadDir:          uploadDir,
+		publicPath:         publicPath,
 	}
 }

@@ -26,9 +26,9 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 
 	// ========== 2️⃣ درج Scene ==========
 	query := `INSERT INTO scenes (
-		id, title, description, background_image_url, 
-		difficulty, status, "order", created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())`
+		id, title, description, background_image_url,
+		difficulty, status, "order", is_locked, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())`
 
 	_, err = tx.Exec(ctx, query,
 		s.ID,
@@ -38,6 +38,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		s.Difficulty,
 		s.Status,
 		s.Order,
+		s.IsLocked,
 	)
 	if err != nil {
 		return richerror.New(op).
@@ -168,9 +169,9 @@ func (r DB) Delete(ctx context.Context, id string) error {
 func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 	const op = "postgres.GetAllScenes"
 
-	query := `SELECT 
+	query := `SELECT
 		id, title, description, background_image_url,
-		difficulty, status, "order", created_at, updated_at
+		difficulty, status, "order", is_locked, created_at, updated_at
 	FROM scenes ORDER BY "order", created_at DESC`
 
 	rows, err := r.conn.Query(ctx, query)
@@ -184,7 +185,7 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 		var s scene.Scene
 		err := rows.Scan(
 			&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
-			&s.Difficulty, &s.Status, &s.Order, &s.CreatedAt, &s.UpdatedAt,
+			&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.CreatedAt, &s.UpdatedAt,
 		)
 		if err != nil {
 			return nil, richerror.New(op).WithErr(err)
@@ -202,15 +203,15 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	const op = "postgres.GetSceneByID"
 
 	// 1️⃣ Get Scene
-	sceneQuery := `SELECT 
+	sceneQuery := `SELECT
 		id, title, description, background_image_url,
-		difficulty, status, "order", created_at, updated_at
+		difficulty, status, "order", is_locked, created_at, updated_at
 	FROM scenes WHERE id = $1`
 
 	var s scene.Scene
 	err := r.conn.QueryRow(ctx, sceneQuery, id).Scan(
 		&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
-		&s.Difficulty, &s.Status, &s.Order, &s.CreatedAt, &s.UpdatedAt,
+		&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -304,19 +305,20 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 	defer tx.Rollback(ctx)
 
 	// 1️⃣ Update Scene
-	query := `UPDATE scenes SET 
-		title = $1, 
-		description = $2, 
+	query := `UPDATE scenes SET
+		title = $1,
+		description = $2,
 		background_image_url = $3,
-		difficulty = $4, 
-		status = $5, 
+		difficulty = $4,
+		status = $5,
 		"order" = $6,
+		is_locked = $7,
 		updated_at = NOW()
-	WHERE id = $7`
+	WHERE id = $8`
 
 	result, err := tx.Exec(ctx, query,
 		scene.Title, scene.Description, scene.BackgroundImageURL,
-		scene.Difficulty, scene.Status, scene.Order, scene.ID,
+		scene.Difficulty, scene.Status, scene.Order, scene.IsLocked, scene.ID,
 	)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to update scene")

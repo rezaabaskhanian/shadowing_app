@@ -1,0 +1,69 @@
+import { authFetch, jsonOrThrow } from './client';
+
+export interface UserStreak {
+  current_streak: number;
+  longest_streak: number;
+  freezes: number;
+  status: 'active' | 'broken' | string;
+  next_milestone: number;
+}
+
+export interface UserSummary {
+  streak: number;
+  total_xp: number;
+  level: number;
+  level_name: string;
+  total_achievements: number;
+  completed_scenes: number;
+  total_scenes: number;
+  overall_progress: number;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | string;
+  xp: number;
+  unlocked_at: string;
+}
+
+export async function getUserStreak(userId: string): Promise<UserStreak> {
+  const res = await authFetch(`/v1/progress/streak/${userId}`, { method: 'GET' });
+  return (await jsonOrThrow(res)) as UserStreak;
+}
+
+export async function getUserSummary(userId: string): Promise<UserSummary> {
+  const res = await authFetch(`/v1/progress/summary/${userId}`, { method: 'GET' });
+  return (await jsonOrThrow(res)) as UserSummary;
+}
+
+export async function getUserAchievements(userId: string): Promise<Achievement[]> {
+  const res = await authFetch(`/v1/progress/achievements/${userId}`, { method: 'GET' });
+  const data = await jsonOrThrow(res);
+  return (data.achievements || []) as Achievement[];
+}
+
+export interface DayActivity {
+  date: string; // "2006-01-02"
+  minutes: number;
+  sessions: number;
+}
+
+export async function getWeeklyActivity(): Promise<DayActivity[]> {
+  const res = await authFetch('/v1/progress/weekly-activity', { method: 'GET' });
+  const data = await jsonOrThrow(res);
+  return (data.days || []) as DayActivity[];
+}
+
+export interface SkillsBreakdown {
+  pronunciation: number;
+  fluency: number;
+  vocabulary: number;
+}
+
+export async function getSkillsBreakdown(): Promise<SkillsBreakdown> {
+  const res = await authFetch('/v1/progress/skills', { method: 'GET' });
+  return (await jsonOrThrow(res)) as SkillsBreakdown;
+}

@@ -11,6 +11,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@cafebazaar/react-native-poolakey": "^3.1.2",
     "@dr.pogodin/react-native-fs": "^2.40.0",
     "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^3.1.1",

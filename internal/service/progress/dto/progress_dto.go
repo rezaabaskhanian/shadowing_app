@@ -91,6 +91,28 @@ type UpdateSceneProgressResponse struct {
 }
 
 // ============================================
+// GetWeeklyActivity
+// ============================================
+type GetWeeklyActivityResponse struct {
+	Days []DayActivityDTO `json:"days"`
+}
+
+type DayActivityDTO struct {
+	Date     string `json:"date"` // "2006-01-02"
+	Minutes  int    `json:"minutes"`
+	Sessions int    `json:"sessions"`
+}
+
+// ============================================
+// GetSkillsBreakdown
+// ============================================
+type GetSkillsBreakdownResponse struct {
+	Pronunciation int `json:"pronunciation"`
+	Fluency       int `json:"fluency"`
+	Vocabulary    int `json:"vocabulary"`
+}
+
+// ============================================
 // GetUserSummary
 // ============================================
 type GetUserSummaryResponse struct {

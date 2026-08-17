@@ -12,7 +12,7 @@ import { ChevronRight, Lightbulb, MessageCircle, Play, Share2, X } from 'lucide-
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
-import { LEVEL_BADGE_STYLE } from '../../components/SceneListCard';
+import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY } from '../../components/SceneListCard';
 import type { DialogueItem, Scenario } from '../../data/scenarios';
 
 interface SceneIntroScreenProps {
@@ -45,6 +45,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
 }) => {
   const levelInfo = LEVEL_BADGE_STYLE[scenario?.level || 'Beginner'] || LEVEL_BADGE_STYLE.Beginner;
   const LevelIcon = levelInfo.Icon;
+  const levelLabel = t(LEVEL_LABEL_KEY[scenario?.level || 'Beginner'] || LEVEL_LABEL_KEY.Beginner);
   const hotspotsCount = scenario?.hotspots?.length || 0;
   const sentencesTotal = dialogueItems.length;
   const minutesCount = parseInt(scenario?.time || '0', 10) || 0;
@@ -78,7 +79,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
             <View style={[styles.introLevelBadge, { backgroundColor: levelInfo.bg }]}>
               <LevelIcon size={12} color={levelInfo.text} />
               <Text style={[styles.introLevelBadgeText, { color: levelInfo.text }]}>
-                {scenario?.level || 'Beginner'}
+                {levelLabel}
               </Text>
             </View>
           </View>

@@ -14,11 +14,12 @@ type Scene struct {
 	Status             SceneStatus
 	Hotspots           []Hotspot
 	Order              int
+	IsLocked           bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }
 
-func NewScene(title, description, bgImage string, difficulty DifficultyLevel) (Scene, error) {
+func NewScene(title, description, bgImage string, difficulty DifficultyLevel, isLocked bool) (Scene, error) {
 	if title == "" {
 		return Scene{}, errors.New("title is required")
 	}
@@ -38,6 +39,7 @@ func NewScene(title, description, bgImage string, difficulty DifficultyLevel) (S
 		Difficulty:         difficulty,
 		Status:             StatusDraft,
 		Hotspots:           []Hotspot{},
+		IsLocked:           isLocked,
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}, nil

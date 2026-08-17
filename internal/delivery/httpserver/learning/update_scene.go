@@ -26,6 +26,7 @@ func (h Handler) UpdateScene(c echo.Context) error {
 		BackgroundImageURL: req.BackgroundImageURL,
 		Difficulty:         req.Difficulty,
 		Hotspots:           req.Hotspots,
+		IsLocked:           req.IsLocked,
 	}
 
 	scene, err := h.learningSvc.UpdateScene(c.Request().Context(), req.ID, updateReq)

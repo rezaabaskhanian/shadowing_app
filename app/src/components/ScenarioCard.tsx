@@ -1,7 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { ChevronRight, Check } from 'lucide-react-native';
+import { ChevronRight, Check, Lock } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
+import { useLanguage } from '../data/i18n';
+
+const LEVEL_LABEL_KEY: Record<string, string> = {
+  Beginner: 'levelBeginner',
+  Intermediate: 'levelIntermediate',
+  Advanced: 'levelAdvanced',
+};
 
 interface ScenarioCardProps {
   title: string;
@@ -13,6 +20,7 @@ interface ScenarioCardProps {
   subtitle?: string;
   sentencesCount?: number;
   isCompleted?: boolean;
+  isLocked?: boolean;
   onPress?: () => void;
   isSmall?: boolean;
 }
@@ -26,9 +34,12 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   subtitle,
   sentencesCount = 24,
   isCompleted = false,
+  isLocked = false,
   onPress,
 }) => {
+  const { t } = useLanguage();
   const imageSource = typeof imageUri === 'string' ? { uri: imageUri } : imageUri;
+  const levelLabel = t(LEVEL_LABEL_KEY[level] || LEVEL_LABEL_KEY.Beginner);
 
   return (
     <TouchableOpacity
@@ -37,14 +48,21 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
       style={styles.card}
     >
       {/* THUMBNAIL */}
-      <Image source={imageSource} style={styles.thumbnail} />
+      <View>
+        <Image source={imageSource} style={[styles.thumbnail, isLocked && styles.thumbnailLocked]} />
+        {isLocked && (
+          <View style={styles.lockOverlay}>
+            <Lock size={18} color={COLORS.white} />
+          </View>
+        )}
+      </View>
 
       {/* CONTENT INFO */}
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
           <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>{level}</Text>
+            <Text style={styles.levelText}>{levelLabel}</Text>
           </View>
         </View>
 
@@ -59,7 +77,9 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
 
       {/* ACTION RIGHT */}
       <View style={styles.actionRight}>
-        {isCompleted || progress >= 100 ? (
+        {isLocked ? (
+          <Lock size={20} color={COLORS.muted} />
+        ) : isCompleted || progress >= 100 ? (
           <View style={styles.completedBadge}>
             <Check size={16} color={COLORS.white} />
           </View>
@@ -87,6 +107,18 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 20,
     backgroundColor: COLORS.surfaceLight,
+  },
+  thumbnailLocked: {
+    opacity: 0.4,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

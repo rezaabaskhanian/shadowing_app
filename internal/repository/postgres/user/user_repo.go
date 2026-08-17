@@ -266,3 +266,90 @@ func (d DB) FindAll(ctx context.Context, limit, offset int) ([]domain.User, erro
 
 	return users, nil
 }
+
+// UserActivityRow خلاصه‌ی فعالیت یک کاربر برای صفحه‌ی «کاربران» پنل ادمین —
+// به‌جای صدازدن جدا-جدا (N+1) endpointهای progress برای هر کاربر، همه‌چیز با
+// یک کوئری JOIN/تجمیعی خوانده می‌شود.
+type UserActivityRow struct {
+	ID                    string  `json:"id"`
+	NickName              string  `json:"nickname"`
+	Phone                 string  `json:"phone"`
+	Points                int     `json:"points"`
+	CreatedAt             string  `json:"created_at"`
+	CurrentStreak         int     `json:"current_streak"`
+	CompletedScenes       int     `json:"completed_scenes"`
+	LastActivityAt        *string `json:"last_activity_at"`
+	HasActiveSubscription bool    `json:"has_active_subscription"`
+}
+
+// CountWithSearch تعداد کاربرهایی که با فیلتر جست‌وجو (نام/شماره) مطابقت
+// دارند را برمی‌گرداند — برای صفحه‌بندی لیست کاربران ادمین.
+func (d DB) CountWithSearch(ctx context.Context, search string) (int, error) {
+	const op = "postgresuser.CountWithSearch"
+
+	var count int
+	err := d.conn.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users
+		WHERE ($1 = '' OR nickname ILIKE '%' || $1 || '%' OR phone ILIKE '%' || $1 || '%')
+	`, search).Scan(&count)
+	if err != nil {
+		return 0, richerror.New(op).WithErr(err).WithMessage("failed to count users")
+	}
+	return count, nil
+}
+
+// ListWithActivity کاربرها را همراه با استریک، تعداد صحنه‌ی تکمیل‌شده، آخرین
+// فعالیت و وضعیت اشتراک فعال برمی‌گرداند (برای صفحه‌ی کاربران پنل ادمین).
+func (d DB) ListWithActivity(ctx context.Context, limit, offset int, search string) ([]UserActivityRow, error) {
+	const op = "postgresuser.ListWithActivity"
+
+	const query = `
+		SELECT
+			u.id::text, u.nickname, u.phone, u.points, u.created_at::text,
+			COALESCE(s.current, 0) AS current_streak,
+			COALESCE(sp.completed_count, 0) AS completed_scenes,
+			sp.last_activity_at::text,
+			COALESCE(sub.has_active, false) AS has_active_subscription
+		FROM users u
+		LEFT JOIN streaks s ON s.user_id = u.id
+		LEFT JOIN (
+			SELECT user_id,
+				COUNT(*) FILTER (WHERE is_completed) AS completed_count,
+				MAX(last_accessed_at) AS last_activity_at
+			FROM scene_progress
+			GROUP BY user_id
+		) sp ON sp.user_id = u.id
+		LEFT JOIN (
+			SELECT user_id, true AS has_active
+			FROM user_subscriptions
+			WHERE status = 'active' AND expires_at > now()
+			GROUP BY user_id
+		) sub ON sub.user_id = u.id
+		WHERE ($3 = '' OR u.nickname ILIKE '%' || $3 || '%' OR u.phone ILIKE '%' || $3 || '%')
+		ORDER BY u.created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := d.conn.Query(ctx, query, limit, offset, search)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to query users activity")
+	}
+	defer rows.Close()
+
+	var list []UserActivityRow
+	for rows.Next() {
+		var row UserActivityRow
+		if err := rows.Scan(
+			&row.ID, &row.NickName, &row.Phone, &row.Points, &row.CreatedAt,
+			&row.CurrentStreak, &row.CompletedScenes, &row.LastActivityAt, &row.HasActiveSubscription,
+		); err != nil {
+			return nil, richerror.New(op).WithErr(err).WithMessage("failed to scan user activity row")
+		}
+		list = append(list, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+
+	return list, nil
+}

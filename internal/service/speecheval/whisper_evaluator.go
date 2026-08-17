@@ -105,6 +105,19 @@ func (e *WhisperEvaluator) score(in Input, tr *TranscriptionResult) *EvaluationR
 		fluency = e.fallback.Evaluate(context.Background(), in).FluencyScore
 	}
 
+	// روانی از روی زمان‌بندیِ همان صدایی حساب می‌شود که شنیده شده، صرف‌نظر از
+	// اینکه محتوایش با متن هدف می‌خواند یا نه. اگر کاربر جمله‌ی کاملاً دیگری
+	// گفته باشد، آن زمان‌بندی به‌دردنخور است و نباید نمره‌ی روانی بالا بدهد؛
+	// پس با نسبت کلمه‌های واقعاً تطبیق‌یافته (غیر missing) مقیاس می‌شود.
+	matched := 0
+	for _, w := range words {
+		if w.Status != WordMissing {
+			matched++
+		}
+	}
+	matchRatio := float64(matched) / float64(len(words))
+	fluency *= matchRatio
+
 	// ۳️⃣ نمره‌ی کل — وزن تلفظ بیشتر است چون هدفِ اصلی تمرین شدوئینگ است
 	overall := pronunciation*0.6 + fluency*0.4
 

@@ -9,10 +9,20 @@ import SceneList from "./SceneList";
 import SettingsPanel from "./SettingsPanel";
 import NotificationsPanel from "./NotificationsPanel";
 import SceneReviewQueue from "./SceneReviewQueue";
+import TopicSuggestionQueue from "./TopicSuggestionQueue";
 import SubscriptionPlansPanel from "./SubscriptionPlansPanel";
-import type { SceneSubmission } from "@/lib/types";
+import UserList from "./UserList";
+import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
-type Tab = "create" | "list" | "settings" | "notifications" | "review" | "subscriptions";
+type Tab =
+  | "create"
+  | "list"
+  | "settings"
+  | "notifications"
+  | "review"
+  | "topics"
+  | "subscriptions"
+  | "users";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,6 +35,11 @@ export default function DashboardPage() {
   // پیشنهادی که در حال بررسی است (فرم را از روی آن پر می‌کند)
   const [reviewSubmission, setReviewSubmission] = useState<SceneSubmission | null>(null);
   const [submissionReloadKey, setSubmissionReloadKey] = useState(0);
+  // پیشنهاد موضوعی که در حال بررسی است
+  const [reviewTopicSuggestion, setReviewTopicSuggestion] = useState<TopicSuggestion | null>(
+    null
+  );
+  const [topicReloadKey, setTopicReloadKey] = useState(0);
 
   // توست ساده
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
@@ -63,7 +78,13 @@ export default function DashboardPage() {
             className={`tab-btn ${tab === "create" ? "active" : ""}`}
             onClick={() => setTab("create")}
           >
-            {reviewSubmission ? "📩 بررسی پیشنهاد" : editScene ? "✏️ ویرایش صحنه" : "➕ ساخت صحنه"}
+            {reviewSubmission
+              ? "📩 بررسی پیشنهاد"
+              : reviewTopicSuggestion
+              ? "💡 بررسی موضوع"
+              : editScene
+              ? "✏️ ویرایش صحنه"
+              : "➕ ساخت صحنه"}
           </button>
           <button
             className={`tab-btn ${tab === "list" ? "active" : ""}`}
@@ -90,10 +111,22 @@ export default function DashboardPage() {
             📩 پیشنهادهای کاربران
           </button>
           <button
+            className={`tab-btn ${tab === "topics" ? "active" : ""}`}
+            onClick={() => setTab("topics")}
+          >
+            💡 پیشنهادهای موضوع
+          </button>
+          <button
             className={`tab-btn ${tab === "subscriptions" ? "active" : ""}`}
             onClick={() => setTab("subscriptions")}
           >
             💳 اشتراک‌ها
+          </button>
+          <button
+            className={`tab-btn ${tab === "users" ? "active" : ""}`}
+            onClick={() => setTab("users")}
+          >
+            👤 کاربران
           </button>
         </div>
         <div className="userbox">
@@ -119,6 +152,14 @@ export default function DashboardPage() {
               setTab("review");
             }}
             onCancelReview={() => setReviewSubmission(null)}
+            fromTopicSuggestion={reviewTopicSuggestion}
+            onTopicApproved={() => {
+              setReviewTopicSuggestion(null);
+              setReloadKey((k) => k + 1);
+              setTopicReloadKey((k) => k + 1);
+              setTab("topics");
+            }}
+            onCancelTopicReview={() => setReviewTopicSuggestion(null)}
           />
         )}
         {tab === "list" && (
@@ -144,7 +185,20 @@ export default function DashboardPage() {
             }}
           />
         )}
+        {tab === "topics" && (
+          <TopicSuggestionQueue
+            notify={notify}
+            reloadKey={topicReloadKey}
+            onReview={(suggestion) => {
+              setReviewTopicSuggestion(suggestion);
+              setReviewSubmission(null);
+              setEditScene(null);
+              setTab("create");
+            }}
+          />
+        )}
         {tab === "subscriptions" && <SubscriptionPlansPanel notify={notify} />}
+        {tab === "users" && <UserList notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}

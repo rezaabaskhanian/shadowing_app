@@ -11,6 +11,22 @@ import (
 )
 
 // ============================================
+// AvgScoresByUser - میانگین نمره‌ی تلفظ/روانی گفتار کاربر از روی همه‌ی
+// ضبط‌های واقعی‌اش (برای «درصد مهارت‌ها»)
+// ============================================
+func (r DB) AvgScoresByUser(ctx context.Context, userID uuid.UUID) (avgPronunciation, avgFluency float64, err error) {
+	const op = "postgres.RecordingRepository.AvgScoresByUser"
+
+	query := `SELECT COALESCE(AVG(pronunciation_score), 0), COALESCE(AVG(fluency_score), 0)
+        FROM shadowing_recordings WHERE user_id = $1`
+
+	if err := r.conn.QueryRow(ctx, query, userID).Scan(&avgPronunciation, &avgFluency); err != nil {
+		return 0, 0, richerror.New(op).WithErr(err)
+	}
+	return avgPronunciation, avgFluency, nil
+}
+
+// ============================================
 // Create - ذخیره ضبط جدید
 // ============================================
 func (r DB) Create(ctx context.Context, rec *recording.Recording) error {

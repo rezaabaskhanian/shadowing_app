@@ -1,4 +1,5 @@
 import type {
+  AdminUsersResp,
   BroadcastItem,
   CreateScenePayload,
   Difficulty,
@@ -9,6 +10,7 @@ import type {
   SceneSubmission,
   SettingsResp,
   SubscriptionPlan,
+  TopicSuggestion,
 } from "./types";
 
 export const API_BASE =
@@ -237,6 +239,57 @@ export async function approveSceneSubmission(
 
 export async function rejectSceneSubmission(id: string, note: string) {
   const res = await authFetch(`/v1/admin/scene-submissions/${id}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ note }),
+  });
+  return jsonOrThrow(res);
+}
+
+// ---------- پیشنهادهای موضوع توسط کاربران ----------
+export async function listTopicSuggestions(
+  status?: string
+): Promise<TopicSuggestion[]> {
+  const qs = status ? `?status=${status}` : "";
+  const res = await authFetch(`/v1/admin/topic-suggestions${qs}`, { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.suggestions || []) as TopicSuggestion[];
+}
+
+export async function getTopicSuggestion(id: string): Promise<TopicSuggestion> {
+  const res = await authFetch(`/v1/admin/topic-suggestions/${id}`, { method: "GET" });
+  return jsonOrThrow(res) as Promise<TopicSuggestion>;
+}
+
+// ---------- کاربران و فعالیتشون ----------
+export async function listUsers(params: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}): Promise<AdminUsersResp> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.offset) qs.set("offset", String(params.offset));
+  if (params.search) qs.set("search", params.search);
+
+  const res = await authFetch(`/v1/admin/users?${qs.toString()}`, { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+export async function approveTopicSuggestion(
+  id: string,
+  payload: CreateScenePayload
+): Promise<{ scene: SceneResp; points_awarded: number }> {
+  const res = await authFetch(`/v1/admin/topic-suggestions/${id}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function rejectTopicSuggestion(id: string, note: string) {
+  const res = await authFetch(`/v1/admin/topic-suggestions/${id}/reject`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ note }),

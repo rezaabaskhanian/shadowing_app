@@ -12,11 +12,14 @@ import { useLanguage } from '../../data/i18n';
 import { usePracticeSettings } from '../../data/PracticeSettingsContext';
 import { saveRecording } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
+import { SceneLockedError } from '../../api/scenes';
+import { getUserStreak } from '../../api/progress';
+import { useAuth } from '../../data/AuthContext';
 
 import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
-import { ShadowingPracticePanel } from './shadowing';
+import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
 import type { AudioActionCommand } from './types';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
@@ -25,9 +28,6 @@ const SESSION_SCORE = 85;
 const SESSION_PRONUNCIATION = 80;
 const SESSION_FLUENCY = 92;
 const SESSION_RHYTHM = 83;
-
-// عدد استریک هنوز از بک‌اند نمی‌آید؛ مثل Home مقدار نمایشی ثابت است.
-const STREAK_COUNT = 14;
 
 // فقط مرحله‌های ورودی (Listen و Shadow) دور خودکار دارند: چند دور کامل پخش
 // می‌شوند و بعد خودکار مرحله‌ی بعد. این اجبار نیست — کاربر هر لحظه می‌تواند با
@@ -72,6 +72,21 @@ export const SceneScreen = () => {
   const { getScene } = useScenes();
   const { language, t } = useLanguage();
   const { repeatsPerStep } = usePracticeSettings();
+  const { user } = useAuth();
+  const [streakCount, setStreakCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      let active = true;
+      getUserStreak(user.id)
+        .then((s) => active && setStreakCount(s.current_streak))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [user?.id])
+  );
   // ابعاد صفحه به‌صورت زنده (نه فقط یک‌بار در زمان لود) تا با چرخش گوشی به
   // حالت عرضی، اندازه‌ی ناحیه‌ی تصویر درست محاسبه شود و تصویر کشیده/بریده
   // نمایش داده نشود.
@@ -104,12 +119,22 @@ export const SceneScreen = () => {
 
   useEffect(() => {
     let mounted = true;
-    getScene(scenarioId).then((s) => {
-      if (mounted) setScenario(s ?? null);
-    });
+    getScene(scenarioId)
+      .then((s) => {
+        if (mounted) setScenario(s ?? null);
+      })
+      .catch((e) => {
+        if (!mounted) return;
+        if (e instanceof SceneLockedError) {
+          navigation.replace('Paywall');
+          return;
+        }
+        setScenario(null);
+      });
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId, getScene]);
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -154,9 +179,10 @@ export const SceneScreen = () => {
   const [playingRecordingUrl, setPlayingRecordingUrl] = useState<string | null>(null);
   // صفِ پخشِ پشت‌سرهم؛ خالی یعنی پخش دنباله‌ای در جریان نیست.
   const [playAllQueue, setPlayAllQueue] = useState<number[]>([]);
-  // در مرحله‌ی ضبط، متن پیش‌فرض مخفی است تا کاربر از حفظ بگوید. این مجموعه
-  // جمله‌هایی است که خودش خواسته ببیند.
-  const [revealedLines, setRevealedLines] = useState<number[]>([]);
+  // در مرحله‌ی ضبط، متن پیش‌فرض مخفی است تا کاربر از حفظ بگوید. یک‌بار که
+  // کاربر «نمایش متن» را بزند، دیگر برای همه‌ی جمله‌های این صحنه آشکار
+  // می‌ماند — لازم نیست هر جمله را دوباره جدا آشکار کند.
+  const [textRevealed, setTextRevealed] = useState(false);
   // false فقط بعد از یک شکست واقعی در native module (مثلاً مجوز میکروفن رد
   // شده) می‌شود؛ تا آن لحظه فرض می‌کنیم ضبط ممکن است.
   const [canRecord, setCanRecord] = useState(true);
@@ -540,10 +566,8 @@ export const SceneScreen = () => {
   );
 
   const toggleRevealText = useCallback(() => {
-    setRevealedLines((prev) =>
-      prev.includes(activeIndex) ? prev.filter((i) => i !== activeIndex) : [...prev, activeIndex]
-    );
-  }, [activeIndex]);
+    setTextRevealed((prev) => !prev);
+  }, []);
 
   /**
    * با عوض شدن صحنه، هرچه به «اندیس جمله» کلید خورده باید پاک شود.
@@ -555,7 +579,7 @@ export const SceneScreen = () => {
   useEffect(() => {
     setRecordings({});
     setEvaluations({});
-    setRevealedLines([]);
+    setTextRevealed(false);
     setPlayAllQueue([]);
     setPlayingRecordingUrl(null);
     setEvalState('idle');
@@ -696,7 +720,7 @@ export const SceneScreen = () => {
       />
 
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollablePlayerContainer}
         showsVerticalScrollIndicator={false}
         bounces={true}
@@ -713,7 +737,7 @@ export const SceneScreen = () => {
           // روی هات‌اسپات زوم می‌کند.
           refocusKey={isShadowingMode ? `${activeStepIndex}-${repeatCount}` : undefined}
           isShadowingMode={isShadowingMode}
-          streakCount={STREAK_COUNT}
+          streakCount={streakCount}
           onForward={handleHeaderForwardPress}
         />
 
@@ -739,14 +763,6 @@ export const SceneScreen = () => {
               currentDialogue={currentDialogue}
               playing={playing}
               actionCommand={actionCommand}
-              setActionCommand={setActionCommand}
-              setPlaying={setPlaying}
-              playbackRate={playbackRate}
-              toggleSpeed={toggleSpeed}
-              togglePlay={togglePlay}
-              onPrevDialogue={handlePrevDialogue}
-              onNextDialogue={handleNextDialogue}
-              onReplay={handleReplay}
               onOpenLeitner={() => navigation.navigate('Leitner')}
               onOpenRecordings={() => navigation.navigate('MyRecordings')}
               saveState={saveState}
@@ -768,7 +784,7 @@ export const SceneScreen = () => {
               activeLineIndex={activeIndex}
               onSelectLine={selectLine}
               // ---- مخفی‌کردن متن ----
-              textRevealed={revealedLines.includes(activeIndex)}
+              textRevealed={textRevealed}
               onToggleRevealText={toggleRevealText}
               recordingUnavailable={!canRecord}
               repeatCount={repeatCount}
@@ -780,6 +796,33 @@ export const SceneScreen = () => {
           )}
         </View>
       </ScrollView>
+
+      {/* نوار ثابت پایین: هیچ‌وقت با اسکرول‌شدنِ لیست جمله‌ها ناپدید نمی‌شود. */}
+      {isShadowingMode && (
+        <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          {activeStepIndex === 2 && (
+            <PinnedCurrentLine
+              currentDialogue={currentDialogue}
+              textRevealed={textRevealed}
+            />
+          )}
+          <PlayerControlsBar
+            activeStepIndex={activeStepIndex}
+            playing={playing}
+            actionCommand={actionCommand}
+            setActionCommand={setActionCommand}
+            setPlaying={setPlaying}
+            playbackRate={playbackRate}
+            toggleSpeed={toggleSpeed}
+            togglePlay={togglePlay}
+            onPrevDialogue={handlePrevDialogue}
+            onNextDialogue={handleNextDialogue}
+            onReplay={handleReplay}
+            hasRecordingForCurrentLine={!!recordings[activeIndex]}
+            onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -789,9 +832,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollablePlayerContainer: {
     flexGrow: 1,
     backgroundColor: COLORS.background,
+  },
+  stickyFooter: {
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   playerSheet: {
     flex: 1,

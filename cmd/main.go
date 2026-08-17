@@ -12,9 +12,12 @@ import (
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
+	posthabit "shadowing-backend/internal/repository/postgres/habit"
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
+	postgresleitner "shadowing-backend/internal/repository/postgres/leitner"
 	postgresnotification "shadowing-backend/internal/repository/postgres/notification"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
+	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
 	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
 	postgressstreak "shadowing-backend/internal/repository/postgres/progress/streak"
 	postgressettings "shadowing-backend/internal/repository/postgres/settings"
@@ -22,6 +25,7 @@ import (
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
+	posttopicsuggestion "shadowing-backend/internal/repository/postgres/topicsuggestion"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
 
 	"shadowing-backend/internal/worker"
@@ -31,7 +35,10 @@ import (
 	"context"
 
 	authservice "shadowing-backend/internal/service/auth"
+	billingservice "shadowing-backend/internal/service/billing"
+	habitservice "shadowing-backend/internal/service/habit"
 	learningservice "shadowing-backend/internal/service/learning"
+	leitnerservice "shadowing-backend/internal/service/leitner"
 	notificationservice "shadowing-backend/internal/service/notification"
 	progressservice "shadowing-backend/internal/service/progress"
 	pushservice "shadowing-backend/internal/service/push"
@@ -40,6 +47,7 @@ import (
 	"shadowing-backend/internal/service/speecheval"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 
 	userservice "shadowing-backend/internal/service/user"
 
@@ -128,11 +136,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc := setupservice(cfg)
 
 	go worker.RunNotificationScheduler(context.Background(), notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc)
 
 	server.Server()
 
@@ -140,7 +148,8 @@ func main() {
 
 func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
-	notificationservice.Service, submissionservice.Service, subscriptionservice.Service) {
+	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
+	topicsuggestionservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -169,13 +178,17 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 		fmt.Println("speech evaluation: WHISPER_URL not set, scores will be estimates only")
 	}
 
-	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo, learnningRepo, evaluator)
-
 	streakRepo := postgressstreak.NewStreakRepository(MyPostgresgresRepo.DB)
 	achievementRepo := postgresachievement.NewAchievementRepository(MyPostgresgresRepo.DB)
 	sceneprogressRepo := postgresssceneprogress.NewSceneProgressRepository(MyPostgresgresRepo.DB)
+	activityRepo := postgresactivity.New(MyPostgresgresRepo.DB)
+	leitnerRepo := postgresleitner.New(MyPostgresgresRepo.DB)
 
-	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo)
+	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo, recordingRepo, leitnerRepo, activityRepo)
+
+	leitnerSvc := leitnerservice.New(leitnerRepo)
+
+	shadowingSvc := shadowingservice.New(sessionRepo, recordingRepo, learnningRepo, evaluator, progressSvc)
 
 	settingsRepo := postgressettings.New(MyPostgresgresRepo.DB)
 	settingsSvc := settingsservice.New(settingsRepo)
@@ -193,7 +206,29 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	subscriptionRepo := postgressubscription.New(MyPostgresgresRepo.DB)
 	subscriptionSvc := subscriptionservice.New(subscriptionRepo)
 
+	topicSuggestionRepo := posttopicsuggestion.New(MyPostgresgresRepo.DB)
+	topicSuggestionSvc := topicsuggestionservice.New(topicSuggestionRepo)
+
+	habitRepo := posthabit.New(MyPostgresgresRepo.DB)
+	habitSvc := habitservice.New(habitRepo, progressSvc, getEnv("WHISPER_URL", ""))
+
+	// پرداخت درون‌برنامه‌ای کافه‌بازار (Poolakey). اگر env های زیر پر نباشند،
+	// billing service غیرفعال می‌ماند و verify-purchase با خطای مشخص رد
+	// می‌شود — مثل الگوی WHISPER_URL، اپ سرپا می‌ماند بدون این قابلیت.
+	cafebazaarClient := billingservice.NewCafeBazaarClient(
+		getEnv("CAFEBAZAAR_PACKAGE_NAME", ""),
+		getEnv("CAFEBAZAAR_CLIENT_ID", ""),
+		getEnv("CAFEBAZAAR_CLIENT_SECRET", ""),
+		getEnv("CAFEBAZAAR_REFRESH_TOKEN", ""),
+	)
+	billingSvc := billingservice.New(cafebazaarClient, subscriptionSvc)
+	if billingSvc.Enabled() {
+		fmt.Println("cafebazaar billing: configured")
+	} else {
+		fmt.Println("cafebazaar billing: CAFEBAZAAR_* env not set, purchase verification disabled")
+	}
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc
 }

@@ -35,6 +35,7 @@ export interface CreateScenePayload {
   background_image_url: string;
   difficulty: Difficulty;
   hotspots: HotspotInput[];
+  is_locked: boolean;
 }
 
 // خروجی تولید صحنه با هوش مصنوعی (بدون تصویر/صدا)
@@ -93,6 +94,7 @@ export interface SceneResp {
   difficulty: string;
   status: string;
   order: number;
+  is_locked: boolean;
   hotspots: HotspotResp[] | null;
   created_at: string;
   updated_at: string;
@@ -157,6 +159,20 @@ export interface SceneSubmission {
   created_at: string;
 }
 
+// ---------- پیشنهاد موضوع توسط کاربر ----------
+export interface TopicSuggestion {
+  id: string;
+  user_id: string;
+  topic_text: string;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string;
+  points_awarded: number | null;
+  scene_id: string;
+  reviewed_by: string;
+  reviewed_at: string;
+  created_at: string;
+}
+
 // ---------- طرح‌های اشتراک ----------
 export interface SubscriptionPlan {
   id: string;
@@ -164,4 +180,24 @@ export interface SubscriptionPlan {
   duration_days: number;
   price_toman: number;
   created_at: string;
+}
+
+// ---------- کاربران و فعالیتشون (صفحه‌ی کاربران ادمین) ----------
+export interface AdminUserRow {
+  id: string;
+  nickname: string;
+  phone: string;
+  points: number;
+  created_at: string;
+  current_streak: number;
+  completed_scenes: number;
+  last_activity_at: string | null;
+  has_active_subscription: boolean;
+}
+
+export interface AdminUsersResp {
+  users: AdminUserRow[];
+  total: number;
+  limit: number;
+  offset: number;
 }

@@ -74,9 +74,10 @@ func (r DB) DeletePlan(ctx context.Context, id string) error {
 	return nil
 }
 
-// GrantSubscription یک اشتراک را دستی برای کاربر فعال می‌کند (بدون درگاه پرداخت
-// واقعی)؛ اگر پوینت ریدیم شود، از موجودی کاربر کم می‌شود.
-func (r DB) GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int) error {
+// GrantSubscription یک اشتراک را برای کاربر فعال می‌کند؛ اگر پوینت ریدیم شود،
+// از موجودی کاربر کم می‌شود. provider/purchaseToken وقتی از یک درگاه پرداخت
+// واقعی (مثل کافه‌بازار) میان پر می‌شوند؛ برای گرنت دستی ادمین خالی می‌مانند.
+func (r DB) GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int, provider, purchaseToken string) error {
 	const op = "postgressubscription.GrantSubscription"
 
 	tx, err := r.conn.Begin(ctx)
@@ -86,10 +87,10 @@ func (r DB) GrantSubscription(ctx context.Context, userID, planID string, points
 	defer tx.Rollback(ctx)
 
 	const insertQuery = `
-		INSERT INTO user_subscriptions (user_id, plan_id, points_redeemed, discount_toman, status, started_at, expires_at)
-		VALUES ($1, $2, $3, $4, 'active', now(), now() + make_interval(days => $5))
+		INSERT INTO user_subscriptions (user_id, plan_id, points_redeemed, discount_toman, status, started_at, expires_at, provider, purchase_token)
+		VALUES ($1, $2, $3, $4, 'active', now(), now() + make_interval(days => $5), NULLIF($6, ''), NULLIF($7, ''))
 	`
-	if _, err := tx.Exec(ctx, insertQuery, userID, planID, pointsRedeemed, discountToman, durationDays); err != nil {
+	if _, err := tx.Exec(ctx, insertQuery, userID, planID, pointsRedeemed, discountToman, durationDays, provider, purchaseToken); err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("خطا در ثبت اشتراک")
 	}
 
@@ -109,4 +110,37 @@ func (r DB) GrantSubscription(ctx context.Context, userID, planID string, points
 		return richerror.New(op).WithErr(err)
 	}
 	return nil
+}
+
+// HasActiveSubscription می‌گوید آیا کاربر همین حالا اشتراک فعال و منقضی‌نشده
+// دارد یا نه — مبنای قفل‌کردن/بازکردن صحنه‌های غیررایگان.
+func (r DB) HasActiveSubscription(ctx context.Context, userID string) (bool, error) {
+	const op = "postgressubscription.HasActiveSubscription"
+
+	var exists bool
+	err := r.conn.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM user_subscriptions
+			WHERE user_id = $1 AND status = 'active' AND expires_at > now()
+		)
+	`, userID).Scan(&exists)
+	if err != nil {
+		return false, richerror.New(op).WithErr(err).WithMessage("خطا در بررسی وضعیت اشتراک")
+	}
+	return exists, nil
+}
+
+// PurchaseTokenUsed می‌گوید آیا این purchaseToken قبلاً verify و اشتراک برایش
+// ثبت شده — جلوی اعمال دوباره‌ی یک خرید کافه‌بازاری را می‌گیرد.
+func (r DB) PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error) {
+	const op = "postgressubscription.PurchaseTokenUsed"
+
+	var exists bool
+	err := r.conn.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM user_subscriptions WHERE purchase_token = $1)
+	`, purchaseToken).Scan(&exists)
+	if err != nil {
+		return false, richerror.New(op).WithErr(err).WithMessage("خطا در بررسی وضعیت خرید")
+	}
+	return exists, nil
 }
