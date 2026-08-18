@@ -9,6 +9,7 @@ import (
 	domainSession "shadowing-backend/internal/domain/shadowing/session"
 
 	"shadowing-backend/internal/pkg/richerror"
+	progressdto "shadowing-backend/internal/service/progress/dto"
 	"shadowing-backend/internal/service/shadowing/dto"
 	"shadowing-backend/internal/service/speecheval"
 
@@ -129,6 +130,23 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 				ctx, sess.UserID.String(), sess.SceneID.String(), sess.DialogueID.String(), evalResult.OverallScore,
 			); err != nil {
 				slog.Warn("shadowing: failed to record scene progress", "err", err)
+			}
+
+			// استریک روزانه: قبلاً فقط ماموریت‌های عادت زبانی این را آپدیت
+			// می‌کردند؛ تمرین معمولی صحنه‌ها هم باید حساب شود. AddDay در خودِ
+			// استریک idempotent است (چند بار در یک روز فرقی نمی‌کند)، پس امن
+			// است این را روی هر دیالوگ کامل‌شده صدا بزنیم.
+			xp := 10
+			if evalResult.OverallScore >= 50 {
+				xp = 20
+			}
+			if _, err := s.progressSvc.AddDailyProgress(ctx, progressdto.AddDailyProgressRequest{
+				UserID:     sess.UserID.String(),
+				DialogueID: sess.DialogueID.String(),
+				Score:      evalResult.OverallScore,
+				XP:         xp,
+			}); err != nil {
+				slog.Warn("shadowing: failed to record daily streak", "err", err)
 			}
 		}
 	}
