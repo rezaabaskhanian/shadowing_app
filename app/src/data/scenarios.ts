@@ -1,13 +1,8 @@
-import { Platform } from 'react-native';
 import { Banknote, Building2, Car, Coffee, Cross, HeartPulse, Hotel, Plane, ShoppingCart, Utensils } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { absUrl } from '../api/config';
 
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8088' : 'http://localhost:8088';
-export function formatAudioUrl(path: string): string {
-  if (!path) return '';
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-}
+export const formatAudioUrl = absUrl;
 
 export interface WordEntry {
   word: string;

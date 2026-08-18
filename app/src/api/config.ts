@@ -5,8 +5,7 @@ import { Platform } from 'react-native';
 // این IP را با IP فعلی سیستم خودتان (ipconfig getifaddr en0) به‌روز نگه دارید.
 const DEV_LAN_IP = '192.168.43.238';
 
-// TODO: قبل از انتشار پروداکشن، این آدرس را با دامنه‌ی واقعی بک‌اند جایگزین کنید.
-const PROD_API_BASE = 'https://api.yourdomain.com';
+const PROD_API_BASE = 'https://api.lingoflow.ir';
 
 export const API_BASE = __DEV__
   ? (Platform.select({
