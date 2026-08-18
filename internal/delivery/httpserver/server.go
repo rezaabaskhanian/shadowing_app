@@ -1,6 +1,9 @@
 package httpserver
 
 import (
+	"os"
+	"strings"
+
 	"shadowing-backend/internal/config"
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
@@ -103,6 +106,26 @@ func New(cfg config.Config, userSvc userservice.Service,
 	}
 }
 
+// allowedOrigins reads CORS origins from ALLOWED_ORIGINS (comma-separated),
+// falling back to local dev origins when unset.
+func allowedOrigins() []string {
+	raw := os.Getenv("ALLOWED_ORIGINS")
+	if raw == "" {
+		return []string{
+			"http://localhost:3000",
+			"http://localhost:3001",
+		}
+	}
+
+	origins := make([]string, 0)
+	for _, origin := range strings.Split(raw, ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
+}
+
 func (s Service) Server() {
 
 	e := echo.New()
@@ -110,10 +133,7 @@ func (s Service) Server() {
 	// for debug error
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-			"http://localhost:3001",
-		},
+		AllowOrigins: allowedOrigins(),
 		AllowMethods: []string{
 			echo.GET,
 			echo.POST,
