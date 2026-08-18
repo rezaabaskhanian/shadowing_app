@@ -1,0 +1,82 @@
+# ============================================================
+# Shadowing (lingoflow.ir) — docker-compose برای دیپلوی روی VPS
+# آروان کلاد SSL را handle می‌کنه، Traefik (پروژه aramina) فقط routing می‌کنه
+# این فایل باید کنار docker-compose اصلی aramina روی همون سرور اجرا بشه
+# چون به شبکه aramina_net که Traefik روش گوش میده وصل میشه.
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: shadowing_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aramina_net
+
+  backend:
+    build:
+      context: .
+    container_name: shadowing_backend_prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AI_PROVIDER: ${AI_PROVIDER}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: 5432
+      DB_HOST: postgres
+      DB_NAME: ${DB_NAME}
+      JWT_SIGN_KEY: ${JWT_SIGN_KEY}
+      ALLOWED_ORIGINS: https://admin.lingoflow.ir
+      WHISPER_URL: ${WHISPER_URL}
+    volumes:
+      - uploads_data:/root/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shadowing-backend.rule=Host(`api.lingoflow.ir`)"
+      - "traefik.http.routers.shadowing-backend.entrypoints=web"
+      - "traefik.http.services.shadowing-backend.loadbalancer.server.port=8088"
+    networks:
+      - aramina_net
+
+  admin:
+    build:
+      context: ./admin-panel
+      args:
+        NEXT_PUBLIC_API_URL: https://api.lingoflow.ir
+    container_name: shadowing_admin_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shadowing-admin.rule=Host(`admin.lingoflow.ir`)"
+      - "traefik.http.routers.shadowing-admin.entrypoints=web"
+      - "traefik.http.services.shadowing-admin.loadbalancer.server.port=3000"
+    networks:
+      - aramina_net
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  aramina_net:
+    external: true
