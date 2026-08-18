@@ -29,10 +29,7 @@
     
     # کپی migrations (با مسیر کامل)
     COPY --from=builder /app/internal/repository/postgres/migrations ./migrations
-    
-    # کپی data (فایل‌های JSON)
-    COPY --from=builder /app/data ./data
-    
+
     EXPOSE 8086
     
     CMD ["./main"]
