@@ -27,8 +27,8 @@
 
     COPY --from=builder /app/main .
     
-    # کپی migrations (با مسیر کامل)
-    COPY --from=builder /app/internal/repository/postgres/migrations ./migrations
+    # کپی migrations (با مسیر کامل - کد migrator.go این مسیر نسبی رو هاردکد داره)
+    COPY --from=builder /app/internal/repository/postgres/migrations ./internal/repository/postgres/migrations
 
     EXPOSE 8086
     
