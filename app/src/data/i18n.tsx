@@ -326,6 +326,10 @@ export const translations: Translations = {
   sourceMixed: { en: 'Both (Mixed)', fa: 'ترکیب واژه‌ها و جملات' },
   sendTestNotification: { en: 'Send Test Notification Banner', fa: 'ارسال نوتیفیکیشن آزمایشی' },
   testNotificationSent: { en: 'Test notification displayed!', fa: 'نوتیفیکیشن آزمایشی نمایش داده شد!' },
+  noContentForTestNotification: {
+    en: 'Nothing to preview yet — save a Leitner word or open a scene first.',
+    fa: 'هنوز چیزی برای نمایش نیست — اول یه کلمه به جعبه‌ی لایتنر اضافه کن یا یه صحنه باز کن.',
+  },
   viewContent: { en: 'Review Now', fa: 'مشاهده و مرور' },
 
   // ---- Language Habit ----

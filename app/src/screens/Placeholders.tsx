@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Award, BarChart2, CheckCircle2, ChevronRight, Play, PlusCircle, Settings, User as UserIcon } from 'lucide-react-native';
 import { SceneListCard } from '../components/SceneListCard';
 import { useScenes } from '../data/ScenesContext';
+import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -316,6 +318,58 @@ export const ProfileScreen = () => {
     triggerTestNotification,
   } = useNotifications();
   const { repeatsPerStep, setRepeatsPerStep } = usePracticeSettings();
+  const { box } = useVocab();
+  const { scenes } = useScenes();
+
+  // یه آیتم واقعی (کلمه‌ی سررسیده‌ی جعبه‌ی لایتنر یا جمله‌ی یکی از صحنه‌ها)
+  // انتخاب می‌کند تا دکمه‌ی «ارسال نوتیفیکیشن آزمایشی» دقیقاً همون چیزی که
+  // نوتیف واقعی نشون می‌ده رو پیش‌نمایش بده، نه یه نمونه‌ی ثابت.
+  const handleSendTestNotification = () => {
+    const source = contentSource;
+    let type: 'leitner' | 'sentence' =
+      source === 'leitner' ? 'leitner' : source === 'sentences' ? 'sentence' : Math.random() > 0.5 ? 'leitner' : 'sentence';
+
+    const sentencePool = scenes.flatMap((s) =>
+      (s.hotspots || [])
+        .filter((h) => h.dialogue && h.translation)
+        .map((h) => ({ text: h.dialogue, translation: h.translation, scene: s.title }))
+    );
+
+    if (type === 'leitner' && box.length === 0) type = 'sentence';
+    if (type === 'sentence' && sentencePool.length === 0) type = 'leitner';
+
+    if (type === 'leitner' && box.length === 0) {
+      Alert.alert(t('noContentForTestNotification'));
+      return;
+    }
+    if (type === 'sentence' && sentencePool.length === 0) {
+      Alert.alert(t('noContentForTestNotification'));
+      return;
+    }
+
+    if (type === 'leitner') {
+      const dueWords = box.filter(isDue);
+      const word = (dueWords.length > 0 ? dueWords : box)[Math.floor(Math.random() * (dueWords.length > 0 ? dueWords.length : box.length))];
+      triggerTestNotification({
+        id: Date.now().toString(),
+        type: 'leitner',
+        title: `📚 Leitner Word Review (Level ${word.level})`,
+        body: word.word,
+        translation: word.meaning,
+        sourceLabel: 'Leitner Box',
+      });
+    } else {
+      const sentence = sentencePool[Math.floor(Math.random() * sentencePool.length)];
+      triggerTestNotification({
+        id: Date.now().toString(),
+        type: 'sentence',
+        title: `🎙 Lesson Shadowing (${sentence.scene})`,
+        body: `"${sentence.text}"`,
+        translation: sentence.translation,
+        sourceLabel: 'Lesson Scenario',
+      });
+    }
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -480,7 +534,7 @@ export const ProfileScreen = () => {
         {/* Test Notification Trigger Button */}
         <TouchableOpacity
           style={styles.testBtn}
-          onPress={() => triggerTestNotification()}
+          onPress={handleSendTestNotification}
         >
           <Sparkles color={COLORS.white} size={16} />
           <Text style={styles.testBtnText}>{t('sendTestNotification')}</Text>

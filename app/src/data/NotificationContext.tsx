@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { SCENARIOS } from './scenarios';
 
 export interface NotificationItem {
   id: string;
@@ -24,7 +23,10 @@ interface NotificationContextType {
   setContentSource: (source: ContentSource) => void;
   activeBanner: NotificationItem | null;
   dismissBanner: () => void;
-  triggerTestNotification: (overrideSource?: ContentSource) => void;
+  // آیتم واقعی (کلمه‌ی لایتنر یا جمله‌ی صحنه) را کالر می‌سازد — این کانتکست
+  // بالاتر از ScenesProvider/VocabProvider است و به داده‌ی واقعی آن‌ها دسترسی
+  // ندارد، پس نباید خودش داده‌ی نمونه/جعلی تولید کند.
+  triggerTestNotification: (item: NotificationItem) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
@@ -40,23 +42,6 @@ const NotificationContext = createContext<NotificationContextType>({
   dismissBanner: () => {},
   triggerTestNotification: () => {},
 });
-
-// Sample pool of sentences from scenarios for fallback
-const SAMPLE_SENTENCES = [
-  { text: 'Excuse me, do you work here?', translation: 'ببخشید، شما اینجا کار می‌کنید؟', scene: 'Supermarket' },
-  { text: 'I would like a hot cappuccino with milk, please.', translation: 'یک کاپوچینوی داغ با شیر می‌خواهم، لطفاً.', scene: 'Coffee Shop' },
-  { text: 'Where can I find organic green apples?', translation: 'سیب‌های سبز ارگانیک را کجا می‌توانم پیدا کنم؟', scene: 'Supermarket' },
-  { text: 'Could you give me the wifi password?', translation: 'می‌توانید رمز وای‌فای را به من بدهید؟', scene: 'Cafe' },
-  { text: 'How much is this tuna can on sale?', translation: 'قیمت این تن ماهی در تخفیف چقدر است؟', scene: 'Supermarket' },
-];
-
-const SAMPLE_LEITNER_WORDS = [
-  { word: 'Hotspot', translation: 'موقعیت حساس / نقطه تمرکز', level: 'Level 2' },
-  { word: 'Shadowing', translation: 'تمرین سایه‌زنی و تکرار همزمان', level: 'Level 3' },
-  { word: 'Cappuccino', translation: 'قهوه اسپرسو با کف شیر', level: 'Level 1' },
-  { word: 'Organic', translation: 'ارگانیک و طبیعی', level: 'Level 4' },
-  { word: 'Fluency', translation: 'روانی کلام و صحبت روان', level: 'Level 2' },
-];
 
 import { NativeNotificationService } from '../services/NativeNotificationService';
 import { PushNotificationService } from '../services/PushNotificationService';
@@ -131,47 +116,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setActiveBanner(null);
   };
 
-  const triggerTestNotification = (overrideSource?: ContentSource) => {
-    const source = overrideSource || contentSource;
-    let selectedType: 'leitner' | 'sentence' = 'sentence';
-
-    if (source === 'leitner') {
-      selectedType = 'leitner';
-    } else if (source === 'sentences') {
-      selectedType = 'sentence';
-    } else {
-      selectedType = Math.random() > 0.5 ? 'leitner' : 'sentence';
-    }
-
-    let notificationItem: NotificationItem;
-
-    if (selectedType === 'leitner') {
-      const randomWord = SAMPLE_LEITNER_WORDS[Math.floor(Math.random() * SAMPLE_LEITNER_WORDS.length)];
-      notificationItem = {
-        id: Date.now().toString(),
-        type: 'leitner',
-        title: `📚 Leitner Word Review (${randomWord.level})`,
-        body: `${randomWord.word}`,
-        translation: randomWord.translation,
-        sourceLabel: 'Leitner Box',
-      };
-    } else {
-      const randomSentence = SAMPLE_SENTENCES[Math.floor(Math.random() * SAMPLE_SENTENCES.length)];
-      notificationItem = {
-        id: Date.now().toString(),
-        type: 'sentence',
-        title: `🎙 Lesson Shadowing (${randomSentence.scene})`,
-        body: `"${randomSentence.text}"`,
-        translation: randomSentence.translation,
-        sourceLabel: 'Lesson Scenario',
-      };
-    }
-
+  const triggerTestNotification = (item: NotificationItem) => {
     // Set in-app active banner
-    setActiveBanner(notificationItem);
+    setActiveBanner(item);
 
     // Also trigger native OS notification display
-    NativeNotificationService.displayNotification(notificationItem);
+    NativeNotificationService.displayNotification(item);
   };
 
   return (
