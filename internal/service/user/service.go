@@ -31,9 +31,15 @@ type AuthGenerator interface {
 	CreateRefreshToken(user domain.User) (string, error)
 }
 
+// OtpVerifier اثبات می‌کند که شماره تلفن قبلاً با کد پیامکی تایید شده است.
+type OtpVerifier interface {
+	ConsumeToken(ctx context.Context, phone, purpose, token string) error
+}
+
 type Service struct {
 	repo Repository
 	auth AuthGenerator
+	otp  OtpVerifier
 }
 
 // // GetUserByID implements [sessionservice.UserService].
@@ -41,8 +47,8 @@ type Service struct {
 // 	panic("unimplemented")
 // }
 
-func New(repo Repository, auth AuthGenerator) Service {
-	return Service{repo: repo, auth: auth}
+func New(repo Repository, auth AuthGenerator, otp OtpVerifier) Service {
+	return Service{repo: repo, auth: auth, otp: otp}
 }
 
 // ListUsersWithActivity برای صفحه‌ی کاربران پنل ادمین: کاربرها + خلاصه‌ی

@@ -22,7 +22,11 @@ import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
-import { resetPassword as resetPasswordApi } from '../api/auth';
+import {
+  resetPassword as resetPasswordApi,
+  sendOtp as sendOtpApi,
+  verifyOtp as verifyOtpApi,
+} from '../api/auth';
 
 type AuthMode = 'login' | 'register' | 'reset';
 
@@ -159,10 +163,106 @@ const LoginScreen = ({
   );
 };
 
+// مرحله‌ی مشترک وارد کردن کد پیامکی؛ هم ثبت‌نام هم بازیابی رمز از این
+// استفاده می‌کنند. onVerified توکن یک‌بارمصرف حاصل از otp/verify را
+// برمی‌گرداند که مرحله‌ی بعد (register/reset-pass) به آن نیاز دارد.
+const OtpStep = ({
+  phone,
+  purpose,
+  onVerified,
+  onBack,
+}: {
+  phone: string;
+  purpose: 'register' | 'reset';
+  onVerified: (token: string) => void;
+  onBack: () => void;
+}) => {
+  const { t } = useLanguage();
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleVerify = async () => {
+    if (code.trim().length < 4) {
+      setError(t('fillAllFields'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const token = await verifyOtpApi(phone, code.trim(), purpose);
+      onVerified(token);
+    } catch (e: any) {
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError('');
+    setResending(true);
+    try {
+      await sendOtpApi(phone, purpose);
+    } catch (e: any) {
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <ArrowLeft color={COLORS.text} size={22} />
+      </TouchableOpacity>
+
+      <View style={styles.brandHeader}>
+        <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
+          <ShieldCheck color={COLORS.primary} size={28} />
+        </View>
+        <Text style={styles.authTitle}>{t('enterOtp')}</Text>
+        <Text style={styles.authSub}>
+          {t('otpSentMessage')} {phone}
+        </Text>
+      </View>
+
+      <View style={styles.inputWrap}>
+        <ShieldCheck color={COLORS.textSecondary} size={20} />
+        <TextInput
+          placeholder={t('otpCodeLabel')}
+          placeholderTextColor={COLORS.textSecondary}
+          style={styles.input}
+          keyboardType="number-pad"
+          value={code}
+          onChangeText={setCode}
+          maxLength={5}
+        />
+      </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <TouchableOpacity style={styles.primaryButton} onPress={handleVerify} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <Text style={styles.primaryButtonText}>{t('verifyCode')}</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.forgotButton} onPress={handleResend} disabled={resending}>
+        <Text style={styles.linkText}>{resending ? '...' : t('resendCode')}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
+
 // REGISTRATION SCREEN
 const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
   const { t } = useLanguage();
   const { register } = useAuth();
+  const [step, setStep] = useState<'form' | 'otp'>('form');
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -171,7 +271,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleRegister = async () => {
+  const handleContinue = async () => {
     if (!nickname.trim() || phone.trim().length < 10 || !password) {
       setError(t('fillAllFields'));
       return;
@@ -187,13 +287,38 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
     setError('');
     setLoading(true);
     try {
-      await register(nickname.trim(), phone.trim(), password);
+      await sendOtpApi(phone.trim(), 'register');
+      setStep('otp');
     } catch (e: any) {
       setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerified = async (otpToken: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      await register(nickname.trim(), phone.trim(), password, otpToken);
+    } catch (e: any) {
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
+      setStep('form');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === 'otp') {
+    return (
+      <OtpStep
+        phone={phone.trim()}
+        purpose="register"
+        onVerified={handleVerified}
+        onBack={() => setStep('form')}
+      />
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
@@ -267,11 +392,11 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={loading}>
+      <TouchableOpacity style={styles.primaryButton} onPress={handleContinue} disabled={loading}>
         {loading ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
-          <Text style={styles.primaryButtonText}>{t('signUp')}</Text>
+          <Text style={styles.primaryButtonText}>{t('continueLabel')}</Text>
         )}
       </TouchableOpacity>
 
@@ -285,11 +410,12 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
   );
 };
 
-// RESET PASSWORD SCREEN (2-step: enter nickname + new password -> success)
+// RESET PASSWORD SCREEN (3-step: phone -> otp -> new password -> success)
 const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
   const { t } = useLanguage();
-  const [step, setStep] = useState<'form' | 'success'>('form');
-  const [nickname, setNickname] = useState('');
+  const [step, setStep] = useState<'phone' | 'otp' | 'form' | 'success'>('phone');
+  const [phone, setPhone] = useState('');
+  const [otpToken, setOtpToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPass, setShowNewPass] = useState(false);
@@ -297,8 +423,30 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const handleSendCode = async () => {
+    if (phone.trim().length < 10) {
+      setError(t('fillAllFields'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await sendOtpApi(phone.trim(), 'reset');
+      setStep('otp');
+    } catch (e: any) {
+      setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerified = (token: string) => {
+    setOtpToken(token);
+    setStep('form');
+  };
+
   const handleUpdatePassword = async () => {
-    if (!nickname.trim() || !newPassword) {
+    if (!newPassword) {
       setError(t('fillAllFields'));
       return;
     }
@@ -309,7 +457,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
     setError('');
     setLoading(true);
     try {
-      await resetPasswordApi(nickname.trim(), newPassword, confirmPassword);
+      await resetPasswordApi(phone.trim(), otpToken, newPassword, confirmPassword);
       setStep('success');
     } catch (e: any) {
       setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
@@ -317,6 +465,17 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
       setLoading(false);
     }
   };
+
+  if (step === 'otp') {
+    return (
+      <OtpStep
+        phone={phone.trim()}
+        purpose="reset"
+        onVerified={handleVerified}
+        onBack={() => setStep('phone')}
+      />
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
@@ -326,7 +485,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
         </TouchableOpacity>
       )}
 
-      {step === 'form' && (
+      {step === 'phone' && (
         <>
           <View style={styles.brandHeader}>
             <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
@@ -337,15 +496,41 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
           </View>
 
           <View style={styles.inputWrap}>
-            <User color={COLORS.textSecondary} size={20} />
+            <Phone color={COLORS.textSecondary} size={20} />
             <TextInput
-              placeholder={t('nicknameLabel')}
+              placeholder={t('phoneNumber')}
               placeholderTextColor={COLORS.textSecondary}
               style={styles.input}
-              value={nickname}
-              onChangeText={setNickname}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
               autoCapitalize="none"
             />
+          </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSendCode} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.primaryButtonText}>{t('sendResetCode')}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.forgotButton} onPress={onBack}>
+            <Text style={styles.linkText}>{t('backToLogin')}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {step === 'form' && (
+        <>
+          <View style={styles.brandHeader}>
+            <View style={[styles.brandBadge, { backgroundColor: COLORS.surfaceLight }]}>
+              <Lock color={COLORS.primary} size={28} />
+            </View>
+            <Text style={styles.authTitle}>{t('resetPasswordTitle')}</Text>
           </View>
 
           <View style={styles.inputWrap}>

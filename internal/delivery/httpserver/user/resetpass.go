@@ -42,9 +42,15 @@ func (h Handler) ResetPass(c echo.Context) error {
 		})
 	}
 
-	err := h.userSvc.ResetPassword(req)
+	err := h.userSvc.ResetPassword(c.Request().Context(), req)
 
 	if err != nil {
+		if re, ok := err.(richerror.RichError); ok && (re.Kind() == richerror.KindInvalid || re.Kind() == richerror.KindNotFound) {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error":   "otp_invalid",
+				"message": re.Message(),
+			})
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 

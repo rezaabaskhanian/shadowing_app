@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, updateSetting } from "@/lib/api";
+import { changePassword, getName, getSettings, updateSetting } from "@/lib/api";
 import type { SettingsResp } from "@/lib/types";
 
 const FIELDS: { key: string; label: string; hint?: string }[] = [
@@ -28,6 +28,10 @@ export default function SettingsPanel({
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [changingPass, setChangingPass] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -91,10 +95,66 @@ export default function SettingsPanel({
     return map[key];
   };
 
+  async function submitChangePassword() {
+    if (newPass.length < 8) {
+      notify("رمز عبور باید حداقل ۸ کاراکتر باشد", "err");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      notify("رمز عبور و تکرار آن مطابقت ندارند", "err");
+      return;
+    }
+    setChangingPass(true);
+    try {
+      await changePassword(newPass, confirmPass);
+      notify("رمز عبور با موفقیت تغییر کرد ✅", "ok");
+      setNewPass("");
+      setConfirmPass("");
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setChangingPass(false);
+    }
+  }
+
   if (loading) return <p className="hint">در حال بارگذاری تنظیمات...</p>;
 
   return (
     <div>
+      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+        <h2 style={{ marginTop: 0 }}>🔒 تغییر رمز عبور ادمین</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          رمز عبور جدید حساب فعلی ({getName() || "..."}) را اینجا تنظیم کن.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 }}>
+          <input
+            type="password"
+            dir="ltr"
+            placeholder="رمز عبور جدید"
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+          />
+          <input
+            type="password"
+            dir="ltr"
+            placeholder="تکرار رمز عبور جدید"
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitChangePassword();
+            }}
+          />
+          <button
+            className="btn btn-sm"
+            onClick={submitChangePassword}
+            disabled={changingPass}
+            style={{ alignSelf: "flex-start" }}
+          >
+            {changingPass ? "..." : "تغییر رمز عبور"}
+          </button>
+        </div>
+      </div>
+
       <div className="card" style={{ borderColor: "#7C3DFF" }}>
         <h2 style={{ marginTop: 0 }}>🔀 ارائه‌دهنده‌ی فعال هوش مصنوعی (تولید صحنه)</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>

@@ -81,6 +81,18 @@ export async function login(
   return jsonOrThrow(res) as Promise<LoginResponse>;
 }
 
+export async function changePassword(password: string, confirmPassword: string) {
+  const res = await authFetch("/v1/users/change-password", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      password,
+      confirm_password: confirmPassword,
+    }),
+  });
+  return jsonOrThrow(res);
+}
+
 // ---------- آپلود ----------
 export async function uploadImage(file: File): Promise<string> {
   const fd = new FormData();

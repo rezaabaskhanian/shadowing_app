@@ -296,6 +296,11 @@ export const translations: Translations = {
     fa: 'رمز عبور شما با موفقیت تغییر کرد. اکنون می‌توانید با رمز جدید وارد شوید.'
   },
   backToLogin: { en: 'Back to Login', fa: 'بازگشت به صفحه ورود' },
+  otpCodeLabel: { en: '5-Digit Code', fa: 'کد ۵ رقمی' },
+  otpSentMessage: { en: 'We sent a code to', fa: 'کد تایید به این شماره ارسال شد:' },
+  verifyCode: { en: 'Verify Code', fa: 'تایید کد' },
+  resendCode: { en: 'Resend code', fa: 'ارسال دوباره کد' },
+  continueLabel: { en: 'Continue', fa: 'ادامه' },
 
   // Notifications & Reminders Settings
   notificationsTitle: { en: 'Notifications & Reminders', fa: 'اعلانات و یادآوری‌ها' },

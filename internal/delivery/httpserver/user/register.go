@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"shadowing-backend/internal/pkg/errmesg"
+	"shadowing-backend/internal/pkg/richerror"
 	"shadowing-backend/internal/service/user/dto"
 )
 
@@ -17,7 +18,7 @@ func (h Handler) Register(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 
-	resp, err := h.userSvc.Register(uReq)
+	resp, err := h.userSvc.Register(c.Request().Context(), uReq)
 
 	// if err != nil {
 
@@ -39,6 +40,12 @@ func (h Handler) Register(c echo.Context) error {
 				"message": err.Error(),
 			})
 		default:
+			if re, ok := err.(richerror.RichError); ok && (re.Kind() == richerror.KindInvalid || re.Kind() == richerror.KindNotFound) {
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"error":   "otp_invalid",
+					"message": re.Message(),
+				})
+			}
 			// خطای غیرمنتظره (دیتابیس، توکن، ...)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error":   "internal_error",

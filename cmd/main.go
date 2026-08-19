@@ -16,6 +16,7 @@ import (
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
 	postgresleitner "shadowing-backend/internal/repository/postgres/leitner"
 	postgresnotification "shadowing-backend/internal/repository/postgres/notification"
+	postgresotp "shadowing-backend/internal/repository/postgres/otp"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
 	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
@@ -40,10 +41,12 @@ import (
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
 	notificationservice "shadowing-backend/internal/service/notification"
+	otpservice "shadowing-backend/internal/service/otp"
 	progressservice "shadowing-backend/internal/service/progress"
 	pushservice "shadowing-backend/internal/service/push"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
+	smsservice "shadowing-backend/internal/service/sms"
 	"shadowing-backend/internal/service/speecheval"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
@@ -136,11 +139,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc := setupservice(cfg)
 
 	go worker.RunNotificationScheduler(context.Background(), notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc)
 
 	server.Server()
 
@@ -149,7 +152,8 @@ func main() {
 func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
-	topicsuggestionservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service) {
+	topicsuggestionservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
+	otpservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -157,7 +161,22 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	UserRepo := postgresuser.New(MyPostgresgresRepo.DB)
 
-	userSvc := userservice.New(UserRepo, authSvc)
+	// ارسال کد تایید پیامکی برای فراموشی رمز/ثبت‌نام (sms.ir). اگر
+	// SMS_IR_* ست نباشد، otp/send با خطا رد می‌شود ولی بقیه‌ی اپ سرپا
+	// می‌ماند — مثل الگوی WHISPER_URL/CAFEBAZAAR.
+	smsClient := smsservice.NewClient(
+		getEnv("SMS_IR_API_KEY", ""),
+		getEnv("SMS_IR_OTP_TEMPLATE_ID", ""),
+	)
+	if smsClient.Enabled() {
+		fmt.Println("sms.ir otp: configured")
+	} else {
+		fmt.Println("sms.ir otp: SMS_IR_API_KEY/SMS_IR_OTP_TEMPLATE_ID not set, otp send disabled")
+	}
+	otpRepo := postgresotp.New(MyPostgresgresRepo.DB)
+	otpSvc := otpservice.New(otpRepo, smsClient)
+
+	userSvc := userservice.New(UserRepo, authSvc, otpSvc)
 
 	learnningRepo := postgreslearning.New(MyPostgresgresRepo.DB)
 
@@ -230,5 +249,5 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc
 }

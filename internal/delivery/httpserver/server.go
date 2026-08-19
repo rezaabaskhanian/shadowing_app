@@ -23,6 +23,7 @@ import (
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
 	notificationservice "shadowing-backend/internal/service/notification"
+	otpservice "shadowing-backend/internal/service/otp"
 	progressservice "shadowing-backend/internal/service/progress"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
@@ -74,11 +75,12 @@ func New(cfg config.Config, userSvc userservice.Service,
 	habitSvc habitservice.Service,
 	billingSvc billingservice.Service,
 	leitnerSvc leitnerservice.Service,
+	otpSvc otpservice.Service,
 
 ) Service {
 
 	return Service{cfg: cfg,
-		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, authConfig, cfg.Auth.SignKey),
+		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
 			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, billingSvc, &progressSvc, authSvc, authConfig, uploadDir, uploadURLPath,
 		),

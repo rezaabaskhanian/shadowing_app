@@ -25,10 +25,37 @@ export async function login(phone: string, password: string): Promise<UserInfo> 
   return data.user;
 }
 
+export async function sendOtp(
+  phone: string,
+  purpose: 'register' | 'reset'
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/v1/users/otp/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, purpose }),
+  });
+  await jsonOrThrow(res);
+}
+
+export async function verifyOtp(
+  phone: string,
+  code: string,
+  purpose: 'register' | 'reset'
+): Promise<string> {
+  const res = await fetch(`${API_BASE}/v1/users/otp/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, code, purpose }),
+  });
+  const data = await jsonOrThrow(res);
+  return data.token as string;
+}
+
 export async function register(
   nickname: string,
   phone: string,
-  password: string
+  password: string,
+  otpToken: string
 ): Promise<UserInfo> {
   const res = await fetch(`${API_BASE}/v1/users/register`, {
     method: 'POST',
@@ -38,6 +65,7 @@ export async function register(
       phone,
       password_hash: password,
       role: 'user',
+      otp_token: otpToken,
     }),
   });
   const data = (await jsonOrThrow(res)) as AuthResponse;
@@ -46,7 +74,8 @@ export async function register(
 }
 
 export async function resetPassword(
-  nickname: string,
+  phone: string,
+  otpToken: string,
   password: string,
   confirmPassword: string
 ): Promise<void> {
@@ -54,7 +83,8 @@ export async function resetPassword(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      nickname,
+      phone,
+      otp_token: otpToken,
       password,
       confirm_password: confirmPassword,
     }),

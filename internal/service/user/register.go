@@ -1,19 +1,28 @@
 package userservice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	domain "shadowing-backend/internal/domain/user"
 	"shadowing-backend/internal/pkg/errmesg"
+	otpservice "shadowing-backend/internal/service/otp"
 	"shadowing-backend/internal/service/user/dto"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func (s Service) Register(req dto.RegisterRequest) (dto.RegisterResponse, error) {
+func (s Service) Register(ctx context.Context, req dto.RegisterRequest) (dto.RegisterResponse, error) {
 
 	const op = "user.Register"
+
+	// شماره باید قبلاً با پیامک تایید شده باشد (register.go در otp service)
+	if s.otp != nil {
+		if err := s.otp.ConsumeToken(ctx, req.Phone, otpservice.PurposeRegister, req.OtpToken); err != nil {
+			return dto.RegisterResponse{}, err
+		}
+	}
 
 	// ========== 1️⃣ Validation در لایه Application ==========
 

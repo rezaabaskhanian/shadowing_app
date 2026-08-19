@@ -7,7 +7,7 @@ interface AuthContextType {
   isRestoring: boolean;
   user: authApi.UserInfo | null;
   login: (phone: string, password: string) => Promise<void>;
-  register: (nickname: string, phone: string, password: string) => Promise<void>;
+  register: (nickname: string, phone: string, password: string, otpToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -46,8 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(profile);
   };
 
-  const register = async (nickname: string, phone: string, password: string) => {
-    const profile = await authApi.register(nickname, phone, password);
+  const register = async (nickname: string, phone: string, password: string, otpToken: string) => {
+    const profile = await authApi.register(nickname, phone, password, otpToken);
     setUser(profile);
   };
 

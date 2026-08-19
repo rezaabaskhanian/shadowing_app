@@ -1,7 +1,8 @@
 package dto
 
 type ResetPasswordRequest struct {
-	Nickname        string `json:"nickname"`
+	Phone           string `json:"phone"`
+	OtpToken        string `json:"otp_token"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
 }
