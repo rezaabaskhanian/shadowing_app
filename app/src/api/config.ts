@@ -1,19 +1,11 @@
-import { Platform } from 'react-native';
-
-// آدرس بک‌اند Go.
-// در حالت dev روی امولاتور، 10.0.2.2/localhost کار می‌کند؛ روی گوشی واقعی باید IP لپ‌تاپ در همون شبکه وای‌فای باشد.
-// این IP را با IP فعلی سیستم خودتان (ipconfig getifaddr en0) به‌روز نگه دارید.
-const DEV_LAN_IP = '192.168.43.238';
-
+// آدرس بک‌اند Go. فعلاً هم در dev هم در production روی سرور واقعی می‌زند —
+// برای تست با بک‌اند لوکال، DEV_LAN_IP را زیر کامنت‌گشایی و API_BASE را به
+// آن سوییچ کن.
 const PROD_API_BASE = 'https://api.lingoflow.ir';
 
-export const API_BASE = __DEV__
-  ? (Platform.select({
-      android: `http://${DEV_LAN_IP}:8088`,
-      ios: `http://${DEV_LAN_IP}:8088`,
-      default: `http://localhost:8088`,
-    }) as string)
-  : PROD_API_BASE;
+// const DEV_LAN_IP = '192.168.43.238'; // ipconfig getifaddr en0
+
+export const API_BASE = PROD_API_BASE;
 
 // TODO: کلید RSA واقعی رو از پنل توسعه‌دهندگان کافه‌بازار (بخش «تنظیمات پرداخت»
 // همین اپ) بگیر و اینجا جایگزین کن — بدون این کلید واقعی، خرید Poolakey کار

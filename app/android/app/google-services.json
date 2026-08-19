@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "988989997152",
+    "project_id": "lingoflow-1b32c",
+    "storage_bucket": "lingoflow-1b32c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:988989997152:android:bcfd4ee482e22d055d4305",
+        "android_client_info": {
+          "package_name": "com.shadowingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAX4nDGZbWDS6Mo0xSmg4065iiT5Op_SJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

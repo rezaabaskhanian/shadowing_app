@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- ضبط صدای کاربر در مرحله‌ی Record (react-native-nitro-sound) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- بدون این، اندروید ۱۳+ درخواست مجوز نوتیفیکیشن (Firebase messaging
+         requestPermission) رو بی‌صدا رد می‌کنه و توکن FCM هیچ‌وقت ثبت نمی‌شه. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <!-- پرمیژن‌های پخش پس‌زمینه‌ی react-native-track-player را خودِ کتابخانه
          با manifest merge اضافه می‌کند؛ اینجا لازم نیست تکرار شود. -->

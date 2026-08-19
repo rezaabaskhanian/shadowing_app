@@ -27,14 +27,16 @@ import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
-import { getUserStreak } from '../api/progress';
+import { getUserStreak, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
-const TODAY_REPS = 38;
-const TODAY_REPS_TARGET = 60;
-const TODAY_MINUTES = 11;
-const TODAY_FLUENCY = 72;
+// هدف روزانه‌ی تعداد جلسه‌های تمرین — یک مقدار طراحی‌شده‌ی ثابت (مثل «۱۰,۰۰۰
+// قدم» در اپ‌های فیتنس)، نه داده‌ی جعلی کاربر؛ بقیه‌ی مقادیر کارت زیر همه از
+// API واقعی می‌آیند.
+const DAILY_SESSIONS_GOAL = 10;
+
+const todayISODate = () => new Date().toISOString().slice(0, 10);
 
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -45,6 +47,9 @@ export const HomeScreen = () => {
   const dueCount = box.filter(isDue).length;
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [streak, setStreak] = React.useState(0);
+  const [todaySessions, setTodaySessions] = React.useState(0);
+  const [todayMinutes, setTodayMinutes] = React.useState(0);
+  const [fluency, setFluency] = React.useState(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -52,6 +57,17 @@ export const HomeScreen = () => {
       let active = true;
       getUserStreak(user.id)
         .then((s) => active && setStreak(s.current_streak))
+        .catch(() => {});
+      getWeeklyActivity()
+        .then((days) => {
+          if (!active) return;
+          const today = days.find((d) => d.date === todayISODate());
+          setTodaySessions(today?.sessions ?? 0);
+          setTodayMinutes(today?.minutes ?? 0);
+        })
+        .catch(() => {});
+      getSkillsBreakdown()
+        .then((skills) => active && setFluency(Math.round(skills.fluency)))
         .catch(() => {});
       return () => {
         active = false;
@@ -72,14 +88,7 @@ export const HomeScreen = () => {
     }, [])
   );
 
-  const primaryScenario = scenes[0] || {
-    id: 'supermarket',
-    title: 'The Last Can of Tuna',
-    category: 'SUPERMARKET · CHAPTER 2',
-    level: 'A2',
-    time: '12 min',
-    imageUri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop',
-  };
+  const primaryScenario = scenes[0] || null;
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
@@ -95,7 +104,7 @@ export const HomeScreen = () => {
     navigation.navigate('Shadowing', { scenarioId: scenario.id });
   };
 
-  const todayPercent = Math.round((TODAY_REPS / TODAY_REPS_TARGET) * 100);
+  const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
   return (
     <View style={styles.container}>
@@ -141,7 +150,7 @@ export const HomeScreen = () => {
             <View style={styles.progressTextCol}>
               <Text style={styles.progressCardTitle}>{t('todaysShadowing')}</Text>
               <Text style={styles.repsText}>
-                {TODAY_REPS} / {TODAY_REPS_TARGET} <Text style={styles.repsUnit}>{t('repsCount')}</Text>
+                {todaySessions} / {DAILY_SESSIONS_GOAL} <Text style={styles.repsUnit}>{t('repsCount')}</Text>
               </Text>
             </View>
           </View>
@@ -149,17 +158,17 @@ export const HomeScreen = () => {
           <View style={styles.statChipsRow}>
             <View style={styles.statChip}>
               <Repeat size={16} color={COLORS.primary} />
-              <Text style={styles.statChipValue}>{TODAY_REPS}</Text>
+              <Text style={styles.statChipValue}>{todaySessions}</Text>
               <Text style={styles.statChipLabel}>{t('repsCount')}</Text>
             </View>
             <View style={styles.statChip}>
               <Clock size={16} color={COLORS.secondary} />
-              <Text style={styles.statChipValue}>{TODAY_MINUTES}</Text>
+              <Text style={styles.statChipValue}>{todayMinutes}</Text>
               <Text style={styles.statChipLabel}>{t('min')}</Text>
             </View>
             <View style={styles.statChip}>
               <Sparkles size={16} color={COLORS.tertiary} />
-              <Text style={styles.statChipValue}>{TODAY_FLUENCY}%</Text>
+              <Text style={styles.statChipValue}>{fluency}%</Text>
               <Text style={styles.statChipLabel}>{t('fluency')}</Text>
             </View>
           </View>
@@ -169,8 +178,9 @@ export const HomeScreen = () => {
         <View style={styles.quickActionsRow}>
           <TouchableOpacity
             style={[styles.quickCard, styles.quickCardPrimary]}
-            onPress={() => openScene(primaryScenario)}
+            onPress={() => primaryScenario && openScene(primaryScenario)}
             activeOpacity={0.85}
+            disabled={!primaryScenario}
           >
             <View style={[styles.quickIconCircle, { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
               <Mic size={20} color={COLORS.white} />
@@ -203,44 +213,53 @@ export const HomeScreen = () => {
         </View>
 
         {/* CONTINUE STORY SECTION */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>{t('continueStory')}</Text>
-        </View>
-
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.storyCard}
-          onPress={() => navigation.navigate('Shadowing', { scenarioId: primaryScenario.id })}
-        >
-          <ImageBackground
-            source={
-              typeof primaryScenario.imageUri === 'string'
-                ? { uri: primaryScenario.imageUri }
-                : primaryScenario.imageUri
-            }
-            style={styles.storyImage}
-            imageStyle={styles.storyImageStyle}
-          >
-            <View style={styles.storyScrim} />
-
-            <View style={styles.storyContent}>
-              <Text style={styles.storyCategory}>
-                SUPERMARKET · CHAPTER 2
-              </Text>
-              <Text style={styles.storyTitle}>{primaryScenario.title}</Text>
-
-              {/* Progress Line */}
-              <View style={styles.storyProgressBg}>
-                <View style={[styles.storyProgressFill, { width: '35%' }]} />
-              </View>
+        {primaryScenario && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>{t('continueStory')}</Text>
             </View>
 
-            {/* Play Circle CTA Overlay */}
-            <View style={styles.playOverlayBtn}>
-              <Play size={22} color={COLORS.white} fill={COLORS.white} />
-            </View>
-          </ImageBackground>
-        </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.storyCard}
+              onPress={() => navigation.navigate('Shadowing', { scenarioId: primaryScenario.id })}
+            >
+              <ImageBackground
+                source={
+                  typeof primaryScenario.imageUri === 'string'
+                    ? { uri: primaryScenario.imageUri }
+                    : primaryScenario.imageUri
+                }
+                style={styles.storyImage}
+                imageStyle={styles.storyImageStyle}
+              >
+                <View style={styles.storyScrim} />
+
+                <View style={styles.storyContent}>
+                  <Text style={styles.storyCategory}>
+                    {(primaryScenario.category || '').toString().toUpperCase()}
+                  </Text>
+                  <Text style={styles.storyTitle}>{primaryScenario.title}</Text>
+
+                  {/* Progress Line */}
+                  <View style={styles.storyProgressBg}>
+                    <View
+                      style={[
+                        styles.storyProgressFill,
+                        { width: `${primaryScenario.progress || 0}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Play Circle CTA Overlay */}
+                <View style={styles.playOverlayBtn}>
+                  <Play size={22} color={COLORS.white} fill={COLORS.white} />
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* WORLDS SECTION */}
         <View style={styles.sectionHeader}>

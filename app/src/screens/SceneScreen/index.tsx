@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, ScrollView, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Alert, BackHandler, ScrollView, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -313,11 +313,29 @@ export const SceneScreen = () => {
     playDialogueAt(0);
   };
 
+  // ورود به مرحله‌ی «مقایسه» (idx 3) بدون داشتن یک ضبط برای خط فعلی معنی
+  // نداره — چیزی برای مقایسه نیست. چه با دکمه‌ی «مرحله بعد» چه با زدن مستقیم
+  // روی تب Compare، از همین یک نقطه رد می‌شود.
+  const requestStepChange = useCallback(
+    (targetIdx: number) => {
+      if (targetIdx === 3 && !recordings[activeIndex]) {
+        Alert.alert(t('recordingRequiredTitle'), t('recordingRequiredMessage'));
+        return;
+      }
+      setActiveStepIndex(targetIdx);
+    },
+    [recordings, activeIndex, t]
+  );
+
   // رفتن به مرحله‌ی بعدی تمرین؛ روی مرحله‌ی آخر، جلسه تمام‌شده تلقی می‌شود.
   // `markDone` فقط وقتی true است که مرحله واقعاً تمام شده باشد (دورها کامل شده
   // یا خود کاربر دکمه‌ی «مرحله بعد» را زده)، نه وقتی صرفاً روی تب دیگری پریده.
   const goToNextStep = useCallback(
     (markDone = true) => {
+      if (activeStepIndex === 2 && !recordings[activeIndex]) {
+        Alert.alert(t('recordingRequiredTitle'), t('recordingRequiredMessage'));
+        return;
+      }
       if (markDone) {
         setCompletedSteps((prev) =>
           prev.includes(activeStepIndex) ? prev : [...prev, activeStepIndex]
@@ -329,7 +347,7 @@ export const SceneScreen = () => {
         setShowResult(true);
       }
     },
-    [activeStepIndex]
+    [activeStepIndex, recordings, activeIndex, t]
   );
 
   const handleNextDialogue = useCallback(() => {
@@ -759,7 +777,7 @@ export const SceneScreen = () => {
               language={language}
               t={t}
               activeStepIndex={activeStepIndex}
-              onChangeStep={setActiveStepIndex}
+              onChangeStep={requestStepChange}
               currentDialogue={currentDialogue}
               playing={playing}
               actionCommand={actionCommand}

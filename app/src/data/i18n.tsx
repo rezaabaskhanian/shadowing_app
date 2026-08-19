@@ -190,6 +190,11 @@ export const translations: Translations = {
     fa: 'مرحله‌های گوش دادن و سایه زدن چند بار تکرار شوند و بعد خودکار جلو بروند. ∞ یعنی منتظر خودت می‌ماند.',
   },
   selfPacedHint: { en: 'Take your time — continue when ready', fa: 'هر چقدر خواستی تمرین کن' },
+  recordingRequiredTitle: { en: 'Recording needed', fa: 'ضبط لازم است' },
+  recordingRequiredMessage: {
+    en: 'Record yourself first — you need a recording before you can compare it.',
+    fa: 'اول باید صدای خودت رو ضبط کنی؛ برای رفتن به مقایسه حتماً باید یک ضبط داشته باشی.',
+  },
   nextStep: { en: 'Next step', fa: 'مرحله بعد' },
   startShadowing: { en: 'Start Shadowing', fa: 'شروع سایه‌زنی' },
   stopShadowing: { en: 'Stop Shadowing', fa: 'توقف سایه‌زنی' },
