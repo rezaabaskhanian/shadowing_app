@@ -12,6 +12,7 @@ import SceneReviewQueue from "./SceneReviewQueue";
 import TopicSuggestionQueue from "./TopicSuggestionQueue";
 import SubscriptionPlansPanel from "./SubscriptionPlansPanel";
 import UserList from "./UserList";
+import LandingSectionsPanel from "./LandingSectionsPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -22,7 +23,8 @@ type Tab =
   | "review"
   | "topics"
   | "subscriptions"
-  | "users";
+  | "users"
+  | "landing";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -128,6 +130,12 @@ export default function DashboardPage() {
           >
             👤 کاربران
           </button>
+          <button
+            className={`tab-btn ${tab === "landing" ? "active" : ""}`}
+            onClick={() => setTab("landing")}
+          >
+            🌐 صفحه معرفی
+          </button>
         </div>
         <div className="userbox">
           <span>👤 {name}</span>
@@ -199,6 +207,7 @@ export default function DashboardPage() {
         )}
         {tab === "subscriptions" && <SubscriptionPlansPanel notify={notify} />}
         {tab === "users" && <UserList notify={notify} />}
+        {tab === "landing" && <LandingSectionsPanel notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}

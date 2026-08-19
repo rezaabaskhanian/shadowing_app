@@ -3,6 +3,7 @@ package adminhandler
 import (
 	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
+	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	notificationservice "shadowing-backend/internal/service/notification"
 	settingsservice "shadowing-backend/internal/service/settings"
@@ -24,6 +25,7 @@ type Handler struct {
 	subscriptionSvc    subscriptionservice.Service
 	topicSuggestionSvc topicsuggestionservice.Service
 	userSvc            userservice.Service
+	landingSvc         landingservice.Service
 
 	authSvc    authservice.Service
 	authConfig authservice.Config
@@ -45,6 +47,7 @@ func New(
 	subscriptionSvc subscriptionservice.Service,
 	topicSuggestionSvc topicsuggestionservice.Service,
 	userSvc userservice.Service,
+	landingSvc landingservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	uploadDir, publicPath string,
@@ -59,6 +62,7 @@ func New(
 		subscriptionSvc:    subscriptionSvc,
 		topicSuggestionSvc: topicSuggestionSvc,
 		userSvc:            userSvc,
+		landingSvc:         landingSvc,
 		authSvc:            authSvc,
 		authConfig:         authConfig,
 		uploadDir:          uploadDir,

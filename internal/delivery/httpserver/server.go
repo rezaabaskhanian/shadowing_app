@@ -9,6 +9,7 @@ import (
 	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
 	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
+	landinghandler "shadowing-backend/internal/delivery/httpserver/landing"
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
@@ -20,6 +21,7 @@ import (
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	habitservice "shadowing-backend/internal/service/habit"
+	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
 	notificationservice "shadowing-backend/internal/service/notification"
@@ -60,6 +62,8 @@ type Service struct {
 	habitHandler habithandler.Handler
 
 	leitnerHandler leitnerhandler.Handler
+
+	landingHandler landinghandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -76,6 +80,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	billingSvc billingservice.Service,
 	leitnerSvc leitnerservice.Service,
 	otpSvc otpservice.Service,
+	landingSvc landingservice.Service,
 
 ) Service {
 
@@ -99,12 +104,15 @@ func New(cfg config.Config, userSvc userservice.Service,
 			subscriptionSvc,
 			topicSuggestionSvc,
 			userSvc,
+			landingSvc,
 			authSvc, authConfig, uploadDir, uploadURLPath,
 		),
 
 		habitHandler: habithandler.New(habitSvc, authSvc, authConfig, uploadDir),
 
 		leitnerHandler: leitnerhandler.New(leitnerSvc, authSvc, authConfig),
+
+		landingHandler: landinghandler.New(landingSvc),
 	}
 }
 
@@ -173,6 +181,9 @@ func (s Service) Server() {
 	s.habitHandler.SetHabitRoutes(e)
 
 	s.leitnerHandler.SetLeitnerRoutes(e)
+
+	// محتوای عمومی صفحه‌ی معرفی (www.lingoflow.ir) — بدون احراز هویت
+	s.landingHandler.SetPublicLandingRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

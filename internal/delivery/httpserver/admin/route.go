@@ -61,4 +61,12 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 
 	// لیست کاربرها + خلاصه‌ی فعالیتشون
 	g.GET("/users", h.ListUsers)
+
+	// محتوای صفحه‌ی معرفی (landing, www.lingoflow.ir): بخش‌ها + عکس‌هاشون
+	g.GET("/landing-sections", h.ListLandingSections)
+	g.POST("/landing-sections", h.CreateLandingSection)
+	g.PUT("/landing-sections/:id", h.UpdateLandingSection)
+	g.DELETE("/landing-sections/:id", h.DeleteLandingSection)
+	g.POST("/landing-sections/:id/images", h.AddLandingSectionImage)
+	g.DELETE("/landing-sections/:id/images/:imageID", h.DeleteLandingSectionImage)
 }

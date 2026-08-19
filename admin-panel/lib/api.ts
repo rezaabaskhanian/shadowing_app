@@ -4,6 +4,7 @@ import type {
   CreateScenePayload,
   Difficulty,
   GeneratedScene,
+  LandingSection,
   LoginResponse,
   NotificationStatsResp,
   SceneResp,
@@ -331,6 +332,63 @@ export async function createSubscriptionPlan(
 
 export async function deleteSubscriptionPlan(id: string) {
   const res = await authFetch(`/v1/admin/subscription-plans/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
+// ---------- بخش‌های صفحه‌ی معرفی (landing) ----------
+export async function listLandingSections(): Promise<LandingSection[]> {
+  const res = await authFetch("/v1/admin/landing-sections", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.sections || []) as LandingSection[];
+}
+
+export async function createLandingSection(
+  tabLabel: string,
+  title: string,
+  description: string,
+  position: number
+): Promise<LandingSection> {
+  const res = await authFetch("/v1/admin/landing-sections", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tab_label: tabLabel, title, description, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function updateLandingSection(
+  id: string,
+  tabLabel: string,
+  title: string,
+  description: string,
+  position: number
+) {
+  const res = await authFetch(`/v1/admin/landing-sections/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tab_label: tabLabel, title, description, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteLandingSection(id: string) {
+  const res = await authFetch(`/v1/admin/landing-sections/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
+export async function addLandingSectionImage(sectionId: string, url: string, position = 0) {
+  const res = await authFetch(`/v1/admin/landing-sections/${sectionId}/images`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteLandingSectionImage(sectionId: string, imageId: string) {
+  const res = await authFetch(`/v1/admin/landing-sections/${sectionId}/images/${imageId}`, {
+    method: "DELETE",
+  });
   return jsonOrThrow(res);
 }
 

@@ -182,6 +182,21 @@ export interface SubscriptionPlan {
   created_at: string;
 }
 
+// ---------- بخش‌های صفحه‌ی معرفی (landing, www.lingoflow.ir) ----------
+export interface LandingImage {
+  id: string;
+  url: string;
+}
+
+export interface LandingSection {
+  id: string;
+  tab_label: string;
+  title: string;
+  description: string;
+  position: number;
+  images: LandingImage[];
+}
+
 // ---------- کاربران و فعالیتشون (صفحه‌ی کاربران ادمین) ----------
 export interface AdminUserRow {
   id: string;

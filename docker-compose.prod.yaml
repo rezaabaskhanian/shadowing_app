@@ -75,6 +75,23 @@ services:
     networks:
       - aramina_net
 
+  landing:
+    build:
+      context: ./landing
+      args:
+        NEXT_PUBLIC_API_URL: https://api.lingoflow.ir
+    container_name: shadowing_landing_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shadowing-landing.rule=Host(`www.lingoflow.ir`) || Host(`lingoflow.ir`)"
+      - "traefik.http.routers.shadowing-landing.entrypoints=web"
+      - "traefik.http.services.shadowing-landing.loadbalancer.server.port=3000"
+    networks:
+      - aramina_net
+
 volumes:
   postgres_data:
   uploads_data:
