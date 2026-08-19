@@ -88,9 +88,13 @@ func (r DB) UpsertSettings(ctx context.Context, s Settings) error {
 func (r DB) DueUsers(ctx context.Context, hhmm string) ([]string, error) {
 	const op = "postgresnotification.DueUsers"
 
+	// LEFT JOIN عمداً: کاربری که ردیف تنظیمات ندارد باید با پیش‌فرض‌های
+	// GetSettings (فعال، ساعت ۲۰:۰۰) در نظر گرفته شود، نه حذف شود.
 	const query = `
-		SELECT user_id FROM user_notification_settings
-		WHERE daily_reminder_enabled = true AND daily_reminder_time = $1
+		SELECT u.id FROM users u
+		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
+		WHERE COALESCE(uns.daily_reminder_enabled, true) = true
+		  AND COALESCE(uns.daily_reminder_time, '20:00') = $1
 	`
 	rows, err := r.conn.Query(ctx, query, hhmm)
 	if err != nil {
@@ -151,11 +155,14 @@ func (r DB) TokensForUser(ctx context.Context, userID string) ([]string, error) 
 func (r DB) OptedInTokens(ctx context.Context) ([]string, error) {
 	const op = "postgresnotification.OptedInTokens"
 
+	// LEFT JOIN عمداً: کاربری که هیچ‌وقت صفحه‌ی تنظیمات نوتیفیکیشن را باز
+	// نکرده هیچ ردیفی در user_notification_settings ندارد، ولی طبق GetSettings
+	// پیش‌فرضش «فعال» است — پس نبودن ردیف هم باید فعال حساب شود، نه حذف از لیست.
 	const query = `
 		SELECT dpt.token
 		FROM device_push_tokens dpt
-		JOIN user_notification_settings uns ON uns.user_id = dpt.user_id
-		WHERE uns.content_notif_enabled = true
+		LEFT JOIN user_notification_settings uns ON uns.user_id = dpt.user_id
+		WHERE COALESCE(uns.content_notif_enabled, true) = true
 	`
 	rows, err := r.conn.Query(ctx, query)
 	if err != nil {
@@ -182,11 +189,19 @@ func (r DB) Stats(ctx context.Context) (dailyReminder, contentNotif, totalUsers 
 	if err != nil {
 		return 0, 0, 0, richerror.New(op).WithErr(err)
 	}
-	err = r.conn.QueryRow(ctx, `SELECT COUNT(*) FROM user_notification_settings WHERE daily_reminder_enabled = true`).Scan(&dailyReminder)
+	err = r.conn.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users u
+		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
+		WHERE COALESCE(uns.daily_reminder_enabled, true) = true
+	`).Scan(&dailyReminder)
 	if err != nil {
 		return 0, 0, 0, richerror.New(op).WithErr(err)
 	}
-	err = r.conn.QueryRow(ctx, `SELECT COUNT(*) FROM user_notification_settings WHERE content_notif_enabled = true`).Scan(&contentNotif)
+	err = r.conn.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users u
+		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
+		WHERE COALESCE(uns.content_notif_enabled, true) = true
+	`).Scan(&contentNotif)
 	if err != nil {
 		return 0, 0, 0, richerror.New(op).WithErr(err)
 	}
