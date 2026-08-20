@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  API_BASE,
   addLandingSectionImage,
   createLandingSection,
   deleteLandingSection,
@@ -209,7 +210,7 @@ export default function LandingSectionsPanel({
                 {s.images.map((img) => (
                   <div key={img.id} style={{ position: "relative" }}>
                     <img
-                      src={img.url}
+                      src={img.url.startsWith("http") ? img.url : `${API_BASE}${img.url}`}
                       alt=""
                       style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8 }}
                     />

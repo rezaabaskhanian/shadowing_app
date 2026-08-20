@@ -1,4 +1,4 @@
-import { fetchLandingSections } from "@/lib/api";
+import { API_BASE, fetchLandingSections } from "@/lib/api";
 
 export default async function HomePage() {
   const sections = await fetchLandingSections();
@@ -43,7 +43,11 @@ export default async function HomePage() {
               <div className="gallery">
                 {s.images.map((img) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={img.id} src={img.url} alt={s.title} />
+                  <img
+                    key={img.id}
+                    src={img.url.startsWith("http") ? img.url : `${API_BASE}${img.url}`}
+                    alt={s.title}
+                  />
                 ))}
               </div>
             )}
