@@ -36,21 +36,25 @@ export default async function HomePage() {
       ) : (
         sections.map((s) => (
           <section key={s.id} id={`section-${s.id}`} className="section">
-            <span className="section-label">{s.tab_label}</span>
-            <h2>{s.title}</h2>
-            {s.description && <p className="desc">{s.description}</p>}
-            {s.images.length > 0 && (
-              <div className="gallery">
-                {s.images.map((img) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={img.id}
-                    src={img.url.startsWith("http") ? img.url : `${API_BASE}${img.url}`}
-                    alt={s.title}
-                  />
-                ))}
+            <div className="section-inner">
+              <div className="section-content">
+                <span className="section-label">{s.tab_label}</span>
+                <h2>{s.title}</h2>
+                {s.description && <p className="desc">{s.description}</p>}
               </div>
-            )}
+              {s.images.length > 0 && (
+                <div className="section-media">
+                  {s.images.map((img) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={img.id}
+                      src={img.url.startsWith("http") ? img.url : `${API_BASE}${img.url}`}
+                      alt={s.title}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         ))
       )}
