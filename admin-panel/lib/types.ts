@@ -197,6 +197,34 @@ export interface LandingSection {
   images: LandingImage[];
 }
 
+export interface LandingSettings {
+  hero_title: string;
+  hero_subtitle: string;
+  hero_image_url: string;
+  google_play_url: string;
+  bazaar_url: string;
+  cta_title: string;
+  cta_subtitle: string;
+}
+
+export type LandingHighlightKind = "feature" | "step";
+
+export interface LandingHighlight {
+  id: string;
+  kind: LandingHighlightKind;
+  icon: string;
+  title: string;
+  description: string;
+  position: number;
+}
+
+export interface LandingFAQ {
+  id: string;
+  question: string;
+  answer: string;
+  position: number;
+}
+
 // ---------- کاربران و فعالیتشون (صفحه‌ی کاربران ادمین) ----------
 export interface AdminUserRow {
   id: string;

@@ -69,4 +69,20 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.DELETE("/landing-sections/:id", h.DeleteLandingSection)
 	g.POST("/landing-sections/:id/images", h.AddLandingSectionImage)
 	g.DELETE("/landing-sections/:id/images/:imageID", h.DeleteLandingSectionImage)
+
+	// تنظیمات کلی صفحه‌ی معرفی (هیرو، دکمه‌های دانلود، بنر پایانی)
+	g.GET("/landing-settings", h.GetLandingSettings)
+	g.PUT("/landing-settings", h.UpdateLandingSettings)
+
+	// آیتم‌های «چرا LingoFlow» (kind=feature) و «چطور کار می‌کنه» (kind=step)
+	g.GET("/landing-highlights/:kind", h.ListLandingHighlights)
+	g.POST("/landing-highlights/:kind", h.CreateLandingHighlight)
+	g.PUT("/landing-highlights/:kind/:id", h.UpdateLandingHighlight)
+	g.DELETE("/landing-highlights/:kind/:id", h.DeleteLandingHighlight)
+
+	// سوالات متداول
+	g.GET("/landing-faqs", h.ListLandingFAQs)
+	g.POST("/landing-faqs", h.CreateLandingFAQ)
+	g.PUT("/landing-faqs/:id", h.UpdateLandingFAQ)
+	g.DELETE("/landing-faqs/:id", h.DeleteLandingFAQ)
 }

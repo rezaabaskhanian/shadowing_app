@@ -4,7 +4,11 @@ import type {
   CreateScenePayload,
   Difficulty,
   GeneratedScene,
+  LandingFAQ,
+  LandingHighlight,
+  LandingHighlightKind,
   LandingSection,
+  LandingSettings,
   LoginResponse,
   NotificationStatsResp,
   SceneResp,
@@ -389,6 +393,94 @@ export async function deleteLandingSectionImage(sectionId: string, imageId: stri
   const res = await authFetch(`/v1/admin/landing-sections/${sectionId}/images/${imageId}`, {
     method: "DELETE",
   });
+  return jsonOrThrow(res);
+}
+
+// ---------- تنظیمات کلی صفحه‌ی معرفی (هیرو، دکمه‌های دانلود، بنر پایانی) ----------
+export async function getLandingSettings(): Promise<LandingSettings> {
+  const res = await authFetch("/v1/admin/landing-settings", { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+export async function updateLandingSettings(s: LandingSettings) {
+  const res = await authFetch("/v1/admin/landing-settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(s),
+  });
+  return jsonOrThrow(res);
+}
+
+// ---------- آیتم‌های «چرا LingoFlow» و «چطور کار می‌کنه» ----------
+export async function listLandingHighlights(kind: LandingHighlightKind): Promise<LandingHighlight[]> {
+  const res = await authFetch(`/v1/admin/landing-highlights/${kind}`, { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.highlights || []) as LandingHighlight[];
+}
+
+export async function createLandingHighlight(
+  kind: LandingHighlightKind,
+  icon: string,
+  title: string,
+  description: string,
+  position: number
+): Promise<LandingHighlight> {
+  const res = await authFetch(`/v1/admin/landing-highlights/${kind}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ icon, title, description, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function updateLandingHighlight(
+  kind: LandingHighlightKind,
+  id: string,
+  icon: string,
+  title: string,
+  description: string,
+  position: number
+) {
+  const res = await authFetch(`/v1/admin/landing-highlights/${kind}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ icon, title, description, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteLandingHighlight(kind: LandingHighlightKind, id: string) {
+  const res = await authFetch(`/v1/admin/landing-highlights/${kind}/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
+// ---------- سوالات متداول صفحه‌ی معرفی ----------
+export async function listLandingFAQs(): Promise<LandingFAQ[]> {
+  const res = await authFetch("/v1/admin/landing-faqs", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.faqs || []) as LandingFAQ[];
+}
+
+export async function createLandingFAQ(question: string, answer: string, position: number): Promise<LandingFAQ> {
+  const res = await authFetch("/v1/admin/landing-faqs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, answer, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function updateLandingFAQ(id: string, question: string, answer: string, position: number) {
+  const res = await authFetch(`/v1/admin/landing-faqs/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, answer, position }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteLandingFAQ(id: string) {
+  const res = await authFetch(`/v1/admin/landing-faqs/${id}`, { method: "DELETE" });
   return jsonOrThrow(res);
 }
 
