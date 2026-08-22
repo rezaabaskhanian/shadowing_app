@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"shadowing-backend/internal/pkg/outboundhttp"
 	"shadowing-backend/internal/pkg/richerror"
 	settingsservice "shadowing-backend/internal/service/settings"
 
@@ -51,9 +52,15 @@ func (p *geminiProvider) clientFor(ctx context.Context, key string) (*genai.Clie
 	if p.initialized && key == p.cachedKey {
 		return p.client, nil
 	}
+	httpClient, err := outboundhttp.Client()
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
-		APIKey:  key,
-		Backend: genai.BackendGeminiAPI,
+		APIKey:     key,
+		Backend:    genai.BackendGeminiAPI,
+		HTTPClient: httpClient,
 	})
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"shadowing-backend/internal/pkg/outboundhttp"
 	"shadowing-backend/internal/pkg/richerror"
 	settingsservice "shadowing-backend/internal/service/settings"
 )
@@ -15,6 +16,13 @@ import (
 // defaultVoiceID یک صدای عمومی انگلیسی (Rachel) در ElevenLabs است که برای هر
 // حساب در دسترس است؛ اگر ELEVENLABS_VOICE_ID تنظیم نشده باشد از همین استفاده می‌شود.
 const defaultVoiceID = "21m00Tcm4TlvDq8ikWAM"
+
+// بازه‌ی مجاز سرعت گفتار طبق مستندات ElevenLabs (voice_settings.speed).
+const (
+	defaultSpeed = 1.0
+	minSpeed     = 0.7
+	maxSpeed     = 1.2
+)
 
 const ttsEndpoint = "https://api.elevenlabs.io/v1/text-to-speech/"
 const voicesEndpoint = "https://api.elevenlabs.io/v1/voices"
@@ -58,7 +66,8 @@ func (s Service) Enabled() bool {
 // GenerateSpeech متن را به صدا (فایل mp3، به‌صورت بایت) تبدیل می‌کند.
 // اگر voiceID خالی باشد از صدای پیش‌فرض تنظیمات استفاده می‌شود، وگرنه همان صدای
 // انتخاب‌شده (مثلاً یک صدای مرد یا زن مشخص) به کار می‌رود.
-func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string) ([]byte, error) {
+// speed سرعت گفتار را کنترل می‌کند (بازه‌ی مجاز ۰.۷ تا ۱.۲؛ ۰ یعنی مقدار پیش‌فرض ۱.۰).
+func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string, speed float64) ([]byte, error) {
 	const op = "ttsservice.GenerateSpeech"
 
 	key := s.apiKey()
@@ -68,6 +77,15 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string) ([]by
 	if voiceID == "" {
 		voiceID = s.voiceID()
 	}
+	if speed == 0 {
+		speed = defaultSpeed
+	}
+	if speed < minSpeed {
+		speed = minSpeed
+	}
+	if speed > maxSpeed {
+		speed = maxSpeed
+	}
 
 	payload, err := json.Marshal(map[string]any{
 		"text":     text,
@@ -75,6 +93,7 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string) ([]by
 		"voice_settings": map[string]float64{
 			"stability":        0.5,
 			"similarity_boost": 0.75,
+			"speed":            speed,
 		},
 	})
 	if err != nil {
@@ -89,7 +108,11 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string) ([]by
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "audio/mpeg")
 
-	resp, err := http.DefaultClient.Do(req)
+	httpClient, err := outboundhttp.Client()
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی ElevenLabs: %v", err))
 	}
@@ -124,7 +147,11 @@ func (s Service) ListVoices(ctx context.Context) ([]Voice, error) {
 	}
 	req.Header.Set("xi-api-key", key)
 
-	resp, err := http.DefaultClient.Do(req)
+	httpClient, err := outboundhttp.Client()
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی ElevenLabs: %v", err))
 	}

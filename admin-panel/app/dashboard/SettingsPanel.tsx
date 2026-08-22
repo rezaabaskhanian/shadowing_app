@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { changePassword, getName, getSettings, updateSetting } from "@/lib/api";
+import {
+  changePassword,
+  connectProxy,
+  getName,
+  getProxyStatus,
+  getSettings,
+  updateSetting,
+} from "@/lib/api";
+import type { ProxyStatus } from "@/lib/api";
 import type { SettingsResp } from "@/lib/types";
 
 const FIELDS: { key: string; label: string; hint?: string }[] = [
@@ -33,6 +41,43 @@ export default function SettingsPanel({
   const [confirmPass, setConfirmPass] = useState("");
   const [changingPass, setChangingPass] = useState(false);
 
+  // ---------- پراکسی خروجی (vless) برای دور زدن بلاک جغرافیایی هوش مصنوعی ----------
+  const [proxyLink, setProxyLink] = useState("");
+  const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null);
+  const [proxyLoading, setProxyLoading] = useState(false);
+  const [proxyConnecting, setProxyConnecting] = useState(false);
+
+  async function loadProxyStatus() {
+    setProxyLoading(true);
+    try {
+      const s = await getProxyStatus();
+      setProxyStatus(s);
+      if (s.link) setProxyLink(s.link);
+    } catch (err: any) {
+      // اگر پراکسی هنوز راه‌اندازی نشده، ساکت نادیده می‌گیریم
+    } finally {
+      setProxyLoading(false);
+    }
+  }
+
+  async function handleConnectProxy() {
+    if (!proxyLink.trim().startsWith("vless://")) {
+      notify("لینک باید با vless:// شروع شود", "err");
+      return;
+    }
+    setProxyConnecting(true);
+    try {
+      const s = await connectProxy(proxyLink.trim());
+      setProxyStatus(s);
+      notify(s.connected ? "✅ به پراکسی وصل شد" : "اتصال برقرار نشد، جزئیات پایین را ببین", s.connected ? "ok" : "err");
+    } catch (err: any) {
+      notify(err.message, "err");
+      loadProxyStatus();
+    } finally {
+      setProxyConnecting(false);
+    }
+  }
+
   async function load() {
     setLoading(true);
     try {
@@ -48,6 +93,7 @@ export default function SettingsPanel({
 
   useEffect(() => {
     load();
+    loadProxyStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -153,6 +199,44 @@ export default function SettingsPanel({
             {changingPass ? "..." : "تغییر رمز عبور"}
           </button>
         </div>
+      </div>
+
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
+        <h2 style={{ marginTop: 0 }}>🌐 اتصال پراکسی خروجی (برای Gemini/Anthropic/ElevenLabs)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          چون سرور ایرانه، این سرویس‌ها مستقیم بلاک می‌کنن. لینک{" "}
+          <code>vless://...</code> رو اینجا بچسبون و «اتصال» رو بزن — چند ثانیه طول
+          می‌کشه تا وصل بشه، بعدش وضعیت پایین نشون داده می‌شه.
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            dir="ltr"
+            placeholder="vless://..."
+            value={proxyLink}
+            onChange={(e) => setProxyLink(e.target.value)}
+            style={{ flex: 1, minWidth: 240, fontFamily: "monospace", fontSize: 12 }}
+          />
+          <button className="btn btn-sm" onClick={handleConnectProxy} disabled={proxyConnecting}>
+            {proxyConnecting ? "در حال اتصال..." : "اتصال"}
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={loadProxyStatus} disabled={proxyLoading}>
+            {proxyLoading ? "..." : "تست وضعیت"}
+          </button>
+        </div>
+        {proxyStatus && (
+          <p style={{ marginBottom: 0, fontSize: 13 }}>
+            {proxyStatus.connected ? (
+              <span style={{ color: "var(--success)" }}>
+                ✅ وصل — IP: {proxyStatus.ip} ({proxyStatus.country}
+                {proxyStatus.org ? `, ${proxyStatus.org}` : ""}) — حالا می‌تونی تصویر/صدا با AI بسازی
+              </span>
+            ) : (
+              <span style={{ color: "var(--danger, #ef4444)" }}>
+                ❌ وصل نیست — {proxyStatus.message}
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="card" style={{ borderColor: "var(--primary)" }}>

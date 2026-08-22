@@ -121,6 +121,7 @@ export default function SceneCreator({
   // صداهای در دسترس ElevenLabs (برای انتخاب مرد/زن هنگام تولید صدای هر دیالوگ)
   const [voices, setVoices] = useState<TTSVoice[]>([]);
   const [voiceChoice, setVoiceChoice] = useState<Record<string, string>>({});
+  const [speedChoice, setSpeedChoice] = useState<Record<string, number>>({});
 
   useEffect(() => {
     listTTSVoices()
@@ -420,7 +421,7 @@ export default function SceneCreator({
     const audioKey = `${hi}-${di}`;
     setGeneratingAudioFor(audioKey);
     try {
-      const url = await generateAudio(text, voiceChoice[audioKey]);
+      const url = await generateAudio(text, voiceChoice[audioKey], speedChoice[audioKey]);
       updateDialogue(hi, di, { audio_url: url });
       notify("صدا با هوش مصنوعی ساخته شد ✅", "ok");
     } catch (err: any) {
@@ -935,6 +936,22 @@ export default function SceneCreator({
                             ))}
                           </select>
                         )}
+                        <input
+                          type="number"
+                          min={0.7}
+                          max={1.2}
+                          step={0.05}
+                          title="سرعت گفتار (۰.۷ تا ۱.۲ — پیش‌فرض ۱)"
+                          placeholder="سرعت"
+                          value={speedChoice[`${selected}-${di}`] ?? ""}
+                          onChange={(e) =>
+                            setSpeedChoice((s) => ({
+                              ...s,
+                              [`${selected}-${di}`]: Number(e.target.value) || 0,
+                            }))
+                          }
+                          style={{ width: 80 }}
+                        />
                         <button
                           type="button"
                           className="btn btn-sm btn-ghost"

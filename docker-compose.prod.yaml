@@ -24,6 +24,16 @@ services:
     networks:
       - aramina_net
 
+  xray:
+    build:
+      context: ./deploy/xray
+    container_name: shadowing_xray_prod
+    restart: unless-stopped
+    volumes:
+      - xray_config:/etc/xray
+    networks:
+      - aramina_net
+
   backend:
     build:
       context: .
@@ -32,6 +42,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      xray:
+        condition: service_started
     environment:
       AI_PROVIDER: ${AI_PROVIDER}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -48,8 +60,13 @@ services:
       JWT_SIGN_KEY: ${JWT_SIGN_KEY}
       ALLOWED_ORIGINS: https://admin.lingoflow.ir
       WHISPER_URL: ${WHISPER_URL}
+      # پراکسی خروجی برای دور زدن بلاک جغرافیایی Gemini/Anthropic/ElevenLabs از IP ایران؛
+      # به سایدکار xray (سرویس بالا) وصل می‌شود. لینک vless از پنل ادمین (تب تنظیمات) ست می‌شود.
+      AI_OUTBOUND_PROXY: socks5://xray:1080
+      XRAY_CONFIG_PATH: /xray-config/config.json
     volumes:
       - uploads_data:/root/uploads
+      - xray_config:/xray-config
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.shadowing-backend.rule=Host(`api.lingoflow.ir`)"
@@ -95,6 +112,7 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  xray_config:
 
 networks:
   aramina_net:

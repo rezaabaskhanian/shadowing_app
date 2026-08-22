@@ -27,6 +27,7 @@ import (
 	notificationservice "shadowing-backend/internal/service/notification"
 	otpservice "shadowing-backend/internal/service/otp"
 	progressservice "shadowing-backend/internal/service/progress"
+	proxyservice "shadowing-backend/internal/service/proxy"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 	submissionservice "shadowing-backend/internal/service/submission"
@@ -98,6 +99,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			learningSvc,
 			aiservice.New(settingsSvc),
 			ttsservice.New(settingsSvc),
+			proxyservice.New(settingsSvc),
 			settingsSvc,
 			notificationSvc,
 			submissionSvc,

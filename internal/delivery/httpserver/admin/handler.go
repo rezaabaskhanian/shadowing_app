@@ -6,6 +6,7 @@ import (
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	notificationservice "shadowing-backend/internal/service/notification"
+	proxyservice "shadowing-backend/internal/service/proxy"
 	settingsservice "shadowing-backend/internal/service/settings"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
@@ -19,6 +20,7 @@ type Handler struct {
 	learningSvc        learningservice.Service
 	aiSvc              aiservice.Service
 	ttsSvc             ttsservice.Service
+	proxySvc           proxyservice.Service
 	settingsSvc        *settingsservice.Service
 	notificationSvc    notificationservice.Service
 	submissionSvc      submissionservice.Service
@@ -41,6 +43,7 @@ func New(
 	learningSvc learningservice.Service,
 	aiSvc aiservice.Service,
 	ttsSvc ttsservice.Service,
+	proxySvc proxyservice.Service,
 	settingsSvc *settingsservice.Service,
 	notificationSvc notificationservice.Service,
 	submissionSvc submissionservice.Service,
@@ -56,6 +59,7 @@ func New(
 		learningSvc:        learningSvc,
 		aiSvc:              aiSvc,
 		ttsSvc:             ttsSvc,
+		proxySvc:           proxySvc,
 		settingsSvc:        settingsSvc,
 		notificationSvc:    notificationSvc,
 		submissionSvc:      submissionSvc,

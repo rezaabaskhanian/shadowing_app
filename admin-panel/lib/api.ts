@@ -121,12 +121,13 @@ export async function uploadAudio(file: File): Promise<string> {
 // تولید صدای دیالوگ با هوش مصنوعی (ElevenLabs) — جایگزین آپلود دستی فایل صوتی
 export async function generateAudio(
   text: string,
-  voiceId?: string
+  voiceId?: string,
+  speed?: number
 ): Promise<string> {
   const res = await authFetch("/v1/admin/generate-audio", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice_id: voiceId || "" }),
+    body: JSON.stringify({ text, voice_id: voiceId || "", speed: speed || 0 }),
   });
   const data = await jsonOrThrow(res);
   return data.url as string;
@@ -143,6 +144,30 @@ export async function listTTSVoices(): Promise<TTSVoice[]> {
   const res = await authFetch("/v1/admin/tts-voices", { method: "GET" });
   const data = await jsonOrThrow(res);
   return (data.voices || []) as TTSVoice[];
+}
+
+// ---------- پراکسی خروجی (vless) برای دور زدن بلاک جغرافیایی هوش مصنوعی ----------
+export interface ProxyStatus {
+  connected: boolean;
+  ip?: string;
+  country?: string;
+  org?: string;
+  message: string;
+  link?: string;
+}
+
+export async function getProxyStatus(): Promise<ProxyStatus> {
+  const res = await authFetch("/v1/admin/proxy/status", { method: "GET" });
+  return jsonOrThrow(res) as Promise<ProxyStatus>;
+}
+
+export async function connectProxy(link: string): Promise<ProxyStatus> {
+  const res = await authFetch("/v1/admin/proxy/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ link }),
+  });
+  return jsonOrThrow(res) as Promise<ProxyStatus>;
 }
 
 // ---------- تنظیمات (کلیدهای API) ----------

@@ -11,8 +11,9 @@ import (
 )
 
 type generateAudioRequest struct {
-	Text    string `json:"text"`
-	VoiceID string `json:"voice_id"`
+	Text    string  `json:"text"`
+	VoiceID string  `json:"voice_id"`
+	Speed   float64 `json:"speed"`
 }
 
 // GenerateAudio متن یک دیالوگ را با ElevenLabs به صدا تبدیل و در uploads ذخیره می‌کند
@@ -32,7 +33,7 @@ func (h Handler) GenerateAudio(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "متن دیالوگ خالی است"})
 	}
 
-	audio, err := h.ttsSvc.GenerateSpeech(c.Request().Context(), req.Text, req.VoiceID)
+	audio, err := h.ttsSvc.GenerateSpeech(c.Request().Context(), req.Text, req.VoiceID, req.Speed)
 	if err != nil {
 		return c.JSON(http.StatusBadGateway, echo.Map{"message": err.Error()})
 	}

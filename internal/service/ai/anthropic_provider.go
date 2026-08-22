@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"shadowing-backend/internal/pkg/outboundhttp"
 	"shadowing-backend/internal/pkg/richerror"
 	settingsservice "shadowing-backend/internal/service/settings"
 
@@ -46,15 +47,19 @@ func (p *anthropicProvider) enabled() bool {
 	return p.apiKey() != ""
 }
 
-func (p *anthropicProvider) clientFor(key string) anthropic.Client {
+func (p *anthropicProvider) clientFor(key string) (anthropic.Client, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.initialized || key != p.cachedKey {
-		p.client = anthropic.NewClient(option.WithAPIKey(key))
+		httpClient, err := outboundhttp.Client()
+		if err != nil {
+			return anthropic.Client{}, err
+		}
+		p.client = anthropic.NewClient(option.WithAPIKey(key), option.WithHTTPClient(httpClient))
 		p.cachedKey = key
 		p.initialized = true
 	}
-	return p.client
+	return p.client, nil
 }
 
 func (p *anthropicProvider) generateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error) {
@@ -70,7 +75,11 @@ func (p *anthropicProvider) generateScene(ctx context.Context, prompt, difficult
 		userText += fmt.Sprintf("\nDifficulty: %s", difficulty)
 	}
 
-	client := p.clientFor(key)
+	client, err := p.clientFor(key)
+	if err != nil {
+		return GeneratedScene{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+	}
 	resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     p.model(),
 		MaxTokens: 8000,

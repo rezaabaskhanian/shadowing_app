@@ -29,6 +29,10 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.GET("/settings", h.GetSettings)
 	g.PUT("/settings", h.UpdateSetting)
 
+	// پراکسی خروجی (vless) برای دور زدن بلاک جغرافیایی سرویس‌های هوش مصنوعی
+	g.GET("/proxy/status", h.ProxyStatus)
+	g.POST("/proxy/connect", h.ConnectProxy)
+
 	// نوتیفیکیشن‌ها: آمار، ارسال پیام همگانی، تاریخچه
 	g.GET("/notifications/stats", h.NotificationStats)
 	g.POST("/notifications/broadcast", h.SendBroadcast)
