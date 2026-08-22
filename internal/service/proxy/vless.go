@@ -40,8 +40,8 @@ type xrayOutbound struct {
 }
 
 // parseVlessLink یک لینک vless:// (فرمت رایج در سابسکریپشن‌های عمومی V2Ray) را
-// به کانفیگ Xray-core تبدیل می‌کند. فقط vless (با یا بدون reality/tls/ws)
-// پشتیبانی می‌شود چون بیشتر لینک‌های عمومی از همین نوع‌اند.
+// به کانفیگ Xray-core تبدیل می‌کند. فقط vless پشتیبانی می‌شود، با ترکیب‌های
+// امنیتی/ترنسپورت رایج: reality، tls، و tcp/ws/xhttp (شامل هدر HTTP obfuscation).
 func parseVlessLink(link string, socksPort int) (xrayConfig, error) {
 	link = strings.TrimSpace(link)
 	if !strings.HasPrefix(link, "vless://") {
@@ -102,7 +102,8 @@ func parseVlessLink(link string, socksPort int) (xrayConfig, error) {
 		}
 	}
 
-	if network == "ws" {
+	switch network {
+	case "ws":
 		path := q.Get("path")
 		if path == "" {
 			path = "/"
@@ -110,6 +111,28 @@ func parseVlessLink(link string, socksPort int) (xrayConfig, error) {
 		stream["wsSettings"] = map[string]any{
 			"path":    path,
 			"headers": map[string]any{"Host": get("host", host)},
+		}
+	case "tcp":
+		if get("headerType", "") == "http" {
+			path := q.Get("path")
+			if path == "" {
+				path = "/"
+			}
+			stream["tcpSettings"] = map[string]any{
+				"header": map[string]any{
+					"type": "http",
+					"request": map[string]any{
+						"path":    []string{path},
+						"headers": map[string]any{"Host": []string{get("host", host)}},
+					},
+				},
+			}
+		}
+	case "xhttp":
+		stream["xhttpSettings"] = map[string]any{
+			"path": get("path", "/"),
+			"host": get("host", host),
+			"mode": get("mode", "auto"),
 		}
 	}
 

@@ -66,6 +66,100 @@ func TestParseVlessLink_Reality(t *testing.T) {
 	}
 }
 
+func TestParseVlessLink_WsTls(t *testing.T) {
+	link := "vless://ebc0ae8a-135b-477e-baf8-9eced85e370b@apk.bestforcast.ir:3333?security=tls&type=ws&headerType=&path=&host=apk.bestforcast.ir&sni=main.bestforcast.ir&fp=random#Germany"
+
+	cfg, err := parseVlessLink(link, 1080)
+	if err != nil {
+		t.Fatalf("parseVlessLink failed: %v", err)
+	}
+	data, _ := cfg.toJSON()
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+	proxyOut := parsed["outbounds"].([]any)[0].(map[string]any)
+	stream := proxyOut["streamSettings"].(map[string]any)
+	if stream["security"] != "tls" || stream["network"] != "ws" {
+		t.Fatalf("unexpected stream: %+v", stream)
+	}
+	tls := stream["tlsSettings"].(map[string]any)
+	if tls["serverName"] != "main.bestforcast.ir" {
+		t.Fatalf("unexpected tls serverName: %v", tls["serverName"])
+	}
+	ws := stream["wsSettings"].(map[string]any)
+	if ws["path"] != "/" {
+		t.Fatalf("expected default ws path '/', got %v", ws["path"])
+	}
+	headers := ws["headers"].(map[string]any)
+	if headers["Host"] != "apk.bestforcast.ir" {
+		t.Fatalf("unexpected ws host header: %v", headers["Host"])
+	}
+}
+
+func TestParseVlessLink_TcpHttpObfuscation(t *testing.T) {
+	link := "vless://ebc0ae8a-135b-477e-baf8-9eced85e370b@all.novahomedesigntips.com:8590?security=none&type=tcp&headerType=http&path=%2Fred&host=play.google.com#Hamrah"
+
+	cfg, err := parseVlessLink(link, 1080)
+	if err != nil {
+		t.Fatalf("parseVlessLink failed: %v", err)
+	}
+	data, _ := cfg.toJSON()
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+	proxyOut := parsed["outbounds"].([]any)[0].(map[string]any)
+	stream := proxyOut["streamSettings"].(map[string]any)
+	if stream["security"] != "none" || stream["network"] != "tcp" {
+		t.Fatalf("unexpected stream: %+v", stream)
+	}
+	tcpSettings, ok := stream["tcpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected tcpSettings to be present, got stream: %+v", stream)
+	}
+	header := tcpSettings["header"].(map[string]any)
+	if header["type"] != "http" {
+		t.Fatalf("expected header type http, got %v", header["type"])
+	}
+	request := header["request"].(map[string]any)
+	paths := request["path"].([]any)
+	if len(paths) != 1 || paths[0] != "/red" {
+		t.Fatalf("unexpected request path: %+v", paths)
+	}
+	headers := request["headers"].(map[string]any)
+	hostVals := headers["Host"].([]any)
+	if len(hostVals) != 1 || hostVals[0] != "play.google.com" {
+		t.Fatalf("unexpected request Host header: %+v", hostVals)
+	}
+}
+
+func TestParseVlessLink_Xhttp(t *testing.T) {
+	link := "vless://ebc0ae8a-135b-477e-baf8-9eced85e370b@apk.lifeisjustaclickaway.com:2087?security=tls&type=xhttp&path=%2FDL%3Fed%3D2096&host=apk.lifeisjustaclickaway.com&mode=auto&sni=apk.lifeisjustaclickaway.com#Notice"
+
+	cfg, err := parseVlessLink(link, 1080)
+	if err != nil {
+		t.Fatalf("parseVlessLink failed: %v", err)
+	}
+	data, _ := cfg.toJSON()
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+	proxyOut := parsed["outbounds"].([]any)[0].(map[string]any)
+	stream := proxyOut["streamSettings"].(map[string]any)
+	if stream["network"] != "xhttp" {
+		t.Fatalf("unexpected network: %v", stream["network"])
+	}
+	xhttp, ok := stream["xhttpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected xhttpSettings to be present, got stream: %+v", stream)
+	}
+	if xhttp["path"] != "/DL?ed=2096" || xhttp["host"] != "apk.lifeisjustaclickaway.com" || xhttp["mode"] != "auto" {
+		t.Fatalf("unexpected xhttpSettings: %+v", xhttp)
+	}
+}
+
 func TestParseVlessLink_RejectsNonVless(t *testing.T) {
 	if _, err := parseVlessLink("vmess://abc", 1080); err == nil {
 		t.Fatal("expected error for non-vless link")
