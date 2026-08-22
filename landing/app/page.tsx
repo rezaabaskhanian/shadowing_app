@@ -38,10 +38,7 @@ export default async function HomePage() {
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <div className="brand">
-            <span className="brand-badge">🎙️</span>
-            LingoFlow
-          </div>
+          <div className="brand">LingoFlow</div>
           <nav className="tabnav">
             <a href="#why">چرا LingoFlow؟</a>
             <a href="#how">چطور کار می‌کنه</a>
@@ -146,10 +143,7 @@ export default async function HomePage() {
       )}
 
       <footer className="footer">
-        <div className="brand">
-          <span className="brand-badge">🎙️</span>
-          LingoFlow
-        </div>
+        <div className="brand">LingoFlow</div>
         <nav className="footer-nav">
           {highlights.features.length > 0 && <a href="#why">چرا LingoFlow؟</a>}
           {highlights.steps.length > 0 && <a href="#how">چطور کار می‌کنه</a>}

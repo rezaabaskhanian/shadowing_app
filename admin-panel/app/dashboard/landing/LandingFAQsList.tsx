@@ -86,7 +86,7 @@ export default function LandingFAQsList({
 
   return (
     <div>
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>{editingId ? "ویرایش سوال متداول" : "افزودن سوال متداول"}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 560 }}>
           <input

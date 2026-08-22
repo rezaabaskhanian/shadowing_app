@@ -75,7 +75,7 @@ export default function LandingSettingsForm({
     : "";
 
   return (
-    <div className="card" style={{ borderColor: "#7C3DFF" }}>
+    <div className="card" style={{ borderColor: "var(--primary)" }}>
       <h2 style={{ marginTop: 0 }}>⚙️ تنظیمات کلی صفحه‌ی معرفی</h2>
       <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
         عنوان/توضیح هیرو (بالای صفحه)، لینک‌های دانلود (که هم توی هیرو هم توی

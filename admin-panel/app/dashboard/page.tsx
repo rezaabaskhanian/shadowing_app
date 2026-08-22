@@ -72,78 +72,78 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
-      <div className="topbar">
-        <h1>🎬 پنل ادمین شادوئینگ</h1>
-        <div className="tabs">
+    <div className="app-shell">
+      <aside className="sidebar">
+        <h1 className="sidebar-title">پنل ادمین شادوئینگ</h1>
+        <nav className="sidebar-nav">
           <button
-            className={`tab-btn ${tab === "create" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "create" ? "active" : ""}`}
             onClick={() => setTab("create")}
           >
             {reviewSubmission
-              ? "📩 بررسی پیشنهاد"
+              ? "بررسی پیشنهاد"
               : reviewTopicSuggestion
-              ? "💡 بررسی موضوع"
+              ? "بررسی موضوع"
               : editScene
-              ? "✏️ ویرایش صحنه"
-              : "➕ ساخت صحنه"}
+              ? "ویرایش صحنه"
+              : "ساخت صحنه"}
           </button>
           <button
-            className={`tab-btn ${tab === "list" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "list" ? "active" : ""}`}
             onClick={() => setTab("list")}
           >
-            📋 لیست صحنه‌ها
+            لیست صحنه‌ها
           </button>
           <button
-            className={`tab-btn ${tab === "settings" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "settings" ? "active" : ""}`}
             onClick={() => setTab("settings")}
           >
-            ⚙️ تنظیمات
+            تنظیمات
           </button>
           <button
-            className={`tab-btn ${tab === "notifications" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "notifications" ? "active" : ""}`}
             onClick={() => setTab("notifications")}
           >
-            🔔 نوتیفیکیشن‌ها
+            نوتیفیکیشن‌ها
           </button>
           <button
-            className={`tab-btn ${tab === "review" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "review" ? "active" : ""}`}
             onClick={() => setTab("review")}
           >
-            📩 پیشنهادهای کاربران
+            پیشنهادهای کاربران
           </button>
           <button
-            className={`tab-btn ${tab === "topics" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "topics" ? "active" : ""}`}
             onClick={() => setTab("topics")}
           >
-            💡 پیشنهادهای موضوع
+            پیشنهادهای موضوع
           </button>
           <button
-            className={`tab-btn ${tab === "subscriptions" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "subscriptions" ? "active" : ""}`}
             onClick={() => setTab("subscriptions")}
           >
-            💳 اشتراک‌ها
+            اشتراک‌ها
           </button>
           <button
-            className={`tab-btn ${tab === "users" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "users" ? "active" : ""}`}
             onClick={() => setTab("users")}
           >
-            👤 کاربران
+            کاربران
           </button>
           <button
-            className={`tab-btn ${tab === "landing" ? "active" : ""}`}
+            className={`sidebar-link ${tab === "landing" ? "active" : ""}`}
             onClick={() => setTab("landing")}
           >
-            🌐 صفحه معرفی
+            صفحه معرفی
           </button>
-        </div>
-        <div className="userbox">
-          <span>👤 {name}</span>
+        </nav>
+        <div className="sidebar-foot">
+          <span className="userbox">{name}</span>
           <button className="btn btn-ghost btn-sm" onClick={logout}>
             خروج
           </button>
         </div>
-      </div>
+      </aside>
 
       <main className="container">
         {tab === "create" && (
@@ -211,6 +211,6 @@ export default function DashboardPage() {
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
-    </>
+    </div>
   );
 }

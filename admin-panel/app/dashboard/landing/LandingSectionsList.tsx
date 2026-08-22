@@ -126,7 +126,7 @@ export default function LandingSectionsList({
 
   return (
     <div>
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>
           🌐 {editingId ? "ویرایش بخش" : "افزودن بخش جدید"}
         </h2>

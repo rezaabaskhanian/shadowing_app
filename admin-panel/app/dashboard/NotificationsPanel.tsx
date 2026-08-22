@@ -57,7 +57,7 @@ export default function NotificationsPanel({
 
   return (
     <div>
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>📊 آمار نوتیفیکیشن‌ها</h2>
         {!stats?.fcm_configured && (
           <p style={{ color: "var(--danger, #ef4444)", fontSize: 13 }}>

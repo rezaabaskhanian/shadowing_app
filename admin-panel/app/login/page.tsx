@@ -33,7 +33,7 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <form className="login-box" onSubmit={handleSubmit}>
-        <h1>🎬 پنل ادمین</h1>
+        <h1>پنل ادمین</h1>
         <p>برای مدیریت صحنه‌ها وارد شوید</p>
 
         <label>شماره تلفن</label>

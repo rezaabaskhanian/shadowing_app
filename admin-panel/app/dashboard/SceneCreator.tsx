@@ -508,7 +508,7 @@ export default function SceneCreator({
         <div
           className="card"
           style={{
-            borderColor: "#22c55e",
+            borderColor: "var(--success)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -527,7 +527,7 @@ export default function SceneCreator({
         <div
           className="card"
           style={{
-            borderColor: "#22c55e",
+            borderColor: "var(--success)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -568,7 +568,7 @@ export default function SceneCreator({
       )}
 
       {/* تولید با هوش مصنوعی (اختیاری — فرم را پر می‌کند) */}
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>🤖 تولید با هوش مصنوعی (اختیاری)</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           یک موقعیت کوتاه بنویس؛ دیالوگ‌ها، ترجمه و واژه‌ها خودکار ساخته و در فرم

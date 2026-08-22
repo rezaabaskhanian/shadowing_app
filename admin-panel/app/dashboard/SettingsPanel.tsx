@@ -121,7 +121,7 @@ export default function SettingsPanel({
 
   return (
     <div>
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>🔒 تغییر رمز عبور ادمین</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           رمز عبور جدید حساب فعلی ({getName() || "..."}) را اینجا تنظیم کن.
@@ -155,7 +155,7 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>🔀 ارائه‌دهنده‌ی فعال هوش مصنوعی (تولید صحنه)</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           تغییر این گزینه بدون ری‌استارت سرور، همان لحظه اعمال می‌شود.

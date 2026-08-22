@@ -102,7 +102,7 @@ export default function LandingHighlightsList({
 
   return (
     <div>
-      <div className="card" style={{ borderColor: "#7C3DFF" }}>
+      <div className="card" style={{ borderColor: "var(--primary)" }}>
         <h2 style={{ marginTop: 0 }}>
           {editingId ? `ویرایش آیتم — ${title}` : `افزودن آیتم — ${title}`}
         </h2>
