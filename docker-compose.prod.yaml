@@ -72,6 +72,7 @@ services:
       - "traefik.http.routers.shadowing-backend.rule=Host(`api.lingoflow.ir`)"
       - "traefik.http.routers.shadowing-backend.entrypoints=web"
       - "traefik.http.services.shadowing-backend.loadbalancer.server.port=8088"
+      - "traefik.docker.network=arama_aramina_net"
     networks:
       - aramina_net
 
@@ -89,6 +90,7 @@ services:
       - "traefik.http.routers.shadowing-admin.rule=Host(`admin.lingoflow.ir`)"
       - "traefik.http.routers.shadowing-admin.entrypoints=web"
       - "traefik.http.services.shadowing-admin.loadbalancer.server.port=3000"
+      - "traefik.docker.network=arama_aramina_net"
     networks:
       - aramina_net
 
@@ -106,6 +108,7 @@ services:
       - "traefik.http.routers.shadowing-landing.rule=Host(`www.lingoflow.ir`) || Host(`lingoflow.ir`)"
       - "traefik.http.routers.shadowing-landing.entrypoints=web"
       - "traefik.http.services.shadowing-landing.loadbalancer.server.port=3000"
+      - "traefik.docker.network=arama_aramina_net"
     networks:
       - aramina_net
 
