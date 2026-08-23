@@ -17,6 +17,8 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
   { key: "CLAUDE_MODEL", label: "مدل Claude", hint: "مثلاً claude-sonnet-4-6 — خالی بگذار برای پیش‌فرض" },
   { key: "GEMINI_API_KEY", label: "کلید Gemini" },
   { key: "GEMINI_MODEL", label: "مدل Gemini", hint: "مثلاً gemini-flash-latest — خالی بگذار برای پیش‌فرض" },
+  { key: "DEEPSEEK_API_KEY", label: "کلید DeepSeek" },
+  { key: "DEEPSEEK_MODEL", label: "مدل DeepSeek", hint: "مثلاً deepseek-chat — خالی بگذار برای پیش‌فرض" },
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
   { key: "ELEVENLABS_VOICE_ID", label: "شناسه صدای ElevenLabs", hint: "خالی بگذار برای صدای پیش‌فرض" },
   {
@@ -32,7 +34,7 @@ export default function SettingsPanel({
   notify: (msg: string, type?: "ok" | "err") => void;
 }) {
   const [settings, setSettings] = useState<SettingsResp | null>(null);
-  const [provider, setProvider] = useState<"anthropic" | "gemini">("anthropic");
+  const [provider, setProvider] = useState<"anthropic" | "gemini" | "deepseek">("anthropic");
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,7 @@ export default function SettingsPanel({
     try {
       const s = await getSettings();
       setSettings(s);
-      setProvider((s.ai_provider as "anthropic" | "gemini") || "anthropic");
+      setProvider((s.ai_provider as "anthropic" | "gemini" | "deepseek") || "anthropic");
     } catch (err: any) {
       notify(err.message, "err");
     } finally {
@@ -97,7 +99,7 @@ export default function SettingsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function saveProvider(next: "anthropic" | "gemini") {
+  async function saveProvider(next: "anthropic" | "gemini" | "deepseek") {
     setProvider(next);
     setSaving("AI_PROVIDER");
     try {
@@ -134,6 +136,7 @@ export default function SettingsPanel({
     const map: Record<string, { set: boolean; masked: string }> = {
       ANTHROPIC_API_KEY: settings.anthropic_api_key,
       GEMINI_API_KEY: settings.gemini_api_key,
+      DEEPSEEK_API_KEY: settings.deepseek_api_key,
       ELEVENLABS_API_KEY: settings.elevenlabs_api_key,
       ELEVENLABS_VOICE_ID: settings.elevenlabs_voice_id,
       FCM_SERVICE_ACCOUNT_JSON: settings.fcm_service_account_json,
@@ -258,6 +261,13 @@ export default function SettingsPanel({
             disabled={saving === "AI_PROVIDER"}
           >
             Gemini
+          </button>
+          <button
+            className={`btn ${provider === "deepseek" ? "" : "btn-ghost"}`}
+            onClick={() => saveProvider("deepseek")}
+            disabled={saving === "AI_PROVIDER"}
+          >
+            DeepSeek
           </button>
         </div>
       </div>

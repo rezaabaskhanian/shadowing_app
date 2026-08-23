@@ -26,14 +26,16 @@ type settingItem struct {
 }
 
 type settingsResponse struct {
-	AIProvider  string      `json:"ai_provider"`
-	Anthropic   settingItem `json:"anthropic_api_key"`
-	ClaudeModel string      `json:"claude_model"`
-	Gemini      settingItem `json:"gemini_api_key"`
-	GeminiModel string      `json:"gemini_model"`
-	ElevenLabs  settingItem `json:"elevenlabs_api_key"`
-	VoiceID     settingItem `json:"elevenlabs_voice_id"`
-	FCMKey      settingItem `json:"fcm_service_account_json"`
+	AIProvider    string      `json:"ai_provider"`
+	Anthropic     settingItem `json:"anthropic_api_key"`
+	ClaudeModel   string      `json:"claude_model"`
+	Gemini        settingItem `json:"gemini_api_key"`
+	GeminiModel   string      `json:"gemini_model"`
+	DeepSeek      settingItem `json:"deepseek_api_key"`
+	DeepSeekModel string      `json:"deepseek_model"`
+	ElevenLabs    settingItem `json:"elevenlabs_api_key"`
+	VoiceID       settingItem `json:"elevenlabs_voice_id"`
+	FCMKey        settingItem `json:"fcm_service_account_json"`
 }
 
 // GetSettings وضعیت فعلی تنظیمات را برمی‌گرداند؛ خودِ کلیدها هیچ‌وقت کامل نمایش
@@ -51,14 +53,16 @@ func (h Handler) GetSettings(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, settingsResponse{
-		AIProvider:  provider,
-		Anthropic:   get(settingsservice.KeyAnthropicAPIKey),
-		ClaudeModel: s.Get(settingsservice.KeyClaudeModel),
-		Gemini:      get(settingsservice.KeyGeminiAPIKey),
-		GeminiModel: s.Get(settingsservice.KeyGeminiModel),
-		ElevenLabs:  get(settingsservice.KeyElevenLabsAPIKey),
-		VoiceID:     get(settingsservice.KeyElevenLabsVoiceID),
-		FCMKey:      get(settingsservice.KeyFCMServiceAccount),
+		AIProvider:    provider,
+		Anthropic:     get(settingsservice.KeyAnthropicAPIKey),
+		ClaudeModel:   s.Get(settingsservice.KeyClaudeModel),
+		Gemini:        get(settingsservice.KeyGeminiAPIKey),
+		GeminiModel:   s.Get(settingsservice.KeyGeminiModel),
+		DeepSeek:      get(settingsservice.KeyDeepSeekAPIKey),
+		DeepSeekModel: s.Get(settingsservice.KeyDeepSeekModel),
+		ElevenLabs:    get(settingsservice.KeyElevenLabsAPIKey),
+		VoiceID:       get(settingsservice.KeyElevenLabsVoiceID),
+		FCMKey:        get(settingsservice.KeyFCMServiceAccount),
 	})
 }
 

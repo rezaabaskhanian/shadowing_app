@@ -7,7 +7,7 @@ import (
 	settingsservice "shadowing-backend/internal/service/settings"
 )
 
-// provider رابط مشترک بین ارائه‌دهنده‌های مختلف هوش مصنوعی (Claude, Gemini) است.
+// provider رابط مشترک بین ارائه‌دهنده‌های مختلف هوش مصنوعی (Claude, Gemini, DeepSeek) است.
 type provider interface {
 	generateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error)
 	enabled() bool
@@ -15,12 +15,13 @@ type provider interface {
 
 // Service تولید محتوای صحنه با کمک یک مدل هوش مصنوعی را انجام می‌دهد.
 // ارائه‌دهنده‌ی فعال از تنظیمات (AI_PROVIDER در پنل ادمین یا .env) خوانده می‌شود:
-// anthropic (پیش‌فرض) یا gemini. چون هر دو provider کلید/مدل را در لحظه‌ی هر
-// درخواست از settings می‌خوانند، تغییر از پنل ادمین بدون ری‌استارت سرور اعمال می‌شود.
+// anthropic (پیش‌فرض)، gemini یا deepseek. چون هر provider کلید/مدل را در لحظه‌ی هر
+// درخواست از settings می‌خواند، تغییر از پنل ادمین بدون ری‌استارت سرور اعمال می‌شود.
 type Service struct {
 	settings  *settingsservice.Service
 	anthropic *anthropicProvider
 	gemini    *geminiProvider
+	deepseek  *deepseekProvider
 }
 
 func New(settings *settingsservice.Service) Service {
@@ -28,14 +29,19 @@ func New(settings *settingsservice.Service) Service {
 		settings:  settings,
 		anthropic: newAnthropicProvider(settings),
 		gemini:    newGeminiProvider(settings),
+		deepseek:  newDeepSeekProvider(settings),
 	}
 }
 
 func (s Service) activeProvider() provider {
-	if strings.ToLower(strings.TrimSpace(s.settings.Get(settingsservice.KeyAIProvider))) == "gemini" {
+	switch strings.ToLower(strings.TrimSpace(s.settings.Get(settingsservice.KeyAIProvider))) {
+	case "gemini":
 		return s.gemini
+	case "deepseek":
+		return s.deepseek
+	default:
+		return s.anthropic
 	}
-	return s.anthropic
 }
 
 // Enabled مشخص می‌کند آیا کلید API ارائه‌دهنده‌ی فعال تنظیم شده است یا نه.

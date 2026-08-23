@@ -117,6 +117,8 @@ export interface SettingsResp {
   claude_model: string;
   gemini_api_key: SettingItem;
   gemini_model: string;
+  deepseek_api_key: SettingItem;
+  deepseek_model: string;
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
   fcm_service_account_json: SettingItem;

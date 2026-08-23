@@ -13,6 +13,8 @@ const (
 	KeyClaudeModel       = "CLAUDE_MODEL"
 	KeyGeminiAPIKey      = "GEMINI_API_KEY"
 	KeyGeminiModel       = "GEMINI_MODEL"
+	KeyDeepSeekAPIKey    = "DEEPSEEK_API_KEY"
+	KeyDeepSeekModel     = "DEEPSEEK_MODEL"
 	KeyElevenLabsAPIKey  = "ELEVENLABS_API_KEY"
 	KeyElevenLabsVoiceID = "ELEVENLABS_VOICE_ID"
 	KeyFCMServiceAccount = "FCM_SERVICE_ACCOUNT_JSON"
@@ -25,6 +27,8 @@ var AllowedKeys = map[string]bool{
 	KeyClaudeModel:       true,
 	KeyGeminiAPIKey:      true,
 	KeyGeminiModel:       true,
+	KeyDeepSeekAPIKey:    true,
+	KeyDeepSeekModel:     true,
 	KeyElevenLabsAPIKey:  true,
 	KeyElevenLabsVoiceID: true,
 	KeyFCMServiceAccount: true,
