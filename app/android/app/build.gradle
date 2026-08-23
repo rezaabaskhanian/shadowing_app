@@ -58,7 +58,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -103,7 +103,21 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            shrinkResources enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    // خروجی جدا برای هر معماری (به‌جای یک APK حجیم که هر دو رو داره) — چون
+    // توزیع از طریق کافه‌بازار/دانلود مستقیمه، نه Play Store (که خودش با AAB
+    // این کار رو خودکار انجام می‌ده). universalApk=false یعنی نسخه‌ی همه‌معماریِ
+    // اضافه ساخته نمی‌شه، فقط armeabi-v7a و arm64-v8a.
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false
+            include "armeabi-v7a", "arm64-v8a"
         }
     }
 }
