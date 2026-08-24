@@ -36,7 +36,7 @@ export class NativeNotificationService {
       // Create channel for Android
       const channelId = await notifeeModule.createChannel({
         id: 'shadowtalk_channel',
-        name: 'ShadowTalk Practice & Reminders',
+        name: 'LingoFlow Practice & Reminders',
         importance: 4, // High importance for system banners
         sound: 'default',
       });

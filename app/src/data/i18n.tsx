@@ -262,7 +262,7 @@ export const translations: Translations = {
   wordNeedsPractice: { en: 'Needs practice', fa: 'نیاز به تمرین' },
   
   // Auth Screen
-  welcomeBack: { en: 'Log in to ShadowTalk', fa: 'ورود به شادوتالک' },
+  welcomeBack: { en: 'Log in to LingoFlow', fa: 'ورود به LingoFlow' },
   loginSub: { en: 'Enter your credentials to continue', fa: 'اطلاعات خود را برای ورود وارد کنید' },
   emailOrPhone: { en: 'Email or Phone', fa: 'ایمیل یا شماره موبایل' },
   password: { en: 'Password', fa: 'رمز عبور' },

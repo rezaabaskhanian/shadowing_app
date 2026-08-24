@@ -53,7 +53,7 @@ export const SplashScreen = () => {
       <View style={styles.statusSpacer} />
 
       <View style={styles.heroCopy}>
-        <Text style={styles.title}>Shadow</Text>
+        <Text style={styles.title}>LingoFlow</Text>
         <Text style={styles.subtitle}>Speak English{'\n'}Naturally</Text>
       </View>
 
