@@ -17,6 +17,7 @@ import {
   Lightbulb,
   LogOut,
   Mail,
+  MessageSquare,
   Target,
   User as UserIcon,
   Zap,
@@ -148,6 +149,15 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
           >
             <Mail color={COLORS.primary} size={18} />
             <Text style={styles.rowText}>{t('habitContactUs')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('Feedback')}
+          >
+            <MessageSquare color={COLORS.primary} size={18} />
+            <Text style={styles.rowText}>{t('habitFeedback')}</Text>
           </TouchableOpacity>
 
           </View>

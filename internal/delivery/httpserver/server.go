@@ -20,6 +20,7 @@ import (
 	aiservice "shadowing-backend/internal/service/ai"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
+	feedbackservice "shadowing-backend/internal/service/feedback"
 	habitservice "shadowing-backend/internal/service/habit"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
@@ -77,6 +78,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	submissionSvc submissionservice.Service,
 	subscriptionSvc subscriptionservice.Service,
 	topicSuggestionSvc topicsuggestionservice.Service,
+	feedbackSvc feedbackservice.Service,
 	habitSvc habitservice.Service,
 	billingSvc billingservice.Service,
 	leitnerSvc leitnerservice.Service,
@@ -88,7 +90,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
-			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, billingSvc, &progressSvc, authSvc, authConfig, uploadDir, uploadURLPath,
+			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, uploadDir, uploadURLPath,
 		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
@@ -107,6 +109,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			topicSuggestionSvc,
 			userSvc,
 			landingSvc,
+			feedbackSvc,
 			authSvc, authConfig, uploadDir, uploadURLPath,
 		),
 

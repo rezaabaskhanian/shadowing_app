@@ -27,6 +27,7 @@ func (h Handler) UpdateScene(c echo.Context) error {
 		Difficulty:         req.Difficulty,
 		Hotspots:           req.Hotspots,
 		IsLocked:           req.IsLocked,
+		Category:           req.Category,
 	}
 
 	scene, err := h.learningSvc.UpdateScene(c.Request().Context(), req.ID, updateReq)

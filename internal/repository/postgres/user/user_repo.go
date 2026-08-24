@@ -274,6 +274,7 @@ type UserActivityRow struct {
 	ID                    string  `json:"id"`
 	NickName              string  `json:"nickname"`
 	Phone                 string  `json:"phone"`
+	Role                  string  `json:"role"`
 	Points                int     `json:"points"`
 	CreatedAt             string  `json:"created_at"`
 	CurrentStreak         int     `json:"current_streak"`
@@ -305,7 +306,7 @@ func (d DB) ListWithActivity(ctx context.Context, limit, offset int, search stri
 
 	const query = `
 		SELECT
-			u.id::text, u.nickname, u.phone, u.points, u.created_at::text,
+			u.id::text, u.nickname, u.phone, u.role, u.points, u.created_at::text,
 			COALESCE(s.current, 0) AS current_streak,
 			COALESCE(sp.completed_count, 0) AS completed_scenes,
 			sp.last_activity_at::text,
@@ -340,7 +341,7 @@ func (d DB) ListWithActivity(ctx context.Context, limit, offset int, search stri
 	for rows.Next() {
 		var row UserActivityRow
 		if err := rows.Scan(
-			&row.ID, &row.NickName, &row.Phone, &row.Points, &row.CreatedAt,
+			&row.ID, &row.NickName, &row.Phone, &row.Role, &row.Points, &row.CreatedAt,
 			&row.CurrentStreak, &row.CompletedScenes, &row.LastActivityAt, &row.HasActiveSubscription,
 		); err != nil {
 			return nil, richerror.New(op).WithErr(err).WithMessage("failed to scan user activity row")

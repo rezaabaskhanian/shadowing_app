@@ -8,6 +8,7 @@ import {
   createScene,
   generateAudio,
   generateScene,
+  listSceneCategories,
   listTTSVoices,
   updateScene,
   uploadAudio,
@@ -109,6 +110,8 @@ export default function SceneCreator({
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [isLocked, setIsLocked] = useState(false);
+  const [category, setCategory] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hotspots, setHotspots] = useState<HotspotInput[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -129,6 +132,12 @@ export default function SceneCreator({
       .catch(() => setVoices([])); // اگر کلید ElevenLabs ست نشده باشد، ساکت نادیده می‌گیریم
   }, []);
 
+  useEffect(() => {
+    listSceneCategories()
+      .then(setCategoryOptions)
+      .catch(() => setCategoryOptions([]));
+  }, []);
+
   // در حالت ویرایش، فرم را با اطلاعات صحنه‌ی موجود پر می‌کنیم.
   useEffect(() => {
     if (!editScene) return;
@@ -136,6 +145,7 @@ export default function SceneCreator({
     setDescription(editScene.description || "");
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
     setIsLocked(!!editScene.is_locked);
+    setCategory(editScene.category || "");
     setImageUrl(editScene.backgroundImageURL || null);
     const hs = hotspotsFromScene(editScene);
     setHotspots(hs);
@@ -154,6 +164,7 @@ export default function SceneCreator({
     setDescription(fromSubmission.situation_text || "");
     setDifficulty("beginner");
     setIsLocked(false);
+    setCategory("");
     setImageUrl(fromSubmission.image_url || null);
     const dialogues: DialogueInput[] = (fromSubmission.dialogues || []).map((d, di) => ({
       order: di + 1,
@@ -187,6 +198,7 @@ export default function SceneCreator({
     setDescription("");
     setDifficulty("beginner");
     setIsLocked(false);
+    setCategory("");
     setImageUrl(null);
     setHotspots([]);
     setSelected(null);
@@ -462,6 +474,7 @@ export default function SceneCreator({
         difficulty,
         hotspots,
         is_locked: isLocked,
+        category: category.trim(),
       };
       if (fromSubmission) {
         const res = await approveSceneSubmission(fromSubmission.id, payload);
@@ -497,6 +510,7 @@ export default function SceneCreator({
     setDescription("");
     setDifficulty("beginner");
     setIsLocked(false);
+    setCategory("");
     setImageUrl(null);
     setHotspots([]);
     setSelected(null);
@@ -623,6 +637,18 @@ export default function SceneCreator({
             </select>
           </div>
         </div>
+        <label>دسته‌بندی</label>
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="مثلاً: shop، travel، restaurant..."
+          list="scene-category-options"
+        />
+        <datalist id="scene-category-options">
+          {categoryOptions.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <input
             type="checkbox"

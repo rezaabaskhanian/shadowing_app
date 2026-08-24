@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listUsers } from "@/lib/api";
+import { listUsers, updateUserRole } from "@/lib/api";
 import type { AdminUserRow } from "@/lib/types";
 
 const PAGE_SIZE = 30;
@@ -16,6 +16,7 @@ export default function UserList({
   const [offset, setOffset] = useState(0);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [changingRoleID, setChangingRoleID] = useState<string | null>(null);
 
   async function load(currentOffset: number, currentSearch: string) {
     setLoading(true);
@@ -48,6 +49,25 @@ export default function UserList({
   function formatDate(value: string | null) {
     if (!value) return "—";
     return new Date(value).toLocaleDateString("fa-IR");
+  }
+
+  async function handleRoleChange(u: AdminUserRow, role: "admin" | "user") {
+    const confirmMsg =
+      role === "admin"
+        ? `${u.nickname || u.phone} به ادمین ارتقا پیدا کنه؟`
+        : `دسترسی ادمین از ${u.nickname || u.phone} گرفته بشه؟`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setChangingRoleID(u.id);
+    try {
+      await updateUserRole(u.id, role);
+      notify(role === "admin" ? "کاربر به ادمین ارتقا پیدا کرد" : "دسترسی ادمین گرفته شد", "ok");
+      load(offset, search);
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setChangingRoleID(null);
+    }
   }
 
   return (
@@ -88,6 +108,14 @@ export default function UserList({
                       اشتراک فعال
                     </span>
                   )}
+                  {u.role === "admin" && (
+                    <span
+                      className="hint"
+                      style={{ marginRight: 8, color: "var(--primary, #6366f1)" }}
+                    >
+                      ادمین
+                    </span>
+                  )}
                 </p>
                 <p className="hint" style={{ margin: 0 }}>
                   {u.phone} — عضو از {formatDate(u.created_at)}
@@ -112,6 +140,24 @@ export default function UserList({
                   <div className="hint">آخرین فعالیت</div>
                 </div>
               </div>
+
+              {u.role === "admin" ? (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={changingRoleID === u.id}
+                  onClick={() => handleRoleChange(u, "user")}
+                >
+                  حذف دسترسی ادمین
+                </button>
+              ) : (
+                <button
+                  className="btn btn-sm"
+                  disabled={changingRoleID === u.id}
+                  onClick={() => handleRoleChange(u, "admin")}
+                >
+                  ارتقا به ادمین
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -12,6 +12,7 @@ import (
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
+	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
 	posthabit "shadowing-backend/internal/repository/postgres/habit"
 	postgreslanding "shadowing-backend/internal/repository/postgres/landing"
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
@@ -38,6 +39,7 @@ import (
 
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
+	feedbackservice "shadowing-backend/internal/service/feedback"
 	habitservice "shadowing-backend/internal/service/habit"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
@@ -141,11 +143,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc := setupservice(cfg)
 
 	go worker.RunNotificationScheduler(context.Background(), notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc)
 
 	server.Server()
 
@@ -154,7 +156,7 @@ func main() {
 func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
-	topicsuggestionservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
+	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
 	otpservice.Service, landingservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
@@ -230,6 +232,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	topicSuggestionRepo := posttopicsuggestion.New(MyPostgresgresRepo.DB)
 	topicSuggestionSvc := topicsuggestionservice.New(topicSuggestionRepo)
 
+	feedbackRepo := postgresfeedback.New(MyPostgresgresRepo.DB)
+	feedbackSvc := feedbackservice.New(feedbackRepo)
+
 	habitRepo := posthabit.New(MyPostgresgresRepo.DB)
 	habitSvc := habitservice.New(habitRepo, progressSvc, getEnv("WHISPER_URL", ""))
 
@@ -254,5 +259,5 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc
 }

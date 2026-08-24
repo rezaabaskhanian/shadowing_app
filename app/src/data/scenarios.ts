@@ -49,7 +49,8 @@ export interface DialogueItem {
   words?: WordEntry[];
 }
 
-export type ScenarioCategory = 'business' | 'travel' | 'daily';
+// دسته‌بندی صحنه اکنون متن آزادیست که ادمین در پنل تعیین می‌کند (مثلاً «shop»)
+export type ScenarioCategory = string;
 
 export interface Scenario {
   id: string;

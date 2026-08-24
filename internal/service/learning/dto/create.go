@@ -7,4 +7,5 @@ type CreateSceneRequest struct {
 	Difficulty         string    `json:"difficulty" validate:"required,oneof=beginner intermediate advanced"`
 	Hotspots           []Hotspot `json:"hotspots"`
 	IsLocked           bool      `json:"is_locked"`
+	Category           string    `json:"category"`
 }

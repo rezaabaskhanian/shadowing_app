@@ -36,6 +36,7 @@ export interface CreateScenePayload {
   difficulty: Difficulty;
   hotspots: HotspotInput[];
   is_locked: boolean;
+  category: string;
 }
 
 // خروجی تولید صحنه با هوش مصنوعی (بدون تصویر/صدا)
@@ -95,6 +96,7 @@ export interface SceneResp {
   status: string;
   order: number;
   is_locked: boolean;
+  category: string;
   hotspots: HotspotResp[] | null;
   created_at: string;
   updated_at: string;
@@ -232,6 +234,7 @@ export interface AdminUserRow {
   id: string;
   nickname: string;
   phone: string;
+  role: string;
   points: number;
   created_at: string;
   current_streak: number;
@@ -245,4 +248,14 @@ export interface AdminUsersResp {
   total: number;
   limit: number;
   offset: number;
+}
+
+// ---------- پیشنهادات و انتقادات کاربران (درج اپ موبایل) ----------
+export interface Feedback {
+  id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+  user_nickname: string;
+  user_phone: string;
 }

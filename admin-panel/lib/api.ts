@@ -3,6 +3,7 @@ import type {
   BroadcastItem,
   CreateScenePayload,
   Difficulty,
+  Feedback,
   GeneratedScene,
   LandingFAQ,
   LandingHighlight,
@@ -233,6 +234,12 @@ export async function deleteScene(id: string) {
   return jsonOrThrow(res);
 }
 
+export async function listSceneCategories(): Promise<string[]> {
+  const res = await authFetch("/v1/admin/scenes/categories", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.categories || []) as string[];
+}
+
 // ---------- نوتیفیکیشن‌ها ----------
 export async function getNotificationStats(): Promise<NotificationStatsResp> {
   const res = await authFetch("/v1/admin/notifications/stats", { method: "GET" });
@@ -316,6 +323,22 @@ export async function listUsers(params: {
 
   const res = await authFetch(`/v1/admin/users?${qs.toString()}`, { method: "GET" });
   return jsonOrThrow(res);
+}
+
+export async function updateUserRole(userID: string, role: "admin" | "user") {
+  const res = await authFetch(`/v1/admin/users/${userID}/role`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+  return jsonOrThrow(res);
+}
+
+// ---------- پیشنهادات و انتقادات کاربران (درج اپ موبایل) ----------
+export async function listFeedbacks(): Promise<Feedback[]> {
+  const res = await authFetch("/v1/admin/feedbacks", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.feedbacks || []) as Feedback[];
 }
 
 export async function approveTopicSuggestion(

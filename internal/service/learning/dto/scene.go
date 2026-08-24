@@ -9,6 +9,7 @@ type Scene struct {
 	Status             string    `json:"status"`
 	Hotspots           []Hotspot `json:"hotspots"`
 	Order              int       `json:"order"`
+	Category           string    `json:"category"`
 	// IsLocked مقدار خام تنظیم‌شده توسط ادمین است. روت‌های ادمین همین مقدار
 	// خام را برمی‌گردانند؛ روت‌های عمومی/موبایل (learninghandler) این فیلد
 	// را بر اساس وضعیت اشتراک/نقش کاربر درخواست‌دهنده بازنویسی می‌کنند.

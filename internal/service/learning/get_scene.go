@@ -60,6 +60,7 @@ func (s Service) GetScene(ctx context.Context, ID string) (dto.Scene, error) {
 		Status:     string(scene.Status),
 		Hotspots:   hotspotDTOs,
 		Order:      scene.Order,
+		Category:   scene.Category,
 
 		CreatedAt: scene.CreatedAt.Format(time.RFC3339),
 

@@ -13,6 +13,7 @@ import TopicSuggestionQueue from "./TopicSuggestionQueue";
 import SubscriptionPlansPanel from "./SubscriptionPlansPanel";
 import UserList from "./UserList";
 import LandingSectionsPanel from "./LandingSectionsPanel";
+import FeedbackQueue from "./FeedbackQueue";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -24,7 +25,8 @@ type Tab =
   | "topics"
   | "subscriptions"
   | "users"
-  | "landing";
+  | "landing"
+  | "feedback";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -136,6 +138,12 @@ export default function DashboardPage() {
           >
             صفحه معرفی
           </button>
+          <button
+            className={`sidebar-link ${tab === "feedback" ? "active" : ""}`}
+            onClick={() => setTab("feedback")}
+          >
+            پیشنهادات و انتقادات
+          </button>
         </nav>
         <div className="sidebar-foot">
           <span className="userbox">{name}</span>
@@ -208,6 +216,7 @@ export default function DashboardPage() {
         {tab === "subscriptions" && <SubscriptionPlansPanel notify={notify} />}
         {tab === "users" && <UserList notify={notify} />}
         {tab === "landing" && <LandingSectionsPanel notify={notify} />}
+        {tab === "feedback" && <FeedbackQueue notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}

@@ -3,6 +3,7 @@ package learninghandler
 import (
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
+	feedbackservice "shadowing-backend/internal/service/feedback"
 	learningservice "shadowing-backend/internal/service/learning"
 	progressservice "shadowing-backend/internal/service/progress"
 	submissionservice "shadowing-backend/internal/service/submission"
@@ -15,6 +16,7 @@ type Handler struct {
 	submissionSvc      submissionservice.Service
 	subscriptionSvc    subscriptionservice.Service
 	topicSuggestionSvc topicsuggestionservice.Service
+	feedbackSvc        feedbackservice.Service
 	billingSvc         billingservice.Service
 	progressSvc        *progressservice.Service
 
@@ -32,6 +34,7 @@ func New(
 	submissionSvc submissionservice.Service,
 	subscriptionSvc subscriptionservice.Service,
 	topicSuggestionSvc topicsuggestionservice.Service,
+	feedbackSvc feedbackservice.Service,
 	billingSvc billingservice.Service,
 	progressSvc *progressservice.Service,
 	authSvc authservice.Service,
@@ -43,6 +46,7 @@ func New(
 		submissionSvc:      submissionSvc,
 		subscriptionSvc:    subscriptionSvc,
 		topicSuggestionSvc: topicSuggestionSvc,
+		feedbackSvc:        feedbackSvc,
 		billingSvc:         billingSvc,
 		progressSvc:        progressSvc,
 		authSvc:            authSvc,

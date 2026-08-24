@@ -24,6 +24,9 @@ func (h Handler) SetLearningRoutes(e *echo.Echo) {
 	learningGroup.POST("/topic-suggestions", h.CreateTopicSuggestion, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.GET("/topic-suggestions/mine", h.MyTopicSuggestions, middlware.Auth(h.authSvc, h.authConfig))
 
+	// پیشنهادات و انتقادات کاربر (درج اپ موبایل)
+	learningGroup.POST("/feedback", h.CreateFeedback, middlware.Auth(h.authSvc, h.authConfig))
+
 	// امتیاز و طرح‌های اشتراک
 	learningGroup.GET("/points", h.MyPoints, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.GET("/subscription-plans", h.SubscriptionPlans, middlware.Auth(h.authSvc, h.authConfig))

@@ -337,6 +337,7 @@ export const translations: Translations = {
   habitRealSituations: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
   habitSuggestTopic: { en: 'Suggest a Topic', fa: 'پیشنهاد موضوع' },
   habitContactUs: { en: 'Contact Us', fa: 'ارتباط با ما' },
+  habitFeedback: { en: 'Suggestions & Feedback', fa: 'پیشنهادات و انتقادات' },
 
   habitScreenTitle: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
   habitTodaysMission: { en: "Today's Mission", fa: 'ماموریت امروز' },
@@ -410,6 +411,20 @@ export const translations: Translations = {
   topicSuggestionMineTitle: { en: 'My Suggestions', fa: 'پیشنهادهای من' },
   topicSuggestionEmpty: { en: 'No suggestions yet.', fa: 'هنوز پیشنهادی ثبت نشده.' },
   topicSuggestionFillField: { en: 'Please write a topic', fa: 'لطفاً یک موضوع بنویس' },
+
+  // ---- Feedback (پیشنهادات و انتقادات) ----
+  feedbackTitle: { en: 'Suggestions & Feedback', fa: 'پیشنهادات و انتقادات' },
+  feedbackNote: {
+    en: 'Tell us what you like or what we should improve — our team reads every message.',
+    fa: 'هر پیشنهاد یا انتقادی داری برامون بنویس — تیم ما همه‌ی پیام‌ها را می‌خواند.',
+  },
+  feedbackPlaceholder: {
+    en: 'Write your suggestion or feedback here...',
+    fa: 'پیشنهاد یا انتقادت را اینجا بنویس...',
+  },
+  feedbackSubmit: { en: 'Send', fa: 'ارسال' },
+  feedbackFillField: { en: 'Please write a message', fa: 'لطفاً پیامی بنویس' },
+  feedbackSuccess: { en: 'Thanks! Your message was sent.', fa: 'ممنون! پیامت ارسال شد.' },
 
   // ---- Paywall (خرید کافه‌بازاری / باز کردن صحنه‌های قفل) ----
   paywallTitle: { en: 'Unlock All Scenes', fa: 'باز کردن همه‌ی صحنه‌ها' },

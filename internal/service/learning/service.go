@@ -13,6 +13,7 @@ type Repository interface {
 	GetPublished(ctx context.Context) ([]domain.Scene, error)
 	Update(ctx context.Context, scene domain.Scene) error
 	Delete(ctx context.Context, id string) error
+	GetCategories(ctx context.Context) ([]string, error)
 }
 
 type Service struct {

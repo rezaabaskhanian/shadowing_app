@@ -45,6 +45,7 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 		req.BackgroundImageURL,
 		difficultyLevel,
 		req.IsLocked,
+		req.Category,
 	)
 	if err != nil {
 		return dto.Scene{}, richerror.New(op).
@@ -118,6 +119,7 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 		Hotspots:           hotspots,
 		Order:              s.Order,
 		IsLocked:           s.IsLocked,
+		Category:           s.Category,
 		CreatedAt:          s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:          s.UpdatedAt.Format(time.RFC3339),
 	}

@@ -21,6 +21,7 @@ export default function SceneList({
   const [scenes, setScenes] = useState<SceneResp[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<SceneResp | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -73,11 +74,26 @@ export default function SceneList({
 
   return (
     <div>
-      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0 }}>صحنه‌های ثبت‌شده</h2>
-        <button className="btn btn-ghost btn-sm" onClick={load}>
-          🔄 بارگذاری مجدد
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{ width: 180 }}
+          >
+            <option value="">همه دسته‌بندی‌ها</option>
+            {Array.from(new Set(scenes.map((s) => s.category).filter(Boolean))).map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value="__none__">بدون دسته‌بندی</option>
+          </select>
+          <button className="btn btn-ghost btn-sm" onClick={load}>
+            🔄 بارگذاری مجدد
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -86,7 +102,15 @@ export default function SceneList({
         <div className="empty">هنوز صحنه‌ای ثبت نشده است.</div>
       ) : (
         <div className="scene-grid">
-          {scenes.map((s) => (
+          {scenes
+            .filter((s) =>
+              !categoryFilter
+                ? true
+                : categoryFilter === "__none__"
+                ? !s.category
+                : s.category === categoryFilter
+            )
+            .map((s) => (
             <div
               className="scene-item"
               key={s.id}
@@ -102,6 +126,13 @@ export default function SceneList({
               <div className="meta">
                 <h3>{s.title || "-"}</h3>
                 <span>{s.status}</span>
+                {s.category ? (
+                  <span className="hint">🏷 {s.category}</span>
+                ) : (
+                  <span className="hint" style={{ color: "var(--danger, #ef4444)" }}>
+                    بدون دسته‌بندی
+                  </span>
+                )}
               </div>
               <button
                 className="btn btn-sm"
@@ -140,6 +171,7 @@ export default function SceneList({
             {detail.description && (
               <p className="hint">{detail.description}</p>
             )}
+            <p className="hint">دسته‌بندی: {detail.category || "بدون دسته‌بندی"}</p>
 
             <div className="image-wrap" style={{ cursor: "default" }}>
               <img

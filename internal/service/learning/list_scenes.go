@@ -61,6 +61,7 @@ func (s Service) ListScene(ctx context.Context) ([]dto.Scene, error) {
 			Status:             string(s.Status),
 			Hotspots:           hotspotDTOs,
 			Order:              s.Order,
+			Category:           s.Category,
 
 			CreatedAt: s.CreatedAt.Format(time.RFC3339),
 			UpdatedAt: s.UpdatedAt.Format(time.RFC3339),

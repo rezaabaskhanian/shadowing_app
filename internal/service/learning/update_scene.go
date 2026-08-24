@@ -63,6 +63,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 		Hotspots:           hotspots,
 		Order:              existing.Order,
 		IsLocked:           req.IsLocked,
+		Category:           req.Category,
 		CreatedAt:          existing.CreatedAt,
 		UpdatedAt:          existing.UpdatedAt,
 	}

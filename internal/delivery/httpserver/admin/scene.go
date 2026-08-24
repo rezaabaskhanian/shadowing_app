@@ -38,6 +38,17 @@ func (h Handler) ListScenes(c echo.Context) error {
 	return c.JSON(http.StatusOK, scenes)
 }
 
+// ListSceneCategories دسته‌بندی‌های موجودِ صحنه‌ها را برای پیشنهاد در فرم
+// ساخت/ویرایش صحنه برمی‌گرداند (متن آزاد؛ فقط برای راحتی انتخاب از موارد قبلی).
+func (h Handler) ListSceneCategories(c echo.Context) error {
+	categories, err := h.learningSvc.ListCategories(c.Request().Context())
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"categories": categories})
+}
+
 // GetScene یک صحنه را همراه با هات‌اسپات‌هایش برمی‌گرداند.
 func (h Handler) GetScene(c echo.Context) error {
 	sceneID := c.Param("sceneID")

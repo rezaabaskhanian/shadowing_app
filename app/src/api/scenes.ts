@@ -48,6 +48,7 @@ interface BackendScene {
   order: number;
   hotspots: BackendHotspot[] | null;
   difficulty?: string;
+  category?: string;
   is_locked?: boolean;
   progress?: number;
   is_completed?: boolean;
@@ -116,8 +117,7 @@ function mapScene(s: BackendScene): Scenario {
     color: COLORS.primary,
     imageUri: localImg || (s.backgroundImageURL ? { uri: absUrl(s.backgroundImageURL) } : require('../assets/scenes/clothes_shopping.png')),
     hotspots,
-    // بک‌اند فعلاً دسته‌بندی صحنه را ذخیره نمی‌کند؛ تا اضافه شدن آن فیلد، مقدار پیش‌فرض قرار می‌گیرد
-    category: 'daily',
+    category: s.category || undefined,
     isLocked: !!s.is_locked,
     isCompleted: !!s.is_completed,
   };

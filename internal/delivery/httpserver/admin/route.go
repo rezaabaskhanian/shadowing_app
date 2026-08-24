@@ -41,6 +41,7 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	// مدیریت صحنه‌ها، هات‌اسپات‌ها و دیالوگ‌ها
 	g.POST("/scenes", h.CreateScene)
 	g.GET("/scenes", h.ListScenes)
+	g.GET("/scenes/categories", h.ListSceneCategories)
 	g.GET("/scenes/:sceneID", h.GetScene)
 	g.PUT("/scenes/:sceneID", h.UpdateScene)
 	g.DELETE("/scenes/:sceneID", h.DeleteScene)
@@ -50,6 +51,9 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.GET("/scene-submissions/:id", h.GetSceneSubmission)
 	g.POST("/scene-submissions/:id/approve", h.ApproveSceneSubmission)
 	g.POST("/scene-submissions/:id/reject", h.RejectSceneSubmission)
+
+	// پیشنهادات و انتقادات کاربران (درج اپ موبایل)
+	g.GET("/feedbacks", h.ListFeedbacks)
 
 	// بررسی پیشنهادهای موضوع کاربران
 	g.GET("/topic-suggestions", h.ListTopicSuggestions)
@@ -65,6 +69,8 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 
 	// لیست کاربرها + خلاصه‌ی فعالیتشون
 	g.GET("/users", h.ListUsers)
+	// تغییر نقش کاربر (ارتقا به ادمین یا برگرداندن به کاربر عادی)
+	g.PUT("/users/:id/role", h.UpdateUserRole)
 
 	// محتوای صفحه‌ی معرفی (landing, www.lingoflow.ir): بخش‌ها + عکس‌هاشون
 	g.GET("/landing-sections", h.ListLandingSections)

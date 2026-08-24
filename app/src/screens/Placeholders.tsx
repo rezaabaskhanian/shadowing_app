@@ -37,12 +37,17 @@ export const ScenesScreen = () => {
   const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
 
-  const categories: { id: CategoryFilter; label: string }[] = [
-    { id: 'business', label: t('categoryBusiness') },
-    { id: 'travel', label: t('categoryTravel') },
-    { id: 'daily', label: t('categoryDaily') },
-    { id: 'all', label: t('all') },
-  ];
+  // دسته‌بندی‌ها دیگر ثابت نیستند؛ از روی دسته‌بندی واقعی صحنه‌ها (که ادمین در
+  // پنل تعیین می‌کند) ساخته می‌شوند.
+  const categories: { id: CategoryFilter; label: string }[] = React.useMemo(() => {
+    const distinct = Array.from(
+      new Set(scenes.map((s) => s.category).filter((c): c is string => !!c))
+    );
+    return [
+      { id: 'all', label: t('all') },
+      ...distinct.map((c) => ({ id: c, label: c })),
+    ];
+  }, [scenes, t]);
 
   const filteredScenes = scenes.filter(
     (scenario) => activeCategory === 'all' || scenario.category === activeCategory
@@ -59,21 +64,23 @@ export const ScenesScreen = () => {
       <Text style={styles.pageTitle}>{t('chooseScenarioTitle')}</Text>
       <Text style={styles.pageSub}>{t('chooseScenarioSub')}</Text>
 
-      <View style={styles.categoryRow}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
-            onPress={() => setActiveCategory(cat.id)}
-          >
-            <Text
-              style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}
+      {categories.length > 1 && (
+        <View style={styles.categoryRow}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
+              onPress={() => setActiveCategory(cat.id)}
             >
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text
+                style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}
+              >
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <TouchableOpacity
         style={styles.suggestSceneCard}

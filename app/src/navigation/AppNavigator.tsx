@@ -35,6 +35,7 @@ import { LanguageHabitScreen } from '../screens/LanguageHabit/LanguageHabitScree
 import { HabitMissionPracticeScreen } from '../screens/LanguageHabit/HabitMissionPracticeScreen';
 import { HabitMissionResultScreen } from '../screens/LanguageHabit/HabitMissionResultScreen';
 import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
+import { FeedbackScreen } from '../screens/Feedback/FeedbackScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { useLanguage } from '../data/i18n';
@@ -51,6 +52,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'HabitMissionPractice',
   'HabitMissionResult',
   'TopicSuggestion',
+  'Feedback',
   'ContactUs',
   'Paywall',
 ];
@@ -230,6 +232,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="TopicSuggestion"
         component={TopicSuggestionScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="Feedback"
+        component={FeedbackScreen}
         options={{
           tabBarButton: () => null,
         }}
