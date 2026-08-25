@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { ChevronRight, Lightbulb, MessageCircle, Play, Share2, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -43,6 +44,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onEnterScene,
   t,
 }) => {
+  const insets = useSafeAreaInsets();
   const levelInfo = LEVEL_BADGE_STYLE[scenario?.level || 'Beginner'] || LEVEL_BADGE_STYLE.Beginner;
   const LevelIcon = levelInfo.Icon;
   const levelLabel = t(LEVEL_LABEL_KEY[scenario?.level || 'Beginner'] || LEVEL_LABEL_KEY.Beginner);
@@ -156,7 +158,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           <Text style={styles.enterCtaText}>{t('enterScene')}</Text>
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: Math.max(insets.bottom, 24) + 16 }} />
       </ScrollView>
     </View>
   );

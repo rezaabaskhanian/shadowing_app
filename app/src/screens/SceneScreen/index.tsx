@@ -146,6 +146,9 @@ export const SceneScreen = () => {
   // true فقط وقتی که آخرین هات‌اسپات هم تمام شده باشد؛ در این حالت دیگر زوم
   // نباید دوباره تکرار شود و دوربین باید در حالت خارج از زوم بماند.
   const [sceneFinished, setSceneFinished] = useState(false);
+  // حباب دیالوگ بالای سر گوینده: با شروع هر خط باز می‌شود، با پایان صدایش
+  // بسته می‌شود و با شروع خط بعدی (همان نقطه یا هات‌اسپات بعدی) دوباره باز.
+  const [bubbleVisible, setBubbleVisible] = useState(true);
   const [showResult, setShowResult] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [actionCommand, setActionCommand] = useState<AudioActionCommand>('none');
@@ -300,6 +303,8 @@ export const SceneScreen = () => {
       setAudioUri(target.audioUrl || null);
       setActionCommand('play_original');
       setPlaying(true);
+      // خط تازه شروع می‌شود؛ حباب دیالوگ بالای سر گوینده باز شود.
+      setBubbleVisible(true);
       // حتی اگر همان دیالوگ قبلی باشد، این عدد باعث می‌شود دستور پخش دوباره
       // به پلیر برسد و صدا از اول شروع شود.
       setAudioNonce((n) => n + 1);
@@ -725,6 +730,11 @@ export const SceneScreen = () => {
         onRecordingStatusUpdate={handleRecordingStatus}
         onRecordedPlaybackEnd={handleRecordedPlaybackEnd}
         onPlaybackStatusUpdate={(status) => {
+          // صدای این خط تمام شد؛ حباب دیالوگ بالای سرش بسته شود — چه قرار
+          // باشد خودکار برویم خط بعد چه نه.
+          if (status === 'finished') {
+            setBubbleVisible(false);
+          }
           // در مرحله‌های دست‌کاربر (ضبط/مقایسه) بعد از پایان صدای اصلی خودکار
           // نمی‌پریم؛ کاربر باید فرصت ضبط و گوش‌دادن داشته باشد.
           const autoAdvance = !isShadowingMode || isAutoStep;
@@ -757,10 +767,21 @@ export const SceneScreen = () => {
           isShadowingMode={isShadowingMode}
           streakCount={streakCount}
           onForward={handleHeaderForwardPress}
+          bubbleSpeaker={currentDialogue.speaker}
+          bubbleText={currentDialogue.dialogue}
+          bubbleVisible={bubbleVisible}
         />
 
         {/* Bottom Sheet Dialogue Card */}
-        <View style={styles.playerSheet}>
+        <View
+          style={[
+            styles.playerSheet,
+            // در حالت اکسپلور (قبل از ورود به تمرین) نوار ثابت پایین وجود ندارد،
+            // پس خودِ کارت باید فاصله‌ی امن پایین صفحه (دکمه‌ی خانه/نوار حرکتی) را
+            // رعایت کند وگرنه دکمه‌ی «شروع تمرین» زیرش پنهان می‌شود.
+            !isShadowingMode && { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+          ]}
+        >
           <View style={styles.dragHandle} />
 
           {!isShadowingMode ? (
