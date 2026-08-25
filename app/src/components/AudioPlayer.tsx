@@ -31,6 +31,11 @@ interface AudioPlayerProps {
     status: 'loading' | 'playing' | 'paused' | 'finished' | 'error'
   ) => void;
   /**
+   * موقعیتِ زنده‌ی پخش (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با صدا.
+   * source مشخص می‌کند این موقعیت مال صدای مرجع است یا پخشِ دوباره‌ی ضبط.
+   */
+  onProgress?: (positionSeconds: number, source: 'original' | 'recording') => void;
+  /**
    * پایان پخشِ صدای ضبط‌شده‌ی کاربر (جدا از صدای اصلی). برای پخش پشت‌سرهمِ
    * چند ضبط لازم است تا بدانیم کِی نوبت بعدی است.
    */
@@ -62,6 +67,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   shouldPlay,
   playbackRate = 1.0,
   onPlaybackStatusUpdate,
+  onProgress,
   onRecordingStatusUpdate,
   onRecordedPlaybackEnd,
   actionCommand = 'none',
@@ -91,11 +97,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
       onPlaybackStatusUpdate?.('finished');
     });
+    const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (data) => {
+      onProgress?.(data.position, 'original');
+    });
     return () => {
       stateSub.remove();
       endedSub.remove();
+      progressSub.remove();
     };
-  }, [onPlaybackStatusUpdate]);
+  }, [onPlaybackStatusUpdate, onProgress]);
 
   // این دستورها مال ضبط/پخشِ ضبط‌اند، نه صدای مرجع؛ افکت پایین باید نادیده
   // بگیردشان تا با اجرای هم‌زمانشان به هم برخورد نکنند.
@@ -157,10 +167,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     Sound.addPlaybackEndListener(() => {
       onRecordedPlaybackEnd?.();
     });
+    // فقط وقتی Sound.startPlayer در حال پخش است اتفاق می‌افتد (نه حین
+    // ضبط)، پس برای هایلایتِ کلمه‌به‌کلمه‌ی پخشِ دوباره‌ی ضبط کافی است.
+    Sound.addPlayBackListener((meta) => {
+      onProgress?.(meta.currentPosition / 1000, 'recording');
+    });
     return () => {
       Sound.removePlaybackEndListener();
+      Sound.removePlayBackListener();
     };
-  }, [onRecordedPlaybackEnd]);
+  }, [onRecordedPlaybackEnd, onProgress]);
 
   useEffect(() => {
     if (actionCommand === 'start_record') {

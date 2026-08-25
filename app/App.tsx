@@ -31,7 +31,7 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
       <NotificationProvider>
         <StatusBar barStyle="light-content" />
         <NotificationBanner />
-        <AuthScreens onComplete={() => {}} />
+        <AuthScreens />
       </NotificationProvider>
     );
   }

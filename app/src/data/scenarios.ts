@@ -9,6 +9,13 @@ export interface WordEntry {
   meaning: string;
 }
 
+/** زمان‌بندی یک کلمه در صدای مرجع (ثانیه)، برای هایلایت هم‌زمان با پخش. */
+export interface WordTimingEntry {
+  word: string;
+  start: number;
+  end: number;
+}
+
 export interface Dialogue {
   id: string;
   sequence: number;
@@ -18,6 +25,7 @@ export interface Dialogue {
   audio_url: string;
   duration: number;
   words?: WordEntry[];
+  wordTimings?: WordTimingEntry[];
 }
 
 export interface Conversation {
@@ -47,6 +55,7 @@ export interface DialogueItem {
   translation: string;
   audioUrl: string;
   words?: WordEntry[];
+  wordTimings?: WordTimingEntry[];
 }
 
 // دسته‌بندی صحنه اکنون متن آزادیست که ادمین در پنل تعیین می‌کند (مثلاً «shop»)
@@ -88,6 +97,7 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
           translation: d.persian_text,
           audioUrl: formatAudioUrl(d.audio_url),
           words: d.words,
+          wordTimings: d.wordTimings,
         });
       }
     } else {

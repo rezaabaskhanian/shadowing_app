@@ -307,7 +307,7 @@ export const ProgressScreen = () => {
 import { useNotifications, ReminderTime, ContentSource } from '../data/NotificationContext';
 import { Switch } from 'react-native';
 import { Bell, BookOpen, Clock, Mic, Repeat, Sparkles } from 'lucide-react-native';
-import { usePracticeSettings, REPEAT_OPTIONS } from '../data/PracticeSettingsContext';
+import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
 
 export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
@@ -324,7 +324,7 @@ export const ProfileScreen = () => {
     setContentSource,
     triggerTestNotification,
   } = useNotifications();
-  const { repeatsPerStep, setRepeatsPerStep } = usePracticeSettings();
+  const { repeatsPerStep, setRepeatsPerStep, highlightColor, setHighlightColor } = usePracticeSettings();
   const { box } = useVocab();
   const { scenes } = useScenes();
 
@@ -447,6 +447,25 @@ export const ProfileScreen = () => {
                 {option === 0 ? '∞' : `${option}×`}
               </Text>
             </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.dividerLine} />
+
+        <Text style={styles.optionTitle}>{t('highlightColorLabel')}</Text>
+        <Text style={styles.optionSub}>{t('highlightColorSub')}</Text>
+
+        <View style={[styles.colorSwatchRow, { marginTop: 10 }]}>
+          {HIGHLIGHT_COLOR_OPTIONS.map((color) => (
+            <TouchableOpacity
+              key={color}
+              style={[
+                styles.colorSwatch,
+                { backgroundColor: color },
+                highlightColor === color && styles.colorSwatchActive,
+              ]}
+              onPress={() => setHighlightColor(color)}
+            />
           ))}
         </View>
       </View>
@@ -921,6 +940,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 14,
+  },
+  colorSwatchRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  colorSwatch: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorSwatchActive: {
+    borderColor: COLORS.text,
   },
   testBtn: {
     flexDirection: 'row',

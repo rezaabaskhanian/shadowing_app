@@ -20,6 +20,7 @@ import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
 import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
+import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import type { AudioActionCommand } from './types';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
@@ -71,7 +72,7 @@ export const SceneScreen = () => {
   const { scenarioId } = route.params || {};
   const { getScene } = useScenes();
   const { language, t } = useLanguage();
-  const { repeatsPerStep } = usePracticeSettings();
+  const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
   const { user } = useAuth();
   const [streakCount, setStreakCount] = useState(0);
 
@@ -155,6 +156,10 @@ export const SceneScreen = () => {
   // شمارنده‌ای که فقط برای «دوباره فرستادن همان دستور» به AudioPlayer بالا
   // می‌رود؛ لازم است چون شروع دوباره‌ی دور، همان دیالوگ اول را دوباره می‌خواهد.
   const [audioNonce, setAudioNonce] = useState(0);
+  // موقعیتِ زنده‌ی پخش (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با صدا؛
+  // مرجع و ضبطِ کاربر جدا نگه داشته می‌شوند چون هرکدام جای متفاوتی هایلایت می‌شوند.
+  const [masterPositionSeconds, setMasterPositionSeconds] = useState(0);
+  const [recordingPositionSeconds, setRecordingPositionSeconds] = useState(0);
   // چندمین دور پخش دیالوگ‌ها در مرحله‌ی فعلی هستیم (۱ تا targetRepeats).
   const [repeatCount, setRepeatCount] = useState(1);
   // وضعیت ذخیره‌ی صدای ضبط‌شده روی گوشی + نام فایلی که ساخته شد.
@@ -729,6 +734,10 @@ export const SceneScreen = () => {
         loadedRecordingPath={playingRecordingUrl}
         onRecordingStatusUpdate={handleRecordingStatus}
         onRecordedPlaybackEnd={handleRecordedPlaybackEnd}
+        onProgress={(positionSeconds, source) => {
+          if (source === 'original') setMasterPositionSeconds(positionSeconds);
+          else setRecordingPositionSeconds(positionSeconds);
+        }}
         onPlaybackStatusUpdate={(status) => {
           // صدای این خط تمام شد؛ حباب دیالوگ بالای سرش بسته شود — چه قرار
           // باشد خودکار برویم خط بعد چه نه.
@@ -768,7 +777,18 @@ export const SceneScreen = () => {
           streakCount={streakCount}
           onForward={handleHeaderForwardPress}
           bubbleSpeaker={currentDialogue.speaker}
-          bubbleText={currentDialogue.dialogue}
+          bubbleText={!isShadowingMode ? currentDialogue.dialogue : undefined}
+          bubbleContent={
+            isShadowingMode && textDisplayMode === 'bubble' ? (
+              <DialogueSentenceContent
+                compact
+                activeStepIndex={activeStepIndex}
+                currentDialogue={currentDialogue}
+                textRevealed={textRevealed}
+                masterPositionSeconds={masterPositionSeconds}
+              />
+            ) : undefined
+          }
           bubbleVisible={bubbleVisible}
         />
 
@@ -831,6 +851,10 @@ export const SceneScreen = () => {
               autoRepeat={isAutoStep}
               completedSteps={completedSteps}
               onNextStep={() => goToNextStep(true)}
+              masterPositionSeconds={masterPositionSeconds}
+              recordingPositionSeconds={recordingPositionSeconds}
+              textDisplayMode={textDisplayMode}
+              onChangeTextDisplayMode={setTextDisplayMode}
             />
           )}
         </View>

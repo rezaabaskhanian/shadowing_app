@@ -34,11 +34,7 @@ type AuthMode = 'login' | 'register' | 'reset';
 const isNetworkError = (e: any) =>
   e instanceof TypeError || /network request failed/i.test(e?.message || '');
 
-interface AuthScreensProps {
-  onComplete: () => void;
-}
-
-export const AuthScreens = ({ onComplete }: AuthScreensProps) => {
+export const AuthScreens = () => {
   const [mode, setMode] = useState<AuthMode>('login');
 
   if (mode === 'register') {

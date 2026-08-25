@@ -1,17 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Eye, EyeOff, Sparkles } from 'lucide-react-native';
+import { AlignLeft, Eye, EyeOff, MessageCircle, Sparkles } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import type { DialogueItem } from '../../../data/scenarios';
-import { HighlightedDialogueText } from './HighlightedDialogueText';
-import { MaskedDialogueText } from './MaskedDialogueText';
+import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
+import { DialogueSentenceContent } from './DialogueSentenceContent';
 import { DialogueVocabChips } from './DialogueVocabChips';
 
 /**
- * جعبه‌ی متن جمله: خودِ جمله (مخفی یا هایلایت‌شده)، ترجمه، دکمه‌ی نمایش/مخفی،
- * چیپ‌های لغت، و بنرهای مخصوص هر مرحله (Shadow / Compare).
+ * جعبه‌ی متن جمله: خودِ جمله (مخفی یا هایلایت‌شده — فقط وقتی textDisplayMode
+ * روی «card» است، وگرنه همین جمله داخل حباب بالای شخصیت است)، ترجمه، دکمه‌ی
+ * نمایش/مخفی، چیپ‌های لغت، بنرهای مخصوص هر مرحله، و دکمه‌ی جابه‌جایی حباب/کارت.
  *
  * در مرحله‌ی ضبط (activeStepIndex === 2) متن پیش‌فرض مخفی است تا کاربر از
  * حفظ بگوید — با متنِ جلوی چشم، دارد می‌خواند نه شدوئینگ می‌کند. ترجمه مخفی
@@ -23,15 +24,57 @@ export const DialogueSentenceBox: React.FC<{
   textRevealed: boolean;
   onToggleRevealText: () => void;
   onOpenLeitner: () => void;
+  /** موقعیتِ زنده‌ی پخشِ صدای مرجع (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه. */
+  masterPositionSeconds?: number;
+  textDisplayMode: TextDisplayMode;
+  onChangeTextDisplayMode: (mode: TextDisplayMode) => void;
   t: (key: string) => string;
-}> = ({ activeStepIndex, currentDialogue, textRevealed, onToggleRevealText, onOpenLeitner, t }) => (
+}> = ({
+  activeStepIndex,
+  currentDialogue,
+  textRevealed,
+  onToggleRevealText,
+  onOpenLeitner,
+  masterPositionSeconds,
+  textDisplayMode,
+  onChangeTextDisplayMode,
+  t,
+}) => (
   <View style={styles.dialogueBox}>
-    {activeStepIndex === 2 && !textRevealed ? (
-      <MaskedDialogueText text={currentDialogue.dialogue || 'Great. Can I pay by card?'} />
-    ) : (
-      <HighlightedDialogueText
-        text={currentDialogue.dialogue || 'Great. Can I pay by card?'}
-        words={currentDialogue.words}
+    {/* جمله یا این‌جا یا داخل حباب بالای شخصیت است، هرگز هر دو با هم؛ این
+        دکمه انتخاب می‌کند کدام‌یک. */}
+    <View style={styles.displayModeRow}>
+      <TouchableOpacity
+        style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnActive]}
+        onPress={() => onChangeTextDisplayMode('bubble')}
+      >
+        <MessageCircle
+          size={13}
+          color={textDisplayMode === 'bubble' ? COLORS.primary : COLORS.muted}
+        />
+        <Text
+          style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && styles.displayModeBtnTextActive]}
+        >
+          {t('textInBubble')}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnActive]}
+        onPress={() => onChangeTextDisplayMode('card')}
+      >
+        <AlignLeft size={13} color={textDisplayMode === 'card' ? COLORS.primary : COLORS.muted} />
+        <Text style={[styles.displayModeBtnText, textDisplayMode === 'card' && styles.displayModeBtnTextActive]}>
+          {t('textInCard')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+
+    {textDisplayMode === 'card' && (
+      <DialogueSentenceContent
+        activeStepIndex={activeStepIndex}
+        currentDialogue={currentDialogue}
+        textRevealed={textRevealed}
+        masterPositionSeconds={masterPositionSeconds}
       />
     )}
     <Text style={styles.translationText}>{currentDialogue.translation}</Text>
@@ -71,6 +114,32 @@ const styles = StyleSheet.create({
   dialogueBox: {
     alignItems: 'center',
     marginBottom: 10,
+  },
+  displayModeRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  displayModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  displayModeBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  displayModeBtnText: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 10,
+  },
+  displayModeBtnTextActive: {
+    color: COLORS.primary,
   },
   translationText: {
     color: COLORS.textSecondary,

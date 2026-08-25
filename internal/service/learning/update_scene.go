@@ -43,7 +43,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	}
 
 	// ========== 4️⃣ ساخت هات‌اسپات‌ها با شناسه‌های تازه ==========
-	hotspots, err := buildHotspots(op, req.Hotspots)
+	hotspots, err := s.buildHotspots(ctx, op, req.Hotspots)
 	if err != nil {
 		return dto.Scene{}, err
 	}

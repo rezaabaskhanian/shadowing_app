@@ -24,6 +24,10 @@ export const CompareAudioSection: React.FC<{
   evalState: 'idle' | 'scoring' | 'done' | 'error';
   evalError: string | null;
   onScoreCurrentLine: () => void;
+  /** موقعیتِ زنده‌ی پخشِ ضبطِ کاربر (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه. */
+  recordingPositionSeconds?: number;
+  /** true وقتی همین حالا ضبطِ کاربر در حال پخش است. */
+  isPlayingRecording?: boolean;
   t: (key: string) => string;
 }> = ({
   hasRecordingForCurrentLine,
@@ -33,6 +37,8 @@ export const CompareAudioSection: React.FC<{
   evalState,
   evalError,
   onScoreCurrentLine,
+  recordingPositionSeconds,
+  isPlayingRecording,
   t,
 }) => (
   <>
@@ -77,6 +83,8 @@ export const CompareAudioSection: React.FC<{
         evalState={evalState}
         evalError={evalError}
         onRetry={onScoreCurrentLine}
+        recordingPositionSeconds={recordingPositionSeconds}
+        isPlayingRecording={isPlayingRecording}
         t={t}
       />
     )}

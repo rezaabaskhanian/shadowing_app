@@ -11,6 +11,14 @@ type DialogueWord struct {
 	Meaning string `json:"meaning"`
 }
 
+// WordTiming زمان‌بندی یک کلمه در صدای مرجع است (از whisper-service)، برای
+// هایلایت کلمه‌به‌کلمه هم‌زمان با پخش.
+type WordTiming struct {
+	Word  string  `json:"word"`
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+}
+
 type Dialogue struct {
 	ID           DialogueID
 	HotspotID    HotspotID
@@ -23,6 +31,7 @@ type Dialogue struct {
 	PartialHint  string         // برای حالت partial
 	WaitDuration int            // مدت انتظار برای پاسخ (ثانیه)
 	Words        []DialogueWord // واژه‌های مهم این دیالوگ با معنی
+	WordTimings  []WordTiming   // زمان‌بندی کلمه‌به‌کلمه‌ی صدای مرجع؛ اگر تشخیص گفتار در دسترس نبوده خالی است
 	CreatedAt    time.Time
 }
 

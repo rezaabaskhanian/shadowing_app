@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import type { DialogueItem } from '../../../data/scenarios';
 import type { EvaluationResult } from '../../../api/shadowing';
 import type { AudioActionCommand } from '../types';
+import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
 
 import { StepTabs } from './StepTabs';
 import { RepeatProgressRow } from './RepeatProgressRow';
@@ -74,6 +75,14 @@ interface ShadowingPracticePanelProps {
   completedSteps: number[];
   /** رفتن دستی به مرحله‌ی بعد، بدون منتظرماندن برای دورهای خودکار. */
   onNextStep: () => void;
+
+  /** موقعیتِ زنده‌ی پخشِ صدای مرجع (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه. */
+  masterPositionSeconds?: number;
+  /** موقعیتِ زنده‌ی پخشِ ضبطِ کاربر (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه در Compare. */
+  recordingPositionSeconds?: number;
+  /** جمله در حباب بالای شخصیت نشان داده شود یا کارتِ پایین. */
+  textDisplayMode: TextDisplayMode;
+  onChangeTextDisplayMode: (mode: TextDisplayMode) => void;
 }
 
 /**
@@ -128,6 +137,10 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   autoRepeat,
   completedSteps,
   onNextStep,
+  masterPositionSeconds,
+  recordingPositionSeconds,
+  textDisplayMode,
+  onChangeTextDisplayMode,
 }) => {
   return (
     <View>
@@ -153,6 +166,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         textRevealed={textRevealed}
         onToggleRevealText={onToggleRevealText}
         onOpenLeitner={onOpenLeitner}
+        masterPositionSeconds={masterPositionSeconds}
+        textDisplayMode={textDisplayMode}
+        onChangeTextDisplayMode={onChangeTextDisplayMode}
         t={t}
       />
 
@@ -167,6 +183,8 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         evalState={evalState}
         evalError={evalError}
         onScoreCurrentLine={onScoreCurrentLine}
+        recordingPositionSeconds={recordingPositionSeconds}
+        isPlayingRecording={actionCommand === 'play_recording'}
         t={t}
       />
 

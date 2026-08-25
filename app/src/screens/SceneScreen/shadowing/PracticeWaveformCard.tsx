@@ -24,6 +24,10 @@ export const PracticeWaveformCard: React.FC<{
   evalState: 'idle' | 'scoring' | 'done' | 'error';
   evalError: string | null;
   onScoreCurrentLine: () => void;
+  /** موقعیتِ زنده‌ی پخشِ ضبطِ کاربر (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه در Compare. */
+  recordingPositionSeconds?: number;
+  /** true وقتی همین حالا ضبطِ کاربر (نه صدای مرجع) در حال پخش است. */
+  isPlayingRecording?: boolean;
   t: (key: string) => string;
 }> = ({
   activeStepIndex,
@@ -36,6 +40,8 @@ export const PracticeWaveformCard: React.FC<{
   evalState,
   evalError,
   onScoreCurrentLine,
+  recordingPositionSeconds,
+  isPlayingRecording,
   t,
 }) => (
   <View style={styles.waveformCard}>
@@ -54,6 +60,8 @@ export const PracticeWaveformCard: React.FC<{
         evalState={evalState}
         evalError={evalError}
         onScoreCurrentLine={onScoreCurrentLine}
+        recordingPositionSeconds={recordingPositionSeconds}
+        isPlayingRecording={isPlayingRecording}
         t={t}
       />
     ) : (

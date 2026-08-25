@@ -11,8 +11,8 @@ import { FONT_FAMILY } from '../../../theme/typography';
  * بلند است — این همان چیزی است که یادآوری از حافظه را ممکن می‌کند بدون اینکه
  * جواب را لو بدهد.
  */
-export const MaskedDialogueText: React.FC<{ text: string }> = ({ text }) => (
-  <Text style={styles.maskedText}>
+export const MaskedDialogueText: React.FC<{ text: string; compact?: boolean }> = ({ text, compact }) => (
+  <Text style={[styles.maskedText, compact && styles.maskedTextCompact]}>
     {text
       .split(/\s+/)
       .filter(Boolean)
@@ -29,5 +29,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: 'center',
     writingDirection: 'ltr',
+  },
+  // برای جای‌گیری داخل حباب کوچکِ بالای شخصیت.
+  maskedTextCompact: {
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
 });

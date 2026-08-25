@@ -184,7 +184,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	learnningRepo := postgreslearning.New(MyPostgresgresRepo.DB)
 
-	learnningSvc := learningservice.New(learnningRepo)
+	// همان مسیر آپلودی که httpserver با آن سرو می‌کند (internal/delivery/httpserver/server.go).
+	const uploadDir = "uploads"
+	learnningSvc := learningservice.New(learnningRepo, getEnv("WHISPER_URL", ""), uploadDir)
 
 	sessionRepo := postgressession.New(MyPostgresgresRepo.DB)
 	recordingRepo := postgresrecording.New(MyPostgresgresRepo.DB)

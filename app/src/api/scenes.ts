@@ -19,6 +19,11 @@ interface BackendWord {
   word: string;
   meaning: string;
 }
+interface BackendWordTiming {
+  word: string;
+  start: number;
+  end: number;
+}
 interface BackendDialogue {
   id: string;
   order: number;
@@ -30,6 +35,7 @@ interface BackendDialogue {
   partial_hint: string;
   wait_duration: number;
   words: BackendWord[] | null;
+  word_timings?: BackendWordTiming[] | null;
 }
 interface BackendHotspot {
   id: string;
@@ -86,6 +92,7 @@ function mapScene(s: BackendScene): Scenario {
       audio_url: absUrl(d.audio_url),
       duration: d.wait_duration || 3,
       words: (d.words || []).map((w) => ({ word: w.word, meaning: w.meaning })),
+      wordTimings: (d.word_timings || []).map((w) => ({ word: w.word, start: w.start, end: w.end })),
     }));
     const first = dialogues[0];
     return {

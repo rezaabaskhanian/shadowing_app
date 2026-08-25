@@ -1,9 +1,14 @@
 package learningservice
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
+
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/richerror"
 	"shadowing-backend/internal/service/learning/dto"
+	"shadowing-backend/internal/service/speecheval"
 )
 
 // toDifficulty رشته‌ی سطح سختی را به نوع دامین تبدیل می‌کند.
@@ -50,7 +55,13 @@ func toDisplay(op richerror.Op, v string) (scene.DisplayType, error) {
 
 // buildHotspots هات‌اسپات‌های ورودی (DTO) را به هات‌اسپات‌های دامین همراه با دیالوگ‌هایشان
 // تبدیل می‌کند. برای هر هات‌اسپات و دیالوگ شناسه‌ی جدید ساخته می‌شود.
-func buildHotspots(op richerror.Op, reqHotspots []dto.Hotspot) ([]scene.Hotspot, error) {
+//
+// اگر صدای مرجع (audio_url) داشته باشد و whisper-service در دسترس باشد،
+// همین‌جا یک‌بار روی آن فایل تشخیص گفتار اجرا می‌شود تا زمان‌بندی
+// کلمه‌به‌کلمه برای هایلایتِ هم‌زمان با پخش در اپ ذخیره شود. شکست این کار
+// بحرانی نیست — دیالوگ بدون word_timings ذخیره می‌شود و اپ فقط هایلایت را
+// نشان نمی‌دهد.
+func (s Service) buildHotspots(ctx context.Context, op richerror.Op, reqHotspots []dto.Hotspot) ([]scene.Hotspot, error) {
 	hotspots := make([]scene.Hotspot, 0, len(reqHotspots))
 
 	for _, hReq := range reqHotspots {
@@ -89,6 +100,7 @@ func buildHotspots(op richerror.Op, reqHotspots []dto.Hotspot) ([]scene.Hotspot,
 
 			if dReq.AudioURL != "" {
 				dialog.AudioURL = dReq.AudioURL
+				dialog.WordTimings = s.transcribeReferenceAudio(ctx, dReq.AudioURL, dReq.OriginalText)
 			}
 			if dReq.PartialHint != "" {
 				dialog.PartialHint = dReq.PartialHint
@@ -115,4 +127,29 @@ func buildHotspots(op richerror.Op, reqHotspots []dto.Hotspot) ([]scene.Hotspot,
 	}
 
 	return hotspots, nil
+}
+
+// transcribeReferenceAudio زمان‌بندی کلمه‌به‌کلمه‌ی فایل صوتی مرجع را از
+// whisper-service می‌گیرد. audioURL همیشه به شکل «<publicPath>/<filename>»
+// است (بدون زیرپوشه — نگاه کنید به generate_audio.go/upload_audio.go)، پس
+// نام فایل همان بخش آخر URL و مسیر دیسک آن uploadDir/filename است.
+func (s Service) transcribeReferenceAudio(ctx context.Context, audioURL, text string) []scene.WordTiming {
+	if s.whisperURL == "" || text == "" {
+		return nil
+	}
+
+	client := speecheval.NewWhisperClient(s.whisperURL)
+	localPath := filepath.Join(s.uploadDir, filepath.Base(audioURL))
+
+	result, err := client.Transcribe(ctx, localPath, text)
+	if err != nil {
+		fmt.Println("warning: reference audio transcription failed for", audioURL, "-", err)
+		return nil
+	}
+
+	timings := make([]scene.WordTiming, 0, len(result.Words))
+	for _, w := range result.Words {
+		timings = append(timings, scene.WordTiming{Word: w.Word, Start: w.Start, End: w.End})
+	}
+	return timings
 }

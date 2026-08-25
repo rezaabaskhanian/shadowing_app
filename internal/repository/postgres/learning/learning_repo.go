@@ -77,11 +77,17 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 					wordsJSON = b
 				}
 			}
+			var wordTimingsJSON []byte
+			if len(d.WordTimings) > 0 {
+				if b, mErr := json.Marshal(d.WordTimings); mErr == nil {
+					wordTimingsJSON = b
+				}
+			}
 
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, words, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())`
+				audio_url, display_type, partial_hint, wait_duration, words, word_timings, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID,
@@ -95,6 +101,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 				d.PartialHint,
 				d.WaitDuration,
 				wordsJSON,
+				wordTimingsJSON,
 			)
 			if err != nil {
 				return richerror.New(op).
@@ -249,7 +256,7 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 		dialogueQuery := `SELECT
 			id, hotspot_id, "order", speaker, original_text, COALESCE(translation, ''),
 			COALESCE(audio_url, ''), display_type, COALESCE(partial_hint, ''), wait_duration,
-			COALESCE(words, '[]'::jsonb), created_at
+			COALESCE(words, '[]'::jsonb), word_timings, created_at
 		FROM dialogues WHERE hotspot_id = $1 ORDER BY "order"`
 
 		dRows, err := r.conn.Query(ctx, dialogueQuery, h.ID)
@@ -262,16 +269,20 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 		for dRows.Next() {
 			var d scene.Dialogue
 			var wordsJSON []byte
+			var wordTimingsJSON []byte
 			err := dRows.Scan(
 				&d.ID, &d.HotspotID, &d.Order, &d.Speaker, &d.OriginalText,
 				&d.Translation, &d.AudioURL, &d.DisplayType,
-				&d.PartialHint, &d.WaitDuration, &wordsJSON, &d.CreatedAt,
+				&d.PartialHint, &d.WaitDuration, &wordsJSON, &wordTimingsJSON, &d.CreatedAt,
 			)
 			if err != nil {
 				return scene.Scene{}, richerror.New(op).WithErr(err)
 			}
 			if len(wordsJSON) > 0 {
 				_ = json.Unmarshal(wordsJSON, &d.Words)
+			}
+			if len(wordTimingsJSON) > 0 {
+				_ = json.Unmarshal(wordTimingsJSON, &d.WordTimings)
 			}
 			dialogues = append(dialogues, d)
 		}
@@ -390,16 +401,22 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 					wordsJSON = b
 				}
 			}
+			var wordTimingsJSON []byte
+			if len(d.WordTimings) > 0 {
+				if b, mErr := json.Marshal(d.WordTimings); mErr == nil {
+					wordTimingsJSON = b
+				}
+			}
 
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, words, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())`
+				audio_url, display_type, partial_hint, wait_duration, words, word_timings, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID, h.ID, d.Order, d.Speaker, d.OriginalText,
 				d.Translation, d.AudioURL, d.DisplayType,
-				d.PartialHint, d.WaitDuration, wordsJSON,
+				d.PartialHint, d.WaitDuration, wordsJSON, wordTimingsJSON,
 			)
 			if err != nil {
 				return richerror.New(op).WithErr(err).WithMessage("failed to insert dialogue")
@@ -421,15 +438,16 @@ func (r DB) GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, 
 	query := `SELECT
 		id, hotspot_id, "order", speaker, original_text, COALESCE(translation, ''),
 		COALESCE(audio_url, ''), display_type, COALESCE(partial_hint, ''), wait_duration,
-		COALESCE(words, '[]'::jsonb), created_at
+		COALESCE(words, '[]'::jsonb), word_timings, created_at
 	FROM dialogues WHERE id = $1`
 
 	var d scene.Dialogue
 	var wordsJSON []byte
+	var wordTimingsJSON []byte
 	err := r.conn.QueryRow(ctx, query, id).Scan(
 		&d.ID, &d.HotspotID, &d.Order, &d.Speaker, &d.OriginalText,
 		&d.Translation, &d.AudioURL, &d.DisplayType,
-		&d.PartialHint, &d.WaitDuration, &wordsJSON, &d.CreatedAt,
+		&d.PartialHint, &d.WaitDuration, &wordsJSON, &wordTimingsJSON, &d.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -442,6 +460,9 @@ func (r DB) GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, 
 
 	if len(wordsJSON) > 0 {
 		_ = json.Unmarshal(wordsJSON, &d.Words)
+	}
+	if len(wordTimingsJSON) > 0 {
+		_ = json.Unmarshal(wordTimingsJSON, &d.WordTimings)
 	}
 
 	return d, nil

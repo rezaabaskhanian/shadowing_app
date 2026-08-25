@@ -88,6 +88,13 @@ interface SceneCameraHeroProps {
   /** حباب دیالوگ بالای سر گوینده‌ی فعلی — متن/گوینده‌ی خط جاری. */
   bubbleSpeaker?: string;
   bubbleText?: string;
+  /**
+   * محتوای غنی‌تر برای داخل حباب (مثلاً جمله‌ی هایلایت‌شده‌ی کلمه‌به‌کلمه) —
+   * وقتی داده شود به‌جای bubbleText رندر می‌شود. اگر نه این و نه bubbleText
+   * چیزی نداشته باشند، حباب اصلاً نمایش داده نمی‌شود (همان راهی که حالت
+   * «کارت پایین» را از تکرارِ هم‌زمانِ متن آزاد می‌کند).
+   */
+  bubbleContent?: React.ReactNode;
   /** فقط وقتی true است حباب نمایش داده می‌شود (با پایان صدای هر خط، بسته می‌شود). */
   bubbleVisible: boolean;
 }
@@ -111,6 +118,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   onForward,
   bubbleSpeaker,
   bubbleText,
+  bubbleContent,
   bubbleVisible,
 }) => {
   const zoomAnim = useRef(new Animated.Value(1)).current;
@@ -118,7 +126,8 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   const panYAnim = useRef(new Animated.Value(0)).current;
   // فید این/اوت حباب دیالوگ — با شروع هر خط باز، با پایان صدایش بسته می‌شود.
   const bubbleAnim = useRef(new Animated.Value(0)).current;
-  const showBubble = bubbleVisible && !sceneFinished && !!activeTarget && !!bubbleText;
+  const showBubble =
+    bubbleVisible && !sceneFinished && !!activeTarget && (!!bubbleText || !!bubbleContent);
 
   // اندازه‌ی واقعی جعبه‌ی حباب (طول متن هر جمله فرق می‌کند) — تا وقتی اندازه‌
   // گیری نشده یک تخمین منطقی استفاده می‌شود که خیلی از واقعیت دور نیست.
@@ -280,9 +289,11 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
               {bubbleSpeaker.toUpperCase()}
             </Text>
           ) : null}
-          <Text style={styles.bubbleText} numberOfLines={4}>
-            {bubbleText}
-          </Text>
+          {bubbleContent ?? (
+            <Text style={styles.bubbleText} numberOfLines={4}>
+              {bubbleText}
+            </Text>
+          )}
         </View>
         <View style={styles.bubbleTail} />
       </Animated.View>

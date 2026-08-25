@@ -25,6 +25,9 @@ export function ensureTrackPlayerSetup(): Promise<void> {
           // قابلیت‌ها را خالی می‌گذاریم.
           capabilities: [Capability.Play, Capability.Pause, Capability.Stop],
           notificationCapabilities: [],
+          // برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با پخش لازم است؛ پیش‌فرض
+          // کتابخانه (۱ ثانیه) خیلی درشت است.
+          progressUpdateEventInterval: 0.1,
         })
       )
       .catch((err) => {

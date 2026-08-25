@@ -18,10 +18,18 @@ type Repository interface {
 
 type Service struct {
 	repo Repository
+	// whisperURL آدرس سایدکار تشخیص گفتار برای زمان‌بندی کلمه‌به‌کلمه‌ی صدای
+	// مرجع است؛ اگر خالی باشد، دیالوگ‌ها بدون word_timings ذخیره می‌شوند و
+	// اپ فقط هایلایت کلمه‌به‌کلمه را نشان نمی‌دهد — مثل الگوی habitservice.
+	whisperURL string
+	// uploadDir مسیر دیسکِ فایل‌های صوتی آپلودشده (همان مسیری که آدرس عمومی
+	// audio_url به آن اشاره می‌کند) — برای اینکه بتوانیم فایل را مستقیم به
+	// whisper-service بدهیم.
+	uploadDir string
 }
 
-func New(repo Repository) Service {
-	return Service{repo: repo}
+func New(repo Repository, whisperURL, uploadDir string) Service {
+	return Service{repo: repo, whisperURL: whisperURL, uploadDir: uploadDir}
 }
 
 /*

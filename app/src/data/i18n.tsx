@@ -190,6 +190,13 @@ export const translations: Translations = {
     fa: 'مرحله‌های گوش دادن و سایه زدن چند بار تکرار شوند و بعد خودکار جلو بروند. ∞ یعنی منتظر خودت می‌ماند.',
   },
   selfPacedHint: { en: 'Take your time — continue when ready', fa: 'هر چقدر خواستی تمرین کن' },
+  textInBubble: { en: 'Bubble', fa: 'حباب' },
+  textInCard: { en: 'Card', fa: 'کارت' },
+  highlightColorLabel: { en: 'Highlight color', fa: 'رنگ هایلایت' },
+  highlightColorSub: {
+    en: 'Color used to highlight the word being spoken.',
+    fa: 'رنگی که برای هایلایت کلمه‌ی در حال گفتن استفاده می‌شود.',
+  },
   recordingRequiredTitle: { en: 'Recording needed', fa: 'ضبط لازم است' },
   recordingRequiredMessage: {
     en: 'Record yourself first — you need a recording before you can compare it.',

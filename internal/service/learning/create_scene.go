@@ -55,7 +55,7 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	}
 
 	// ========== 4️⃣ اضافه کردن هات‌اسپات‌ها با دیالوگ‌ها ==========
-	hotspots, err := buildHotspots(op, req.Hotspots)
+	hotspots, err := s.buildHotspots(ctx, op, req.Hotspots)
 	if err != nil {
 		return dto.Scene{}, err
 	}
@@ -96,6 +96,7 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 				PartialHint:  d.PartialHint,
 				WaitDuration: d.WaitDuration,
 				Words:        toWordDTOs(d.Words),
+				WordTimings:  toWordTimingDTOs(d.WordTimings),
 			}
 		}
 
@@ -130,6 +131,20 @@ func toWordDTOs(ws []scene.DialogueWord) []dto.Word {
 	out := make([]dto.Word, 0, len(ws))
 	for _, w := range ws {
 		out = append(out, dto.Word{Word: w.Word, Meaning: w.Meaning})
+	}
+	return out
+}
+
+// toWordTimingDTOs زمان‌بندی کلمه‌های دامنه را به DTO تبدیل می‌کند. اگر
+// تشخیص گفتار برای این دیالوگ اجرا نشده باشد nil برمی‌گرداند (نه آرایه‌ی
+// خالی) تا در JSON اصلاً فیلد word_timings نمایش داده نشود.
+func toWordTimingDTOs(ws []scene.WordTiming) []dto.WordTiming {
+	if len(ws) == 0 {
+		return nil
+	}
+	out := make([]dto.WordTiming, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, dto.WordTiming{Word: w.Word, Start: w.Start, End: w.End})
 	}
 	return out
 }

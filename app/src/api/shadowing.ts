@@ -20,6 +20,9 @@ export interface WordScore {
   status: WordStatus;
   /** چیزی که واقعاً شنیده شده؛ برای کلمه‌های گفته‌نشده خالی است. */
   heard?: string;
+  /** زمان شروع/پایان این کلمه در ضبط کاربر (ثانیه)؛ برای کلمه‌های گفته‌نشده هر دو صفرند. */
+  start?: number;
+  end?: number;
 }
 
 export interface EvaluationResult {

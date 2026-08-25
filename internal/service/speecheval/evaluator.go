@@ -29,6 +29,10 @@ type WordScore struct {
 	Status WordStatus `json:"status"`
 	// Heard چیزی که واقعاً شنیده شده؛ اگر کلمه اصلاً گفته نشده خالی است
 	Heard string `json:"heard,omitempty"`
+	// Start و End (ثانیه، از ابتدای ضبط کاربر) — برای هایلایتِ هم‌زمان با
+	// پخشِ دوباره‌ی ضبط در مرحله‌ی Compare. اگر کلمه گفته نشده، هر دو صفرند.
+	Start float64 `json:"start,omitempty"`
+	End   float64 `json:"end,omitempty"`
 }
 
 // EvaluationResult - نتیجه ارزیابی تلفظ و روانی گفتار

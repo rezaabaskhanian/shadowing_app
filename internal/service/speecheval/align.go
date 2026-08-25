@@ -188,6 +188,8 @@ func scoreWords(targetRaw []string, target, heard []string, heardWords []HeardWo
 		prob := 0.8
 		if a.heardIndex < len(heardWords) {
 			prob = heardWords[a.heardIndex].Probability
+			ws.Start = heardWords[a.heardIndex].Start
+			ws.End = heardWords[a.heardIndex].End
 		}
 		ws.Heard = heard[a.heardIndex]
 

@@ -22,8 +22,12 @@ export const PronunciationFeedback: React.FC<{
   evalState: 'idle' | 'scoring' | 'done' | 'error';
   evalError: string | null;
   onRetry?: () => void;
+  /** موقعیتِ زنده‌ی پخشِ ضبطِ کاربر (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه. */
+  recordingPositionSeconds?: number;
+  /** true وقتی همین حالا همین ضبط در حال پخش است. */
+  isPlayingRecording?: boolean;
   t: (key: string) => string;
-}> = ({ evaluation, evalState, evalError, onRetry, t }) => {
+}> = ({ evaluation, evalState, evalError, onRetry, recordingPositionSeconds, isPlayingRecording, t }) => {
   if (evalState === 'scoring') {
     return (
       <View style={feedbackCardStyles.feedbackCard}>
@@ -77,7 +81,12 @@ export const PronunciationFeedback: React.FC<{
         <ScorePill label={t('scoreFluency')} value={evaluation.fluency_score} />
       </View>
 
-      {!!evaluation.words?.length && <ScoredDialogueText words={evaluation.words} />}
+      {!!evaluation.words?.length && (
+        <ScoredDialogueText
+          words={evaluation.words}
+          currentTimeSeconds={isPlayingRecording ? recordingPositionSeconds : undefined}
+        />
+      )}
 
       {!!evaluation.transcript && (
         <Text style={styles.transcriptText} numberOfLines={2}>
