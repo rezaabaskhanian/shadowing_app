@@ -9,7 +9,13 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# ایندکس پیش‌فرض PyPI از سرورهای ایران قابل‌دسترس نیست (شبیه مشکل دانلود مدل
+# از HuggingFace در download-model.sh)؛ به‌جایش از آینه‌ی ایرانی رانفلر استفاده
+# می‌شود.
+RUN pip install --no-cache-dir \
+    --index-url https://mirror-pypi.runflare.com/simple \
+    --trusted-host mirror-pypi.runflare.com \
+    -r requirements.txt
 
 COPY main.py .
 
