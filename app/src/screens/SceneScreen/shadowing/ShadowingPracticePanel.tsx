@@ -7,6 +7,7 @@ import type { AudioActionCommand } from '../types';
 import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
 
 import { StepTabs } from './StepTabs';
+import { LineChipsRow } from './LineChipsRow';
 import { RepeatProgressRow } from './RepeatProgressRow';
 import { DialogueSentenceBox } from './DialogueSentenceBox';
 import { PracticeWaveformCard } from './PracticeWaveformCard';
@@ -151,6 +152,15 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onChangeStep={onChangeStep}
         t={t}
       />
+
+      {activeStepIndex === 2 && dialogueLines.length > 1 && (
+        <LineChipsRow
+          lineCount={dialogueLines.length}
+          recordedLines={recordedLines}
+          activeLineIndex={activeLineIndex}
+          onSelectLine={onSelectLine}
+        />
+      )}
 
       <RepeatProgressRow
         autoRepeat={autoRepeat}
