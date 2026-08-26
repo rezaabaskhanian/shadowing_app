@@ -34,6 +34,19 @@ services:
     networks:
       - aramina_net
 
+  whisper:
+    build: ./whisper-service
+    container_name: shadowing_whisper_prod
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: /models/base.en
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+    volumes:
+      - ./whisper-service/models:/models:ro
+    networks:
+      - aramina_net
+
   backend:
     build:
       context: .
@@ -43,6 +56,8 @@ services:
       postgres:
         condition: service_healthy
       xray:
+        condition: service_started
+      whisper:
         condition: service_started
     environment:
       AI_PROVIDER: ${AI_PROVIDER}
@@ -59,7 +74,7 @@ services:
       DB_NAME: ${DB_NAME}
       JWT_SIGN_KEY: ${JWT_SIGN_KEY}
       ALLOWED_ORIGINS: https://admin.lingoflow.ir
-      WHISPER_URL: ${WHISPER_URL}
+      WHISPER_URL: http://whisper:9000
       # پراکسی خروجی برای دور زدن بلاک جغرافیایی Gemini/Anthropic/ElevenLabs از IP ایران؛
       # به سایدکار xray (سرویس بالا) وصل می‌شود. لینک vless از پنل ادمین (تب تنظیمات) ست می‌شود.
       AI_OUTBOUND_PROXY: socks5://xray:1080
