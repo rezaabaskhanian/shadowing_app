@@ -31,6 +31,19 @@ export interface RecordingMeta {
 const DIR = `${RNFS.DocumentDirectoryPath}/recordings`;
 const INDEX_KEY = 'my_recordings_index';
 
+/**
+ * `react-native-nitro-sound` از `stopRecorder()` یک URI به شکل `file://...`
+ * برمی‌گرداند (هم روی اندروید هم iOS — مستقیم از Uri.fromFile/URL خودِ
+ * سیستم‌عامل می‌آید)، نه یک مسیر خامِ فایل‌سیستم. اگر همین رشته را مستقیم
+ * به `RNFS.moveFile` بدهیم، لایه‌ی native آن را به‌عنوان یک مسیرِ حرف‌به‌حرف
+ * (یعنی پوشه‌ای به اسم literal "file:") می‌خواند، فایل را پیدا نمی‌کند، و
+ * move همیشه شکست می‌خورد — یعنی ضبط هیچ‌وقت واقعاً ذخیره نمی‌شود، هرچند
+ * خودِ ضبط‌شدن بی‌مشکل انجام شده. برای APIهای nitro-sound (پخش) دست‌نخورده
+ * می‌ماند چون آن‌ها خودشان با Uri.parse این پیشوند را درست می‌فهمند؛ فقط
+ * قبل از سپردنش به RNFS باید پیشوند را برداریم.
+ */
+const toFsPath = (value: string) => (value.startsWith('file://') ? value.slice('file://'.length) : value);
+
 /** نام صحنه را به یک قطعه‌ی امن برای نام فایل تبدیل می‌کند. */
 const slugify = (value: string) =>
   value
@@ -81,15 +94,17 @@ export const saveRecording = async (params: {
     await RNFS.mkdir(DIR);
   }
 
+  const sourcePath = toFsPath(params.sourcePath);
+
   const createdAt = Date.now();
-  const ext = params.sourcePath.split('.').pop() || 'm4a';
+  const ext = sourcePath.split('.').pop() || 'm4a';
   // مثال: `coffee-shop_line-03_20260814-153207.m4a`
   const fileName =
     `${slugify(params.sceneTitle)}_line-${String(params.lineNumber).padStart(2, '0')}` +
     `_${timestampLabel(new Date(createdAt))}.${ext}`;
   const path = `${DIR}/${fileName}`;
 
-  await RNFS.moveFile(params.sourcePath, path);
+  await RNFS.moveFile(sourcePath, path);
 
   const meta: RecordingMeta = {
     id: `${createdAt}`,

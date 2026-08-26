@@ -233,7 +233,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           await Sound.stopPlayer().catch(() => {});
           await Sound.startPlayer(loadedRecordingPath);
         } catch (err) {
-          console.warn('[AudioPlayer] playback of recording failed:', err);
+          // این خطا الان بی‌صدا قورت داده می‌شود (به نفعِ «پخش همه»، که باید
+          // با شکستِ یک ضبط کامل متوقف نشود) — ولی مسیر فایل را هم لاگ
+          // می‌کنیم تا اگر یک فایل خاص همیشه شکست می‌خورد (نه یک خطای موقت)
+          // بشود از لاگ فهمید کدام فایل و چرا.
+          console.warn('[AudioPlayer] playback of recording failed:', loadedRecordingPath, err);
           if (!cancelled) onRecordedPlaybackEnd?.();
         }
       })();

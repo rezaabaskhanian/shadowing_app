@@ -98,11 +98,10 @@ export const SceneScreen = () => {
   // بریده نشود؛ فقط برای تصویرهای خیلی کشیده‌ی عمودی یک سقف می‌گذاریم که کل
   // صفحه را نبلعند.
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_SCENE_ASPECT);
-  // const topViewHeight = Math.min(
-  //   Math.round(screenWidth / imageAspectRatio),
-  //   Math.round(screenHeight * 0.6)
-  // );
-  const topViewHeight = screenHeight * 0.5;
+  const topViewHeight = Math.min(
+    Math.round(screenWidth / imageAspectRatio),
+    Math.round(screenHeight * 0.6)
+  );
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [inScene, setInScene] = useState(false); // false = Intro overview, true = Active player
@@ -502,12 +501,17 @@ export const SceneScreen = () => {
     [scenarioId, scenario, activeIndex, currentDialogue.dialogue]
   );
 
-  /** پخش ضبط یک جمله‌ی مشخص (یا جمله‌ی جاری). */
+  /**
+   * پخش ضبط یک جمله‌ی مشخص (یا جمله‌ی جاری). اندیس فعال را هم روی همین جمله
+   * می‌گذارد تا دوربین و کادرِ هایلایت‌شده در لیست ضبط‌ها با «پخش همه» هم‌گام
+   * جلو بروند، نه اینکه روی جمله‌ی قبل از شروعِ پخش ثابت بمانند.
+   */
   const playRecordingOfLine = useCallback(
     (lineIndex: number) => {
       const rec = recordings[lineIndex];
       if (!rec) return;
       setPlaying(false);
+      setActiveIndex(lineIndex);
       setPlayingRecordingUrl(rec.filePath);
       setActionCommand('play_recording');
       setAudioNonce((n) => n + 1);
@@ -617,13 +621,17 @@ export const SceneScreen = () => {
     setSavedFileName(null);
   }, [scenarioId]);
 
+  /** فاصله‌ی مکث بین پایان یک ضبط و شروع پخش ضبطِ بعدی در «پخش همه». */
+  const PLAY_ALL_GAP_MS = 1000;
+
   /** با پایان هر ضبط، اگر صفی هست نوبت بعدی را پخش می‌کند. */
   const handleRecordedPlaybackEnd = useCallback(() => {
     setPlayAllQueue((queue) => {
       if (queue.length === 0) return queue;
       const [next, ...rest] = queue;
-      // خودِ پخش نمی‌تواند داخل setState انجام شود؛ به تیک بعدی موکولش می‌کنیم.
-      setTimeout(() => playRecordingOfLine(next), 350);
+      // خودِ پخش نمی‌تواند داخل setState انجام شود؛ به تیک بعدی موکولش می‌کنیم
+      // (علاوه بر این تأخیر، همین مکث عمدی هم هست تا بین دو ضبط فاصله باشد).
+      setTimeout(() => playRecordingOfLine(next), PLAY_ALL_GAP_MS);
       return rest;
     });
   }, [playRecordingOfLine]);
