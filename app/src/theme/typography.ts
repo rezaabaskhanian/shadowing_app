@@ -1,8 +1,8 @@
 export const FONT_FAMILY = {
-  regular: 'BeVietnamPro-Regular',
-  medium: 'BeVietnamPro-Medium',
-  semiBold: 'BeVietnamPro-SemiBold',
-  bold: 'BeVietnamPro-Bold',
+  regular: 'Vazirmatn-Regular',
+  medium: 'Vazirmatn-Medium',
+  semiBold: 'Vazirmatn-SemiBold',
+  bold: 'Vazirmatn-Bold',
 };
 
 export const TEXT_STYLES = {

@@ -7,8 +7,11 @@ import { FONT_FAMILY } from '../../../theme/typography';
 import { feedbackCardStyles } from './sharedStyles';
 
 /**
- * ردیف زیر کارت ویوفرمِ مرحله‌ی ضبط: هشدارِ «ضبط ممکن نیست» (اگر پیش بیاید)،
- * راهنمای «نگه دار و بگو»، و وضعیت ذخیره‌ی آخرین ضبط روی گوشی.
+ * ردیف زیر کارت ویوفرمِ مرحله‌ی ضبط: هشدارِ «ضبط ممکن نیست» (اگر پیش بیاید)
+ * و وضعیت ذخیره‌ی آخرین ضبط روی گوشی.
+ *
+ * راهنمای «نگه دار و بگو» اینجا نیست — زیرِ خودِ دکمه‌ی میکروفن (در نوار ثابت
+ * پایین) نشان داده می‌شود تا درست بالای دکمه نه چیز دیگری فاصله نیفتد.
  */
 export const RecordingSaveStatus: React.FC<{
   recordingUnavailable: boolean;
@@ -18,12 +21,10 @@ export const RecordingSaveStatus: React.FC<{
   t: (key: string) => string;
 }> = ({ recordingUnavailable, saveState, savedFileName, onOpenRecordings, t }) => (
   <>
-    {recordingUnavailable ? (
+    {recordingUnavailable && (
       <View style={[feedbackCardStyles.feedbackCard, feedbackCardStyles.feedbackCardError]}>
         <Text style={feedbackCardStyles.feedbackErrorText}>{t('recordingUnavailable')}</Text>
       </View>
-    ) : (
-      <Text style={styles.holdToRecordHint}>{t('holdToRecord')}</Text>
     )}
 
     {saveState !== 'idle' && (
@@ -56,13 +57,6 @@ export const RecordingSaveStatus: React.FC<{
 );
 
 const styles = StyleSheet.create({
-  holdToRecordHint: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
   saveStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',

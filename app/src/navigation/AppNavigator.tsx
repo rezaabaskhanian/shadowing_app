@@ -38,6 +38,7 @@ import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestio
 import { FeedbackScreen } from '../screens/Feedback/FeedbackScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
+import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
@@ -55,6 +56,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'Feedback',
   'ContactUs',
   'Paywall',
+  'ToastDemo',
 ];
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
@@ -253,6 +255,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="Paywall"
         component={PaywallScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="ToastDemo"
+        component={ToastDemoScreen}
         options={{
           tabBarButton: () => null,
         }}

@@ -38,6 +38,15 @@ const DAILY_SESSIONS_GOAL = 10;
 
 const todayISODate = () => new Date().toISOString().slice(0, 10);
 
+/** کلید احوال‌پرسی بر اساس ساعت واقعی دستگاه، نه یک متن ثابت. */
+const getGreetingKey = (): string => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'greetingMorning';
+  if (hour >= 12 && hour < 17) return 'greetingAfternoon';
+  if (hour >= 17 && hour < 21) return 'greetingEvening';
+  return 'greetingNight';
+};
+
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
@@ -106,6 +115,14 @@ export const HomeScreen = () => {
 
   const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
+  // اسمِ کاربر واقعی؛ اگر ثبت نشده بود، بدون اسم («عصر بخیر!») نشان می‌دهیم
+  // نه یک اسمِ ثابت جعلی.
+  const nameSuffix = user?.nickname
+    ? language === 'fa'
+      ? `، ${user.nickname}`
+      : `, ${user.nickname}`
+    : '';
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -115,10 +132,15 @@ export const HomeScreen = () => {
         {/* HEADER TOP ROW */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{t('goodEvening')}</Text>
+            <Text style={styles.greeting} numberOfLines={2}>
+              {t(getGreetingKey())}
+              {nameSuffix}
+            </Text>
             <Text style={styles.headerTitle}>{t('readyToStepIn')}</Text>
           </View>
 
+          {/* روی ردیف جدا و زیر متن، نه کنارش — وگرنه با اسمِ بلند، دکمه‌ی
+              باز کردنِ دراور از صفحه بیرون می‌افتاد. */}
           <View style={styles.headerActions}>
             {/* Language Selector */}
             <TouchableOpacity style={styles.langBadge} onPress={toggleLanguage}>
@@ -301,9 +323,6 @@ const styles = StyleSheet.create({
     paddingTop: 54,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 20,
   },
   greeting: {
@@ -321,7 +340,9 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: 8,
+    marginTop: 12,
   },
   langBadge: {
     flexDirection: 'row',

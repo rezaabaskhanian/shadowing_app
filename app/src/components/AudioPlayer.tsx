@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import Sound from 'react-native-nitro-sound';
@@ -84,28 +84,48 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     );
   }, []);
 
+  // `onPlaybackStatusUpdate`/`onProgress` روی هر رندرِ SceneScreen یک closure
+  // تازه‌اند؛ اگر مستقیم در dependency باشند، این افکت هر بار listenerهای
+  // native را جدا و دوباره وصل می‌کند. با نگه‌داشتنشان در ref، subscribe فقط
+  // یک‌بار انجام می‌شود ولی همیشه به آخرین نسخه‌ی callback می‌رسد.
+  const onPlaybackStatusUpdateRef = useRef(onPlaybackStatusUpdate);
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => {
+    onPlaybackStatusUpdateRef.current = onPlaybackStatusUpdate;
+    onProgressRef.current = onProgress;
+  }, [onPlaybackStatusUpdate, onProgress]);
+
+  // وقتی صدای مرجع عوض می‌شود (افکت پایین‌تر)، بینِ `reset()` و `add()`ی
+  // خودمان، صف لحظه‌ای خالی می‌شود — این می‌تواند یک `PlaybackQueueEnded`
+  // ساختگی شلیک کند که هیچ ربطی به تمام‌شدنِ واقعیِ صدا ندارد. بدون این پرچم،
+  // آن رویداد به «finished» ترجمه می‌شد و مثلاً حبابِ دیالوگِ خطِ تازه (که
+  // همان لحظه با «بعدی» باز شده) را دوباره می‌بست — همان چیزی که باعث می‌شد
+  // حباب گاهی بیاید گاهی نه.
+  const switchingTrackRef = useRef(false);
+
   useEffect(() => {
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (data) => {
-      if (data.state === State.Playing) onPlaybackStatusUpdate?.('playing');
-      else if (data.state === State.Paused) onPlaybackStatusUpdate?.('paused');
-      else if (data.state === State.Error) onPlaybackStatusUpdate?.('error');
+      if (data.state === State.Playing) onPlaybackStatusUpdateRef.current?.('playing');
+      else if (data.state === State.Paused) onPlaybackStatusUpdateRef.current?.('paused');
+      else if (data.state === State.Error) onPlaybackStatusUpdateRef.current?.('error');
       else if (data.state === State.Loading || data.state === State.Buffering) {
-        onPlaybackStatusUpdate?.('loading');
+        onPlaybackStatusUpdateRef.current?.('loading');
       }
     });
     // پایان صف = پایان صدای مرجع؛ چون همیشه فقط یک track در صف داریم.
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
-      onPlaybackStatusUpdate?.('finished');
+      if (switchingTrackRef.current) return;
+      onPlaybackStatusUpdateRef.current?.('finished');
     });
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (data) => {
-      onProgress?.(data.position, 'original');
+      onProgressRef.current?.(data.position, 'original');
     });
     return () => {
       stateSub.remove();
       endedSub.remove();
       progressSub.remove();
     };
-  }, [onPlaybackStatusUpdate, onProgress]);
+  }, []);
 
   // این دستورها مال ضبط/پخشِ ضبط‌اند، نه صدای مرجع؛ افکت پایین باید نادیده
   // بگیردشان تا با اجرای هم‌زمانشان به هم برخورد نکنند.
@@ -118,6 +138,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     if (isRecordingCommand) return;
 
     let cancelled = false;
+    switchingTrackRef.current = true;
     (async () => {
       await ensureTrackPlayerSetup();
       if (cancelled) return;
@@ -148,10 +169,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       } else {
         await TrackPlayer.pause();
       }
-    })().catch((err) => {
-      console.warn('[AudioPlayer] master playback failed:', err);
-      onPlaybackStatusUpdate?.('error');
-    });
+    })()
+      .catch((err) => {
+        console.warn('[AudioPlayer] master playback failed:', err);
+        onPlaybackStatusUpdateRef.current?.('error');
+      })
+      .finally(() => {
+        switchingTrackRef.current = false;
+      });
 
     return () => {
       cancelled = true;

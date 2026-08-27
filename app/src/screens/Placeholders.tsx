@@ -4,12 +4,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Play, PlusCircle, Settings, User as UserIcon } from 'lucide-react-native';
-import { SceneListCard } from '../components/SceneListCard';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Play, PlusCircle, Search, Settings, User as UserIcon, X } from 'lucide-react-native';
+import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
@@ -30,12 +31,15 @@ import {
 export { HomeScreen } from './Home';
 
 type CategoryFilter = ScenarioCategory | 'all';
+type LevelFilter = string | 'all';
 
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
   const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
+  const [activeLevel, setActiveLevel] = React.useState<LevelFilter>('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   // دسته‌بندی‌ها دیگر ثابت نیستند؛ از روی دسته‌بندی واقعی صحنه‌ها (که ادمین در
   // پنل تعیین می‌کند) ساخته می‌شوند.
@@ -49,9 +53,26 @@ export const ScenesScreen = () => {
     ];
   }, [scenes, t]);
 
-  const filteredScenes = scenes.filter(
-    (scenario) => activeCategory === 'all' || scenario.category === activeCategory
-  );
+  // سطح‌ها هم مثل دسته‌بندی از روی داده‌ی واقعی صحنه‌ها ساخته می‌شوند، ولی
+  // ترتیبشان ثابت (آسان→متوسط→حرفه‌ای) است، نه ترتیب برخورد در لیست.
+  const levels: { id: LevelFilter; label: string }[] = React.useMemo(() => {
+    const present = new Set(scenes.map((s) => s.level).filter(Boolean));
+    const ordered = Object.keys(LEVEL_LABEL_KEY).filter((lvl) => present.has(lvl));
+    return [
+      { id: 'all', label: t('all') },
+      ...ordered.map((lvl) => ({ id: lvl, label: t(LEVEL_LABEL_KEY[lvl]) })),
+    ];
+  }, [scenes, t]);
+
+  const filteredScenes = scenes.filter((scenario) => {
+    if (activeCategory !== 'all' && scenario.category !== activeCategory) return false;
+    if (activeLevel !== 'all' && scenario.level !== activeLevel) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (q && !scenario.title.toLowerCase().includes(q) && !(scenario.description || '').toLowerCase().includes(q)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -63,6 +84,23 @@ export const ScenesScreen = () => {
       </View>
       <Text style={styles.pageTitle}>{t('chooseScenarioTitle')}</Text>
       <Text style={styles.pageSub}>{t('chooseScenarioSub')}</Text>
+
+      <View style={styles.searchBox}>
+        <Search color={COLORS.muted} size={17} />
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('searchScenesPlaceholder')}
+          placeholderTextColor={COLORS.muted}
+          returnKeyType="search"
+        />
+        {!!searchQuery && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <X color={COLORS.muted} size={16} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       {categories.length > 1 && (
         <View style={styles.categoryRow}>
@@ -76,6 +114,24 @@ export const ScenesScreen = () => {
                 style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}
               >
                 {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {levels.length > 1 && (
+        <View style={styles.categoryRow}>
+          {levels.map((lvl) => (
+            <TouchableOpacity
+              key={lvl.id}
+              style={[styles.categoryChip, activeLevel === lvl.id && styles.categoryChipActive]}
+              onPress={() => setActiveLevel(lvl.id)}
+            >
+              <Text
+                style={[styles.categoryChipText, activeLevel === lvl.id && styles.categoryChipTextActive]}
+              >
+                {lvl.label}
               </Text>
             </TouchableOpacity>
           ))}
@@ -98,7 +154,7 @@ export const ScenesScreen = () => {
       </TouchableOpacity>
 
       {filteredScenes.length === 0 ? (
-        <Text style={styles.emptyCategoryText}>{t('noScenariosInCategory')}</Text>
+        <Text style={styles.emptyCategoryText}>{t('noScenariosMatch')}</Text>
       ) : (
         <View style={styles.featuredList}>
           {filteredScenes.map((scenario) => (
@@ -306,7 +362,7 @@ export const ProgressScreen = () => {
 
 import { useNotifications, ReminderTime, ContentSource } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Clock, Mic, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Clock, MessageSquare, Mic, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
 
 export const ProfileScreen = () => {
@@ -422,6 +478,22 @@ export const ProfileScreen = () => {
         <View style={{ flex: 1 }}>
           <Text style={styles.pointsValue}>{t('myRecordings')}</Text>
           <Text style={styles.pointsSub}>{t('myRecordingsSub')}</Text>
+        </View>
+        <ChevronRight color={COLORS.muted} size={18} />
+      </TouchableOpacity>
+
+      {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست */}
+      <TouchableOpacity
+        style={styles.pointsCard}
+        onPress={() => navigation.navigate('ToastDemo')}
+        activeOpacity={0.85}
+      >
+        <View style={styles.pointsIconWrap}>
+          <MessageSquare color={COLORS.primary} size={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pointsValue}>{t('toastDemoMenuLabel')}</Text>
+          <Text style={styles.pointsSub}>{t('toastDemoMenuSub')}</Text>
         </View>
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
@@ -615,6 +687,25 @@ const styles = StyleSheet.create({
   },
   featuredList: {
     gap: 4,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 14,
+    padding: 0,
   },
   categoryRow: {
     flexDirection: 'row',

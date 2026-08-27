@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { AuthScreens } from './src/screens/AuthScreens';
 import { ScenesProvider } from './src/data/ScenesContext';
@@ -13,6 +14,8 @@ import { PracticeSettingsProvider } from './src/data/PracticeSettingsContext';
 
 import { NotificationProvider } from './src/data/NotificationContext';
 import { NotificationBanner } from './src/components/NotificationBanner';
+import { ToastProvider } from './src/data/ToastContext';
+import { Toast } from './src/components/Toast';
 
 function AppContent({ showSplash }: { showSplash: boolean }) {
   const { isAuthenticated, isRestoring } = useAuth();
@@ -65,12 +68,17 @@ export default function App() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <LanguageProvider>
-        <AuthProvider>
-          <AppContent showSplash={showSplash} />
-        </AuthProvider>
-      </LanguageProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <LanguageProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AppContent showSplash={showSplash} />
+            </AuthProvider>
+            <Toast />
+          </ToastProvider>
+        </LanguageProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

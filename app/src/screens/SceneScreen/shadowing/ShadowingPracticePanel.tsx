@@ -153,7 +153,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         t={t}
       />
 
-      {activeStepIndex === 2 && dialogueLines.length > 1 && (
+      {(activeStepIndex === 2 || activeStepIndex === 3) && dialogueLines.length > 1 && (
         <LineChipsRow
           lineCount={dialogueLines.length}
           recordedLines={recordedLines}

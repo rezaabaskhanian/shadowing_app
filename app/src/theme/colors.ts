@@ -43,8 +43,13 @@ export const COLORS = {
 
   // State Colors
   success: '#006e4b',
+  successLight: 'rgba(0, 110, 75, 0.12)',
   error: '#ba1a1a',
+  errorLight: 'rgba(186, 26, 26, 0.10)',
   info: '#3B82F6',
+  infoLight: 'rgba(59, 130, 246, 0.12)',
+  warning: '#b45309',
+  warningLight: 'rgba(180, 83, 9, 0.12)',
   white: '#FFFFFF',
   black: '#000000',
 };

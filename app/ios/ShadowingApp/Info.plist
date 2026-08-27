@@ -34,17 +34,17 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>برای ضبط صدای شما در تمرین‌های تکرار (Shadowing) به دسترسی میکروفون نیاز داریم.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
 	<array>
-		<string>BeVietnamPro-SemiBold.ttf</string>
-		<string>BeVietnamPro-Regular.ttf</string>
-		<string>BeVietnamPro-Medium.ttf</string>
-		<string>BeVietnamPro-Bold.ttf</string>
+		<string>Vazirmatn-Bold.ttf</string>
+		<string>Vazirmatn-Medium.ttf</string>
+		<string>Vazirmatn-Regular.ttf</string>
+		<string>Vazirmatn-SemiBold.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

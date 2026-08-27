@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, BackHandler, ScrollView, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
+import { FONT_FAMILY } from '../../theme/typography';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { SessionResultScreen } from '../../components/SessionResultScreen';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
 import { useScenes } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
+import { useToast } from '../../data/ToastContext';
 import { usePracticeSettings } from '../../data/PracticeSettingsContext';
 import { saveRecording } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
@@ -72,6 +74,7 @@ export const SceneScreen = () => {
   const { scenarioId } = route.params || {};
   const { getScene } = useScenes();
   const { language, t } = useLanguage();
+  const toast = useToast();
   const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
   const { user } = useAuth();
   const [streakCount, setStreakCount] = useState(0);
@@ -168,12 +171,12 @@ export const SceneScreen = () => {
   // به‌ازای جمله نگه می‌داریم (نه یک مقدار واحد) تا با جابه‌جا شدن بین جمله‌ها
   // بازخورد جمله‌ی قبلی روی جمله‌ی جدید نماند.
   const [evaluations, setEvaluations] = useState<Record<number, EvaluationResult>>({});
-  const [evalState, setEvalState] = useState<'idle' | 'scoring' | 'done' | 'error'>('idle');
-  const [evalError, setEvalError] = useState<string | null>(null);
-  // کدام جمله وضعیت نمره‌دهی بالا مال اوست. بدون این، اگر کاربر وسط
-  // نمره‌دهی جمله را عوض کند، حالتِ «در حال بررسی» یا خطا روی جمله‌ی اشتباه
-  // نشان داده می‌شود.
-  const [evalLineIndex, setEvalLineIndex] = useState<number | null>(null);
+  // وضعیت/خطای نمره‌دهی به‌ازای هر جمله جداست (نه یک مقدار سراسری) چون همه‌ی
+  // جمله‌های ضبط‌شده هم‌زمان و موازی نمره‌دهی می‌شوند (پایین‌تر، ورود به
+  // Compare) — با یک مقدار واحد، وضعیتِ «در حال بررسی»ی یک جمله روی بقیه هم
+  // نشان داده می‌شد.
+  const [evalStates, setEvalStates] = useState<Record<number, 'idle' | 'scoring' | 'done' | 'error'>>({});
+  const [evalErrors, setEvalErrors] = useState<Record<number, string | null>>({});
   // زمان شروع ضبط، برای اینکه مدت واقعی ضبط را به سرور بدهیم؛ نمره‌ی روانی
   // بدون آن قابل محاسبه نیست.
   const recordStartedAtRef = useRef<number>(0);
@@ -212,9 +215,8 @@ export const SceneScreen = () => {
   // نتیجه‌ی نمره‌دهی همین جمله (اگر ضبطی ارزیابی شده باشد).
   const currentEvaluation = evaluations[activeIndex];
 
-  // وضعیت نمره‌دهی فقط وقتی به این جمله مربوط است که برای خودش شروع شده
-  // باشد؛ در غیر این صورت انگار هیچ نمره‌دهی‌ای در جریان نیست.
-  const currentEvalState = evalLineIndex === activeIndex ? evalState : 'idle';
+  const currentEvalState = evalStates[activeIndex] ?? 'idle';
+  const currentEvalError = evalErrors[activeIndex] ?? null;
 
   // اندیس جمله‌هایی که ضبط دارند — برای علامت‌زدن در لیست ضبط‌ها.
   const recordedLineNumbers = useMemo(
@@ -322,18 +324,41 @@ export const SceneScreen = () => {
     playDialogueAt(0);
   };
 
-  // ورود به مرحله‌ی «مقایسه» (idx 3) بدون داشتن یک ضبط برای خط فعلی معنی
-  // نداره — چیزی برای مقایسه نیست. چه با دکمه‌ی «مرحله بعد» چه با زدن مستقیم
-  // روی تب Compare، از همین یک نقطه رد می‌شود.
+  // ورود به مرحله‌ی «مقایسه» (idx 3) بدون هیچ ضبطی توی کل صحنه معنی نداره —
+  // چیزی برای مقایسه نیست. لازم نیست دقیقاً خطِ فعلی ضبط داشته باشد؛ کافی است
+  // حداقل یک جمله ضبط شده باشد، چون توی خودِ Compare هم (مثل Record) می‌شود
+  // با دایره‌های بالا بین جمله‌ها جابه‌جا شد. اگر خطِ فعلی ضبط نداشت ولی جای
+  // دیگری داشت، مستقیم به همان جمله‌ی ضبط‌شده می‌پریم تا کاربر با یک صفحه‌ی
+  // خالی روبه‌رو نشود.
+  const jumpToCompare = useCallback(() => {
+    if (!recordings[activeIndex]) {
+      const recordedIdx = Object.keys(recordings)
+        .map(Number)
+        .sort((a, b) => a - b)[0];
+      if (recordedIdx !== undefined) {
+        setActiveIndex(recordedIdx);
+        // بدون این، دکمه‌ی «صدای مرجع» صدای جمله‌ای را پخش می‌کرد که پیش از
+        // این با playDialogueAt پخش شده بود، نه همین جمله‌ای که تازه پریدیم.
+        setAudioUri(dialogueItems[recordedIdx]?.audioUrl || null);
+        setBubbleVisible(true);
+      }
+    }
+    setActiveStepIndex(3);
+  }, [recordings, activeIndex, dialogueItems]);
+
   const requestStepChange = useCallback(
     (targetIdx: number) => {
-      if (targetIdx === 3 && !recordings[activeIndex]) {
-        Alert.alert(t('recordingRequiredTitle'), t('recordingRequiredMessage'));
+      if (targetIdx === 3 && Object.keys(recordings).length === 0) {
+        toast.warning(t('recordingRequiredMessage'), { title: t('recordingRequiredTitle') });
+        return;
+      }
+      if (targetIdx === 3) {
+        jumpToCompare();
         return;
       }
       setActiveStepIndex(targetIdx);
     },
-    [recordings, activeIndex, t]
+    [recordings, t, toast, jumpToCompare]
   );
 
   // رفتن به مرحله‌ی بعدی تمرین؛ روی مرحله‌ی آخر، جلسه تمام‌شده تلقی می‌شود.
@@ -341,8 +366,8 @@ export const SceneScreen = () => {
   // یا خود کاربر دکمه‌ی «مرحله بعد» را زده)، نه وقتی صرفاً روی تب دیگری پریده.
   const goToNextStep = useCallback(
     (markDone = true) => {
-      if (activeStepIndex === 2 && !recordings[activeIndex]) {
-        Alert.alert(t('recordingRequiredTitle'), t('recordingRequiredMessage'));
+      if (activeStepIndex === 2 && Object.keys(recordings).length === 0) {
+        toast.warning(t('recordingRequiredMessage'), { title: t('recordingRequiredTitle') });
         return;
       }
       if (markDone) {
@@ -350,13 +375,15 @@ export const SceneScreen = () => {
           prev.includes(activeStepIndex) ? prev : [...prev, activeStepIndex]
         );
       }
-      if (activeStepIndex < 3) {
+      if (activeStepIndex === 2) {
+        jumpToCompare();
+      } else if (activeStepIndex < 3) {
         setActiveStepIndex(activeStepIndex + 1);
       } else {
         setShowResult(true);
       }
     },
-    [activeStepIndex, recordings, activeIndex, t]
+    [activeStepIndex, recordings, t, toast, jumpToCompare]
   );
 
   const handleNextDialogue = useCallback(() => {
@@ -469,8 +496,8 @@ export const SceneScreen = () => {
         delete next[lineIndex];
         return next;
       });
-      setEvalState('idle');
-      setEvalError(null);
+      setEvalStates((prev) => ({ ...prev, [lineIndex]: 'idle' }));
+      setEvalErrors((prev) => ({ ...prev, [lineIndex]: null }));
 
       setSaveState('saving');
       saveRecording({
@@ -512,11 +539,15 @@ export const SceneScreen = () => {
       if (!rec) return;
       setPlaying(false);
       setActiveIndex(lineIndex);
+      // تا اگر بعداً کاربر «صدای مرجع» را زد، صدای همین جمله پخش شود نه
+      // جمله‌ای که پیش از این با playDialogueAt پخش شده بود.
+      setAudioUri(dialogueItems[lineIndex]?.audioUrl || null);
+      setBubbleVisible(true);
       setPlayingRecordingUrl(rec.filePath);
       setActionCommand('play_recording');
       setAudioNonce((n) => n + 1);
     },
-    [recordings]
+    [recordings, dialogueItems]
   );
 
   /** پخش صدای مرجع همین جمله (بدون تغییر مرحله). */
@@ -549,43 +580,75 @@ export const SceneScreen = () => {
   }, []);
 
   /**
-   * فرستادن ضبط جمله‌ی جاری به بک‌اند برای نمره‌دهی تلفظ. از مرحله‌ی مقایسه
-   * دستی صدا زده می‌شود.
+   * فرستادن ضبطِ یک جمله‌ی مشخص به بک‌اند برای نمره‌دهی گفتار. هم از مرحله‌ی
+   * مقایسه دستی (برای جمله‌ی جاری) صدا زده می‌شود، هم خودکار برای همه‌ی
+   * جمله‌های ضبط‌شده وقتی وارد Compare می‌شویم (پایین‌تر) — چند تا هم‌زمان و
+   * موازی، برای همین وضعیت/خطا به‌ازای هر جمله جداست، نه یک مقدار سراسری.
    */
-  const scoreCurrentLine = useCallback(() => {
-    const rec = recordings[activeIndex];
-    if (!rec || evalState === 'scoring') return;
+  const scoreLine = useCallback(
+    (lineIndex: number) => {
+      const rec = recordings[lineIndex];
+      if (!rec || evalStates[lineIndex] === 'scoring') return;
 
-    // اندیس را همین‌جا می‌بندیم: تا وقتی پاسخ سرور برسد ممکن است کاربر جمله
-    // را عوض کرده باشد، و نتیجه باید به جمله‌ی درست بچسبد.
-    const lineIndex = activeIndex;
-    const dialogue = dialogueItems[lineIndex];
+      const dialogue = dialogueItems[lineIndex];
 
-    setEvalState('scoring');
-    setEvalLineIndex(lineIndex);
-    setEvalError(null);
-    evaluateRecording({
-      filePath: rec.filePath,
-      mimeType: rec.mimeType,
-      dialogueId: dialogue?.id,
-      targetText: dialogue?.dialogue,
-      duration: rec.duration,
-      expectedDuration: DEFAULT_LINE_SECONDS,
-    })
-      .then((result) => {
-        setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
-        setEvalState('done');
+      setEvalStates((prev) => ({ ...prev, [lineIndex]: 'scoring' }));
+      setEvalErrors((prev) => ({ ...prev, [lineIndex]: null }));
+      evaluateRecording({
+        filePath: rec.filePath,
+        mimeType: rec.mimeType,
+        dialogueId: dialogue?.id,
+        targetText: dialogue?.dialogue,
+        duration: rec.duration,
+        expectedDuration: DEFAULT_LINE_SECONDS,
       })
-      .catch((err) => {
-        console.warn('[SceneScreen] pronunciation scoring failed:', err);
-        setEvalError(err?.message || null);
-        setEvalState('error');
-      });
-  }, [recordings, activeIndex, dialogueItems, evalState]);
+        .then((result) => {
+          setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
+          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'done' }));
+        })
+        .catch((err) => {
+          console.warn('[SceneScreen] pronunciation scoring failed:', err);
+          setEvalErrors((prev) => ({ ...prev, [lineIndex]: err?.message || null }));
+          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'error' }));
+        });
+    },
+    [recordings, dialogueItems, evalStates]
+  );
+
+  const scoreCurrentLine = useCallback(() => {
+    scoreLine(activeIndex);
+  }, [scoreLine, activeIndex]);
 
   /**
-   * انتخاب یک جمله از لیست ضبط‌ها. عمداً پخش را شروع نمی‌کند: کاربر آمده که
-   * دوباره ضبط کند، نه اینکه صدای مرجع پخش شود.
+   * ورودِ به Compare یعنی کاربر می‌خواهد نتیجه ببیند — به‌جای مجبورکردنش به
+   * زدن دکمه‌ی «بررسی گفتارم» برای تک‌تک جمله‌ها، همه‌ی جمله‌های ضبط‌شده‌ای
+   * که هنوز نمره ندارند را همین‌جا و موازی می‌فرستیم؛ هرکدام که جواب آمد،
+   * همان لحظه (چه کاربر رویش باشد چه نه) توی evaluations می‌نشیند. جمله‌های
+   * قبلاً نمره‌گرفته یا در حالِ نمره‌گیری یا شکست‌خورده دوباره فرستاده
+   * نمی‌شوند — برای خطا عمداً retry خودکار نداریم تا با یک مشکل مداوم شبکه
+   * پشت‌سرهم درخواستِ ناموفق نزنیم؛ retry دستی همان دکمه‌ی «تلاش دوباره» است.
+   */
+  useEffect(() => {
+    if (activeStepIndex !== 3) return;
+    Object.keys(recordings)
+      .map(Number)
+      .forEach((idx) => {
+        const state = evalStates[idx] ?? 'idle';
+        if (!evaluations[idx] && state === 'idle') {
+          scoreLine(idx);
+        }
+      });
+  }, [activeStepIndex, recordings, evaluations, evalStates, scoreLine]);
+
+  /**
+   * انتخاب یک جمله از لیست ضبط‌ها/دایره‌های بالا. عمداً خودش پخش را شروع
+   * نمی‌کند: کاربر آمده که دوباره ضبط کند یا مقایسه کند، نه اینکه صدای مرجع
+   * همین الان پخش شود. ولی `audioUri` را همین‌جا به‌روز می‌کنیم — وگرنه با
+   * زدن دکمه‌ی پخش، چون `audioUri` هنوز از آخرین `playDialogueAt` مانده،
+   * صدای جمله‌ی قبلی پخش می‌شد نه جمله‌ی تازه‌انتخاب‌شده. `bubbleVisible` هم
+   * همین‌جا باز می‌شود — وگرنه اگر صدای جمله‌ی قبلی تا آخر پخش شده بود (که
+   * حباب را می‌بندد)، با انتخاب جمله‌ی بعدی حباب همچنان بسته می‌ماند تا
+   * کاربر دکمه‌ی پخش را بزند.
    */
   const selectLine = useCallback(
     (lineIndex: number) => {
@@ -593,8 +656,10 @@ export const SceneScreen = () => {
       setPlaying(false);
       setPlayAllQueue([]);
       setActiveIndex(lineIndex);
+      setAudioUri(dialogueItems[lineIndex]?.audioUrl || null);
+      setBubbleVisible(true);
     },
-    [dialogueItems.length]
+    [dialogueItems]
   );
 
   const toggleRevealText = useCallback(() => {
@@ -614,9 +679,8 @@ export const SceneScreen = () => {
     setTextRevealed(false);
     setPlayAllQueue([]);
     setPlayingRecordingUrl(null);
-    setEvalState('idle');
-    setEvalLineIndex(null);
-    setEvalError(null);
+    setEvalStates({});
+    setEvalErrors({});
     setSaveState('idle');
     setSavedFileName(null);
   }, [scenarioId]);
@@ -836,7 +900,7 @@ export const SceneScreen = () => {
               savedFileName={savedFileName}
               evaluation={currentEvaluation}
               evalState={currentEvalState}
-              evalError={evalError}
+              evalError={currentEvalError}
               onScoreCurrentLine={scoreCurrentLine}
               // ---- ضبط‌ها ----
               recordedLines={recordedLineNumbers}
@@ -892,6 +956,9 @@ export const SceneScreen = () => {
             hasRecordingForCurrentLine={!!recordings[activeIndex]}
             onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
           />
+          {activeStepIndex === 2 && canRecord && (
+            <Text style={styles.holdToRecordHint}>{t('holdToRecord')}</Text>
+          )}
         </View>
       )}
     </View>
@@ -916,6 +983,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 20,
     paddingTop: 4,
+  },
+  holdToRecordHint: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   playerSheet: {
     flex: 1,

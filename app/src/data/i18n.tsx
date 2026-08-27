@@ -18,7 +18,10 @@ export const translations: Translations = {
   profile: { en: 'You', fa: 'حساب من' },
   
   // Home Screen
-  goodEvening: { en: 'Good evening, Maya', fa: 'عصر بخیر، مایا' },
+  greetingMorning: { en: 'Good morning', fa: 'صبح بخیر' },
+  greetingAfternoon: { en: 'Good afternoon', fa: 'ظهر بخیر' },
+  greetingEvening: { en: 'Good evening', fa: 'عصر بخیر' },
+  greetingNight: { en: 'Good night', fa: 'شب بخیر' },
   readyToStepIn: { en: 'Ready to step in?', fa: 'آماده‌ای شروع کنیم؟' },
   todaysShadowing: { en: 'Today\'s shadowing', fa: 'سایه‌زنی امروز' },
   repsCount: { en: 'reps', fa: 'تکرار' },
@@ -71,13 +74,14 @@ export const translations: Translations = {
   categoryBusiness: { en: 'Business', fa: 'کاری' },
   categoryTravel: { en: 'Travel', fa: 'سفر' },
   categoryDaily: { en: 'Daily', fa: 'روزمره' },
-  noScenariosInCategory: { en: 'No scenarios in this category yet.', fa: 'هنوز سناریویی در این دسته نیست.' },
+  noScenariosMatch: { en: 'No scenarios match your filters.', fa: 'سناریویی با این فیلترها پیدا نشد.' },
+  searchScenesPlaceholder: { en: 'Search scenarios…', fa: 'جست‌وجوی سناریوها…' },
 
   // Progress Screen
   greatJobTitle: { en: 'Great Job!', fa: 'عالی بود!' },
   greatJobSub: { en: 'You did amazing on today\'s practice.', fa: 'عملکرد فوق‌العاده‌ای در تمرین امروز داشتید.' },
   overallScore: { en: 'Overall Score', fa: 'نمره کل' },
-  pronunciation: { en: 'Pronunciation', fa: 'تلفظ' },
+  pronunciation: { en: 'Clarity', fa: 'وضوح' },
   compareAudio: { en: 'Compare Audio', fa: 'مقایسه صدا' },
   vocabulary: { en: 'Vocabulary', fa: 'دایره واژگان' },
   listening: { en: 'Listening', fa: 'شنیداری' },
@@ -210,25 +214,29 @@ export const translations: Translations = {
   masterAudio: { en: 'Master Audio', fa: 'صدای اصلی' },
   yourRecording: { en: 'Your Recording', fa: 'صدای شما' },
 
-  // ---- نمره‌دهی تلفظ ----
-  scoringInProgress: { en: 'Scoring your pronunciation…', fa: 'در حال بررسی تلفظ شما…' },
+  // ---- نمره‌دهی گفتار ----
+  // این فیچر تلفظ آوایی (فونتیک) را نمی‌سنجد؛ فقط با کمکِ اطمینانِ STT
+  // (whisper) می‌گوید هر کلمه چقدر واضح ادا شده. برای همین همه‌جا از واژه‌ی
+  // «تلفظ» پرهیز شده و «وضوح/گفتار» به‌کار رفته تا چیزی که واقعاً سنجیده
+  // نمی‌شود ادعا نشود.
+  scoringInProgress: { en: 'Scoring your speech…', fa: 'در حال بررسی گفتار شما…' },
   scoringFailed: {
     en: "Couldn't score this recording. Check your connection.",
     fa: 'نمره‌دهی انجام نشد. اتصال اینترنت را بررسی کنید.',
   },
   recordToSeeScore: {
-    en: 'Record yourself to see your pronunciation score',
-    fa: 'صدایت را ضبط کن تا نمره‌ی تلفظت را ببینی',
+    en: 'Record yourself to see your speech score',
+    fa: 'صدایت را ضبط کن تا نمره‌ی گفتارت را ببینی',
   },
   scoreEstimatedNote: {
-    en: 'Rough estimate — pronunciation service unavailable, so words are not checked.',
-    fa: 'نمره تقریبی است — سرویس بررسی تلفظ در دسترس نبود، پس کلمه‌ها بررسی نشده‌اند.',
+    en: 'Rough estimate — speech-recognition service unavailable, so words are not checked.',
+    fa: 'نمره تقریبی است — سرویس تشخیص گفتار در دسترس نبود، پس کلمه‌ها بررسی نشده‌اند.',
   },
   scoreOverall: { en: 'Overall', fa: 'کل' },
-  scorePronunciation: { en: 'Pronunciation', fa: 'تلفظ' },
+  scorePronunciation: { en: 'Clarity', fa: 'وضوح' },
   scoreFluency: { en: 'Fluency', fa: 'روانی' },
   weHeard: { en: 'We heard:', fa: 'آنچه شنیدیم:' },
-  checkPronunciation: { en: 'Check my pronunciation', fa: 'تلفظم را بررسی کن' },
+  checkPronunciation: { en: 'Check my speech', fa: 'گفتارم را بررسی کن' },
   tryAgain: { en: 'Try again', fa: 'تلاش دوباره' },
   noRecordingForLine: {
     en: 'Not recorded yet',
@@ -469,6 +477,24 @@ export const translations: Translations = {
   contactUsCopy: { en: 'Copy', fa: 'کپی' },
   contactUsCopied: { en: 'Copied!', fa: 'کپی شد!' },
   contactUsOpenEmail: { en: 'Open Email App', fa: 'باز کردن اپ ایمیل' },
+
+  // ---- Toast demo ----
+  toastDemoTitle: { en: 'Toast Preview', fa: 'پیش‌نمایش پیام‌ها' },
+  toastDemoSub: {
+    en: 'Tap a card to fire that toast — same messages shown for real elsewhere in the app.',
+    fa: 'روی هر کارت بزن تا همون پیام نمایش داده بشه — دقیقاً همون متن‌هایی که جاهای واقعی اپ دیده می‌شن.',
+  },
+  toastDemoSuccessTitle: { en: 'Success', fa: 'موفقیت' },
+  toastDemoErrorTitle: { en: 'Error', fa: 'خطا' },
+  toastDemoInfoTitle: { en: 'Info', fa: 'اطلاع‌رسانی' },
+  toastDemoWarningTitle: { en: 'Warning', fa: 'هشدار' },
+  toastDemoQueueTitle: { en: 'Queue (fires 3 in a row)', fa: 'صف (۳ تا پشت‌سرهم)' },
+  toastDemoQueueSample: {
+    en: 'Shows how back-to-back toasts wait their turn instead of interrupting each other.',
+    fa: 'نشون می‌ده وقتی چند پیام پشت‌سرهم بیان، هرکدوم نوبتشو صبر می‌کنه و قطع نمی‌شه.',
+  },
+  toastDemoMenuLabel: { en: 'Toast Preview', fa: 'پیش‌نمایش پیام‌ها' },
+  toastDemoMenuSub: { en: 'Dev-only: see every toast style', fa: 'فقط برای توسعه: دیدن همه‌ی استایل‌های پیام' },
 };
 
 interface LanguageContextType {

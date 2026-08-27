@@ -90,8 +90,11 @@ export const DialogueSentenceBox: React.FC<{
       </TouchableOpacity>
     )}
 
-    {/* لغت‌های همین جمله؛ با زدن روی هرکدام به جعبه‌ی لایتنر می‌رود */}
-    <DialogueVocabChips words={currentDialogue.words} onOpenLeitner={onOpenLeitner} t={t} />
+    {/* لغت‌های همین جمله؛ با زدن روی هرکدام به جعبه‌ی لایتنر می‌رود.
+        در مرحله‌ی ضبط نمایش داده نمی‌شود تا حواس کاربر از حفظ‌گویی پرت نشود. */}
+    {activeStepIndex !== 2 && (
+      <DialogueVocabChips words={currentDialogue.words} onOpenLeitner={onOpenLeitner} t={t} />
+    )}
 
     {activeStepIndex === 1 && (
       <View style={styles.shadowBannerPill}>
