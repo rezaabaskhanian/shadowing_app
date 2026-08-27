@@ -17,7 +17,7 @@ set -euo pipefail
 
 MODEL="${1:-base.en}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/models/$MODEL"
-BASE="https://huggingface.co/Systran/faster-whisper-$MODEL/resolve/main"
+BASE="https://hf-mirror.com/Systran/faster-whisper-$MODEL/resolve/main"
 
 # اگر HuggingFace مستقیم جواب نداد، آینه را امتحان کن:
 #   BASE="https://hf-mirror.com/Systran/faster-whisper-$MODEL/resolve/main"
