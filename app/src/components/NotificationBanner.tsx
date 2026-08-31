@@ -20,7 +20,7 @@ export const NotificationBanner: React.FC = () => {
         <View style={styles.headerRow}>
           <View style={styles.iconWrap}>
             {activeBanner.type === 'leitner' ? (
-              <BookOpen color={COLORS.secondary} size={18} />
+              <BookOpen color={COLORS.info} size={18} />
             ) : (
               <Mic color={COLORS.tertiary} size={18} />
             )}

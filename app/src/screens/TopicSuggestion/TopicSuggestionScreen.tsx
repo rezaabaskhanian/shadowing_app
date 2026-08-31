@@ -27,7 +27,7 @@ const statusMeta = (status: TopicSuggestion['status']) => {
     case 'rejected':
       return { color: COLORS.error, icon: XCircle, key: 'statusRejected' as const };
     default:
-      return { color: COLORS.secondary, icon: Clock, key: 'statusPending' as const };
+      return { color: COLORS.warningDeep, icon: Clock, key: 'statusPending' as const };
   }
 };
 

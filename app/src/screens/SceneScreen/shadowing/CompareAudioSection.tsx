@@ -63,7 +63,7 @@ export const CompareAudioSection: React.FC<{
       <View style={styles.abRowBody}>
         <Text style={styles.compareLabel}>{t('yourRecording')}</Text>
         {hasRecordingForCurrentLine ? (
-          <WaveBars active color={COLORS.secondary} />
+          <WaveBars active color={COLORS.audioMine} />
         ) : (
           <Text style={styles.abEmptyHint}>{t('noRecordingForLine')}</Text>
         )}
@@ -110,10 +110,10 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.audioOriginal,
   },
   abPlayCircleMine: {
-    backgroundColor: COLORS.secondaryContainer,
+    backgroundColor: COLORS.audioMine,
   },
   abEmptyHint: {
     color: COLORS.muted,

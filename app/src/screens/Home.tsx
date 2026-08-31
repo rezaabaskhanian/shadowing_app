@@ -184,7 +184,7 @@ export const HomeScreen = () => {
               <Text style={styles.statChipLabel}>{t('repsCount')}</Text>
             </View>
             <View style={styles.statChip}>
-              <Clock size={16} color={COLORS.secondary} />
+              <Clock size={16} color={COLORS.info} />
               <Text style={styles.statChipValue}>{todayMinutes}</Text>
               <Text style={styles.statChipLabel}>{t('min')}</Text>
             </View>
@@ -293,7 +293,7 @@ export const HomeScreen = () => {
             <ScenarioCard
               key={scenario.id || index}
               title={scenario.title}
-              level={scenario.level || 'A2'}
+              level={scenario.level || 'Beginner'}
               progress={scenario.progress || 0}
               time={scenario.time || '12 min'}
               imageUri={scenario.imageUri}

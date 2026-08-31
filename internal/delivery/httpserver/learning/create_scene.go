@@ -52,7 +52,7 @@ func (h Handler) CreateScene(c echo.Context) error {
 	if !validDifficulties[req.Difficulty] {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_difficulty",
-			"message": "سطح سختی باید یکی از مقادیر beginner, intermediate, advanced باشد",
+			"message": "سطح زبان‌آموز باید یکی از مقادیر beginner, intermediate, advanced باشد",
 		})
 	}
 

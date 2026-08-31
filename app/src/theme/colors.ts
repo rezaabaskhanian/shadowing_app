@@ -15,7 +15,10 @@ export const COLORS = {
   primaryLight: 'rgba(53, 37, 205, 0.10)',
   onPrimaryContainer: '#dad7ff',
 
-  secondary: '#fea619', // Gold — reserved for streaks/achievements only
+  // Gold — فقط استریک، دستاورد و امتیاز/سکه. برای وضعیت (pending/ضعیف)،
+  // آمار، دسته‌بندی یا حالتِ فعال از این توکن استفاده نکن؛ آن‌ها توکن
+  // خودشان را دارند (warning/warningDeep، info، audioMine، primaryDark).
+  secondary: '#fea619',
   secondaryContainer: '#684000',
   secondaryLight: 'rgba(254, 166, 25, 0.15)',
 
@@ -41,6 +44,20 @@ export const COLORS = {
   border: '#c7c4d8',
   borderLight: '#e2e8f8',
 
+  // Scene level ramp — رمپ اختصاصی بج سطح صحنه‌ها.
+  // عمداً از توکن‌های state و brand جدا نگه داشته شده تا معنیِ آن‌ها
+  // (خطا، استریک/دستاورد، CTA) با «سطح» قاطی نشود. هر سه با متن سفید
+  // حداقل ۶:۱ کنتراست دارند و کنار آیکن و لیبل خودشان می‌آیند،
+  // پس رنگ تنها کانالِ تمایزشان نیست.
+  levelBeginnerBg: '#006e4b',     // سبز — شروع
+  levelIntermediateBg: '#0b5cad', // آبی — در مسیر
+  levelAdvancedBg: '#3525cd',     // نیلی — تسلط
+
+  // A/B compare — «صدای اصلی» در برابر «صدای خودت».
+  // این هم محور مستقلی است و توکن خودش را دارد تا از استریک قرض نگیرد.
+  audioOriginal: '#3525cd', // نیلی — صدای مرجع
+  audioMine: '#0e7490',     // فیروزه‌ی تیره — صدای کاربر (با آیکن سفید ۵.۴:۱)
+
   // State Colors
   success: '#006e4b',
   successLight: 'rgba(0, 110, 75, 0.12)',
@@ -49,6 +66,9 @@ export const COLORS = {
   info: '#3B82F6',
   infoLight: 'rgba(59, 130, 246, 0.12)',
   warning: '#b45309',
+  // نسخه‌ی تیره‌ی warning برای *متن* روی زمینه‌ی روشن؛ خودِ warning
+  // روی چیپ‌های کم‌رنگ فقط ۴.۳:۱ می‌دهد و از حد متن معمولی پایین‌تر است.
+  warningDeep: '#7c3a06',
   warningLight: 'rgba(180, 83, 9, 0.12)',
   white: '#FFFFFF',
   black: '#000000',

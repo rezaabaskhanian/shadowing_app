@@ -11,7 +11,7 @@ type WordLevel = 'excellent' | 'good' | 'practice';
 
 const LEVEL_COLOR: Record<WordLevel, { bg: string; text: string; dot: string }> = {
   excellent: { bg: COLORS.tertiaryLight, text: COLORS.tertiary, dot: COLORS.tertiary },
-  good: { bg: COLORS.secondaryLight, text: COLORS.secondaryContainer, dot: COLORS.secondary },
+  good: { bg: COLORS.warningLight, text: COLORS.warningDeep, dot: COLORS.warning },
   practice: { bg: 'rgba(186, 26, 26, 0.10)', text: COLORS.error, dot: COLORS.error },
 };
 

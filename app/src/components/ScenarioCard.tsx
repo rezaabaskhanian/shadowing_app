@@ -1,14 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { ChevronRight, Check, Lock } from 'lucide-react-native';
-import { COLORS, BORDER_RADIUS } from '../theme/colors';
+import { COLORS } from '../theme/colors';
 import { useLanguage } from '../data/i18n';
-
-const LEVEL_LABEL_KEY: Record<string, string> = {
-  Beginner: 'levelBeginner',
-  Intermediate: 'levelIntermediate',
-  Advanced: 'levelAdvanced',
-};
+import { LEVEL_LABEL_KEY } from './SceneListCard';
 
 interface ScenarioCardProps {
   title: string;
@@ -128,14 +123,18 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
+    flexShrink: 1,
     color: COLORS.text,
     fontSize: 16,
     fontWeight: '700',
     marginRight: 6,
   },
   levelBadge: {
+    flexShrink: 0,
+    alignItems: 'center',
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: 8,
     paddingVertical: 2,

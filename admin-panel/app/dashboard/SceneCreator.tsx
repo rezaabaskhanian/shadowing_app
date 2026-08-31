@@ -626,14 +626,14 @@ export default function SceneCreator({
             />
           </div>
           <div>
-            <label>سطح سختی *</label>
+            <label>سطح زبان‌آموز *</label>
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value as Difficulty)}
             >
-              <option value="beginner">آسان</option>
+              <option value="beginner">مبتدی</option>
               <option value="intermediate">متوسط</option>
-              <option value="advanced">حرفه‌ای</option>
+              <option value="advanced">پیشرفته</option>
             </select>
           </div>
         </div>

@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playBtnActive: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primaryDark,
   },
   recordingText: {
     color: COLORS.textSecondary,

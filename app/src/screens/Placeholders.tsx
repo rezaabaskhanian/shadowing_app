@@ -55,7 +55,7 @@ export const ScenesScreen = () => {
   }, [scenes, t]);
 
   // سطح‌ها هم مثل دسته‌بندی از روی داده‌ی واقعی صحنه‌ها ساخته می‌شوند، ولی
-  // ترتیبشان ثابت (آسان→متوسط→حرفه‌ای) است، نه ترتیب برخورد در لیست.
+  // ترتیبشان ثابت (مبتدی→متوسط→پیشرفته) است، نه ترتیب برخورد در لیست.
   const levels: { id: LevelFilter; label: string }[] = React.useMemo(() => {
     const present = new Set(scenes.map((s) => s.level).filter(Boolean));
     const ordered = Object.keys(LEVEL_LABEL_KEY).filter((lvl) => present.has(lvl));
@@ -195,7 +195,7 @@ const WEEKDAY_LABELS: Record<number, { en: string; fa: string }> = {
 const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary', string> = {
   pronunciation: COLORS.primary,
   fluency: COLORS.tertiary,
-  vocabulary: COLORS.secondary,
+  vocabulary: COLORS.info,
 };
 
 export const ProgressScreen = () => {

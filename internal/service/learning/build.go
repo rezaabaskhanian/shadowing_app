@@ -11,7 +11,7 @@ import (
 	"shadowing-backend/internal/service/speecheval"
 )
 
-// toDifficulty رشته‌ی سطح سختی را به نوع دامین تبدیل می‌کند.
+// toDifficulty رشته‌ی سطح زبان‌آموز را به نوع دامین تبدیل می‌کند.
 func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 	switch v {
 	case "beginner":
@@ -22,7 +22,7 @@ func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 		return scene.DifficultyAdvanced, nil
 	default:
 		return "", richerror.New(op).
-			WithMessage("سطح سختی نامعتبر است. مقادیر مجاز: beginner, intermediate, advanced").
+			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: beginner, intermediate, advanced").
 			WithKind(richerror.KindForbidden)
 	}
 }

@@ -47,9 +47,9 @@ export const PracticeWaveformCard: React.FC<{
   <View style={styles.waveformCard}>
     {activeStepIndex === 1 ? (
       <>
-        <WaveBars active color={COLORS.primary} />
+        <WaveBars active color={COLORS.audioOriginal} />
         <View style={styles.waveformDivider} />
-        <WaveBars active={actionCommand === 'start_record'} color={COLORS.secondary} />
+        <WaveBars active={actionCommand === 'start_record'} color={COLORS.audioMine} />
       </>
     ) : activeStepIndex === 3 ? (
       <CompareAudioSection

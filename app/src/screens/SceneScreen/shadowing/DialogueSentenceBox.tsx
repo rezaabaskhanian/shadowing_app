@@ -98,7 +98,7 @@ export const DialogueSentenceBox: React.FC<{
 
     {activeStepIndex === 1 && (
       <View style={styles.shadowBannerPill}>
-        <Sparkles size={14} color={COLORS.secondaryContainer} />
+        <Sparkles size={14} color={COLORS.primary} />
         <Text style={styles.shadowBannerText}>{t('repeatAlongBanner')}</Text>
       </View>
     )}
@@ -172,14 +172,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 6,
-    backgroundColor: COLORS.secondaryLight,
+    backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
     marginBottom: 8,
   },
   shadowBannerText: {
-    color: COLORS.secondaryContainer,
+    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
   },

@@ -22,9 +22,9 @@ interface SceneListCardProps {
 }
 
 export const LEVEL_BADGE_STYLE: Record<string, { bg: string; text: string; Icon: any }> = {
-  Beginner: { bg: COLORS.tertiary, text: COLORS.white, Icon: GraduationCap },
-  Intermediate: { bg: COLORS.secondary, text: COLORS.secondaryContainer, Icon: Plane },
-  Advanced: { bg: COLORS.error, text: COLORS.white, Icon: Gauge },
+  Beginner: { bg: COLORS.levelBeginnerBg, text: COLORS.white, Icon: GraduationCap },
+  Intermediate: { bg: COLORS.levelIntermediateBg, text: COLORS.white, Icon: Plane },
+  Advanced: { bg: COLORS.levelAdvancedBg, text: COLORS.white, Icon: Gauge },
 };
 
 export function SceneListCard({ title, level, time, imageUri, isLocked, isCompleted, onPress }: SceneListCardProps) {

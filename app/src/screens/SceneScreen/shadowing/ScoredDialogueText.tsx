@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     color: COLORS.tertiary,
   },
   scoredWordWeak: {
-    color: COLORS.secondaryContainer,
+    color: COLORS.warningDeep,
   },
   scoredWordMissing: {
     color: COLORS.error,
