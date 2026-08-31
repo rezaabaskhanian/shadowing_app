@@ -32,7 +32,9 @@ func Auth(service authservice.Service, config authservice.Config) echo.Middlewar
 
 		ParseTokenFunc: func(c echo.Context, auth string) (interface{}, error) {
 
-			claims, err := service.ParseToken("Bearer " + auth)
+			// ParseAccessToken (نه ParseToken): علاوه بر امضا، subject را هم چک
+			// می‌کند تا refresh token به‌عنوان توکن دسترسی پذیرفته نشود.
+			claims, err := service.ParseAccessToken(auth)
 
 			if err != nil {
 				return nil, richerror.New(op).WithErr(err).WithMessage("dont create clamis")

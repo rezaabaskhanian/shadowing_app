@@ -36,19 +36,32 @@ func (s Service) CreateRefreshToken(user domain.User) (string, error) {
 	return s.createToken(string(user.ID), user.Role, s.config.RefreshSubject, s.config.RefreshExpirationTime)
 }
 
-// ParseRefreshToken یک refresh token را اعتبارسنجی می‌کند.
+// ParseAccessToken یک access token را اعتبارسنجی می‌کند و مطمئن می‌شود که
+// واقعاً access token است، نه refresh token.
 //
-// برخلاف ParseToken، اینجا subject هم بررسی می‌شود: بدون این بررسی، یک access
-// token هم به‌عنوان refresh token پذیرفته می‌شد و تفکیک این دو بی‌معنی می‌شد.
+// این بررسی لازم است چون هر دو توکن با یک کلید امضا می‌شوند و فقط subject
+// از هم جدایشان می‌کند. بدون آن، refresh tokenِ هفت‌روزه — که اپ روی دستگاه
+// ذخیره‌اش می‌کند — به‌عنوان توکن دسترسی برای همه‌ی روت‌های محافظت‌شده کار
+// می‌کرد و عمر مؤثر دسترسی از ۲۴ ساعت به ۷ روز می‌رفت.
+func (s Service) ParseAccessToken(tokenStr string) (*Claims, error) {
+	return s.parseWithSubject(tokenStr, s.config.AccessSubject, "این توکن، توکن دسترسی نیست")
+}
+
+// ParseRefreshToken یک refresh token را اعتبارسنجی می‌کند (و مطمئن می‌شود
+// access token به‌جایش فرستاده نشده).
 func (s Service) ParseRefreshToken(tokenStr string) (*Claims, error) {
-	const op = "authservice.ParseRefreshToken"
+	return s.parseWithSubject(tokenStr, s.config.RefreshSubject, "این توکن، توکن تمدید نیست")
+}
+
+func (s Service) parseWithSubject(tokenStr, wantSubject, mismatchMsg string) (*Claims, error) {
+	const op = "authservice.parseWithSubject"
 
 	claims, err := s.ParseToken("Bearer " + tokenStr)
 	if err != nil {
 		return nil, err
 	}
-	if claims.Subject != s.config.RefreshSubject {
-		return nil, richerror.New(op).WithMessage("این توکن، توکن تمدید نیست").WithKind(richerror.KindInvalid)
+	if claims.Subject != wantSubject {
+		return nil, richerror.New(op).WithMessage(mismatchMsg).WithKind(richerror.KindInvalid)
 	}
 	return claims, nil
 }
