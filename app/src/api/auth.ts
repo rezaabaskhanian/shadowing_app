@@ -21,7 +21,7 @@ export async function login(phone: string, password: string): Promise<UserInfo> 
     body: JSON.stringify({ phone_number: phone, password_hash: password }),
   });
   const data = (await jsonOrThrow(res)) as AuthResponse;
-  await setToken(data.tokens.access_token);
+  await setToken(data.tokens.access_token, data.tokens.refresh_token);
   return data.user;
 }
 
@@ -69,7 +69,7 @@ export async function register(
     }),
   });
   const data = (await jsonOrThrow(res)) as AuthResponse;
-  await setToken(data.tokens.access_token);
+  await setToken(data.tokens.access_token, data.tokens.refresh_token);
   return data.user;
 }
 

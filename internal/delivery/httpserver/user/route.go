@@ -14,6 +14,7 @@ func (h Handler) SetUserRoutes(e *echo.Echo) {
 
 	userGroup.POST("/login", h.Login)
 	userGroup.POST("/register", h.Register)
+	userGroup.POST("/refresh", h.Refresh)
 
 	userGroup.POST("/reset-pass", h.ResetPass)
 

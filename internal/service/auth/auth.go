@@ -36,6 +36,23 @@ func (s Service) CreateRefreshToken(user domain.User) (string, error) {
 	return s.createToken(string(user.ID), user.Role, s.config.RefreshSubject, s.config.RefreshExpirationTime)
 }
 
+// ParseRefreshToken یک refresh token را اعتبارسنجی می‌کند.
+//
+// برخلاف ParseToken، اینجا subject هم بررسی می‌شود: بدون این بررسی، یک access
+// token هم به‌عنوان refresh token پذیرفته می‌شد و تفکیک این دو بی‌معنی می‌شد.
+func (s Service) ParseRefreshToken(tokenStr string) (*Claims, error) {
+	const op = "authservice.ParseRefreshToken"
+
+	claims, err := s.ParseToken("Bearer " + tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	if claims.Subject != s.config.RefreshSubject {
+		return nil, richerror.New(op).WithMessage("این توکن، توکن تمدید نیست").WithKind(richerror.KindInvalid)
+	}
+	return claims, nil
+}
+
 func (s Service) ParseToken(authHeader string) (*Claims, error) {
 	const op = "authservice.parseToken"
 
