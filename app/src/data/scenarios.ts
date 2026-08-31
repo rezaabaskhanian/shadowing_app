@@ -47,6 +47,17 @@ export interface Hotspot {
 
 export interface DialogueItem {
   id: string;
+  /**
+   * شناسه‌ی واقعی دیالوگ در دیتابیس. فقط برای جمله‌هایی پر می‌شود که واقعاً یک
+   * ردیف `dialogues` دارند.
+   *
+   * هات‌اسپاتی که هیچ دیالوگی ندارد، به‌ناچار با شناسه‌ی خودِ هات‌اسپات در
+   * `id` ساخته می‌شود؛ آن شناسه به هیچ دیالوگی اشاره نمی‌کند، پس نه می‌شود
+   * برایش نمره‌ی سرور گرفت نه پیشرفت ثبت کرد (کلید خارجی
+   * scene_dialogue_progress.dialogue_id رد می‌کند). هرجا شناسه را به بک‌اند
+   * می‌فرستیم باید از این فیلد استفاده شود، نه از `id`.
+   */
+  dialogueId?: string;
   hotspotId: string;
   x: number;
   y: number;
@@ -89,6 +100,7 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
       for (const d of hotspot.conversation.dialogues) {
         items.push({
           id: d.id,
+          dialogueId: d.id,
           hotspotId: hotspot.id,
           x: hotspot.x,
           y: hotspot.y,
@@ -101,6 +113,7 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
         });
       }
     } else {
+      // عمداً بدون dialogueId: این هات‌اسپات ردیف دیالوگی در دیتابیس ندارد.
       items.push({
         id: hotspot.id,
         hotspotId: hotspot.id,
