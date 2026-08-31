@@ -2,6 +2,9 @@ package userhandler
 
 import (
 	"net/http"
+	"sort"
+	"strings"
+	"time"
 
 	"shadowing-backend/internal/pkg/claims"
 	notificationservice "shadowing-backend/internal/service/notification"
@@ -25,10 +28,40 @@ func (h Handler) GetNotificationSettings(c echo.Context) error {
 }
 
 type updateNotificationSettingsRequest struct {
-	DailyReminderEnabled bool   `json:"daily_reminder_enabled"`
-	DailyReminderTime    string `json:"daily_reminder_time"`
-	ContentNotifEnabled  bool   `json:"content_notif_enabled"`
-	ContentSource        string `json:"content_source"`
+	DailyReminderEnabled bool     `json:"daily_reminder_enabled"`
+	DailyReminderTimes   []string `json:"daily_reminder_times"`
+	ContentNotifEnabled  bool     `json:"content_notif_enabled"`
+	ContentSource        string   `json:"content_source"`
+}
+
+// maxReminderTimes سقف تعداد ساعت‌های یادآوری روزانه‌ی یک کاربر؛ چون هر ساعت
+// روی خود دستگاه یک trigger جداگانه‌ی notifee می‌سازد، بی‌سقف بودن یعنی
+// امکان ساخت صدها نوتیفیکیشن زمان‌بندی‌شده.
+const maxReminderTimes = 12
+
+// normalizeReminderTimes ساعت‌ها را به فرمت HH:MM اعتبارسنجی می‌کند، تکراری‌ها
+// را حذف و مرتب می‌کند. ورودی نامعتبر بی‌صدا کنار گذاشته می‌شود تا یک ساعت خراب
+// کل ذخیره‌ی تنظیمات را شکست ندهد.
+func normalizeReminderTimes(times []string) []string {
+	seen := make(map[string]struct{}, len(times))
+	out := make([]string, 0, len(times))
+	for _, raw := range times {
+		t, err := time.Parse("15:04", strings.TrimSpace(raw))
+		if err != nil {
+			continue
+		}
+		hhmm := t.Format("15:04")
+		if _, dup := seen[hhmm]; dup {
+			continue
+		}
+		seen[hhmm] = struct{}{}
+		out = append(out, hhmm)
+		if len(out) == maxReminderTimes {
+			break
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // UpdateNotificationSettings تنظیمات نوتیفیکیشن کاربر جاری را ذخیره می‌کند.
@@ -45,14 +78,15 @@ func (h Handler) UpdateNotificationSettings(c echo.Context) error {
 	if req.ContentSource != "leitner" && req.ContentSource != "sentences" && req.ContentSource != "mixed" {
 		req.ContentSource = "mixed"
 	}
-	if req.DailyReminderTime == "" {
-		req.DailyReminderTime = "20:00"
-	}
+
+	times := normalizeReminderTimes(req.DailyReminderTimes)
+	// یادآوری روزانه بدون هیچ ساعتی معنایی ندارد؛ خاموش حساب می‌شود.
+	dailyEnabled := req.DailyReminderEnabled && len(times) > 0
 
 	err = h.notificationSvc.UpsertSettings(c.Request().Context(), notificationservice.Settings{
 		UserID:               userClaims.UserID,
-		DailyReminderEnabled: req.DailyReminderEnabled,
-		DailyReminderTime:    req.DailyReminderTime,
+		DailyReminderEnabled: dailyEnabled,
+		DailyReminderTimes:   times,
 		ContentNotifEnabled:  req.ContentNotifEnabled,
 		ContentSource:        req.ContentSource,
 	})

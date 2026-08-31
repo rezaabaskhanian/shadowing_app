@@ -10,7 +10,6 @@ import (
 type repository interface {
 	GetSettings(ctx context.Context, userID string) (postgresnotification.Settings, error)
 	UpsertSettings(ctx context.Context, s postgresnotification.Settings) error
-	DueUsers(ctx context.Context, hhmm string) ([]string, error)
 	UpsertDeviceToken(ctx context.Context, userID, token, platform string) error
 	TokensForUser(ctx context.Context, userID string) ([]string, error)
 	OptedInTokens(ctx context.Context) ([]string, error)
@@ -76,34 +75,4 @@ func (s Service) Broadcast(ctx context.Context, title, body, createdBy string) (
 		return sent, err
 	}
 	return sent, nil
-}
-
-// SendDueReminders برای هر کاربری که یادآوری روزانه‌اش برای ساعت hhmm (فرمت
-// "HH:MM") فعال است، یک نوتیفیکیشن عمومی می‌فرستد. توسط زمان‌بند سرور (هر
-// دقیقه) صدا زده می‌شود.
-func (s Service) SendDueReminders(ctx context.Context, hhmm string) (int, error) {
-	if !s.push.Enabled() {
-		return 0, nil
-	}
-	userIDs, err := s.repo.DueUsers(ctx, hhmm)
-	if err != nil {
-		return 0, err
-	}
-
-	const title = "🔥 وقت تمرینه!"
-	const body = "چند دقیقه تمرین کن تا استریکت از بین نره."
-
-	sentTotal := 0
-	for _, userID := range userIDs {
-		tokens, err := s.repo.TokensForUser(ctx, userID)
-		if err != nil || len(tokens) == 0 {
-			continue
-		}
-		sent, err := s.push.SendToTokens(ctx, tokens, title, body)
-		if err != nil {
-			continue
-		}
-		sentTotal += sent
-	}
-	return sentTotal, nil
 }

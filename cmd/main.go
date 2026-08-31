@@ -31,8 +31,6 @@ import (
 	posttopicsuggestion "shadowing-backend/internal/repository/postgres/topicsuggestion"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
 
-	"shadowing-backend/internal/worker"
-
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	"context"
@@ -144,8 +142,6 @@ func main() {
 	fmt.Println("server is runing")
 
 	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc := setupservice(cfg)
-
-	go worker.RunNotificationScheduler(context.Background(), notificationSvc)
 
 	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc)
 

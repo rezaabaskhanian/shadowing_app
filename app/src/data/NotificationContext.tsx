@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export interface NotificationItem {
   id: string;
@@ -9,14 +9,19 @@ export interface NotificationItem {
   sourceLabel?: string;
 }
 
-export type ReminderTime = '09:00' | '14:00' | '20:00';
+/** ساعت یادآوری با فرمت "HH:MM" (۲۴ساعته) — کاربر خودش انتخابش می‌کند. */
+export type ReminderTime = string;
+
+/** حداکثر تعداد ساعت‌های یادآوری؛ باید با maxReminderTimes در بک‌اند یکی باشد. */
+export const MAX_REMINDER_TIMES = 12;
 export type ContentSource = 'leitner' | 'sentences' | 'mixed';
 
 interface NotificationContextType {
   studyReminderEnabled: boolean;
   setStudyReminderEnabled: (val: boolean) => void;
-  studyReminderTime: ReminderTime;
-  setStudyReminderTime: (time: ReminderTime) => void;
+  studyReminderTimes: ReminderTime[];
+  addStudyReminderTime: (time: ReminderTime) => boolean;
+  removeStudyReminderTime: (time: ReminderTime) => void;
   contentNotificationEnabled: boolean;
   setContentNotificationEnabled: (val: boolean) => void;
   contentSource: ContentSource;
@@ -30,11 +35,13 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType>({
-  studyReminderEnabled: true,
+  // پیش‌فرض هر دو نوتیفیکیشن خاموش است؛ کاربر باید خودش روشنشان کند.
+  studyReminderEnabled: false,
   setStudyReminderEnabled: () => {},
-  studyReminderTime: '20:00',
-  setStudyReminderTime: () => {},
-  contentNotificationEnabled: true,
+  studyReminderTimes: [],
+  addStudyReminderTime: () => false,
+  removeStudyReminderTime: () => {},
+  contentNotificationEnabled: false,
   setContentNotificationEnabled: () => {},
   contentSource: 'mixed',
   setContentSource: () => {},
@@ -50,9 +57,11 @@ import { useAuth } from './AuthContext';
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  const [studyReminderEnabled, setStudyReminderEnabledState] = useState(true);
-  const [studyReminderTime, setStudyReminderTimeState] = useState<ReminderTime>('20:00');
-  const [contentNotificationEnabled, setContentNotificationEnabledState] = useState(true);
+  // پیش‌فرض خاموش — تا وقتی کاربر خودش روشن نکرده و ساعت انتخاب نکرده، هیچ
+  // یادآوری‌ای زمان‌بندی نمی‌شود.
+  const [studyReminderEnabled, setStudyReminderEnabledState] = useState(false);
+  const [studyReminderTimes, setStudyReminderTimesState] = useState<ReminderTime[]>([]);
+  const [contentNotificationEnabled, setContentNotificationEnabledState] = useState(false);
   const [contentSource, setContentSourceState] = useState<ContentSource>('mixed');
   const [activeBanner, setActiveBanner] = useState<NotificationItem | null>(null);
 
@@ -62,13 +71,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     (async () => {
       try {
         const settings = await notifApi.getNotificationSettings();
+        const times = settings.daily_reminder_times ?? [];
         setStudyReminderEnabledState(settings.daily_reminder_enabled);
-        setStudyReminderTimeState(settings.daily_reminder_time as ReminderTime);
+        setStudyReminderTimesState(times);
         setContentNotificationEnabledState(settings.content_notif_enabled);
         setContentSourceState(settings.content_source);
-        if (settings.daily_reminder_enabled) {
-          NativeNotificationService.scheduleDailyReminder(settings.daily_reminder_time as ReminderTime);
-        }
+        // همیشه با وضعیت سرور همگام می‌شویم: اگر یادآوری خاموش است، لیست خالی
+        // فرستاده می‌شود تا trigger‌های باقی‌مانده از قبل هم لغو شوند.
+        NativeNotificationService.scheduleDailyReminders(
+          settings.daily_reminder_enabled ? times : []
+        );
       } catch (err) {
         console.warn('[NotificationContext] failed to load notification settings:', err);
       }
@@ -76,72 +88,120 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     PushNotificationService.init();
   }, [isAuthenticated]);
 
-  const persist = (overrides: Partial<notifApi.NotificationSettings>) => {
+  const persist = useCallback((overrides: Partial<notifApi.NotificationSettings>) => {
     notifApi
       .updateNotificationSettings({
         daily_reminder_enabled: studyReminderEnabled,
-        daily_reminder_time: studyReminderTime,
+        daily_reminder_times: studyReminderTimes,
         content_notif_enabled: contentNotificationEnabled,
         content_source: contentSource,
         ...overrides,
       })
       .catch((err) => console.warn('[NotificationContext] failed to save settings:', err));
-  };
+  }, [studyReminderEnabled, studyReminderTimes, contentNotificationEnabled, contentSource]);
 
-  const setStudyReminderEnabled = (val: boolean) => {
-    setStudyReminderEnabledState(val);
-    if (val) NativeNotificationService.scheduleDailyReminder(studyReminderTime);
-    persist({ daily_reminder_enabled: val });
-  };
+  const setStudyReminderEnabled = useCallback(
+    (val: boolean) => {
+      setStudyReminderEnabledState(val);
+      NativeNotificationService.scheduleDailyReminders(val ? studyReminderTimes : []);
+      persist({ daily_reminder_enabled: val });
+    },
+    [studyReminderTimes, persist]
+  );
 
-  const setStudyReminderTime = (time: ReminderTime) => {
-    setStudyReminderTimeState(time);
-    if (studyReminderEnabled) {
-      NativeNotificationService.scheduleDailyReminder(time);
-    }
-    persist({ daily_reminder_time: time });
-  };
+  /**
+   * addStudyReminderTime یک ساعت جدید اضافه می‌کند. اگر تکراری باشد یا به سقف
+   * رسیده باشیم false برمی‌گرداند تا صفحه‌ی تنظیمات بتواند پیام مناسب بدهد.
+   */
+  const addStudyReminderTime = useCallback(
+    (time: ReminderTime): boolean => {
+      if (studyReminderTimes.includes(time)) return false;
+      if (studyReminderTimes.length >= MAX_REMINDER_TIMES) return false;
 
-  const setContentNotificationEnabled = (val: boolean) => {
-    setContentNotificationEnabledState(val);
-    persist({ content_notif_enabled: val });
-  };
+      const next = [...studyReminderTimes, time].sort();
+      setStudyReminderTimesState(next);
+      if (studyReminderEnabled) {
+        NativeNotificationService.scheduleDailyReminders(next);
+      }
+      persist({ daily_reminder_times: next });
+      return true;
+    },
+    [studyReminderTimes, studyReminderEnabled, persist]
+  );
 
-  const setContentSource = (source: ContentSource) => {
-    setContentSourceState(source);
-    persist({ content_source: source });
-  };
+  const removeStudyReminderTime = useCallback(
+    (time: ReminderTime) => {
+      const next = studyReminderTimes.filter((t) => t !== time);
+      setStudyReminderTimesState(next);
+      if (studyReminderEnabled) {
+        NativeNotificationService.scheduleDailyReminders(next);
+      }
+      persist({ daily_reminder_times: next });
+    },
+    [studyReminderTimes, studyReminderEnabled, persist]
+  );
 
-  const dismissBanner = () => {
+  const setContentNotificationEnabled = useCallback(
+    (val: boolean) => {
+      setContentNotificationEnabledState(val);
+      persist({ content_notif_enabled: val });
+    },
+    [persist]
+  );
+
+  const setContentSource = useCallback(
+    (source: ContentSource) => {
+      setContentSourceState(source);
+      persist({ content_source: source });
+    },
+    [persist]
+  );
+
+  const dismissBanner = useCallback(() => {
     setActiveBanner(null);
-  };
+  }, []);
 
-  const triggerTestNotification = (item: NotificationItem) => {
+  const triggerTestNotification = useCallback((item: NotificationItem) => {
     // Set in-app active banner
     setActiveBanner(item);
 
     // Also trigger native OS notification display
     NativeNotificationService.displayNotification(item);
-  };
+  }, []);
+
+  const value = useMemo<NotificationContextType>(
+    () => ({
+      studyReminderEnabled,
+      setStudyReminderEnabled,
+      studyReminderTimes,
+      addStudyReminderTime,
+      removeStudyReminderTime,
+      contentNotificationEnabled,
+      setContentNotificationEnabled,
+      contentSource,
+      setContentSource,
+      activeBanner,
+      dismissBanner,
+      triggerTestNotification,
+    }),
+    [
+      studyReminderEnabled,
+      setStudyReminderEnabled,
+      studyReminderTimes,
+      addStudyReminderTime,
+      removeStudyReminderTime,
+      contentNotificationEnabled,
+      setContentNotificationEnabled,
+      contentSource,
+      setContentSource,
+      activeBanner,
+      dismissBanner,
+      triggerTestNotification,
+    ]
+  );
 
   return (
-    <NotificationContext.Provider
-      value={{
-        studyReminderEnabled,
-        setStudyReminderEnabled,
-        studyReminderTime,
-        setStudyReminderTime,
-        contentNotificationEnabled,
-        setContentNotificationEnabled,
-        contentSource,
-        setContentSource,
-        activeBanner,
-        dismissBanner,
-        triggerTestNotification,
-      }}
-    >
-      {children}
-    </NotificationContext.Provider>
+    <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>
   );
 };
 

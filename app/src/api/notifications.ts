@@ -1,11 +1,12 @@
 import { authFetch, jsonOrThrow } from './client';
 
+/** ساعت یادآوری با فرمت "HH:MM" (۲۴ساعته). */
 export type ReminderTime = string;
 export type ContentSource = 'leitner' | 'sentences' | 'mixed';
 
 export interface NotificationSettings {
   daily_reminder_enabled: boolean;
-  daily_reminder_time: ReminderTime;
+  daily_reminder_times: ReminderTime[];
   content_notif_enabled: boolean;
   content_source: ContentSource;
 }

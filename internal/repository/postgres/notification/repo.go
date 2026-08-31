@@ -18,11 +18,11 @@ func New(conn *pgxpool.Pool) DB {
 }
 
 type Settings struct {
-	UserID               string `json:"-"`
-	DailyReminderEnabled bool   `json:"daily_reminder_enabled"`
-	DailyReminderTime    string `json:"daily_reminder_time"`
-	ContentNotifEnabled  bool   `json:"content_notif_enabled"`
-	ContentSource        string `json:"content_source"`
+	UserID               string   `json:"-"`
+	DailyReminderEnabled bool     `json:"daily_reminder_enabled"`
+	DailyReminderTimes   []string `json:"daily_reminder_times"`
+	ContentNotifEnabled  bool     `json:"content_notif_enabled"`
+	ContentSource        string   `json:"content_source"`
 }
 
 type Broadcast struct {
@@ -34,29 +34,33 @@ type Broadcast struct {
 }
 
 // GetSettings تنظیمات نوتیفیکیشن کاربر را برمی‌گرداند؛ اگر هنوز ردیفی ثبت نشده
-// باشد، مقادیر پیش‌فرض (فعال، ساعت ۲۰:۰۰، مخلوط) را برمی‌گرداند.
+// باشد، مقادیر پیش‌فرض (هر دو خاموش، بدون ساعت) را برمی‌گرداند — کاربر باید
+// خودش نوتیفیکیشن را روشن کند و ساعت‌هایش را انتخاب کند.
 func (r DB) GetSettings(ctx context.Context, userID string) (Settings, error) {
 	const op = "postgresnotification.GetSettings"
 
 	const query = `
-		SELECT daily_reminder_enabled, daily_reminder_time, content_notif_enabled, content_source
+		SELECT daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source
 		FROM user_notification_settings WHERE user_id = $1
 	`
 	s := Settings{
 		UserID:               userID,
-		DailyReminderEnabled: true,
-		DailyReminderTime:    "20:00",
-		ContentNotifEnabled:  true,
+		DailyReminderEnabled: false,
+		DailyReminderTimes:   []string{},
+		ContentNotifEnabled:  false,
 		ContentSource:        "mixed",
 	}
 	err := r.conn.QueryRow(ctx, query, userID).Scan(
-		&s.DailyReminderEnabled, &s.DailyReminderTime, &s.ContentNotifEnabled, &s.ContentSource,
+		&s.DailyReminderEnabled, &s.DailyReminderTimes, &s.ContentNotifEnabled, &s.ContentSource,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return s, nil
 		}
 		return Settings{}, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن تنظیمات نوتیفیکیشن")
+	}
+	if s.DailyReminderTimes == nil {
+		s.DailyReminderTimes = []string{}
 	}
 	return s, nil
 }
@@ -67,50 +71,24 @@ func (r DB) UpsertSettings(ctx context.Context, s Settings) error {
 
 	const query = `
 		INSERT INTO user_notification_settings
-			(user_id, daily_reminder_enabled, daily_reminder_time, content_notif_enabled, content_source, updated_at)
+			(user_id, daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, updated_at)
 		VALUES ($1, $2, $3, $4, $5, now())
 		ON CONFLICT (user_id) DO UPDATE SET
 			daily_reminder_enabled = EXCLUDED.daily_reminder_enabled,
-			daily_reminder_time    = EXCLUDED.daily_reminder_time,
+			daily_reminder_times   = EXCLUDED.daily_reminder_times,
 			content_notif_enabled  = EXCLUDED.content_notif_enabled,
 			content_source         = EXCLUDED.content_source,
 			updated_at             = now()
 	`
-	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, s.DailyReminderTime, s.ContentNotifEnabled, s.ContentSource)
+	times := s.DailyReminderTimes
+	if times == nil {
+		times = []string{}
+	}
+	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, times, s.ContentNotifEnabled, s.ContentSource)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره تنظیمات نوتیفیکیشن")
 	}
 	return nil
-}
-
-// DueUsers کاربرانی که یادآوری روزانه‌شان فعال است و ساعت آن با hhmm فعلی برابر
-// است را برمی‌گرداند (برای زمان‌بند سرور).
-func (r DB) DueUsers(ctx context.Context, hhmm string) ([]string, error) {
-	const op = "postgresnotification.DueUsers"
-
-	// LEFT JOIN عمداً: کاربری که ردیف تنظیمات ندارد باید با پیش‌فرض‌های
-	// GetSettings (فعال، ساعت ۲۰:۰۰) در نظر گرفته شود، نه حذف شود.
-	const query = `
-		SELECT u.id FROM users u
-		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
-		WHERE COALESCE(uns.daily_reminder_enabled, true) = true
-		  AND COALESCE(uns.daily_reminder_time, '20:00') = $1
-	`
-	rows, err := r.conn.Query(ctx, query, hhmm)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن کاربران سررسیده")
-	}
-	defer rows.Close()
-
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, richerror.New(op).WithErr(err)
-		}
-		ids = append(ids, id)
-	}
-	return ids, nil
 }
 
 // UpsertDeviceToken توکن FCM دستگاه را ثبت/به‌روزرسانی می‌کند (هر توکن یکتاست).
@@ -155,14 +133,14 @@ func (r DB) TokensForUser(ctx context.Context, userID string) ([]string, error) 
 func (r DB) OptedInTokens(ctx context.Context) ([]string, error) {
 	const op = "postgresnotification.OptedInTokens"
 
-	// LEFT JOIN عمداً: کاربری که هیچ‌وقت صفحه‌ی تنظیمات نوتیفیکیشن را باز
-	// نکرده هیچ ردیفی در user_notification_settings ندارد، ولی طبق GetSettings
-	// پیش‌فرضش «فعال» است — پس نبودن ردیف هم باید فعال حساب شود، نه حذف از لیست.
+	// JOIN معمولی (نه LEFT): پیش‌فرض نوتیفیکیشن خاموش است، پس فقط کاربری که
+	// خودش ردیف تنظیمات ساخته و content_notif_enabled را روشن کرده باید پیام
+	// همگانی بگیرد؛ نبودن ردیف یعنی رضایت نداده.
 	const query = `
 		SELECT dpt.token
 		FROM device_push_tokens dpt
-		LEFT JOIN user_notification_settings uns ON uns.user_id = dpt.user_id
-		WHERE COALESCE(uns.content_notif_enabled, true) = true
+		JOIN user_notification_settings uns ON uns.user_id = dpt.user_id
+		WHERE uns.content_notif_enabled = true
 	`
 	rows, err := r.conn.Query(ctx, query)
 	if err != nil {
@@ -191,16 +169,16 @@ func (r DB) Stats(ctx context.Context) (dailyReminder, contentNotif, totalUsers 
 	}
 	err = r.conn.QueryRow(ctx, `
 		SELECT COUNT(*) FROM users u
-		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
-		WHERE COALESCE(uns.daily_reminder_enabled, true) = true
+		JOIN user_notification_settings uns ON uns.user_id = u.id
+		WHERE uns.daily_reminder_enabled = true
 	`).Scan(&dailyReminder)
 	if err != nil {
 		return 0, 0, 0, richerror.New(op).WithErr(err)
 	}
 	err = r.conn.QueryRow(ctx, `
 		SELECT COUNT(*) FROM users u
-		LEFT JOIN user_notification_settings uns ON uns.user_id = u.id
-		WHERE COALESCE(uns.content_notif_enabled, true) = true
+		JOIN user_notification_settings uns ON uns.user_id = u.id
+		WHERE uns.content_notif_enabled = true
 	`).Scan(&contentNotif)
 	if err != nil {
 		return 0, 0, 0, richerror.New(op).WithErr(err)
