@@ -1,12 +1,6 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { fetchScene, fetchScenes, SceneLockedError } from '../api/scenes';
 import { SCENARIOS, type Scenario } from './scenarios';
 
@@ -27,59 +21,64 @@ const ScenesContext = createContext<ScenesContextValue>({
   getScene: async () => undefined,
 });
 
+/** کلیدهای کش. یک‌جا تعریف می‌شوند تا بی‌اعتبارسازی از جای دیگر هم امن باشد. */
+export const sceneKeys = {
+  list: ['scenes'] as const,
+  detail: (id: string) => ['scene', id] as const,
+};
+
+/**
+ * صحنه‌ها روی react-query نشسته‌اند، نه یک کش دست‌ساز.
+ *
+ * قبلاً لیست در useState و جزئیاتِ هر صحنه در یک Map داخل useRef نگه داشته
+ * می‌شد: بدون سیاست انقضا، بدون ادغام درخواست‌های هم‌زمان، و با بی‌اعتبارسازیِ
+ * دستی که هرجا لازم بود باید یادمان می‌ماند reload() صدا بزنیم.
+ */
 export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
-  // با داده‌ی محلی مقداردهی می‌شود تا اگر بک‌اند در دسترس نبود اپ همچنان کار کند
-  const [scenes, setScenes] = useState<Scenario[]>(SCENARIOS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const detailCache = useRef<Map<string, Scenario>>(new Map());
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchScenes();
-      if (data.length > 0) {
-        setScenes(data);
-        detailCache.current.clear();
-      }
-    } catch (e: any) {
-      // در صورت خطا، همان داده‌ی محلی نمایش داده می‌شود
-      setError(e?.message || 'خطا در دریافت صحنه‌ها');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery({
+    queryKey: sceneKeys.list,
+    queryFn: fetchScenes,
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // اگر بک‌اند در دسترس نبود یا لیست خالی برگرداند، همان داده‌ی محلی نمایش
+  // داده می‌شود تا اپ بدون شبکه هم کار کند.
+  const scenes = data && data.length > 0 ? data : SCENARIOS;
+
+  const reload = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: sceneKeys.list });
+  }, [queryClient]);
 
   const getScene = useCallback(
     async (id: string): Promise<Scenario | undefined> => {
-      const cached = detailCache.current.get(id);
-      if (cached) return cached;
       try {
-        const full = await fetchScene(id);
-        detailCache.current.set(id, full);
-        return full;
+        // fetchQuery خودش کش را می‌خواند، درخواست‌های هم‌زمانِ یک صحنه را ادغام
+        // می‌کند و نتیجه را برای دفعه‌ی بعد نگه می‌دارد.
+        return await queryClient.fetchQuery({
+          queryKey: sceneKeys.detail(id),
+          queryFn: () => fetchScene(id),
+        });
       } catch (e) {
         // قفل‌بودن یعنی واقعاً نباید محتوا نشون داده بشه — به‌جای fallback
         // بی‌صدا، به صدازننده اجازه می‌دیم خودش هندلش کنه (مثلاً باز کردن Paywall).
         if (e instanceof SceneLockedError) throw e;
         // بقیه‌ی خطاها (مثلاً قطعی شبکه): fallback به صحنه‌ی لیست جاری یا داده‌ی محلی
-        return (
-          scenes.find((s) => s.id === id) ??
-          SCENARIOS.find((s) => s.id === id)
-        );
+        return scenes.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === id);
       }
     },
-    [scenes]
+    [queryClient, scenes]
   );
 
   const value = useMemo<ScenesContextValue>(
-    () => ({ scenes, loading, error, reload: load, getScene }),
-    [scenes, loading, error, load, getScene]
+    () => ({
+      scenes,
+      loading: isLoading,
+      error: error ? (error as Error).message || 'خطا در دریافت صحنه‌ها' : null,
+      reload,
+      getScene,
+    }),
+    [scenes, isLoading, error, reload, getScene]
   );
 
   return <ScenesContext.Provider value={value}>{children}</ScenesContext.Provider>;

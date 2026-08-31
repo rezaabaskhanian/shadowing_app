@@ -8,7 +8,7 @@ import { FONT_FAMILY } from '../../theme/typography';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { SessionResultScreen } from '../../components/SessionResultScreen';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
-import { useScenes } from '../../data/ScenesContext';
+import { useScenes, sceneKeys } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
 import { useToast } from '../../data/ToastContext';
 import { usePracticeSettings } from '../../data/PracticeSettingsContext';
@@ -16,6 +16,7 @@ import { saveRecording } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
 import { SceneLockedError } from '../../api/scenes';
 import { getUserStreak, recordDialogueProgress } from '../../api/progress';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../data/AuthContext';
 
 import { SceneIntroScreen } from './SceneIntroScreen';
@@ -71,7 +72,25 @@ export const SceneScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { scenarioId } = route.params || {};
-  const { getScene, reload: reloadScenes } = useScenes();
+  const { getScene } = useScenes();
+  const queryClient = useQueryClient();
+
+  /**
+   * ثبت یک جمله‌ی کامل‌شده. وقتی این جمله صحنه را تمام کند، کش صحنه‌ها
+   * بی‌اعتبار می‌شود تا تیکِ صحنه در لیست خانه خودش تازه شود — به‌جای اینکه
+   * هرجا لازم شد یادمان باشد دستی reload صدا بزنیم.
+   *
+   * شکستش عمداً بی‌صداست: نباید نمره‌ای که کاربر همین حالا گرفته را خراب کند.
+   */
+  const progressMutation = useMutation({
+    mutationFn: recordDialogueProgress,
+    onSuccess: (res) => {
+      if (res?.is_completed) {
+        queryClient.invalidateQueries({ queryKey: sceneKeys.list });
+      }
+    },
+    onError: (err) => console.warn('[SceneScreen] failed to record scene progress:', err),
+  });
   const { language, t } = useLanguage();
   const toast = useToast();
   const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
@@ -581,7 +600,7 @@ export const SceneScreen = () => {
       evaluateRecording({
         filePath: rec.filePath,
         mimeType: rec.mimeType,
-        dialogueId: dialogue?.id,
+        dialogueId: dialogue?.dialogueId,
         targetText: dialogue?.dialogue,
         duration: rec.duration,
         expectedDuration: DEFAULT_LINE_SECONDS,
@@ -591,17 +610,14 @@ export const SceneScreen = () => {
           setEvalStates((prev) => ({ ...prev, [lineIndex]: 'done' }));
 
           // این جمله کامل شد؛ به بک‌اند خبر می‌دهیم تا وقتی همه‌ی جمله‌های
-          // صحنه تمام شدند، صحنه در لیست خانه تیک بخورد. عمداً fire-and-forget
-          // است: شکستش نباید نمره‌ای که کاربر همین حالا گرفته را خراب کند.
+          // صحنه تمام شدند، صحنه در لیست خانه تیک بخورد.
           const sceneId = scenarioId ?? scenario?.id;
-          if (sceneId && dialogue?.id) {
-            recordDialogueProgress({
+          if (sceneId && dialogue?.dialogueId) {
+            progressMutation.mutate({
               sceneId: String(sceneId),
-              dialogueId: dialogue.id,
+              dialogueId: dialogue.dialogueId,
               score: result.overall_score,
-            }).catch((err) =>
-              console.warn('[SceneScreen] failed to record scene progress:', err)
-            );
+            });
           }
         })
         .catch((err) => {
@@ -610,7 +626,7 @@ export const SceneScreen = () => {
           setEvalStates((prev) => ({ ...prev, [lineIndex]: 'error' }));
         });
     },
-    [recordings, dialogueItems, evalStates, scenarioId, scenario]
+    [recordings, dialogueItems, evalStates, scenarioId, scenario, progressMutation]
   );
 
   const scoreCurrentLine = useCallback(() => {
@@ -630,13 +646,16 @@ export const SceneScreen = () => {
     if (activeStepIndex !== 3) return;
     Object.keys(recordings)
       .map(Number)
+      // جمله‌ی بدون ردیف دیالوگ اصلاً قابل نمره‌دهی نیست؛ فرستادنش فقط یک
+      // درخواست ناموفق است.
+      .filter((idx) => dialogueItems[idx]?.dialogueId)
       .forEach((idx) => {
         const state = evalStates[idx] ?? 'idle';
         if (!evaluations[idx] && state === 'idle') {
           scoreLine(idx);
         }
       });
-  }, [activeStepIndex, recordings, evaluations, evalStates, scoreLine]);
+  }, [activeStepIndex, recordings, evaluations, evalStates, scoreLine, dialogueItems]);
 
   /**
    * انتخاب یک جمله از لیست ضبط‌ها/دایره‌های بالا. عمداً خودش پخش را شروع
@@ -657,13 +676,26 @@ export const SceneScreen = () => {
   );
 
   /**
+   * جمله‌هایی که واقعاً می‌شود مقایسه‌شان کرد: باید ردیف دیالوگ در دیتابیس
+   * داشته باشند، وگرنه نه نمره‌ی سرور می‌گیرند نه پیشرفتشان ثبت می‌شود. یک
+   * هات‌اسپاتِ بی‌دیالوگ نباید درس را برای همیشه ناتمام نگه دارد.
+   */
+  const gradableIndexes = useMemo(
+    () =>
+      dialogueItems
+        .map((item, idx) => (item.dialogueId ? idx : -1))
+        .filter((idx) => idx !== -1),
+    [dialogueItems]
+  );
+
+  /**
    * تعداد جمله‌هایی که چرخه‌شان کامل شده: هم ضبط شده‌اند هم نمره‌ی مقایسه
    * گرفته‌اند. معیارِ «درس تمام شد» همین است — نه صرفاً ضبط‌شدن، چون خودِ
    * مقایسه بخشی از تمرین است.
    */
   const comparedCount = useMemo(
-    () => dialogueItems.reduce((n, _item, idx) => (evaluations[idx] ? n + 1 : n), 0),
-    [dialogueItems, evaluations]
+    () => gradableIndexes.reduce((n, idx) => (evaluations[idx] ? n + 1 : n), 0),
+    [gradableIndexes, evaluations]
   );
 
   /**
@@ -686,11 +718,11 @@ export const SceneScreen = () => {
    * مرحله‌ی مقایسه (که خودش ضبط‌های بی‌نمره را نمره می‌دهد).
    */
   const handleFinishLesson = useCallback(() => {
-    const total = dialogueItems.length;
+    const total = gradableIndexes.length;
     if (total > 0 && comparedCount === total) {
-      // تیکِ صحنه در لیست خانه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ لیست
-      // را تازه می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
-      reloadScenes();
+      // تیکِ صحنه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ کش را بی‌اعتبار
+      // می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
+      queryClient.invalidateQueries({ queryKey: sceneKeys.list });
       Alert.alert(
         t('lessonCompleteTitle'),
         t('lessonCompleteMessage'),
@@ -708,8 +740,8 @@ export const SceneScreen = () => {
     });
     setShowResult(false);
 
-    const firstUndone = dialogueItems.findIndex((_item, idx) => !evaluations[idx]);
-    if (firstUndone === -1) return;
+    const firstUndone = gradableIndexes.find((idx) => !evaluations[idx]);
+    if (firstUndone === undefined) return;
     // forceIndex یعنی این پرشِ عمدی بر حافظه‌ی مرحله اولویت دارد.
     dispatch({
       type: 'CHANGE_STEP',
@@ -719,12 +751,13 @@ export const SceneScreen = () => {
     });
   }, [
     dialogueItems,
+    gradableIndexes,
     comparedCount,
     evaluations,
     recordings,
     resetToHome,
     restartLesson,
-    reloadScenes,
+    queryClient,
     toast,
     t,
   ]);
