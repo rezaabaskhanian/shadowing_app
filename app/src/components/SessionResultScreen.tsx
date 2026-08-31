@@ -35,7 +35,7 @@ interface SessionResultScreenProps {
   translation: string;
   words?: WordEntry[];
   onPracticeAgain: () => void;
-  onNextLesson: () => void;
+  onFinishLesson: () => void;
 }
 
 export function SessionResultScreen({
@@ -47,7 +47,7 @@ export function SessionResultScreen({
   translation,
   words = [],
   onPracticeAgain,
-  onNextLesson,
+  onFinishLesson,
 }: SessionResultScreenProps) {
   const { t } = useLanguage();
   const tokens = tokenizeWithLevels(englishText, words);
@@ -125,8 +125,8 @@ export function SessionResultScreen({
             <RotateCcw size={18} color={COLORS.text} />
             <Text style={styles.secondaryBtnText}>{t('practiceAgain')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtn} onPress={onNextLesson}>
-            <Text style={styles.primaryBtnText}>{t('nextLesson')}</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={onFinishLesson}>
+            <Text style={styles.primaryBtnText}>{t('finishLesson')}</Text>
             <ArrowRight size={18} color={COLORS.white} />
           </TouchableOpacity>
         </View>

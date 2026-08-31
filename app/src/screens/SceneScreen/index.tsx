@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Alert, BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,7 +15,7 @@ import { usePracticeSettings } from '../../data/PracticeSettingsContext';
 import { saveRecording } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
 import { SceneLockedError } from '../../api/scenes';
-import { getUserStreak } from '../../api/progress';
+import { getUserStreak, recordDialogueProgress } from '../../api/progress';
 import { useAuth } from '../../data/AuthContext';
 
 import { SceneIntroScreen } from './SceneIntroScreen';
@@ -23,7 +23,7 @@ import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
 import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
-import type { AudioActionCommand } from './types';
+import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -32,13 +32,12 @@ const SESSION_PRONUNCIATION = 80;
 const SESSION_FLUENCY = 92;
 const SESSION_RHYTHM = 83;
 
-// فقط مرحله‌های ورودی (Listen و Shadow) دور خودکار دارند: چند دور کامل پخش
-// می‌شوند و بعد خودکار مرحله‌ی بعد. این اجبار نیست — کاربر هر لحظه می‌تواند با
-// تب یا دکمه‌ی «مرحله بعد» جلو برود، و تعداد دور را هم در تنظیمات عوض کند.
-// مرحله‌های ضبط و مقایسه همیشه با سرعت خودِ کاربر پیش می‌روند (نه دور خودکار،
-// نه پرش خودکار)، چون آنجا کاربر تصمیم می‌گیرد کِی راضی شده — رفتار رایج
-// اپ‌های شدوئینگ.
-const AUTO_REPEAT_STEPS = [0, 1];
+// AUTO_REPEAT_STEPS در playbackReducer تعریف شده تا خودِ reducer هم بداند
+// کدام مرحله با تعویضِ مرحله باید پخش را شروع کند و کدام نه:
+// فقط مرحله‌های ورودی (Listen و Shadow) دور خودکار دارند. این اجبار نیست —
+// کاربر هر لحظه می‌تواند با تب یا دکمه‌ی «مرحله بعد» جلو برود. مرحله‌های ضبط و
+// مقایسه همیشه با سرعت خودِ کاربر پیش می‌روند، چون آنجا کاربر تصمیم می‌گیرد کِی
+// راضی شده — رفتار رایج اپ‌های شدوئینگ.
 
 // تصویرهای صحنه landscape هستند؛ تا وقتی ابعاد واقعی تصویر لود نشده از این
 // نسبت استفاده می‌شود تا فریم اول هم تقریباً درست باشد و تصویر نپرد.
@@ -72,7 +71,7 @@ export const SceneScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { scenarioId } = route.params || {};
-  const { getScene } = useScenes();
+  const { getScene, reload: reloadScenes } = useScenes();
   const { language, t } = useLanguage();
   const toast = useToast();
   const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
@@ -140,30 +139,35 @@ export const SceneScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId, getScene]);
 
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [activeStepIndex, setActiveStepIndex] = useState(0); // 0..3 steps
-  const [playing, setPlaying] = useState(true);
+  /**
+   * ماشین حالتِ پخش و مرحله. این مقادیر به هم وابسته‌اند و هر گذارشان باید
+   * اتمیک باشد، پس با یک reducer اداره می‌شوند نه چند useState پراکنده —
+   * جزئیاتِ چرایی در playbackReducer.ts.
+   */
+  const [pb, dispatch] = useReducer(playbackReducer, initialPlaybackState);
+  const {
+    activeIndex,
+    step: activeStepIndex,
+    shadowing: isShadowingMode,
+    playing,
+    audioUri,
+    command: actionCommand,
+    nonce: audioNonce,
+    bubbleVisible,
+    sceneFinished,
+    lineAudioMissing,
+    repeatCount,
+    playingRecordingUrl,
+    playAllQueue,
+  } = pb;
+
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const autoMode = true;
-  const [isShadowingMode, setIsShadowingMode] = useState(false);
-  // true فقط وقتی که آخرین هات‌اسپات هم تمام شده باشد؛ در این حالت دیگر زوم
-  // نباید دوباره تکرار شود و دوربین باید در حالت خارج از زوم بماند.
-  const [sceneFinished, setSceneFinished] = useState(false);
-  // حباب دیالوگ بالای سر گوینده: با شروع هر خط باز می‌شود، با پایان صدایش
-  // بسته می‌شود و با شروع خط بعدی (همان نقطه یا هات‌اسپات بعدی) دوباره باز.
-  const [bubbleVisible, setBubbleVisible] = useState(true);
   const [showResult, setShowResult] = useState(false);
-  const [audioUri, setAudioUri] = useState<string | null>(null);
-  const [actionCommand, setActionCommand] = useState<AudioActionCommand>('none');
-  // شمارنده‌ای که فقط برای «دوباره فرستادن همان دستور» به AudioPlayer بالا
-  // می‌رود؛ لازم است چون شروع دوباره‌ی دور، همان دیالوگ اول را دوباره می‌خواهد.
-  const [audioNonce, setAudioNonce] = useState(0);
   // موقعیتِ زنده‌ی پخش (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با صدا؛
   // مرجع و ضبطِ کاربر جدا نگه داشته می‌شوند چون هرکدام جای متفاوتی هایلایت می‌شوند.
   const [masterPositionSeconds, setMasterPositionSeconds] = useState(0);
   const [recordingPositionSeconds, setRecordingPositionSeconds] = useState(0);
-  // چندمین دور پخش دیالوگ‌ها در مرحله‌ی فعلی هستیم (۱ تا targetRepeats).
-  const [repeatCount, setRepeatCount] = useState(1);
   // وضعیت ذخیره‌ی صدای ضبط‌شده روی گوشی + نام فایلی که ساخته شد.
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [savedFileName, setSavedFileName] = useState<string | null>(null);
@@ -185,10 +189,6 @@ export const SceneScreen = () => {
   // بشود هر جمله را جدا یا همه را پشت‌سرهم پخش کرد؛ نسخه‌ی ماندگارش هم روی
   // گوشی ذخیره می‌شود.
   const [recordings, setRecordings] = useState<Record<number, LineRecording>>({});
-  // ضبطی که همین حالا باید پخش شود؛ به AudioPlayer داده می‌شود.
-  const [playingRecordingUrl, setPlayingRecordingUrl] = useState<string | null>(null);
-  // صفِ پخشِ پشت‌سرهم؛ خالی یعنی پخش دنباله‌ای در جریان نیست.
-  const [playAllQueue, setPlayAllQueue] = useState<number[]>([]);
   // در مرحله‌ی ضبط، متن پیش‌فرض مخفی است تا کاربر از حفظ بگوید. یک‌بار که
   // کاربر «نمایش متن» را بزند، دیگر برای همه‌ی جمله‌های این صحنه آشکار
   // می‌ماند — لازم نیست هر جمله را دوباره جدا آشکار کند.
@@ -201,7 +201,7 @@ export const SceneScreen = () => {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
   // آیا مرحله‌ی فعلی دور خودکار دارد یا دست خود کاربر است.
-  const isAutoStep = AUTO_REPEAT_STEPS.includes(activeStepIndex);
+  const isAutoStep = stepIsAuto(activeStepIndex);
   // تعداد دور پیشنهادی مرحله‌ی فعلی (از تنظیمات کاربر)؛ ۰ یعنی بی‌نهایت.
   const targetRepeats = repeatsPerStep;
 
@@ -299,28 +299,17 @@ export const SceneScreen = () => {
   const playDialogueAt = useCallback(
     (idx: number) => {
       if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-      const target = dialogueItems[idx];
-      if (!target) return;
-      setSceneFinished(false);
+      if (!dialogueItems[idx]) return;
       // نوار «ذخیره شد» مال جمله‌ی قبلی است؛ با عوض‌شدن جمله باید برود.
       setSaveState('idle');
       setSavedFileName(null);
-      setActiveIndex(idx);
-      setAudioUri(target.audioUrl || null);
-      setActionCommand('play_original');
-      setPlaying(true);
-      // خط تازه شروع می‌شود؛ حباب دیالوگ بالای سر گوینده باز شود.
-      setBubbleVisible(true);
-      // حتی اگر همان دیالوگ قبلی باشد، این عدد باعث می‌شود دستور پخش دوباره
-      // به پلیر برسد و صدا از اول شروع شود.
-      setAudioNonce((n) => n + 1);
+      dispatch({ type: 'PLAY_LINE', index: idx, items: dialogueItems });
     },
     [dialogueItems]
   );
 
   const handleEnterScene = () => {
     setInScene(true);
-    setRepeatCount(1);
     playDialogueAt(0);
   };
 
@@ -331,19 +320,21 @@ export const SceneScreen = () => {
   // دیگری داشت، مستقیم به همان جمله‌ی ضبط‌شده می‌پریم تا کاربر با یک صفحه‌ی
   // خالی روبه‌رو نشود.
   const jumpToCompare = useCallback(() => {
-    if (!recordings[activeIndex]) {
-      const recordedIdx = Object.keys(recordings)
-        .map(Number)
-        .sort((a, b) => a - b)[0];
-      if (recordedIdx !== undefined) {
-        setActiveIndex(recordedIdx);
-        // بدون این، دکمه‌ی «صدای مرجع» صدای جمله‌ای را پخش می‌کرد که پیش از
-        // این با playDialogueAt پخش شده بود، نه همین جمله‌ای که تازه پریدیم.
-        setAudioUri(dialogueItems[recordedIdx]?.audioUrl || null);
-        setBubbleVisible(true);
-      }
-    }
-    setActiveStepIndex(3);
+    // اگر جمله‌ی فعلی ضبط ندارد، اولین جمله‌ی ضبط‌شده را به reducer تحمیل
+    // می‌کنیم؛ وگرنه خودش تصمیم می‌گیرد (جمله‌ی به‌خاطرمانده یا فعلی).
+    const forceIndex = recordings[activeIndex]
+      ? undefined
+      : Object.keys(recordings)
+          .map(Number)
+          .sort((a, b) => a - b)[0];
+
+    dispatch({
+      type: 'CHANGE_STEP',
+      step: 3,
+      items: dialogueItems,
+      forceIndex,
+      hasRecording: (idx) => !!recordings[idx],
+    });
   }, [recordings, activeIndex, dialogueItems]);
 
   const requestStepChange = useCallback(
@@ -356,9 +347,9 @@ export const SceneScreen = () => {
         jumpToCompare();
         return;
       }
-      setActiveStepIndex(targetIdx);
+      dispatch({ type: 'CHANGE_STEP', step: targetIdx, items: dialogueItems });
     },
-    [recordings, t, toast, jumpToCompare]
+    [recordings, t, toast, jumpToCompare, dialogueItems]
   );
 
   // رفتن به مرحله‌ی بعدی تمرین؛ روی مرحله‌ی آخر، جلسه تمام‌شده تلقی می‌شود.
@@ -378,12 +369,12 @@ export const SceneScreen = () => {
       if (activeStepIndex === 2) {
         jumpToCompare();
       } else if (activeStepIndex < 3) {
-        setActiveStepIndex(activeStepIndex + 1);
+        dispatch({ type: 'CHANGE_STEP', step: activeStepIndex + 1, items: dialogueItems });
       } else {
         setShowResult(true);
       }
     },
-    [activeStepIndex, recordings, t, toast, jumpToCompare]
+    [activeStepIndex, recordings, t, toast, jumpToCompare, dialogueItems]
   );
 
   const handleNextDialogue = useCallback(() => {
@@ -399,14 +390,14 @@ export const SceneScreen = () => {
     // بیرون از حالت تمرین، فقط اعلام می‌کنیم صحنه تمام شده تا دوربین زوم اوت
     // کند و دیگر تکرار نشود.
     if (!isShadowingMode) {
-      setSceneFinished(true);
+      dispatch({ type: 'SCENE_FINISHED' });
       return;
     }
 
     // مرحله‌های دست‌کاربر (ضبط/مقایسه): نه دور خودکار، نه پرش خودکار — همین‌جا
     // می‌ایستیم تا خودش تصمیم بگیرد.
     if (!isAutoStep) {
-      setSceneFinished(true);
+      dispatch({ type: 'SCENE_FINISHED' });
       return;
     }
 
@@ -414,8 +405,8 @@ export const SceneScreen = () => {
     // می‌کنیم و بعد از آن خودکار به مرحله‌ی بعد می‌رویم. targetRepeats صفر یعنی
     // کاربر «بی‌نهایت» را انتخاب کرده و پرش خودکاری در کار نیست.
     if (targetRepeats === 0 || repeatCount < targetRepeats) {
-      setRepeatCount(repeatCount + 1);
-      playDialogueAt(0);
+      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+      dispatch({ type: 'NEXT_REPEAT', items: dialogueItems });
     } else {
       goToNextStep();
     }
@@ -537,24 +528,21 @@ export const SceneScreen = () => {
     (lineIndex: number) => {
       const rec = recordings[lineIndex];
       if (!rec) return;
-      setPlaying(false);
-      setActiveIndex(lineIndex);
-      // تا اگر بعداً کاربر «صدای مرجع» را زد، صدای همین جمله پخش شود نه
-      // جمله‌ای که پیش از این با playDialogueAt پخش شده بود.
-      setAudioUri(dialogueItems[lineIndex]?.audioUrl || null);
-      setBubbleVisible(true);
-      setPlayingRecordingUrl(rec.filePath);
-      setActionCommand('play_recording');
-      setAudioNonce((n) => n + 1);
+      // audioUri هم همین‌جا به این جمله می‌رود، تا اگر بعداً کاربر «صدای
+      // مرجع» را زد صدای همین جمله پخش شود نه جمله‌ای که قبلاً پخش شده بود.
+      dispatch({
+        type: 'PLAY_RECORDING',
+        index: lineIndex,
+        items: dialogueItems,
+        filePath: rec.filePath,
+      });
     },
     [recordings, dialogueItems]
   );
 
   /** پخش صدای مرجع همین جمله (بدون تغییر مرحله). */
   const playOriginalOfLine = useCallback(() => {
-    setPlayingRecordingUrl(null);
-    setActionCommand('play_original');
-    setAudioNonce((n) => n + 1);
+    dispatch({ type: 'PLAY_ORIGINAL' });
   }, []);
 
   /** پخش پشت‌سرهمِ همه‌ی ضبط‌های این صحنه، به ترتیب جمله‌ها. */
@@ -564,19 +552,15 @@ export const SceneScreen = () => {
       .filter((idx) => recordings[idx]);
     if (recorded.length === 0) return;
 
-    setPlaying(false);
     // اولی را همین حالا پخش می‌کنیم و بقیه در صف می‌مانند تا با پایان هرکدام
     // نوبت بعدی برسد.
-    setPlayAllQueue(recorded.slice(1));
+    dispatch({ type: 'PLAY_ALL', queue: recorded.slice(1) });
     playRecordingOfLine(recorded[0]);
   }, [dialogueItems, recordings, playRecordingOfLine]);
 
   const stopPlayAll = useCallback(() => {
-    setPlayAllQueue([]);
     // دستور 'none' با playing=false در AudioPlayer به pause ترجمه می‌شود.
-    setPlaying(false);
-    setActionCommand('none');
-    setAudioNonce((n) => n + 1);
+    dispatch({ type: 'STOP_PLAY_ALL' });
   }, []);
 
   /**
@@ -605,6 +589,20 @@ export const SceneScreen = () => {
         .then((result) => {
           setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
           setEvalStates((prev) => ({ ...prev, [lineIndex]: 'done' }));
+
+          // این جمله کامل شد؛ به بک‌اند خبر می‌دهیم تا وقتی همه‌ی جمله‌های
+          // صحنه تمام شدند، صحنه در لیست خانه تیک بخورد. عمداً fire-and-forget
+          // است: شکستش نباید نمره‌ای که کاربر همین حالا گرفته را خراب کند.
+          const sceneId = scenarioId ?? scenario?.id;
+          if (sceneId && dialogue?.id) {
+            recordDialogueProgress({
+              sceneId: String(sceneId),
+              dialogueId: dialogue.id,
+              score: result.overall_score,
+            }).catch((err) =>
+              console.warn('[SceneScreen] failed to record scene progress:', err)
+            );
+          }
         })
         .catch((err) => {
           console.warn('[SceneScreen] pronunciation scoring failed:', err);
@@ -612,7 +610,7 @@ export const SceneScreen = () => {
           setEvalStates((prev) => ({ ...prev, [lineIndex]: 'error' }));
         });
     },
-    [recordings, dialogueItems, evalStates]
+    [recordings, dialogueItems, evalStates, scenarioId, scenario]
   );
 
   const scoreCurrentLine = useCallback(() => {
@@ -653,14 +651,83 @@ export const SceneScreen = () => {
   const selectLine = useCallback(
     (lineIndex: number) => {
       if (lineIndex < 0 || lineIndex >= dialogueItems.length) return;
-      setPlaying(false);
-      setPlayAllQueue([]);
-      setActiveIndex(lineIndex);
-      setAudioUri(dialogueItems[lineIndex]?.audioUrl || null);
-      setBubbleVisible(true);
+      dispatch({ type: 'SELECT_LINE', index: lineIndex, items: dialogueItems });
     },
     [dialogueItems]
   );
+
+  /**
+   * تعداد جمله‌هایی که چرخه‌شان کامل شده: هم ضبط شده‌اند هم نمره‌ی مقایسه
+   * گرفته‌اند. معیارِ «درس تمام شد» همین است — نه صرفاً ضبط‌شدن، چون خودِ
+   * مقایسه بخشی از تمرین است.
+   */
+  const comparedCount = useMemo(
+    () => dialogueItems.reduce((n, _item, idx) => (evaluations[idx] ? n + 1 : n), 0),
+    [dialogueItems, evaluations]
+  );
+
+  /**
+   * شروع دوباره‌ی همین صحنه از مرحله‌ی اول و جمله‌ی اول.
+   *
+   * ضبط‌ها و نمره‌ها عمداً پاک نمی‌شوند: درس همچنان تمام‌شده حساب می‌شود و
+   * کاربر فقط دارد دوباره تمرین می‌کند.
+   */
+  const restartLesson = useCallback(() => {
+    setShowResult(false);
+    dispatch({ type: 'RESTART_LESSON', items: dialogueItems });
+  }, [dialogueItems]);
+
+  /**
+   * دکمه‌ی پایان درس در صفحه‌ی نتیجه.
+   *
+   * اگر همه‌ی جمله‌ها مقایسه شده باشند، درس تمام‌شده اعلام و کاربر به خانه
+   * برگردانده می‌شود. وگرنه به‌جای اینکه بی‌صدا رد شود، می‌گوییم چقدر مانده و
+   * می‌بریمش سرِ اولین جمله‌ی ناتمام — مرحله‌ی ضبط اگر هنوز ضبطی ندارد، وگرنه
+   * مرحله‌ی مقایسه (که خودش ضبط‌های بی‌نمره را نمره می‌دهد).
+   */
+  const handleFinishLesson = useCallback(() => {
+    const total = dialogueItems.length;
+    if (total > 0 && comparedCount === total) {
+      // تیکِ صحنه در لیست خانه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ لیست
+      // را تازه می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
+      reloadScenes();
+      Alert.alert(
+        t('lessonCompleteTitle'),
+        t('lessonCompleteMessage'),
+        [
+          { text: t('shadowAgain'), onPress: restartLesson },
+          { text: t('backToHome'), onPress: resetToHome },
+        ],
+        { cancelable: false }
+      );
+      return;
+    }
+
+    toast.warning(`${t('lessonIncompleteMessage')} (${comparedCount}/${total})`, {
+      title: t('lessonIncompleteTitle'),
+    });
+    setShowResult(false);
+
+    const firstUndone = dialogueItems.findIndex((_item, idx) => !evaluations[idx]);
+    if (firstUndone === -1) return;
+    // forceIndex یعنی این پرشِ عمدی بر حافظه‌ی مرحله اولویت دارد.
+    dispatch({
+      type: 'CHANGE_STEP',
+      step: recordings[firstUndone] ? 3 : 2,
+      items: dialogueItems,
+      forceIndex: firstUndone,
+    });
+  }, [
+    dialogueItems,
+    comparedCount,
+    evaluations,
+    recordings,
+    resetToHome,
+    restartLesson,
+    reloadScenes,
+    toast,
+    t,
+  ]);
 
   const toggleRevealText = useCallback(() => {
     setTextRevealed((prev) => !prev);
@@ -674,11 +741,10 @@ export const SceneScreen = () => {
    * یک جمله‌ی دیگر را زیر جمله‌ی فعلی می‌بیند و می‌شنود.
    */
   useEffect(() => {
+    dispatch({ type: 'RESET_SCENE' });
     setRecordings({});
     setEvaluations({});
     setTextRevealed(false);
-    setPlayAllQueue([]);
-    setPlayingRecordingUrl(null);
     setEvalStates({});
     setEvalErrors({});
     setSaveState('idle');
@@ -690,24 +756,17 @@ export const SceneScreen = () => {
 
   /** با پایان هر ضبط، اگر صفی هست نوبت بعدی را پخش می‌کند. */
   const handleRecordedPlaybackEnd = useCallback(() => {
-    setPlayAllQueue((queue) => {
-      if (queue.length === 0) return queue;
-      const [next, ...rest] = queue;
-      // خودِ پخش نمی‌تواند داخل setState انجام شود؛ به تیک بعدی موکولش می‌کنیم
-      // (علاوه بر این تأخیر، همین مکث عمدی هم هست تا بین دو ضبط فاصله باشد).
-      setTimeout(() => playRecordingOfLine(next), PLAY_ALL_GAP_MS);
-      return rest;
-    });
-  }, [playRecordingOfLine]);
+    const next = playAllQueue[0];
+    if (next === undefined) return;
+    dispatch({ type: 'SHIFT_PLAY_ALL' });
+    // مکث عمدی تا بین دو ضبط فاصله باشد.
+    setTimeout(() => playRecordingOfLine(next), PLAY_ALL_GAP_MS);
+  }, [playAllQueue, playRecordingOfLine]);
 
-  // با ورود به تمرین و با هر تعویض مرحله (چه دستی با تب/فلش، چه خودکار بعد از
-  // پایان دورها)، همه‌چیز از اول شروع می‌شود: دیالوگ اول، هات‌اسپات اول،
-  // دوربین دوباره روی همان زوم می‌کند و شمارنده‌ی دور صفر می‌شود.
-  useEffect(() => {
-    if (!isShadowingMode) return;
-    setRepeatCount(1);
-    playDialogueAt(0);
-  }, [isShadowingMode, activeStepIndex, playDialogueAt]);
+  // افکتِ همگام‌سازیِ مرحله (و دو ref کمکی‌اش) اینجا بود و حذف شد: تعویض
+  // مرحله حالا یک گذارِ اتمیک داخل reducer است (CHANGE_STEP)، پس دیگر لازم
+  // نیست افکتی بعد از رندر از روی state حدس بزند مرحله عوض شده و جمله‌ی
+  // درست کدام است.
 
   const toggleSpeed = () => {
     const speeds = [1.0, 0.75, 1.25, 1.5];
@@ -715,9 +774,10 @@ export const SceneScreen = () => {
     setPlaybackRate(speeds[nextSpeedIdx]);
   };
 
+  // مکث و ادامه دو نیتِ متفاوت‌اند و باید دو action جدا باشند: با یک دستورِ
+  // مشترک، پلیر نمی‌فهمید باید سر جایش بایستد یا از اول پخش کند.
   const togglePlay = () => {
-    setPlaying(!playing);
-    setActionCommand(playing ? 'none' : 'play_original');
+    dispatch({ type: playing ? 'PAUSE' : 'RESUME' });
   };
 
   // دکمه‌ی فلش روی تصویر: مرحله‌ی بعدی را باز می‌کند؛ روی آخرین مرحله، از
@@ -770,15 +830,8 @@ export const SceneScreen = () => {
         englishText={currentDialogue.dialogue}
         translation={currentDialogue.translation}
         words={currentDialogue.words}
-        onPracticeAgain={() => {
-          setShowResult(false);
-          setActiveStepIndex(0);
-        }}
-        onNextLesson={() => {
-          setShowResult(false);
-          setActiveStepIndex(0);
-          handleNextDialogue();
-        }}
+        onPracticeAgain={restartLesson}
+        onFinishLesson={handleFinishLesson}
       />
     );
   }
@@ -814,7 +867,7 @@ export const SceneScreen = () => {
           // صدای این خط تمام شد؛ حباب دیالوگ بالای سرش بسته شود — چه قرار
           // باشد خودکار برویم خط بعد چه نه.
           if (status === 'finished') {
-            setBubbleVisible(false);
+            dispatch({ type: 'AUDIO_FINISHED' });
           }
           // در مرحله‌های دست‌کاربر (ضبط/مقایسه) بعد از پایان صدای اصلی خودکار
           // نمی‌پریم؛ کاربر باید فرصت ضبط و گوش‌دادن داشته باشد.
@@ -824,6 +877,18 @@ export const SceneScreen = () => {
             autoTimeoutRef.current = setTimeout(() => {
               handleNextDialogue();
             }, 2200);
+          }
+          // این جمله فایل صدا ندارد: به کاربر می‌گوییم چرا ساکت است و در
+          // مرحله‌های خودکار می‌رویم جمله‌ی بعد، وگرنه روی یک جمله‌ی بی‌صدا
+          // گیر می‌کردیم و به‌نظر می‌رسید کل پخش خراب شده.
+          if (status === 'no_audio') {
+            dispatch({ type: 'AUDIO_MISSING' });
+            if (autoMode && autoAdvance) {
+              if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+              autoTimeoutRef.current = setTimeout(() => {
+                handleNextDialogue();
+              }, 1200);
+            }
           }
         }}
       />
@@ -882,7 +947,7 @@ export const SceneScreen = () => {
               sceneHotspots={sceneHotspots}
               activeHotspotIndex={activeHotspotIndex}
               onGoToHotspot={goToHotspot}
-              onStartShadowing={() => setIsShadowingMode(true)}
+              onStartShadowing={() => dispatch({ type: 'START_SHADOWING', items: dialogueItems })}
               t={t}
             />
           ) : (
@@ -945,8 +1010,10 @@ export const SceneScreen = () => {
             activeStepIndex={activeStepIndex}
             playing={playing}
             actionCommand={actionCommand}
-            setActionCommand={setActionCommand}
-            setPlaying={setPlaying}
+            onStartRecord={(withReference) =>
+              dispatch({ type: 'START_RECORD', withReference })
+            }
+            onStopRecord={() => dispatch({ type: 'STOP_RECORD' })}
             playbackRate={playbackRate}
             toggleSpeed={toggleSpeed}
             togglePlay={togglePlay}
@@ -956,8 +1023,11 @@ export const SceneScreen = () => {
             hasRecordingForCurrentLine={!!recordings[activeIndex]}
             onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
           />
+          {lineAudioMissing && <Text style={styles.noAudioHint}>{t('lineHasNoAudio')}</Text>}
           {activeStepIndex === 2 && canRecord && (
-            <Text style={styles.holdToRecordHint}>{t('holdToRecord')}</Text>
+            <Text style={styles.recordHint}>
+              {actionCommand === 'start_record' ? t('tapToStopRecord') : t('tapToRecord')}
+            </Text>
           )}
         </View>
       )}
@@ -984,7 +1054,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 4,
   },
-  holdToRecordHint: {
+  noAudioHint: {
+    color: COLORS.error,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  recordHint: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,

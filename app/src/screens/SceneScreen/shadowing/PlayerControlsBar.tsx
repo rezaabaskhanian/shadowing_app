@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Square } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -15,15 +15,16 @@ import type { AudioActionCommand } from '../types';
  * دکمه‌ی اصلی و فرعی بسته به مرحله معنی‌شان عوض می‌شود:
  *  - Listen (۰): دکمه‌ی اصلی پخش/توقف، فرعی تکرار.
  *  - Shadow (۱): دکمه‌ی اصلی ضبط (کلیک برای شروع/پایان)، فرعی «تکرار».
- *  - Record (۲): دکمه‌ی اصلی ضبط (نگه‌داشتن)، فرعی «صدای خودم را بشنو».
+ *  - Record (۲): دکمه‌ی اصلی ضبط (کلیک برای شروع/پایان)، فرعی «صدای خودم را بشنو».
  *  - Compare (۳): دکمه‌ی اصلی پخش/توقف، فرعی «ضبط دوباره».
  */
 export const PlayerControlsBar: React.FC<{
   activeStepIndex: number;
   playing: boolean;
   actionCommand: AudioActionCommand;
-  setActionCommand: (cmd: AudioActionCommand) => void;
-  setPlaying: (playing: boolean) => void;
+  /** شروع ضبط؛ پارامتر یعنی صدای مرجع هم هم‌زمان پخش شود (مرحله‌ی شدو). */
+  onStartRecord: (withReference: boolean) => void;
+  onStopRecord: () => void;
   playbackRate: number;
   toggleSpeed: () => void;
   togglePlay: () => void;
@@ -36,8 +37,8 @@ export const PlayerControlsBar: React.FC<{
   activeStepIndex,
   playing,
   actionCommand,
-  setActionCommand,
-  setPlaying,
+  onStartRecord,
+  onStopRecord,
   playbackRate,
   toggleSpeed,
   togglePlay,
@@ -48,10 +49,8 @@ export const PlayerControlsBar: React.FC<{
   onPlayMyRecording,
 }) => {
   // مجوز میکروفن را زودتر (وقتی وارد مرحله‌ی ضبط می‌شویم) می‌گیریم تا لحظه‌ی
-  // نگه‌داشتنِ دکمه، ensureMicPermission دیگر async/کند نباشد؛ وگرنه در یک
-  // نگه‌داشتن کوتاه، onPressOut (stop_record) زودتر از resolve شدن promise
-  // اجرا می‌شد و start_record دیرهنگام روی آن می‌نشست — یعنی ضبط عملاً هیچ‌وقت
-  // واقعاً شروع/پایان درستی نداشت.
+  // زدنِ دکمه، ensureMicPermission دیگر async/کند نباشد و ضبط بدون تأخیر
+  // شروع شود.
   const micGrantedRef = React.useRef(false);
   React.useEffect(() => {
     if (activeStepIndex === 1 || activeStepIndex === 2) {
@@ -61,16 +60,21 @@ export const PlayerControlsBar: React.FC<{
     }
   }, [activeStepIndex]);
 
-  const startRecord = React.useCallback(() => {
-    if (micGrantedRef.current) {
-      setActionCommand('start_record');
-      return;
-    }
-    ensureMicPermission().then((granted) => {
-      micGrantedRef.current = granted;
-      if (granted) setActionCommand('start_record');
-    });
-  }, [setActionCommand]);
+  const recording = actionCommand === 'start_record';
+
+  const startRecord = React.useCallback(
+    (withReference: boolean) => {
+      if (micGrantedRef.current) {
+        onStartRecord(withReference);
+        return;
+      }
+      ensureMicPermission().then((granted) => {
+        micGrantedRef.current = granted;
+        if (granted) onStartRecord(withReference);
+      });
+    },
+    [onStartRecord]
+  );
 
   return (
     <View style={styles.controlsBar}>
@@ -84,28 +88,32 @@ export const PlayerControlsBar: React.FC<{
 
       <TouchableOpacity
         activeOpacity={0.85}
-        style={[styles.centerMicBtn, actionCommand === 'start_record' ? styles.centerMicBtnActive : null]}
+        style={[styles.centerMicBtn, recording ? styles.centerMicBtnActive : null]}
         onPress={() => {
-          if (activeStepIndex === 1) {
-            if (actionCommand === 'start_record') {
-              setActionCommand('stop_record');
+          // مرحله‌های ۱ و ۲ هر دو ضبط‌اند و یک‌جور کار می‌کنند: یک‌بار زدن شروع،
+          // یک‌بار دیگر پایان. (قبلاً مرحله‌ی ۲ نگه‌داشتنی بود؛ هم با بقیه‌ی اپ
+          // ناهماهنگ بود و هم نگه‌داشتنِ کوتاه باعث می‌شد stop_record زودتر از
+          // start_record بنشیند.)
+          if (activeStepIndex === 1 || activeStepIndex === 2) {
+            if (recording) {
+              onStopRecord();
             } else {
-              startRecord();
-              setPlaying(true);
+              // فقط در مرحله‌ی Shadow صدای مرجع هم‌زمان پخش می‌شود؛ در مرحله‌ی
+              // Record کاربر تنها صدای خودش را ضبط می‌کند.
+              startRecord(activeStepIndex === 1);
             }
-          } else if (activeStepIndex === 2) {
-            // این مرحله فقط با onPressIn/onPressOut (نگه‌داشتن) کار می‌کند؛
-            // onPress خودش نباید کاری بکند وگرنه با togglePlay قاطی می‌شود.
           } else {
             // Steps 0 (Listen) and 3 (Compare) share a simple play/pause toggle.
             togglePlay();
           }
         }}
-        onPressIn={activeStepIndex === 2 ? startRecord : undefined}
-        onPressOut={activeStepIndex === 2 ? () => setActionCommand('stop_record') : undefined}
       >
         {activeStepIndex === 1 || activeStepIndex === 2 ? (
-          <Mic size={24} color={COLORS.white} />
+          recording ? (
+            <Square size={22} color={COLORS.white} fill={COLORS.white} />
+          ) : (
+            <Mic size={24} color={COLORS.white} />
+          )
         ) : playing ? (
           <Pause size={22} color={COLORS.white} fill={COLORS.white} />
         ) : (
@@ -123,7 +131,11 @@ export const PlayerControlsBar: React.FC<{
         ]}
         disabled={activeStepIndex === 2 && !hasRecordingForCurrentLine}
         onPress={
-          activeStepIndex === 2 ? onPlayMyRecording : activeStepIndex === 3 ? startRecord : onReplay
+          activeStepIndex === 2
+            ? onPlayMyRecording
+            : activeStepIndex === 3
+              ? () => startRecord(false)
+              : onReplay
         }
       >
         {activeStepIndex === 3 ? (

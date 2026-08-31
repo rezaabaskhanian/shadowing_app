@@ -28,7 +28,7 @@ interface AudioPlayerProps {
   shouldPlay: boolean;
   playbackRate?: number;
   onPlaybackStatusUpdate?: (
-    status: 'loading' | 'playing' | 'paused' | 'finished' | 'error'
+    status: 'loading' | 'playing' | 'paused' | 'finished' | 'error' | 'no_audio'
   ) => void;
   /**
    * موقعیتِ زنده‌ی پخش (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با صدا.
@@ -45,7 +45,18 @@ interface AudioPlayerProps {
     filePath?: string,
     mimeType?: string
   ) => void;
-  actionCommand?: 'none' | 'start_record' | 'stop_record' | 'play_recording' | 'play_original';
+  /**
+   * دستور فعلی. تفاوت `play_original` و `resume` عمدی است: اولی یعنی «از اول
+   * پخش کن» و دومی یعنی «از همان‌جا ادامه بده». بدون این تفکیک، پلیر باید از
+   * روی داده حدس می‌زد و مکث را با تکرار اشتباه می‌گرفت.
+   */
+  actionCommand?:
+    | 'none'
+    | 'start_record'
+    | 'stop_record'
+    | 'play_recording'
+    | 'play_original'
+    | 'resume';
   /**
    * مسیر فایلِ ضبطی که دستور `play_recording` باید پخشش کند. اگر خالی باشد
    * یعنی برای این جمله هنوز ضبطی نیست.
@@ -90,10 +101,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // یک‌بار انجام می‌شود ولی همیشه به آخرین نسخه‌ی callback می‌رسد.
   const onPlaybackStatusUpdateRef = useRef(onPlaybackStatusUpdate);
   const onProgressRef = useRef(onProgress);
+  const onRecordedPlaybackEndRef = useRef(onRecordedPlaybackEnd);
   useEffect(() => {
     onPlaybackStatusUpdateRef.current = onPlaybackStatusUpdate;
     onProgressRef.current = onProgress;
-  }, [onPlaybackStatusUpdate, onProgress]);
+    onRecordedPlaybackEndRef.current = onRecordedPlaybackEnd;
+  }, [onPlaybackStatusUpdate, onProgress, onRecordedPlaybackEnd]);
 
   // وقتی صدای مرجع عوض می‌شود (افکت پایین‌تر)، بینِ `reset()` و `add()`ی
   // خودمان، صف لحظه‌ای خالی می‌شود — این می‌تواند یک `PlaybackQueueEnded`
@@ -102,6 +115,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // همان لحظه با «بعدی» باز شده) را دوباره می‌بست — همان چیزی که باعث می‌شد
   // حباب گاهی بیاید گاهی نه.
   const switchingTrackRef = useRef(false);
+
 
   useEffect(() => {
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (data) => {
@@ -143,27 +157,44 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       await ensureTrackPlayerSetup();
       if (cancelled) return;
 
+      const wantsPlay =
+        actionCommand === 'play_original' ||
+        actionCommand === 'resume' ||
+        (actionCommand === 'none' && shouldPlay);
+      // فقط `play_original` یعنی «از اول». `resume` و مکث و تغییر سرعت نباید
+      // موقعیت پخش را از دست بدهند.
+      const wantsRestart = actionCommand === 'play_original';
+
       if (!uri) {
         await TrackPlayer.pause();
+        // این جمله اصلاً صدای مرجع ندارد. باید صریحاً خبر بدهیم: چون هیچ
+        // پخشی شروع نمی‌شود، هیچ‌وقت PlaybackQueueEnded («finished») هم
+        // نمی‌آید و بدون این خبر، جریانِ خودکارِ «گوش دادن» روی همین جمله
+        // برای همیشه می‌ماند و کاربر فکر می‌کند پخش خراب شده.
+        //
+        // فقط روی درخواستِ صریحِ پخش خبر می‌دهیم، نه روی حالتِ پیش‌فرضِ
+        // (command='none' و shouldPlay=true) که هنوز هیچ جمله‌ای انتخاب نشده —
+        // وگرنه همان لحظه‌ی اولِ باز شدن صفحه هم «صدا ندارد» اعلام می‌شد.
+        if (wantsRestart || actionCommand === 'resume') {
+          onPlaybackStatusUpdateRef.current?.('no_audio');
+        }
         return;
       }
 
-      // فقط وقتی صدا واقعاً عوض شده صف را از نو می‌سازیم؛ وگرنه (مثلاً فقط
-      // rate عوض شده یا actionNonce برای پخشِ دوباره زیاد شده) همان track را
+      // فقط وقتی صدا واقعاً عوض شده صف را از نو می‌سازیم؛ وگرنه همان track را
       // نگه می‌داریم و فقط seek/rate را به‌روز می‌کنیم — این‌طور صدا هر بار
       // با یک تلق کوتاهِ reload نمی‌پرد.
       const active = await TrackPlayer.getActiveTrack();
       if (active?.url !== uri) {
         await TrackPlayer.reset();
         await TrackPlayer.add({ id: MASTER_TRACK_ID, url: uri });
-      } else {
+      } else if (wantsRestart) {
         await TrackPlayer.seekTo(0);
       }
       if (cancelled) return;
 
       await TrackPlayer.setRate(playbackRate);
 
-      const wantsPlay = actionCommand === 'play_original' || (actionCommand === 'none' && shouldPlay);
       if (wantsPlay) {
         await TrackPlayer.play();
       } else {
@@ -181,27 +212,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uri, shouldPlay, actionCommand, actionNonce, playbackRate, isRecordingCommand]);
 
   // ============================================================
   // ضبط صدای کاربر و پخش دوباره‌ی آن — nitro-sound
   // ============================================================
 
+  // مثل listenerهای TrackPlayer بالا، اینها هم فقط یک بار ثبت می‌شوند و از
+  // طریق ref به آخرین callback می‌رسند. اگر خودِ propها در dependency باشند،
+  // چون callerها آنها را درون‌خطی می‌سازند، با هر رندر (و صدای مرجع ۱۰ بار در
+  // ثانیه رندر می‌سازد) این listenerها قطع و دوباره وصل می‌شوند — هم هدررفت
+  // است و هم بینِ remove و add یک شکاف بی‌listener می‌ماند که می‌تواند رویداد
+  // پایانِ پخش را ببلعد و صفِ «پخش همه‌ی ضبط‌ها» را وسط راه بخواباند.
   useEffect(() => {
     Sound.addPlaybackEndListener(() => {
-      onRecordedPlaybackEnd?.();
+      onRecordedPlaybackEndRef.current?.();
     });
     // فقط وقتی Sound.startPlayer در حال پخش است اتفاق می‌افتد (نه حین
     // ضبط)، پس برای هایلایتِ کلمه‌به‌کلمه‌ی پخشِ دوباره‌ی ضبط کافی است.
     Sound.addPlayBackListener((meta) => {
-      onProgress?.(meta.currentPosition / 1000, 'recording');
+      onProgressRef.current?.(meta.currentPosition / 1000, 'recording');
     });
     return () => {
       Sound.removePlaybackEndListener();
       Sound.removePlayBackListener();
     };
-  }, [onRecordedPlaybackEnd, onProgress]);
+  }, []);
 
   useEffect(() => {
     if (actionCommand === 'start_record') {
