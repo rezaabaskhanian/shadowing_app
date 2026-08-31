@@ -67,3 +67,34 @@ export async function getSkillsBreakdown(): Promise<SkillsBreakdown> {
   const res = await authFetch('/v1/progress/skills', { method: 'GET' });
   return (await jsonOrThrow(res)) as SkillsBreakdown;
 }
+
+export interface SceneProgressUpdate {
+  scene_id: string;
+  progress: number;
+  is_completed: boolean;
+  total_xp: number;
+}
+
+/**
+ * ثبت یک جمله‌ی کامل‌شده (ضبط + نمره‌ی مقایسه) برای پیشرفت صحنه.
+ *
+ * مسیر نمره‌دهیِ اپ (/v1/shadowing/evaluate) بدون session است و خودش پیشرفت
+ * صحنه را ثبت نمی‌کند، برای همین صحنه بدون این فراخوانی هیچ‌وقت در لیست خانه
+ * تیک نمی‌خورد. سمت سرور idempotent است، پس تکرارش بی‌خطر است.
+ */
+export async function recordDialogueProgress(params: {
+  sceneId: string;
+  dialogueId: string;
+  score: number;
+}): Promise<SceneProgressUpdate> {
+  const res = await authFetch('/v1/progress/dialogue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scene_id: params.sceneId,
+      dialogue_id: params.dialogueId,
+      score: params.score,
+    }),
+  });
+  return (await jsonOrThrow(res)) as SceneProgressUpdate;
+}

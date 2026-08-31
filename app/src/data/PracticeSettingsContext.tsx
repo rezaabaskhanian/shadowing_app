@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { COLORS } from '../theme/colors';
@@ -79,32 +79,42 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       .catch(() => {});
   }, []);
 
-  const setRepeatsPerStep = (value: RepeatsPerStep) => {
+  const setRepeatsPerStep = useCallback((value: RepeatsPerStep) => {
     setRepeatsPerStepState(value);
     AsyncStorage.setItem(STORAGE_KEY, String(value)).catch(() => {});
-  };
+  }, []);
 
-  const setTextDisplayMode = (value: TextDisplayMode) => {
+  const setTextDisplayMode = useCallback((value: TextDisplayMode) => {
     setTextDisplayModeState(value);
     AsyncStorage.setItem(TEXT_DISPLAY_MODE_KEY, value).catch(() => {});
-  };
+  }, []);
 
-  const setHighlightColor = (value: string) => {
+  const setHighlightColor = useCallback((value: string) => {
     setHighlightColorState(value);
     AsyncStorage.setItem(HIGHLIGHT_COLOR_KEY, value).catch(() => {});
-  };
+  }, []);
+
+  const value = useMemo<PracticeSettingsContextType>(
+    () => ({
+      repeatsPerStep,
+      setRepeatsPerStep,
+      textDisplayMode,
+      setTextDisplayMode,
+      highlightColor,
+      setHighlightColor,
+    }),
+    [
+      repeatsPerStep,
+      setRepeatsPerStep,
+      textDisplayMode,
+      setTextDisplayMode,
+      highlightColor,
+      setHighlightColor,
+    ]
+  );
 
   return (
-    <PracticeSettingsContext.Provider
-      value={{
-        repeatsPerStep,
-        setRepeatsPerStep,
-        textDisplayMode,
-        setTextDisplayMode,
-        highlightColor,
-        setHighlightColor,
-      }}
-    >
+    <PracticeSettingsContext.Provider value={value}>
       {children}
     </PracticeSettingsContext.Provider>
   );

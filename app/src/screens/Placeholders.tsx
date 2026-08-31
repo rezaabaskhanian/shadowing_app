@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -360,10 +361,89 @@ export const ProgressScreen = () => {
   );
 };
 
-import { useNotifications, ReminderTime, ContentSource } from '../data/NotificationContext';
+import {
+  useNotifications,
+  ReminderTime,
+  ContentSource,
+  MAX_REMINDER_TIMES,
+} from '../data/NotificationContext';
+import { useToast } from '../data/ToastContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Clock, MessageSquare, Mic, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Clock, MessageSquare, Mic, Plus, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
+
+/**
+ * TimePickerModal انتخاب ساعت دلخواه برای یادآوری روزانه. عمداً با ScrollView
+ * ساده نوشته شده (نه @react-native-community/datetimepicker) تا وابستگی نیتیو
+ * جدید و rebuild لازم نشود. دقیقه‌ها با گام ۵ دقیقه‌ای‌اند.
+ */
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TimePickerModal: React.FC<{
+  visible: boolean;
+  onCancel: () => void;
+  onConfirm: (time: ReminderTime) => void;
+}> = ({ visible, onCancel, onConfirm }) => {
+  const { t } = useLanguage();
+  const [hour, setHour] = React.useState('20');
+  const [minute, setMinute] = React.useState('00');
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={styles.timeModalBackdrop}>
+        <View style={styles.timeModalCard}>
+          <Text style={styles.timeModalTitle}>{t('pickReminderTime')}</Text>
+          <Text style={styles.timeModalPreview}>{`${hour}:${minute}`}</Text>
+
+          <View style={styles.timeColumnRow}>
+            <View style={styles.timeColumn}>
+              <Text style={styles.subOptionLabel}>{t('hour')}</Text>
+              <ScrollView style={styles.timeColumnScroll} showsVerticalScrollIndicator={false}>
+                {HOUR_OPTIONS.map((h) => (
+                  <TouchableOpacity
+                    key={h}
+                    style={[styles.timeCell, hour === h && styles.timeCellActive]}
+                    onPress={() => setHour(h)}
+                  >
+                    <Text style={[styles.pillText, hour === h && styles.pillTextActive]}>{h}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.timeColumn}>
+              <Text style={styles.subOptionLabel}>{t('minute')}</Text>
+              <ScrollView style={styles.timeColumnScroll} showsVerticalScrollIndicator={false}>
+                {MINUTE_OPTIONS.map((m) => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.timeCell, minute === m && styles.timeCellActive]}
+                    onPress={() => setMinute(m)}
+                  >
+                    <Text style={[styles.pillText, minute === m && styles.pillTextActive]}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+
+          <View style={styles.timeModalActions}>
+            <TouchableOpacity style={[styles.pillBtn]} onPress={onCancel}>
+              <Text style={styles.pillText}>{t('cancel')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pillBtn, styles.pillBtnActive]}
+              onPress={() => onConfirm(`${hour}:${minute}`)}
+            >
+              <Text style={[styles.pillText, styles.pillTextActive]}>{t('addReminderTime')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
@@ -372,8 +452,9 @@ export const ProfileScreen = () => {
   const {
     studyReminderEnabled,
     setStudyReminderEnabled,
-    studyReminderTime,
-    setStudyReminderTime,
+    studyReminderTimes,
+    addStudyReminderTime,
+    removeStudyReminderTime,
     contentNotificationEnabled,
     setContentNotificationEnabled,
     contentSource,
@@ -381,6 +462,21 @@ export const ProfileScreen = () => {
     triggerTestNotification,
   } = useNotifications();
   const { repeatsPerStep, setRepeatsPerStep, highlightColor, setHighlightColor } = usePracticeSettings();
+  const toast = useToast();
+  const [timePickerOpen, setTimePickerOpen] = React.useState(false);
+
+  // ساعتِ انتخاب‌شده در مودال اضافه می‌شود؛ اگر تکراری بود یا به سقف رسیده
+  // بودیم، به‌جای اضافه‌کردنِ بی‌صدا به کاربر پیام می‌دهیم.
+  const handleAddReminderTime = (time: ReminderTime) => {
+    setTimePickerOpen(false);
+    if (studyReminderTimes.includes(time)) {
+      toast.info(t('reminderTimeDuplicate'));
+      return;
+    }
+    if (!addStudyReminderTime(time)) {
+      toast.warning(t('reminderTimeLimitReached'));
+    }
+  };
   const { box } = useVocab();
   const { scenes } = useScenes();
 
@@ -569,19 +665,31 @@ export const ProfileScreen = () => {
               <Clock color={COLORS.textSecondary} size={14} />
               <Text style={styles.subOptionLabel}>{t('reminderTime')}</Text>
             </View>
-            <View style={styles.pillGroup}>
-              {(['09:00', '14:00', '20:00'] as ReminderTime[]).map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[styles.pillBtn, studyReminderTime === time && styles.pillBtnActive]}
-                  onPress={() => setStudyReminderTime(time)}
-                >
-                  <Text style={[styles.pillText, studyReminderTime === time && styles.pillTextActive]}>
-                    {time === '09:00' ? '09:00 AM' : time === '14:00' ? '02:00 PM' : '08:00 PM'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+
+            {studyReminderTimes.length === 0 ? (
+              <Text style={styles.optionSub}>{t('reminderTimesEmpty')}</Text>
+            ) : (
+              <View style={styles.timeChipRow}>
+                {studyReminderTimes.map((time) => (
+                  <View key={time} style={styles.timeChip}>
+                    <Text style={styles.timeChipText}>{time}</Text>
+                    <TouchableOpacity
+                      onPress={() => removeStudyReminderTime(time)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <X color={COLORS.white} size={13} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {studyReminderTimes.length < MAX_REMINDER_TIMES && (
+              <TouchableOpacity style={styles.addTimeBtn} onPress={() => setTimePickerOpen(true)}>
+                <Plus color={COLORS.primary} size={14} />
+                <Text style={styles.addTimeText}>{t('addReminderTime')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -637,6 +745,12 @@ export const ProfileScreen = () => {
           <Sparkles color={COLORS.white} size={16} />
           <Text style={styles.testBtnText}>{t('sendTestNotification')}</Text>
         </TouchableOpacity>
+
+        <TimePickerModal
+          visible={timePickerOpen}
+          onCancel={() => setTimePickerOpen(false)}
+          onConfirm={handleAddReminderTime}
+        />
       </View>
 
     </ScrollView>
@@ -1026,6 +1140,96 @@ const styles = StyleSheet.create({
   },
   pillTextActive: {
     color: COLORS.white,
+  },
+  timeChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+  },
+  timeChipText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+  },
+  addTimeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  addTimeText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+  },
+  timeModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  timeModalCard: {
+    width: '100%',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  timeModalTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  timeModalPreview: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 28,
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  timeColumnRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  timeColumnScroll: {
+    maxHeight: 180,
+  },
+  timeCell: {
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    marginBottom: 6,
+  },
+  timeCellActive: {
+    backgroundColor: COLORS.primary,
+  },
+  timeModalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
   },
   dividerLine: {
     height: 1,

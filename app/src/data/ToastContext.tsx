@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -88,11 +88,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [show],
   );
 
-  return (
-    <ToastContext.Provider value={{ current, show, success, error, info, warning, dismiss }}>
-      {children}
-    </ToastContext.Provider>
+  // بدون این memo، هر رندرِ provider یک آبجکت تازه می‌سازد و همه‌ی مصرف‌کننده‌ها
+  // رندر می‌شوند — و چون ToastProvider بالای بیشترِ درخت است، هر توست کل اپ را
+  // رندر می‌کرد. تابع‌ها همگی useCallback با deps پایدارند، پس تنها چیزی که
+  // واقعاً value را عوض می‌کند خودِ current است.
+  const value = useMemo<ToastContextValue>(
+    () => ({ current, show, success, error, info, warning, dismiss }),
+    [current, show, success, error, info, warning, dismiss]
   );
+
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
 };
 
 export function useToast(): ToastContextValue {

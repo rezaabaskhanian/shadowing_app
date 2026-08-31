@@ -17,5 +17,6 @@ func (h Handler) SetProgressRoutes(e *echo.Echo) {
 	group.GET("/summary/:userID", h.GetUserSummary, middlware.Auth(h.authSvc, h.authConfig))
 	group.GET("/weekly-activity", h.GetWeeklyActivity, middlware.Auth(h.authSvc, h.authConfig))
 	group.GET("/skills", h.GetSkillsBreakdown, middlware.Auth(h.authSvc, h.authConfig))
+	group.POST("/dialogue", h.RecordDialogueProgress, middlware.Auth(h.authSvc, h.authConfig))
 
 }

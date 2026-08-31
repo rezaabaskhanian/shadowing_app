@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 export type Language = 'en' | 'fa';
 
@@ -210,7 +210,12 @@ export const translations: Translations = {
   startShadowing: { en: 'Start Shadowing', fa: 'شروع سایه‌زنی' },
   stopShadowing: { en: 'Stop Shadowing', fa: 'توقف سایه‌زنی' },
   replayMaster: { en: 'Replay Master', fa: 'پخش دوباره صدای اصلی' },
-  holdToRecord: { en: 'Hold to Record', fa: 'برای ضبط نگه دارید' },
+  lineHasNoAudio: {
+    en: 'No reference audio for this line yet.',
+    fa: 'برای این جمله هنوز صدای مرجع ثبت نشده.'
+  },
+  tapToRecord: { en: 'Tap to Record', fa: 'برای ضبط بزنید' },
+  tapToStopRecord: { en: 'Tap to Stop', fa: 'برای پایان ضبط بزنید' },
   masterAudio: { en: 'Master Audio', fa: 'صدای اصلی' },
   yourRecording: { en: 'Your Recording', fa: 'صدای شما' },
 
@@ -271,7 +276,21 @@ export const translations: Translations = {
     fa: 'صداهای مصوت را خوب تلفظ می‌کنید، اما سعی کنید روی کلمات کلیدی بیشتر تاکید کنید.',
   },
   practiceAgain: { en: 'Practice Again', fa: 'تمرین دوباره' },
-  nextLesson: { en: 'Next Lesson', fa: 'درس بعدی' },
+  // این دکمه درس را تمام می‌کند (و نه رفتن به درس بعدی)؛ اسمش باید همان کاری
+  // را بگوید که می‌کند.
+  finishLesson: { en: 'Finish Lesson', fa: 'پایان درس' },
+  shadowAgain: { en: 'Practice again', fa: 'دوباره تمرین کن' },
+  backToHome: { en: 'Back to home', fa: 'برگرد به خانه' },
+  lessonCompleteTitle: { en: 'Lesson complete! 🎉', fa: 'درس تمام شد! 🎉' },
+  lessonCompleteMessage: {
+    en: 'You recorded and compared every sentence in this scene.',
+    fa: 'همه‌ی جمله‌های این صحنه را ضبط و مقایسه کردی.'
+  },
+  lessonIncompleteTitle: { en: 'Lesson not finished yet', fa: 'درس هنوز تمام نشده' },
+  lessonIncompleteMessage: {
+    en: "You haven't compared every sentence yet — finish the remaining ones first.",
+    fa: 'هنوز همه‌ی جمله‌ها را مقایسه نکرده‌ای — اول بقیه را کامل کن.'
+  },
   wordExcellent: { en: 'Excellent', fa: 'عالی' },
   wordGood: { en: 'Good', fa: 'خوب' },
   wordNeedsPractice: { en: 'Needs practice', fa: 'نیاز به تمرین' },
@@ -329,7 +348,20 @@ export const translations: Translations = {
     en: 'Get daily alerts to keep your learning streak active.',
     fa: 'دریافت یادآوری روزانه برای حفظ استریک و استمرار در تمرین.'
   },
-  reminderTime: { en: 'Reminder Time', fa: 'زمان یادآوری روزانه' },
+  reminderTime: { en: 'Reminder Times', fa: 'ساعت‌های یادآوری' },
+  reminderTimesEmpty: {
+    en: 'No time selected yet — add at least one.',
+    fa: 'هنوز ساعتی انتخاب نکرده‌ای — حداقل یکی اضافه کن.'
+  },
+  addReminderTime: { en: 'Add a time', fa: 'افزودن ساعت' },
+  pickReminderTime: { en: 'Pick a reminder time', fa: 'انتخاب ساعت یادآوری' },
+  reminderTimeLimitReached: {
+    en: 'You can add up to 12 reminder times.',
+    fa: 'حداکثر ۱۲ ساعت یادآوری می‌توانی اضافه کنی.'
+  },
+  reminderTimeDuplicate: { en: 'This time is already added.', fa: 'این ساعت قبلاً اضافه شده است.' },
+  hour: { en: 'Hour', fa: 'ساعت' },
+  minute: { en: 'Minute', fa: 'دقیقه' },
   contentNotification: { en: 'Sentence & Vocab Alerts', fa: 'نوتیفیکیشن واژه‌ها و جملات' },
   contentNotificationSub: {
     en: 'Receive banner notifications featuring your Leitner words or lesson sentences.',
@@ -339,6 +371,13 @@ export const translations: Translations = {
   sourceLeitner: { en: 'Leitner Words', fa: 'واژگان لایتنر' },
   sourceSentences: { en: 'Lesson Sentences', fa: 'جملات درس‌ها' },
   sourceMixed: { en: 'Both (Mixed)', fa: 'ترکیب واژه‌ها و جملات' },
+  // متن خودِ نوتیفیکیشن یادآوری روزانه — با زبانِ دستگاه ساخته می‌شود، نه
+  // زبان انتخابی داخل اپ (getDeviceLanguage در utils/deviceLanguage).
+  notifDailyReminderTitle: { en: '🔥 Time to shadow!', fa: '🔥 وقت تمرینه!' },
+  notifDailyReminderBody: {
+    en: 'A few minutes of practice keeps your streak alive.',
+    fa: 'چند دقیقه تمرین کن تا استریکت از بین نره.'
+  },
   sendTestNotification: { en: 'Send Test Notification Banner', fa: 'ارسال نوتیفیکیشن آزمایشی' },
   testNotificationSent: { en: 'Test notification displayed!', fa: 'نوتیفیکیشن آزمایشی نمایش داده شد!' },
   noContentForTestNotification: {
@@ -497,6 +536,17 @@ export const translations: Translations = {
   toastDemoMenuSub: { en: 'Dev-only: see every toast style', fa: 'فقط برای توسعه: دیدن همه‌ی استایل‌های پیام' },
 };
 
+/**
+ * translate ترجمه را بیرون از درخت React برمی‌گرداند؛ برای جاهایی مثل
+ * سرویس نوتیفیکیشن که به هوک useLanguage دسترسی ندارند و باید متن را با
+ * زبانِ دستگاه بسازند.
+ */
+export const translate = (lang: Language, key: string): string => {
+  const entry = translations[key];
+  if (!entry) return key;
+  return entry[lang] || entry.en;
+};
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -512,18 +562,16 @@ const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('en');
 
-  const t = (key: string): string => {
-    if (translations[key]) {
-      return translations[key][language] || translations[key].en;
-    }
-    return key;
-  };
-
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+  // t باید پایدار باشد: در سراسر اپ داخل dependency array هوک‌ها می‌نشیند، پس
+  // اگر هر رندر تابع تازه‌ای باشد، آن هوک‌ها هم بی‌دلیل دوباره اجرا می‌شوند.
+  const t = useCallback(
+    (key: string): string => translate(language, key),
+    [language]
   );
+
+  const value = useMemo(() => ({ language, setLanguage, t }), [language, t]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 
 export const useLanguage = () => useContext(LanguageContext);

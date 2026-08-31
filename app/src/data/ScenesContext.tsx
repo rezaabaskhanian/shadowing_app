@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -76,13 +77,12 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
     [scenes]
   );
 
-  return (
-    <ScenesContext.Provider
-      value={{ scenes, loading, error, reload: load, getScene }}
-    >
-      {children}
-    </ScenesContext.Provider>
+  const value = useMemo<ScenesContextValue>(
+    () => ({ scenes, loading, error, reload: load, getScene }),
+    [scenes, loading, error, load, getScene]
   );
+
+  return <ScenesContext.Provider value={value}>{children}</ScenesContext.Provider>;
 };
 
 export const useScenes = () => useContext(ScenesContext);
