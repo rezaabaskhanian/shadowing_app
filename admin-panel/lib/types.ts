@@ -183,7 +183,22 @@ export interface SubscriptionPlan {
   name: string;
   duration_days: number;
   price_toman: number;
+  product_id: string;
   created_at: string;
+}
+
+export interface DailyRevenue {
+  date: string;
+  revenue_toman: number;
+  purchase_count: number;
+}
+
+export interface RevenueStats {
+  total_revenue_toman: number;
+  total_purchase_count: number;
+  period_revenue_toman: number;
+  period_purchase_count: number;
+  daily: DailyRevenue[];
 }
 
 // ---------- بخش‌های صفحه‌ی معرفی (landing, www.lingoflow.ir) ----------

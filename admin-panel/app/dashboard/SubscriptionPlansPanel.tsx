@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import {
   createSubscriptionPlan,
   deleteSubscriptionPlan,
+  getRevenueStats,
   grantSubscription,
   listSubscriptionPlans,
 } from "@/lib/api";
-import type { SubscriptionPlan } from "@/lib/types";
+import type { RevenueStats, SubscriptionPlan } from "@/lib/types";
 
 const POINTS_PER_DISCOUNT_UNIT = 100;
 const DISCOUNT_TOMAN_PER_UNIT = 20000;
@@ -23,12 +24,16 @@ export default function SubscriptionPlansPanel({
   const [name, setName] = useState("");
   const [durationDays, setDurationDays] = useState("30");
   const [priceToman, setPriceToman] = useState("");
+  const [productId, setProductId] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [phone, setPhone] = useState("");
   const [planId, setPlanId] = useState("");
   const [points, setPoints] = useState("0");
   const [granting, setGranting] = useState(false);
+
+  const [revenue, setRevenue] = useState<RevenueStats | null>(null);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   async function load() {
     setLoading(true);
@@ -43,8 +48,20 @@ export default function SubscriptionPlansPanel({
     }
   }
 
+  async function loadRevenue() {
+    setRevenueLoading(true);
+    try {
+      setRevenue(await getRevenueStats(30));
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setRevenueLoading(false);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadRevenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -55,11 +72,12 @@ export default function SubscriptionPlansPanel({
     }
     setCreating(true);
     try {
-      await createSubscriptionPlan(name.trim(), Number(durationDays), Number(priceToman));
+      await createSubscriptionPlan(name.trim(), Number(durationDays), Number(priceToman), productId.trim());
       notify("طرح اشتراک ساخته شد ✅", "ok");
       setName("");
       setDurationDays("30");
       setPriceToman("");
+      setProductId("");
       load();
     } catch (err: any) {
       notify(err.message, "err");
@@ -103,10 +121,38 @@ export default function SubscriptionPlansPanel({
   return (
     <div>
       <div className="card">
+        <h2 style={{ marginTop: 0 }}>📈 درآمد اشتراک (۳۰ روز اخیر)</h2>
+        {revenueLoading || !revenue ? (
+          <p className="hint">در حال بارگذاری...</p>
+        ) : (
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>درآمد کل (همه‌ی زمان)</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>
+                {revenue.total_revenue_toman.toLocaleString()} تومان
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{revenue.total_purchase_count} خرید</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>درآمد ۳۰ روز اخیر</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>
+                {revenue.period_revenue_toman.toLocaleString()} تومان
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{revenue.period_purchase_count} خرید</div>
+            </div>
+          </div>
+        )}
+        <p style={{ marginTop: 12, opacity: 0.6, fontSize: 12 }}>
+          فقط خریدهای واقعی کافه‌بازاری شمرده می‌شوند؛ اشتراک‌هایی که دستی از پنل فعال شده‌اند جزو درآمد نیستند.
+        </p>
+      </div>
+
+      <div className="card">
         <h2 style={{ marginTop: 0 }}>💳 طرح‌های اشتراک</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
-          هنوز درگاه پرداخت واقعی وصل نیست — فعلاً طرح‌ها اینجا تعریف می‌شوند و
-          اشتراک هر کاربر دستی (پس از پرداخت خارج از اپ) فعال می‌شود.
+          شناسه‌ی محصول (product_id) باید دقیقاً با SKUای که در پنل توسعه‌دهندگان
+          کافه‌بازار برای این پلن ساخته‌ای یکی باشد تا از اپ قابل‌خرید باشد؛ برای
+          طرح‌هایی که فقط دستی فعال می‌شوند می‌تواند خالی بماند.
         </p>
 
         {plans.length === 0 ? (
@@ -127,6 +173,11 @@ export default function SubscriptionPlansPanel({
               >
                 <span>
                   {p.name} — {p.duration_days} روزه — {p.price_toman.toLocaleString()} تومان
+                  {p.product_id ? (
+                    <code style={{ marginInlineStart: 8, opacity: 0.7, fontSize: 12 }}>{p.product_id}</code>
+                  ) : (
+                    <span style={{ marginInlineStart: 8, opacity: 0.5, fontSize: 12 }}>(فقط گرنت دستی)</span>
+                  )}
                 </span>
                 <button className="btn btn-ghost btn-sm" onClick={() => handleDeletePlan(p.id)}>
                   حذف
@@ -136,7 +187,7 @@ export default function SubscriptionPlansPanel({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input placeholder="نام طرح" value={name} onChange={(e) => setName(e.target.value)} />
           <input
             placeholder="مدت (روز)"
@@ -151,6 +202,13 @@ export default function SubscriptionPlansPanel({
             value={priceToman}
             onChange={(e) => setPriceToman(e.target.value)}
             style={{ width: 140 }}
+          />
+          <input
+            placeholder="product_id (SKU کافه‌بازار — اختیاری)"
+            dir="ltr"
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
+            style={{ width: 220 }}
           />
           <button className="btn btn-sm" onClick={handleCreatePlan} disabled={creating}>
             {creating ? "..." : "+ افزودن طرح"}

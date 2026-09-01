@@ -66,6 +66,7 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/subscription-plans", h.CreateSubscriptionPlan)
 	g.DELETE("/subscription-plans/:id", h.DeleteSubscriptionPlan)
 	g.POST("/subscriptions/grant", h.GrantSubscription)
+	g.GET("/subscriptions/revenue-stats", h.RevenueStats)
 
 	// لیست کاربرها + خلاصه‌ی فعالیتشون
 	g.GET("/users", h.ListUsers)

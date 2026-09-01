@@ -483,26 +483,30 @@ export const translations: Translations = {
   // ---- Paywall (خرید کافه‌بازاری / باز کردن صحنه‌های قفل) ----
   paywallTitle: { en: 'Unlock All Scenes', fa: 'باز کردن همه‌ی صحنه‌ها' },
   paywallSubtitle: {
-    en: 'The first 30 scenes are always free. Get every scene for a full year with one payment.',
-    fa: 'سی صحنه‌ی اول همیشه رایگانه. با یه پرداخت، همه‌ی صحنه‌ها رو یک سال کامل باز کن.',
+    en: 'The first 30 scenes are always free. Pick a plan to unlock every scene.',
+    fa: 'سی صحنه‌ی اول همیشه رایگانه. یه پلن انتخاب کن و همه‌ی صحنه‌ها رو باز کن.',
   },
-  paywallYourPoints: { en: 'Your points', fa: 'امتیازهای تو' },
   paywallPriceLabel: { en: 'Price', fa: 'قیمت' },
-  paywallDiscountApplied: {
-    en: 'Discount applied from your points',
-    fa: 'تخفیف امتیازهات اعمال شد',
-  },
-  paywallBuyButton: { en: 'Buy — 1 Year Access', fa: 'خرید — دسترسی یک‌ساله' },
-  paywallProcessing: { en: 'Processing your purchase…', fa: 'در حال پردازش خرید…' },
+  paywallBuyButton: { en: 'Continue', fa: 'ادامه و پرداخت' },
+  paywallProcessing: { en: 'Processing…', fa: 'در حال پردازش…' },
   paywallSuccessTitle: { en: 'Subscription activated!', fa: 'اشتراک فعال شد!' },
   paywallSuccessSub: {
-    en: 'All scenes are unlocked for the next year.',
-    fa: 'همه‌ی صحنه‌ها برای یک سال آینده باز شدن.',
+    en: 'All scenes are unlocked.',
+    fa: 'همه‌ی صحنه‌ها باز شدن.',
   },
   paywallSuccessBtn: { en: "Great, let's go", fa: 'عالی، بریم' },
   paywallErrorGeneric: {
     en: "Couldn't complete the purchase. Please try again.",
     fa: 'خرید کامل نشد. دوباره امتحان کن.',
+  },
+  paywallRestoreButton: { en: 'Restore purchase', fa: 'بازیابی خرید قبلی' },
+  paywallRestoreNotFound: {
+    en: 'No previous purchase was found for this Bazaar account.',
+    fa: 'خرید قبلی‌ای برای این حساب بازار پیدا نشد.',
+  },
+  paywallPlansLoadError: {
+    en: "Couldn't load plans. Please try again.",
+    fa: 'طرح‌های اشتراک بارگذاری نشد. دوباره امتحان کن.',
   },
   lockedBadge: { en: 'Locked', fa: 'قفل' },
 

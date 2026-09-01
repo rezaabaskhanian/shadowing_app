@@ -22,11 +22,13 @@ func DiscountForPoints(points int) int {
 
 type repository interface {
 	ListPlans(ctx context.Context) ([]postgressubscription.Plan, error)
-	CreatePlan(ctx context.Context, name string, durationDays, priceToman int) (postgressubscription.Plan, error)
+	CreatePlan(ctx context.Context, name string, durationDays, priceToman int, productID string) (postgressubscription.Plan, error)
+	GetPlanByProductID(ctx context.Context, productID string) (postgressubscription.Plan, error)
 	DeletePlan(ctx context.Context, id string) error
 	GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int, provider, purchaseToken string) error
 	HasActiveSubscription(ctx context.Context, userID string) (bool, error)
 	PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error)
+	RevenueStats(ctx context.Context, days int) (postgressubscription.RevenueStats, error)
 }
 
 type Service struct {
@@ -43,8 +45,19 @@ func (s Service) ListPlans(ctx context.Context) ([]Plan, error) {
 	return s.repo.ListPlans(ctx)
 }
 
-func (s Service) CreatePlan(ctx context.Context, name string, durationDays, priceToman int) (Plan, error) {
-	return s.repo.CreatePlan(ctx, name, durationDays, priceToman)
+func (s Service) CreatePlan(ctx context.Context, name string, durationDays, priceToman int, productID string) (Plan, error) {
+	return s.repo.CreatePlan(ctx, name, durationDays, priceToman, productID)
+}
+
+// GetPlanByProductID پلن متناظر یک SKU کافه‌بازار را برمی‌گرداند — برای
+// اعتبارسنجی خرید Poolakey استفاده می‌شود.
+func (s Service) GetPlanByProductID(ctx context.Context, productID string) (Plan, error) {
+	return s.repo.GetPlanByProductID(ctx, productID)
+}
+
+// RevenueStats آمار درآمد اشتراک‌های خریداری‌شده (نه گرنت دستی) را برمی‌گرداند.
+func (s Service) RevenueStats(ctx context.Context, days int) (postgressubscription.RevenueStats, error) {
+	return s.repo.RevenueStats(ctx, days)
 }
 
 func (s Service) DeletePlan(ctx context.Context, id string) error {

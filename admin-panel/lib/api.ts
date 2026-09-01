@@ -14,6 +14,7 @@ import type {
   NotificationStatsResp,
   SceneResp,
   SceneSubmission,
+  RevenueStats,
   SettingsResp,
   SubscriptionPlan,
   TopicSuggestion,
@@ -372,18 +373,31 @@ export async function listSubscriptionPlans(): Promise<SubscriptionPlan[]> {
 export async function createSubscriptionPlan(
   name: string,
   durationDays: number,
-  priceToman: number
+  priceToman: number,
+  productId: string
 ): Promise<SubscriptionPlan> {
   const res = await authFetch("/v1/admin/subscription-plans", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, duration_days: durationDays, price_toman: priceToman }),
+    body: JSON.stringify({
+      name,
+      duration_days: durationDays,
+      price_toman: priceToman,
+      product_id: productId,
+    }),
   });
   return jsonOrThrow(res);
 }
 
 export async function deleteSubscriptionPlan(id: string) {
   const res = await authFetch(`/v1/admin/subscription-plans/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
+export async function getRevenueStats(days = 30): Promise<RevenueStats> {
+  const res = await authFetch(`/v1/admin/subscriptions/revenue-stats?days=${days}`, {
+    method: "GET",
+  });
   return jsonOrThrow(res);
 }
 

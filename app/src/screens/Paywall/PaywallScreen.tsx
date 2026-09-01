@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Coins, Lock, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, Lock, RotateCcw, Sparkles } from 'lucide-react-native';
 import { useBazaar } from '@cafebazaar/react-native-poolakey';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { useScenes } from '../../data/ScenesContext';
-import { getMyPoints } from '../../api/submissions';
-import { verifyPurchase } from '../../api/billing';
-import { bestTierForPoints, YEARLY_PLAN_PRICE_TOMAN } from '../../data/subscriptionTiers';
+import { getSubscriptionPlans, verifyPurchase, SubscriptionPlan } from '../../api/billing';
 import { CAFEBAZAAR_RSA_KEY } from '../../api/config';
 
 const formatToman = (n: number) => n.toLocaleString('en-US');
+
+type Phase = 'loading' | 'idle' | 'buying' | 'restoring' | 'error' | 'success';
 
 export const PaywallScreen = () => {
   const navigation = useNavigation<any>();
@@ -21,32 +21,66 @@ export const PaywallScreen = () => {
   const { reload } = useScenes();
   const bazaar = useBazaar(CAFEBAZAAR_RSA_KEY || null);
 
-  const [points, setPoints] = useState(0);
-  const [phase, setPhase] = useState<'idle' | 'buying' | 'error' | 'success'>('idle');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>('loading');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    getMyPoints()
-      .then((p) => active && setPoints(p))
-      .catch(() => {});
+    getSubscriptionPlans()
+      .then((list) => {
+        if (!active) return;
+        setPlans(list);
+        // پیش‌فرض طولانی‌ترین پلن (معمولاً به‌صرفه‌ترین) انتخاب می‌شود.
+        const longest = [...list].sort((a, b) => b.duration_days - a.duration_days)[0];
+        setSelectedId(longest ? longest.id : null);
+        setPhase('idle');
+      })
+      .catch((err) => {
+        if (!active) return;
+        setErrorDetail(err instanceof Error ? err.message : String(err));
+        setPhase('error');
+      });
     return () => {
       active = false;
     };
   }, []);
 
-  const tier = bestTierForPoints(points);
-  const discount = YEARLY_PLAN_PRICE_TOMAN - tier.priceToman;
+  const selectedPlan = plans.find((p) => p.id === selectedId) || null;
+  const busy = phase === 'buying' || phase === 'restoring';
 
   const handleBuy = async () => {
+    if (!selectedPlan || !selectedPlan.product_id) return;
     setPhase('buying');
     setErrorDetail(null);
     try {
-      const result = await bazaar.purchaseProduct(tier.productId);
-      await verifyPurchase(tier.productId, result.purchaseToken);
+      const result = await bazaar.purchaseProduct(selectedPlan.product_id);
+      await verifyPurchase(selectedPlan.product_id, result.purchaseToken);
       // مصرف‌کردن خرید توی کافه‌بازار لازمه وگرنه چون این محصول non-consumable
-      // ثبت شده، دفعه‌ی بعد (مثلاً بعد از انقضای یک‌ساله) دیگه قابل خرید نیست.
+      // ثبت شده، دفعه‌ی بعد (مثلاً بعد از انقضای اشتراک) دیگه قابل خرید نیست.
       await bazaar.consumePurchase(result.purchaseToken).catch(() => {});
+      await reload();
+      setPhase('success');
+    } catch (err) {
+      setErrorDetail(err instanceof Error ? err.message : String(err));
+      setPhase('error');
+    }
+  };
+
+  const handleRestore = async () => {
+    setPhase('restoring');
+    setErrorDetail(null);
+    try {
+      const purchased = await bazaar.getPurchasedProducts();
+      if (purchased.length === 0) {
+        setErrorDetail(t('paywallRestoreNotFound'));
+        setPhase('error');
+        return;
+      }
+      for (const p of purchased) {
+        await verifyPurchase(p.productId, p.purchaseToken);
+      }
       await reload();
       setPhase('success');
     } catch (err) {
@@ -74,6 +108,16 @@ export const PaywallScreen = () => {
     );
   }
 
+  if (phase === 'loading') {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.centerArea}>
+          <ActivityIndicator color={COLORS.primary} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -87,22 +131,30 @@ export const PaywallScreen = () => {
         <Text style={styles.title}>{t('paywallTitle')}</Text>
         <Text style={styles.subtitle}>{t('paywallSubtitle')}</Text>
 
-        <View style={styles.pointsRow}>
-          <Coins color={COLORS.secondary} size={18} />
-          <Text style={styles.pointsText}>
-            {t('paywallYourPoints')}: {points}
-          </Text>
-        </View>
-
-        <View style={styles.priceCard}>
-          <Text style={styles.priceLabel}>{t('paywallPriceLabel')}</Text>
-          <Text style={styles.priceValue}>{formatToman(tier.priceToman)} تومان</Text>
-          {discount > 0 && (
-            <Text style={styles.discountText}>
-              {t('paywallDiscountApplied')} (-{formatToman(discount)} تومان)
-            </Text>
-          )}
-        </View>
+        {plans.length === 0 ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{t('paywallPlansLoadError')}</Text>
+          </View>
+        ) : (
+          <View style={styles.plansList}>
+            {plans.map((p) => {
+              const active = p.id === selectedId;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[styles.planCard, active && styles.planCardActive]}
+                  activeOpacity={0.85}
+                  onPress={() => setSelectedId(p.id)}
+                >
+                  <Text style={[styles.planName, active && styles.planNameActive]}>{p.name}</Text>
+                  <Text style={[styles.planPrice, active && styles.planNameActive]}>
+                    {formatToman(p.price_toman)} تومان
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {phase === 'error' && (
           <View style={styles.errorBox}>
@@ -114,7 +166,7 @@ export const PaywallScreen = () => {
         <TouchableOpacity
           style={styles.buyBtn}
           activeOpacity={0.85}
-          disabled={phase === 'buying'}
+          disabled={busy || !selectedPlan}
           onPress={handleBuy}
         >
           {phase === 'buying' ? (
@@ -128,6 +180,18 @@ export const PaywallScreen = () => {
               <Text style={styles.buyBtnText}>{t('paywallBuyButton')}</Text>
             </>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          activeOpacity={0.85}
+          disabled={busy}
+          onPress={handleRestore}
+        >
+          <RotateCcw color={COLORS.textSecondary} size={16} />
+          <Text style={styles.restoreBtnText}>
+            {phase === 'restoring' ? t('paywallProcessing') : t('paywallRestoreButton')}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -175,41 +239,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
-  pointsRow: {
+  plansList: {
+    gap: 10,
+    marginBottom: 20,
+  },
+  planCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  pointsText: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 14,
-  },
-  priceCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
-    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  priceLabel: {
-    color: COLORS.textSecondary,
+  planCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  planName: {
+    color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-    marginBottom: 6,
+    fontSize: 15,
   },
-  priceValue: {
+  planPrice: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 26,
+    fontSize: 15,
   },
-  discountText: {
-    color: COLORS.tertiary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-    marginTop: 8,
+  planNameActive: {
+    color: COLORS.primary,
   },
   errorBox: {
     backgroundColor: COLORS.backgroundSoft,
@@ -241,6 +301,19 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
+  },
+  restoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    marginTop: 4,
+  },
+  restoreBtnText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
   },
   centerArea: {
     flex: 1,
