@@ -76,5 +76,10 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 			WithKind(richerror.KindUnexpected)
 	}
 
+	// تشخیص گفتار صداهای مرجع در پس‌زمینه (به دلیل کندی، هم‌زمان با
+	// درخواست پنل ادمین اجرا نمی‌شود — به processWordTimingsAsync در
+	// build.go نگاه کنید).
+	go s.processWordTimingsAsync(updated.Hotspots)
+
 	return toSceneDTO(updated), nil
 }

@@ -428,6 +428,30 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 
 }
 
+// UpdateDialogueWordTimings فقط ستون word_timings یک دیالوگ را به‌روز
+// می‌کند؛ برای پرکردن نتیجه‌ی تشخیص گفتار که در پس‌زمینه (بعد از ذخیره‌ی
+// صحنه) اجرا می‌شود.
+func (r DB) UpdateDialogueWordTimings(ctx context.Context, dialogueID string, timings []scene.WordTiming) error {
+	const op = "postgres.UpdateDialogueWordTimings"
+
+	var wordTimingsJSON []byte
+	if len(timings) > 0 {
+		b, err := json.Marshal(timings)
+		if err != nil {
+			return richerror.New(op).WithErr(err).WithMessage("failed to marshal word timings")
+		}
+		wordTimingsJSON = b
+	}
+
+	query := `UPDATE dialogues SET word_timings = $1, updated_at = now() WHERE id = $2`
+	_, err := r.conn.Exec(ctx, query, wordTimingsJSON, dialogueID)
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update word timings")
+	}
+
+	return nil
+}
+
 // GetDialogueByID یک دیالوگ را مستقیم با شناسه‌اش می‌خواند.
 //
 // سرویس shadowing به این نیاز دارد تا متن واقعی هر مرحله را از دیتابیس

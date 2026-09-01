@@ -72,7 +72,12 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithKind(richerror.KindUnexpected)
 	}
 
-	// ========== 6️⃣ تبدیل به DTO ==========
+	// ========== 6️⃣ تشخیص گفتار صداهای مرجع در پس‌زمینه ==========
+	// این کار می‌تواند چند دقیقه طول بکشد؛ صحنه از قبل ذخیره شده، پس
+	// منتظرش نمی‌مانیم تا پاسخ به ادمین سریع برگردد.
+	go s.processWordTimingsAsync(newScene.Hotspots)
+
+	// ========== 7️⃣ تبدیل به DTO ==========
 	return toSceneDTO(newScene), nil
 
 }

@@ -56,11 +56,12 @@ func toDisplay(op richerror.Op, v string) (scene.DisplayType, error) {
 // buildHotspots هات‌اسپات‌های ورودی (DTO) را به هات‌اسپات‌های دامین همراه با دیالوگ‌هایشان
 // تبدیل می‌کند. برای هر هات‌اسپات و دیالوگ شناسه‌ی جدید ساخته می‌شود.
 //
-// اگر صدای مرجع (audio_url) داشته باشد و whisper-service در دسترس باشد،
-// همین‌جا یک‌بار روی آن فایل تشخیص گفتار اجرا می‌شود تا زمان‌بندی
-// کلمه‌به‌کلمه برای هایلایتِ هم‌زمان با پخش در اپ ذخیره شود. شکست این کار
-// بحرانی نیست — دیالوگ بدون word_timings ذخیره می‌شود و اپ فقط هایلایت را
-// نشان نمی‌دهد.
+// تشخیص گفتار روی صدای مرجع اینجا اجرا نمی‌شود — این کار می‌تواند چندین
+// ثانیه تا چند دقیقه طول بکشد (به‌خصوص وقتی whisper-service زیر فشار است)
+// و اگر همین‌جا و به‌صورت همزمان با request انجام شود، درخواست ذخیره‌ی
+// صحنه در پنل ادمین را کند یا با تایم‌اوت پراکسی ناموفق می‌کند. به‌جایش
+// CreateScene/UpdateScene بعد از ذخیره‌ی موفق در دیتابیس، این کار را در
+// پس‌زمینه با processWordTimingsAsync انجام می‌دهند.
 func (s Service) buildHotspots(ctx context.Context, op richerror.Op, reqHotspots []dto.Hotspot) ([]scene.Hotspot, error) {
 	hotspots := make([]scene.Hotspot, 0, len(reqHotspots))
 
@@ -100,7 +101,6 @@ func (s Service) buildHotspots(ctx context.Context, op richerror.Op, reqHotspots
 
 			if dReq.AudioURL != "" {
 				dialog.AudioURL = dReq.AudioURL
-				dialog.WordTimings = s.transcribeReferenceAudio(ctx, dReq.AudioURL, dReq.OriginalText)
 			}
 			if dReq.PartialHint != "" {
 				dialog.PartialHint = dReq.PartialHint
@@ -152,4 +152,34 @@ func (s Service) transcribeReferenceAudio(ctx context.Context, audioURL, text st
 		timings = append(timings, scene.WordTiming{Word: w.Word, Start: w.Start, End: w.End})
 	}
 	return timings
+}
+
+// processWordTimingsAsync زمان‌بندی کلمه‌به‌کلمه‌ی صدای مرجع همه‌ی دیالوگ‌های
+// دارای audio_url را در پس‌زمینه (بعد از پاسخ به request) محاسبه و در
+// دیتابیس ذخیره می‌کند. باید با go s.processWordTimingsAsync(...) فراخوانی
+// شود؛ context.Background می‌گیرد چون context درخواست HTTP با پایان یافتن
+// پاسخ لغو می‌شود. تماس‌ها عمداً سریالی هستند (نه موازی) تا فشار همزمان
+// روی whisper-service محدود کم‌منابع بالا نرود.
+func (s Service) processWordTimingsAsync(hotspots []scene.Hotspot) {
+	if s.whisperURL == "" {
+		return
+	}
+
+	ctx := context.Background()
+	for _, h := range hotspots {
+		for _, d := range h.Dialogues {
+			if d.AudioURL == "" || d.OriginalText == "" {
+				continue
+			}
+
+			timings := s.transcribeReferenceAudio(ctx, d.AudioURL, d.OriginalText)
+			if len(timings) == 0 {
+				continue
+			}
+
+			if err := s.repo.UpdateDialogueWordTimings(ctx, string(d.ID), timings); err != nil {
+				fmt.Println("warning: failed to save word timings for dialogue", d.ID, "-", err)
+			}
+		}
+	}
 }

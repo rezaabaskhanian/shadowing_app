@@ -14,6 +14,9 @@ type Repository interface {
 	Update(ctx context.Context, scene domain.Scene) error
 	Delete(ctx context.Context, id string) error
 	GetCategories(ctx context.Context) ([]string, error)
+	// UpdateDialogueWordTimings فقط ستون word_timings یک دیالوگ را به‌روز
+	// می‌کند — برای پرکردن نتیجه‌ی تشخیص گفتار پس‌زمینه (به processWordTimingsAsync نگاه کنید).
+	UpdateDialogueWordTimings(ctx context.Context, dialogueID string, timings []domain.WordTiming) error
 }
 
 type Service struct {
