@@ -25,4 +25,9 @@ type Dialogue struct {
 	WaitDuration int          `json:"wait_duration"`
 	Words        []Word       `json:"words"`
 	WordTimings  []WordTiming `json:"word_timings,omitempty"`
+
+	// IsCompleted/Score هم مثل Scene.Progress توسط handler پر می‌شوند —
+	// اینکه همین کاربر قبلاً این دیالوگ را ضبط/تکمیل کرده یا نه.
+	IsCompleted bool    `json:"is_completed"`
+	Score       float64 `json:"score,omitempty"`
 }

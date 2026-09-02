@@ -47,6 +47,25 @@ func (h Handler) sceneProgressForUser(c echo.Context, sceneID string) (progress 
 	return progress, isCompleted
 }
 
+// dialogueProgressForUser نمره‌ی هر دیالوگِ این صحنه را که کاربر درخواست‌دهنده
+// قبلاً ضبط/تکمیل کرده برمی‌گرداند (کلید = dialogueID)؛ اگر کاربر لاگین
+// نبود یا هنوز چیزی ضبط نکرده بود، مپ خالی برمی‌گردد. برای رفع این باگ که
+// با بازگشت به صحنه، دیالوگ‌های قبلاً ضبط‌شده گم به‌نظر می‌رسیدند.
+func (h Handler) dialogueProgressForUser(c echo.Context, sceneID string) map[string]float64 {
+	if h.progressSvc == nil {
+		return nil
+	}
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return nil
+	}
+	scores, err := h.progressSvc.GetDialogueProgress(c.Request().Context(), userClaims.UserID, sceneID)
+	if err != nil {
+		return nil
+	}
+	return scores
+}
+
 func (h Handler) ListScene(c echo.Context) error {
 	const op = "learninghandler.ListScene"
 

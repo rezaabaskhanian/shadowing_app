@@ -83,3 +83,12 @@ func (sp *SceneProgress) AddXP(amount int) {
 	sp.XP += amount
 	sp.UpdatedAt = time.Now()
 }
+
+// DialogueProgress - رکورد تکمیل یک دیالوگ مشخص توسط کاربر (از جدول
+// scene_dialogue_progress)، برای نمایش وضعیت «قبلاً ضبط شده» هنگام بازگشت
+// به صحنه.
+type DialogueProgress struct {
+	DialogueID  uuid.UUID `json:"dialogue_id"`
+	Score       float64   `json:"score"`
+	CompletedAt time.Time `json:"completed_at"`
+}

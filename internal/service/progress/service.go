@@ -49,6 +49,7 @@ type SceneProgressRepository interface {
 	RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64) error
 	CountCompletedDialogues(ctx context.Context, userID, sceneID uuid.UUID) (int, float64, error)
 	CountTotalDialogues(ctx context.Context, sceneID uuid.UUID) (int, error)
+	GetDialogueProgress(ctx context.Context, userID, sceneID uuid.UUID) ([]domainSceneProgress.DialogueProgress, error)
 }
 
 // RecordingStatsRepository - میانگین نمره‌ی تلفظ/روانی گفتار کاربر از روی

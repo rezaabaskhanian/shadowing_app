@@ -199,6 +199,35 @@ func (r *SceneProgressRepository) CountTotalDialogues(ctx context.Context, scene
 }
 
 // ============================================
+// GetDialogueProgress - دریافت وضعیت تکمیل/نمره‌ی تک‌تک دیالوگ‌های یک صحنه
+// برای کاربر (برای اینکه اپ هنگام بازگشت به صحنه بداند کدام دیالوگ‌ها قبلاً
+// ضبط شده‌اند)
+// ============================================
+func (r *SceneProgressRepository) GetDialogueProgress(ctx context.Context, userID, sceneID uuid.UUID) ([]sceneprogress.DialogueProgress, error) {
+	const op = "postgres.SceneProgressRepository.GetDialogueProgress"
+
+	query := `SELECT dialogue_id, score, completed_at
+        FROM scene_dialogue_progress WHERE user_id = $1 AND scene_id = $2`
+
+	rows, err := r.db.Query(ctx, query, userID, sceneID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+
+	var progresses []sceneprogress.DialogueProgress
+	for rows.Next() {
+		var p sceneprogress.DialogueProgress
+		if err := rows.Scan(&p.DialogueID, &p.Score, &p.CompletedAt); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		progresses = append(progresses, p)
+	}
+
+	return progresses, nil
+}
+
+// ============================================
 // GetCompletedScenes - دریافت سناریوهای تکمیل‌شده کاربر
 // ============================================
 func (r *SceneProgressRepository) GetCompletedScenes(ctx context.Context, userID string) ([]sceneprogress.SceneProgress, error) {

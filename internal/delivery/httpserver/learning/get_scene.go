@@ -30,6 +30,17 @@ func (h Handler) GetScene(c echo.Context) error {
 	scene.IsLocked = false
 	scene.Progress, scene.IsCompleted = h.sceneProgressForUser(c, scene.ID)
 
+	dialogueScores := h.dialogueProgressForUser(c, scene.ID)
+	for i := range scene.Hotspots {
+		for j := range scene.Hotspots[i].Dialogues {
+			d := &scene.Hotspots[i].Dialogues[j]
+			if score, ok := dialogueScores[d.ID]; ok {
+				d.IsCompleted = true
+				d.Score = score
+			}
+		}
+	}
+
 	return c.JSON(http.StatusOK, scene)
 
 }
