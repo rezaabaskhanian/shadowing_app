@@ -104,7 +104,12 @@ export const ScenesScreen = () => {
       </View>
 
       {categories.length > 1 && (
-        <View style={styles.categoryRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryRowWrapper}
+          contentContainerStyle={styles.categoryRow}
+        >
           {categories.map((cat) => (
             <TouchableOpacity
               key={cat.id}
@@ -118,11 +123,16 @@ export const ScenesScreen = () => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {levels.length > 1 && (
-        <View style={styles.categoryRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryRowWrapper}
+          contentContainerStyle={styles.categoryRow}
+        >
           {levels.map((lvl) => (
             <TouchableOpacity
               key={lvl.id}
@@ -136,7 +146,7 @@ export const ScenesScreen = () => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       <TouchableOpacity
@@ -765,7 +775,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 54,
-    paddingBottom: 90,
+    // تب‌بار پایین شناور و absolute است (AppNavigator: bottom 24/16 + ارتفاع
+    // 70) و بخشی از جریان عادی صفحه نیست، پس هر ScrollView باید خودش فضای
+    // کافی برایش کنار بگذارد؛ ۹۰ تقریباً هم‌اندازه‌ی خودِ تب‌بار بود (روی iOS
+    // حتی کمتر) و آخرین آیتم (مثلاً دکمه‌ی تست نوتیفیکیشن در پروفایل) درست
+    // زیرش گم می‌شد.
+    paddingBottom: 130,
   },
   topBar: {
     flexDirection: 'row',
@@ -821,10 +836,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 0,
   },
+  categoryRowWrapper: {
+    marginBottom: 20,
+  },
   categoryRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 20,
   },
   categoryChip: {
     paddingHorizontal: 14,

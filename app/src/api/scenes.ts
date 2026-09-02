@@ -36,6 +36,10 @@ interface BackendDialogue {
   wait_duration: number;
   words: BackendWord[] | null;
   word_timings?: BackendWordTiming[] | null;
+  // آیا کاربر همین دیالوگ را قبلاً (در بازدید قبلی از صحنه) ضبط/نمره‌دهی
+  // کرده — از scene_dialogue_progress سمت بک‌اند.
+  is_completed?: boolean;
+  score?: number;
 }
 interface BackendHotspot {
   id: string;
@@ -93,6 +97,8 @@ function mapScene(s: BackendScene): Scenario {
       duration: d.wait_duration || 3,
       words: (d.words || []).map((w) => ({ word: w.word, meaning: w.meaning })),
       wordTimings: (d.word_timings || []).map((w) => ({ word: w.word, start: w.start, end: w.end })),
+      is_completed: d.is_completed,
+      score: d.score,
     }));
     const first = dialogues[0];
     return {

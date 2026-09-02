@@ -26,6 +26,9 @@ export interface Dialogue {
   duration: number;
   words?: WordEntry[];
   wordTimings?: WordTimingEntry[];
+  // آیا کاربر این دیالوگ را قبلاً ضبط/نمره‌دهی کرده (از بک‌اند).
+  is_completed?: boolean;
+  score?: number;
 }
 
 export interface Conversation {
@@ -67,6 +70,11 @@ export interface DialogueItem {
   audioUrl: string;
   words?: WordEntry[];
   wordTimings?: WordTimingEntry[];
+  // آیا کاربر این دیالوگ را قبلاً ضبط/نمره‌دهی کرده (از بک‌اند)؛ برای
+  // اینکه با برگشتن به صحنه، جمله‌های قبلاً ضبط‌شده دوباره خالی نمایش
+  // داده نشوند.
+  is_completed?: boolean;
+  score?: number;
 }
 
 // دسته‌بندی صحنه اکنون متن آزادیست که ادمین در پنل تعیین می‌کند (مثلاً «shop»)
@@ -110,6 +118,8 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
           audioUrl: formatAudioUrl(d.audio_url),
           words: d.words,
           wordTimings: d.wordTimings,
+          is_completed: d.is_completed,
+          score: d.score,
         });
       }
     } else {

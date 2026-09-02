@@ -12,7 +12,7 @@ import { useScenes, sceneKeys } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
 import { useToast } from '../../data/ToastContext';
 import { usePracticeSettings } from '../../data/PracticeSettingsContext';
-import { saveRecording } from '../../services/RecordingsService';
+import { saveRecording, listRecordings } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
 import { SceneLockedError } from '../../api/scenes';
 import { getUserStreak, recordDialogueProgress } from '../../api/progress';
@@ -783,6 +783,85 @@ export const SceneScreen = () => {
     setSaveState('idle');
     setSavedFileName(null);
   }, [scenarioId]);
+
+  /**
+   * بعد از لود صحنه، جمله‌هایی که در بازدیدهای قبلی ضبط/نمره‌دهی شده‌اند
+   * نباید انگار هیچ‌وقت لمس نشده‌اند نشان داده شوند — این همان چیزی بود که
+   * کاربر گزارش کرد: چند دیالوگ ضبط می‌کرد، صحنه را ترک می‌کرد، و با
+   * برگشتن انگار هیچ‌کدام ضبط نشده بود، چون useState بالا هر بار خالی شروع
+   * می‌شود (افکت ریست بالا) و تا اینجا هیچ‌جا از نو پر نمی‌شد.
+   *
+   * دو منبع مستقل داریم که هرکدام چیزی که دیگری ندارد را می‌دهد:
+   *  - بک‌اند (`is_completed`/`score` روی هر دیالوگ): همیشه معتبر است، حتی
+   *    روی گوشی/نصب دیگر، اما فقط نمره را می‌دهد نه خودِ فایل صوتی.
+   *  - فایل‌های ضبط‌شده‌ی محلی (`RecordingsService`): فقط روی همین گوشی هست
+   *    ولی صدای واقعی کاربر را برمی‌گرداند تا بشود دوباره گوشش داد یا
+   *    دوباره نمره‌دهی کرد.
+   * بک‌اند مرجعِ «تمام‌شده یا نه» است؛ فایل محلی فقط برای پخش/امکان
+   * ضبط‌مجدد به آن اضافه می‌شود.
+   */
+  useEffect(() => {
+    if (dialogueItems.length === 0) return;
+    let mounted = true;
+
+    (async () => {
+      const sceneIdForFiles = String(scenarioId ?? scenario?.id ?? '');
+      let localByLine = new Map<number, { path: string; mimeType: string }>();
+      try {
+        const saved = await listRecordings(sceneIdForFiles);
+        localByLine = new Map(saved.map((m) => [m.lineNumber - 1, { path: m.path, mimeType: m.mimeType }]));
+      } catch {
+        // نبودِ فایل محلی (مثلاً نصب جدید) نباید مانع نمایش وضعیت بک‌اند شود.
+      }
+      if (!mounted) return;
+
+      setRecordings((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        localByLine.forEach((meta, idx) => {
+          if (!next[idx]) {
+            next[idx] = { filePath: meta.path, mimeType: meta.mimeType, duration: DEFAULT_LINE_SECONDS };
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+
+      setEvaluations((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        dialogueItems.forEach((item, idx) => {
+          if (item.is_completed && item.score != null && !next[idx]) {
+            next[idx] = {
+              target_text: item.dialogue,
+              pronunciation_score: item.score,
+              fluency_score: item.score,
+              overall_score: item.score,
+              is_estimated: false,
+            };
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+
+      setEvalStates((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        dialogueItems.forEach((item, idx) => {
+          if (item.is_completed && item.score != null && next[idx] !== 'done') {
+            next[idx] = 'done';
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [dialogueItems, scenarioId, scenario]);
 
   /** فاصله‌ی مکث بین پایان یک ضبط و شروع پخش ضبطِ بعدی در «پخش همه». */
   const PLAY_ALL_GAP_MS = 1000;
