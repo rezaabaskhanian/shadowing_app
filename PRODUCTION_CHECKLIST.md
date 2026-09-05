@@ -12,6 +12,7 @@
 - [ ] `ANTHROPIC_API_KEY` و `CLAUDE_MODEL` برای فیچر AI scene generation در env پروداکشن ست بشه.
 - [ ] اتصال دیتابیس پروداکشن (نه Docker Postgres پورت 5435 لوکال) در env تنظیم بشه.
 - [ ] بررسی CORS/آدرس‌های مجاز برای دامنه prod اپ.
+- [ ] **صحنه‌های Draft در لیست عمومی دیده می‌شوند** — `GetAll` در [internal/repository/postgres/learning/learning_repo.go:177](internal/repository/postgres/learning/learning_repo.go#L177) (پشتِ `ListScene`/`GET /v1/scenes`) هیچ فیلتر `status`ی ندارد، یعنی صحنه‌ای که ادمین تازه ساخته و هنوز Publish نکرده هم فوراً در اپ به همه‌ی کاربران نشان داده می‌شود. `GetPublished` هم برای همین منظور در همان فایل تعریف شده ولی `panic("unimplemented")` است — پیاده نشده. اگر قرار است Draft واقعاً مخفی بماند، `ListScene`/`GetAll` (یا هندلر عمومی) باید `WHERE status = 'published'` بگیرد (یا `GetPublished` پیاده و جایگزین `GetAll` شود در مسیر عمومی)، جدا از مسیر ادمین که باید همه‌ی وضعیت‌ها را ببیند.
 
 ## سایر
 
