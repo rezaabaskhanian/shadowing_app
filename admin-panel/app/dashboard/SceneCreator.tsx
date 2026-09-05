@@ -129,7 +129,11 @@ export default function SceneCreator({
   useEffect(() => {
     listTTSVoices()
       .then(setVoices)
-      .catch(() => setVoices([])); // اگر کلید ElevenLabs ست نشده باشد، ساکت نادیده می‌گیریم
+      .catch((err) => {
+        setVoices([]);
+        notify(err.message, "err");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
