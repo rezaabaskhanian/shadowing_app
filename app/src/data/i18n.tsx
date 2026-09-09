@@ -82,7 +82,6 @@ export const translations: Translations = {
   greatJobSub: { en: 'You did amazing on today\'s practice.', fa: 'عملکرد فوق‌العاده‌ای در تمرین امروز داشتید.' },
   overallScore: { en: 'Overall Score', fa: 'نمره کل' },
   pronunciation: { en: 'Clarity', fa: 'وضوح' },
-  compareAudio: { en: 'Compare Audio', fa: 'مقایسه صدا' },
   vocabulary: { en: 'Vocabulary', fa: 'دایره واژگان' },
   listening: { en: 'Listening', fa: 'شنیداری' },
   weeklyActivity: { en: 'Weekly Activity', fa: 'فعالیت هفتگی' },
@@ -412,7 +411,6 @@ export const translations: Translations = {
   habitRealSituations: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
   habitSuggestTopic: { en: 'Suggest a Topic', fa: 'پیشنهاد موضوع' },
   habitContactUs: { en: 'Contact Us', fa: 'ارتباط با ما' },
-  habitFeedback: { en: 'Suggestions & Feedback', fa: 'پیشنهادات و انتقادات' },
 
   habitScreenTitle: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
   habitTodaysMission: { en: "Today's Mission", fa: 'ماموریت امروز' },
@@ -535,6 +533,22 @@ export const translations: Translations = {
     fa: '{points} امتیاز داری — می‌تونی خرجش کنی برای {days} روز اضافه روی این اشتراک.',
   },
   lockedBadge: { en: 'Locked', fa: 'قفل' },
+  sequenceLockedMsg: {
+    en: 'Finish the previous scene in the path to unlock this one',
+    fa: 'برای باز شدن این صحنه، اول صحنه‌ی قبلی مسیر رو کامل کن',
+  },
+  curriculumMapTitle: { en: 'Learning Path', fa: 'مسیر آموزشی' },
+  curriculumMapSub: {
+    en: '{done} of {total} scenes completed',
+    fa: '{done} از {total} صحنه کامل شده',
+  },
+  startQuiz: { en: 'Test yourself', fa: 'شروع کوئیز' },
+  quizPromptKicker: { en: 'Which sentence did you hear?', fa: 'کدوم جمله رو شنیدی؟' },
+  quizUnavailable: {
+    en: 'No quiz available for this scene yet.',
+    fa: 'هنوز کوئیزی برای این صحنه در دسترس نیست.',
+  },
+  quizDone: { en: 'Done', fa: 'باشه' },
 
   // ---- Contact Us ----
   contactUsTitle: { en: 'Contact Us', fa: 'ارتباط با ما' },

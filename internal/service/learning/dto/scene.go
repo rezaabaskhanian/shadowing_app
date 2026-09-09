@@ -20,6 +20,11 @@ type Scene struct {
 	Progress    int  `json:"progress"`
 	IsCompleted bool `json:"is_completed"`
 
+	// SequenceLocked یعنی صحنه‌ی قبلی در مسیر آموزشی (بر اساس Order) هنوز
+	// کامل نشده — جدا از IsLocked (که قفلِ اشتراک است). توسط handler پر
+	// می‌شود، برای ادمین همیشه false است.
+	SequenceLocked bool `json:"sequence_locked"`
+
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }

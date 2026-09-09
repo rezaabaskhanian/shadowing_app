@@ -10,16 +10,17 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Play, PlusCircle, Search, Settings, User as UserIcon, X, Zap } from 'lucide-react-native';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { StreakInfoModal } from '../components/StreakInfoModal';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
-import { COLORS } from '../theme/colors';
+import { COLORS, hexToRgba } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
+import { useToast } from '../data/ToastContext';
 import {
   getUserSummary,
   getUserStreak,
@@ -40,6 +41,7 @@ export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
   const { t } = useLanguage();
+  const toast = useToast();
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
   const [activeLevel, setActiveLevel] = React.useState<LevelFilter>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -81,9 +83,14 @@ export const ScenesScreen = () => {
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
         <Text style={styles.kicker}>{t('worlds')}</Text>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
-          <Settings color={COLORS.text} size={20} />
-        </TouchableOpacity>
+        <View style={styles.topBarActions}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('CurriculumMap')}>
+            <MapIcon color={COLORS.text} size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
+            <Settings color={COLORS.text} size={20} />
+          </TouchableOpacity>
+        </View>
       </View>
       <Text style={styles.pageTitle}>{t('chooseScenarioTitle')}</Text>
       <Text style={styles.pageSub}>{t('chooseScenarioSub')}</Text>
@@ -178,12 +185,19 @@ export const ScenesScreen = () => {
               time={scenario.time}
               imageUri={scenario.imageUri}
               isLocked={scenario.isLocked}
+              isSequenceLocked={scenario.isSequenceLocked}
               isCompleted={scenario.isCompleted}
-              onPress={() =>
-                scenario.isLocked
-                  ? navigation.navigate('Paywall')
-                  : navigation.navigate('Shadowing', { scenarioId: scenario.id })
-              }
+              onPress={() => {
+                if (scenario.isLocked) {
+                  navigation.navigate('Paywall');
+                  return;
+                }
+                if (scenario.isSequenceLocked) {
+                  toast.info(t('sequenceLockedMsg'));
+                  return;
+                }
+                navigation.navigate('Shadowing', { scenarioId: scenario.id });
+              }}
             />
           ))}
         </View>
@@ -307,35 +321,16 @@ export const ProgressScreen = () => {
         </View>
         <View style={styles.scoreRow}>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>{skills.pronunciation}%</Text>
+            <Text style={[styles.metricValue, { color: SKILL_COLORS.pronunciation }]}>
+              {skills.pronunciation}%
+            </Text>
             <Text style={styles.metricLabel}>{t('pronunciation')}</Text>
           </View>
           <View style={styles.scoreMetric}>
-            <Text style={styles.metricValue}>{skills.fluency}%</Text>
+            <Text style={[styles.metricValue, { color: SKILL_COLORS.fluency }]}>
+              {skills.fluency}%
+            </Text>
             <Text style={styles.metricLabel}>{t('fluency')}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.practiceCard}>
-        <Text style={styles.cardTitle}>{t('compareAudio')}</Text>
-        <View style={styles.waveRow}>
-          <TouchableOpacity style={styles.playCircle}>
-            <Play color={COLORS.white} size={18} fill={COLORS.white} />
-          </TouchableOpacity>
-          <View style={styles.waveform}>
-            {Array.from({ length: 28 }).map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.waveBar,
-                  {
-                    height: 8 + ((index * 7) % 24),
-                    backgroundColor: index % 2 === 0 ? COLORS.primary : COLORS.tertiary,
-                  },
-                ]}
-              />
-            ))}
           </View>
         </View>
       </View>
@@ -426,7 +421,6 @@ import {
   ContentSource,
   MAX_REMINDER_TIMES,
 } from '../data/NotificationContext';
-import { useToast } from '../data/ToastContext';
 import { Switch } from 'react-native';
 import { Bell, BookOpen, Clock, MessageSquare, Mic, Plus, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
@@ -627,8 +621,10 @@ export const ProfileScreen = () => {
         onPress={() => navigation.navigate('MyRecordings')}
         activeOpacity={0.85}
       >
-        <View style={styles.pointsIconWrap}>
-          <Mic color={COLORS.primary} size={22} />
+        {/* audioMine همون توکن اختصاصی «صدای خودت» تو مقایسه‌ی A/B است — اینجا
+            هم دقیقاً همون معنی رو داره. */}
+        <View style={[styles.pointsIconWrap, { backgroundColor: hexToRgba(COLORS.audioMine, 0.12) }]}>
+          <Mic color={COLORS.audioMine} size={22} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.pointsValue}>{t('myRecordings')}</Text>
@@ -642,7 +638,7 @@ export const ProfileScreen = () => {
         onPress={() => navigation.navigate('HelpFaq')}
         activeOpacity={0.85}
       >
-        <View style={styles.pointsIconWrap}>
+        <View style={[styles.pointsIconWrap, { backgroundColor: COLORS.primaryLight }]}>
           <HelpCircle color={COLORS.primary} size={22} />
         </View>
         <View style={{ flex: 1 }}>
@@ -652,14 +648,15 @@ export const ProfileScreen = () => {
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
 
-      {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست */}
+      {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست — عمداً خاکستری/کم‌رنگ‌تر
+          از بقیه‌ی ردیف‌ها، چون یک قابلیت واقعی برای کاربر نیست. */}
       <TouchableOpacity
         style={styles.pointsCard}
         onPress={() => navigation.navigate('ToastDemo')}
         activeOpacity={0.85}
       >
         <View style={styles.pointsIconWrap}>
-          <MessageSquare color={COLORS.primary} size={22} />
+          <MessageSquare color={COLORS.muted} size={22} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.pointsValue}>{t('toastDemoMenuLabel')}</Text>
@@ -671,7 +668,7 @@ export const ProfileScreen = () => {
       {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
       <View style={[styles.settingCard, { marginTop: 16 }]}>
         <View style={styles.sectionHeaderRow}>
-          <Repeat color={COLORS.primary} size={20} />
+          <Repeat color={COLORS.tertiary} size={20} />
           <Text style={styles.settingCardTitle}>{t('practiceSettingsTitle')}</Text>
         </View>
 
@@ -682,7 +679,10 @@ export const ProfileScreen = () => {
           {REPEAT_OPTIONS.map((option) => (
             <TouchableOpacity
               key={option}
-              style={[styles.pillBtn, repeatsPerStep === option && styles.pillBtnActive]}
+              style={[
+                styles.pillBtn,
+                repeatsPerStep === option && { backgroundColor: COLORS.tertiary, borderColor: COLORS.tertiary },
+              ]}
               onPress={() => setRepeatsPerStep(option)}
             >
               <Text style={[styles.pillText, repeatsPerStep === option && styles.pillTextActive]}>
@@ -866,6 +866,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  topBarActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   pageTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -1016,6 +1020,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 4,
     borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1046,43 +1051,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  practiceCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cardTitle: {
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  waveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  playCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  waveform: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    height: 32,
-  },
-  waveBar: {
-    width: 3,
-    borderRadius: 1.5,
-  },
   profileHeader: {
     alignItems: 'center',
     backgroundColor: COLORS.surface,
@@ -1096,7 +1064,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,

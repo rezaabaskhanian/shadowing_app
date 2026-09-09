@@ -28,6 +28,7 @@ import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
+import { useToast } from '../data/ToastContext';
 import { getUserStreak, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -52,6 +53,7 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
+  const toast = useToast();
   const { user } = useAuth();
   const { box } = useVocab();
   const dueCount = box.filter(isDue).length;
@@ -111,10 +113,16 @@ export const HomeScreen = () => {
   };
 
   // اگه صحنه قفله (خارج از سقف رایگان و بدون اشتراک فعال)، به‌جای رفتن
-  // مستقیم به تمرین، پی‌وال (Paywall) باز میشه.
-  const openScene = (scenario: { id: string; isLocked?: boolean }) => {
+  // مستقیم به تمرین، پی‌وال (Paywall) باز میشه. جدا از این، اگه صحنه‌ی
+  // قبلیِ مسیر آموزشی هنوز کامل نشده (isSequenceLocked)، راه‌حلش خریدن
+  // اشتراک نیست — فقط یه پیام نشون می‌دیم که اول صحنه‌ی قبلی رو کامل کنه.
+  const openScene = (scenario: { id: string; isLocked?: boolean; isSequenceLocked?: boolean }) => {
     if (scenario.isLocked) {
       navigation.navigate('Paywall');
+      return;
+    }
+    if (scenario.isSequenceLocked) {
+      toast.info(t('sequenceLockedMsg'));
       return;
     }
     navigation.navigate('Shadowing', { scenarioId: scenario.id });
@@ -191,17 +199,17 @@ export const HomeScreen = () => {
           </View>
 
           <View style={styles.statChipsRow}>
-            <View style={styles.statChip}>
+            <View style={[styles.statChip, { backgroundColor: COLORS.primaryLight }]}>
               <Repeat size={16} color={COLORS.primary} />
               <Text style={styles.statChipValue}>{todaySessions}</Text>
               <Text style={styles.statChipLabel}>{t('repsCount')}</Text>
             </View>
-            <View style={styles.statChip}>
+            <View style={[styles.statChip, { backgroundColor: COLORS.infoLight }]}>
               <Clock size={16} color={COLORS.info} />
               <Text style={styles.statChipValue}>{todayMinutes}</Text>
               <Text style={styles.statChipLabel}>{t('min')}</Text>
             </View>
-            <View style={styles.statChip}>
+            <View style={[styles.statChip, { backgroundColor: COLORS.tertiaryLight }]}>
               <Sparkles size={16} color={COLORS.tertiary} />
               <Text style={styles.statChipValue}>{fluency}%</Text>
               <Text style={styles.statChipLabel}>{t('fluency')}</Text>
@@ -233,8 +241,10 @@ export const HomeScreen = () => {
             onPress={() => navigation.navigate('Leitner')}
             activeOpacity={0.85}
           >
-            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.primaryLight }]}>
-              <BookOpen size={20} color={COLORS.primary} />
+            {/* آبی به‌جای بنفش تکراری — تا با کارت شدوئینگ (که خودش بنفشِ
+                توپره) از همون نگاه اول جدا دیده شود. */}
+            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.infoLight }]}>
+              <BookOpen size={20} color={COLORS.info} />
             </View>
             <View style={styles.quickTextContainer}>
               <Text style={styles.quickCardTitle}>{t('leitner')}</Text>
@@ -314,6 +324,7 @@ export const HomeScreen = () => {
               sentencesCount={scenario.sentencesCount || 24}
               isCompleted={!!scenario.isCompleted}
               isLocked={scenario.isLocked}
+              isSequenceLocked={scenario.isSequenceLocked}
               onPress={() => openScene(scenario)}
             />
           ))}

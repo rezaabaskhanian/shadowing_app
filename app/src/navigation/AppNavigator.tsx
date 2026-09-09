@@ -35,9 +35,10 @@ import { LanguageHabitScreen } from '../screens/LanguageHabit/LanguageHabitScree
 import { HabitMissionPracticeScreen } from '../screens/LanguageHabit/HabitMissionPracticeScreen';
 import { HabitMissionResultScreen } from '../screens/LanguageHabit/HabitMissionResultScreen';
 import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
-import { FeedbackScreen } from '../screens/Feedback/FeedbackScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
 import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
+import { CurriculumMapScreen } from '../screens/CurriculumMap/CurriculumMapScreen';
+import { QuizScreen } from '../screens/Quiz/QuizScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { useLanguage } from '../data/i18n';
@@ -54,9 +55,10 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'HabitMissionPractice',
   'HabitMissionResult',
   'TopicSuggestion',
-  'Feedback',
   'ContactUs',
   'HelpFaq',
+  'CurriculumMap',
+  'SceneQuiz',
   'Paywall',
   'ToastDemo',
 ];
@@ -173,7 +175,7 @@ export const AppNavigator = () => {
   return (
     <Tab.Navigator
       initialRouteName="Home"
-      backBehavior="initialRoute"
+      backBehavior="history"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -241,13 +243,6 @@ export const AppNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Feedback"
-        component={FeedbackScreen}
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tab.Screen
         name="ContactUs"
         component={ContactUsScreen}
         options={{
@@ -257,6 +252,20 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="HelpFaq"
         component={HelpFaqScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="CurriculumMap"
+        component={CurriculumMapScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="SceneQuiz"
+        component={QuizScreen}
         options={{
           tabBarButton: () => null,
         }}

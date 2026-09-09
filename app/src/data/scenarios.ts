@@ -99,6 +99,10 @@ export interface Scenario {
   isLocked?: boolean;
   // پیشرفت واقعی همین کاربر در این صحنه (از scene_progress بک‌اند)
   isCompleted?: boolean;
+  // ترتیب این صحنه در مسیر آموزشی (برای صفحه‌ی نقشه/مسیر)
+  order?: number;
+  // جدا از isLocked (اشتراک): یعنی صحنه‌ی قبلیِ همین مسیر هنوز کامل نشده.
+  isSequenceLocked?: boolean;
 }
 
 export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[] {

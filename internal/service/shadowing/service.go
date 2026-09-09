@@ -59,6 +59,12 @@ type RecordingRepository interface {
 
 	// DeleteBySession - حذف همه ضبط‌های یک جلسه
 	DeleteBySession(ctx context.Context, sessionID uuid.UUID) error
+
+	// CreateEvaluationEvent یک نمره‌دهی session-less (از EvaluateRecording) را
+	// فقط برای آمار «فعالیت هفتگی»/«تفکیک مهارت‌ها» ثبت می‌کند — بدون جلسه و
+	// بدون ذخیره‌ی صدا؛ dialogueID اختیاری است (حالت target_text آزاد آن را
+	// ندارد).
+	CreateEvaluationEvent(ctx context.Context, userID uuid.UUID, dialogueID *uuid.UUID, pronunciationScore, fluencyScore float64, durationSeconds int) error
 }
 
 // ============================================

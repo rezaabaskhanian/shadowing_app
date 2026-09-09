@@ -20,7 +20,12 @@ import (
 // اپ اما آزاد است — کاربر بین مرحله‌ها می‌پرد و هر جمله را هرچندبار که بخواهد
 // دوباره ضبط می‌کند. این تابع همان ارزیاب را صدا می‌زند ولی چیزی را جابه‌جا
 // یا ذخیره نمی‌کند، پس بی‌محدودیت قابل فراخوانی است.
-func (s Service) EvaluateRecording(ctx context.Context, req dto.EvaluateRecordingRequest) (*dto.EvaluateRecordingResponse, error) {
+//
+// با این‌حال یک رویداد سبک (بدون صدا، بدون جلسه) برای آمار «فعالیت
+// هفتگی»/«تفکیک مهارت‌ها»ی صفحه‌ی خانه ثبت می‌کند — وگرنه این آمار برای
+// کاربری که فقط صحنه‌ها را تمرین می‌کند (نه ماموریت عادت زبانی) همیشه صفر
+// می‌ماند.
+func (s Service) EvaluateRecording(ctx context.Context, userID string, req dto.EvaluateRecordingRequest) (*dto.EvaluateRecordingResponse, error) {
 	const op = "shadowing.EvaluateRecording"
 
 	// فایل صوتی فقط برای نمره‌دهی آمده؛ در هر مسیر خروجی پاک می‌شود.
@@ -36,6 +41,9 @@ func (s Service) EvaluateRecording(ctx context.Context, req dto.EvaluateRecordin
 	// مطمئن‌تر است چون کلاینت نمی‌تواند متن را دستکاری کند.
 	targetText := strings.TrimSpace(req.TargetText)
 	expected := req.ExpectedDuration
+	// برخی صحنه‌ها داده‌ی نمونه‌ی محلی‌اند و دیالوگشان توی دیتابیس نیست؛ برای
+	// آن‌ها این nil می‌ماند و رویداد بدون dialogue_id ثبت می‌شود.
+	var dialogueUUID *uuid.UUID
 
 	if req.DialogueID != "" {
 		dialogueID, err := uuid.Parse(req.DialogueID)
@@ -54,6 +62,7 @@ func (s Service) EvaluateRecording(ctx context.Context, req dto.EvaluateRecordin
 		if expected <= 0 {
 			expected = dialogue.WaitDuration
 		}
+		dialogueUUID = &dialogueID
 	}
 
 	if targetText == "" {
@@ -68,6 +77,16 @@ func (s Service) EvaluateRecording(ctx context.Context, req dto.EvaluateRecordin
 		DurationSeconds:         req.Duration,
 		ExpectedDurationSeconds: expected,
 	})
+
+	// خطای این بخش نباید نمره‌ای که کاربر همین حالا گرفته را خراب کند، فقط
+	// لاگ می‌شود.
+	if uid, err := uuid.Parse(userID); err == nil {
+		if err := s.recordingRepo.CreateEvaluationEvent(
+			ctx, uid, dialogueUUID, result.PronunciationScore, result.FluencyScore, req.Duration,
+		); err != nil {
+			slog.Warn("shadowing: failed to record evaluation event", "err", err)
+		}
+	}
 
 	return &dto.EvaluateRecordingResponse{
 		TargetText:         targetText,

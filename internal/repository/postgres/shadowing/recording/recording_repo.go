@@ -11,19 +11,43 @@ import (
 )
 
 // ============================================
-// AvgScoresByUser - میانگین نمره‌ی تلفظ/روانی گفتار کاربر از روی همه‌ی
-// ضبط‌های واقعی‌اش (برای «درصد مهارت‌ها»)
+// AvgScoresByUser - میانگین نمره‌ی تلفظ/روانی گفتار کاربر از روی هر دو منبع
+// نمره‌ی واقعی‌اش: ضبط‌های جلسه‌محورِ قدیمی (shadowing_recordings) و
+// رویدادهای نمره‌دهیِ session-less مسیر واقعی اپ (shadowing_evaluation_events)
+// (برای «درصد مهارت‌ها»)
 // ============================================
 func (r DB) AvgScoresByUser(ctx context.Context, userID uuid.UUID) (avgPronunciation, avgFluency float64, err error) {
 	const op = "postgres.RecordingRepository.AvgScoresByUser"
 
-	query := `SELECT COALESCE(AVG(pronunciation_score), 0), COALESCE(AVG(fluency_score), 0)
-        FROM shadowing_recordings WHERE user_id = $1`
+	query := `
+        SELECT COALESCE(AVG(pronunciation_score), 0), COALESCE(AVG(fluency_score), 0)
+        FROM (
+            SELECT pronunciation_score, fluency_score FROM shadowing_recordings WHERE user_id = $1
+            UNION ALL
+            SELECT pronunciation_score, fluency_score FROM shadowing_evaluation_events WHERE user_id = $1
+        ) scores`
 
 	if err := r.conn.QueryRow(ctx, query, userID).Scan(&avgPronunciation, &avgFluency); err != nil {
 		return 0, 0, richerror.New(op).WithErr(err)
 	}
 	return avgPronunciation, avgFluency, nil
+}
+
+// ============================================
+// CreateEvaluationEvent - ثبت یک نمره‌دهی session-less (مسیر واقعی اپ)
+// ============================================
+func (r DB) CreateEvaluationEvent(ctx context.Context, userID uuid.UUID, dialogueID *uuid.UUID, pronunciationScore, fluencyScore float64, durationSeconds int) error {
+	const op = "postgres.RecordingRepository.CreateEvaluationEvent"
+
+	const query = `
+        INSERT INTO shadowing_evaluation_events
+            (user_id, dialogue_id, pronunciation_score, fluency_score, duration_seconds)
+        VALUES ($1, $2, $3, $4, $5)
+    `
+	if _, err := r.conn.Exec(ctx, query, userID, dialogueID, pronunciationScore, fluencyScore, durationSeconds); err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to save evaluation event")
+	}
+	return nil
 }
 
 // ============================================

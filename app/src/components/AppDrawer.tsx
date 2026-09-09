@@ -19,7 +19,6 @@ import {
   Lightbulb,
   LogOut,
   Mail,
-  MessageSquare,
   Target,
   User as UserIcon,
   Zap,
@@ -124,16 +123,21 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
 
           <View style={{flex:1,justifyContent:'space-between',}}>
           <View style={styles.sectionHeaderRow}>
-            <Zap color={COLORS.primary} size={18} />
+            <Zap color={COLORS.secondary} size={18} />
             <Text style={styles.sectionTitle}>{t('habitCardTitle')}</Text>
           </View>
 
+          {/* هر ردیف رنگ اختصاصی خودش را دارد — هم برای تشخیص سریع‌تر، هم تا
+              وقتی از این ردیف وارد صفحه‌اش می‌شوی، همون رنگ آنجا هم ادامه پیدا
+              کند (زبانه سبز → صفحه‌ی عادت زبانی هم لهجه‌ی سبز دارد، و…). */}
           <TouchableOpacity
             style={styles.row}
             activeOpacity={0.7}
             onPress={() => go('LanguageHabit')}
           >
-            <Target color={COLORS.primary} size={18} />
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
+              <Target color={COLORS.tertiary} size={18} />
+            </View>
             <Text style={styles.rowText}>{t('habitRealSituations')}</Text>
           </TouchableOpacity>
 
@@ -142,26 +146,23 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
             activeOpacity={0.7}
             onPress={() => go('TopicSuggestion')}
           >
-            <Lightbulb color={COLORS.primary} size={18} />
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.warningLight }]}>
+              <Lightbulb color={COLORS.warning} size={18} />
+            </View>
             <Text style={styles.rowText}>{t('habitSuggestTopic')}</Text>
           </TouchableOpacity>
 
+          {/* پیشنهادات/انتقادات قبلاً ردیف جدا داشت؛ چون هر دو یک راه ارتباط
+              با تیم‌اند، حالا زیر همین «ارتباط با ما» یکی شدند. */}
           <TouchableOpacity
             style={styles.row}
             activeOpacity={0.7}
             onPress={() => go('ContactUs')}
           >
-            <Mail color={COLORS.primary} size={18} />
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+              <Mail color={COLORS.info} size={18} />
+            </View>
             <Text style={styles.rowText}>{t('habitContactUs')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('Feedback')}
-          >
-            <MessageSquare color={COLORS.primary} size={18} />
-            <Text style={styles.rowText}>{t('habitFeedback')}</Text>
           </TouchableOpacity>
 
           </View>
@@ -170,10 +171,11 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
 
           <View style={styles.dividerLine} />
 
-          {/* رضایت صریح کاربر برای پوش یادآوری استریک — پیش‌فرض خاموش. */}
+          {/* رضایت صریح کاربر برای پوش یادآوری استریک — پیش‌فرض خاموش. طلایی
+              چون هم‌رنگ شعله‌ی استریکه، نه چون CTA اصلیه. */}
           <View style={styles.streakReminderRow}>
-            <View style={styles.streakReminderIconWrap}>
-              <Bell color={COLORS.primary} size={18} />
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
+              <Bell color={COLORS.secondary} size={18} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowText}>{t('streakReminderTitle')}</Text>
@@ -189,7 +191,9 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
           <View style={styles.dividerLine} />
 
           <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('HelpFaq')}>
-            <HelpCircle color={COLORS.primary} size={18} />
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <HelpCircle color={COLORS.primary} size={18} />
+            </View>
             <Text style={styles.rowText}>{t('helpFaq')}</Text>
           </TouchableOpacity>
 
@@ -311,19 +315,18 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.medium,
     fontSize: 14,
   },
+  rowIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   streakReminderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 10,
-  },
-  streakReminderIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   streakReminderSub: {
     color: COLORS.textSecondary,

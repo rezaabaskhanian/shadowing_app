@@ -4,6 +4,8 @@ import (
 	"context"
 
 	domain "shadowing-backend/internal/domain/learning/scene"
+
+	"github.com/google/uuid"
 )
 
 type Repository interface {
@@ -17,6 +19,16 @@ type Repository interface {
 	// UpdateDialogueWordTimings فقط ستون word_timings یک دیالوگ را به‌روز
 	// می‌کند — برای پرکردن نتیجه‌ی تشخیص گفتار پس‌زمینه (به processWordTimingsAsync نگاه کنید).
 	UpdateDialogueWordTimings(ctx context.Context, dialogueID string, timings []domain.WordTiming) error
+	// UpdateOrder فقط ستون "order" (ترتیب مسیر آموزشی) یک صحنه را به‌روز
+	// می‌کند — برای مرتب‌سازی سریع از لیست ادمین، بدون نیاز به ارسال کل
+	// هات‌اسپات‌ها/دیالوگ‌ها.
+	UpdateOrder(ctx context.Context, id string, order int) error
+	// RandomDialogueTexts استخر متن انگلیسیِ دیالوگ‌های صحنه‌های دیگر را
+	// برای گزینه‌های غلطِ کوئیز درک شنیداری برمی‌گرداند.
+	RandomDialogueTexts(ctx context.Context, excludeSceneID string, difficulty string, limit int) ([]string, error)
+	// GetDialogueByID یک دیالوگ را مستقیم می‌خواند — برای نمره‌دهیِ سمت
+	// سرورِ کوئیز درک شنیداری (مقایسه‌ی پاسخ کاربر با متن واقعی).
+	GetDialogueByID(ctx context.Context, id uuid.UUID) (domain.Dialogue, error)
 }
 
 type Service struct {

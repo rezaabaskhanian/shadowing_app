@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"shadowing-backend/internal/pkg/claims"
 	"shadowing-backend/internal/pkg/errorhandling"
+	"shadowing-backend/internal/service/learning/dto"
 
 	"github.com/labstack/echo/v4"
 )
@@ -66,6 +67,36 @@ func (h Handler) dialogueProgressForUser(c echo.Context, sceneID string) map[str
 	return scores
 }
 
+// isAdminCaller می‌گوید آیا درخواست‌دهنده نقش ادمین دارد (ادمین‌ها هیچ‌وقت
+// در مسیر ترتیبی قفل نمی‌شوند، برای مدیریت محتوا لازم است همه‌چیز باز باشد).
+func isAdminCaller(c echo.Context) bool {
+	userClaims, err := claims.GetClaims(c)
+	return err == nil && userClaims.Role == "admin"
+}
+
+// applySequenceLock صحنه‌های منتشرشده‌ی این اسلایس را به ترتیب (که GetAll
+// از قبل بر اساس "order" مرتب برگردانده) می‌پیماید و SequenceLocked هر صحنه
+// را پر می‌کند: تا وقتی صحنه‌ی منتشرشده‌ی قبلیِ *همان سطح دشواری* کامل نشده،
+// صحنه‌های بعدیِ همان سطح قفل‌اند. زنجیره‌ی هر سطح (beginner/intermediate/
+// advanced) جدا از بقیه است — وگرنه یک کاربر پیشرفته مجبور می‌شد کل صحنه‌های
+// مبتدی را یکی‌یکی تمام کند تا به صحنه‌ی سطح خودش برسد؛ با این تفکیک، اولین
+// صحنه‌ی هر سطح از همان اول باز است. IsCompleted باید از قبل روی هر آیتم پر
+// شده باشد. پیش‌نویس/آرشیوشده در هیچ زنجیره‌ای شرکت نمی‌کنند.
+func applySequenceLock(scenes []dto.Scene, isAdmin bool) {
+	blockedByDifficulty := map[string]bool{}
+	for i := range scenes {
+		if scenes[i].Status != "published" {
+			scenes[i].SequenceLocked = false
+			continue
+		}
+		diff := scenes[i].Difficulty
+		scenes[i].SequenceLocked = blockedByDifficulty[diff] && !isAdmin
+		if !scenes[i].IsCompleted {
+			blockedByDifficulty[diff] = true
+		}
+	}
+}
+
 func (h Handler) ListScene(c echo.Context) error {
 	const op = "learninghandler.ListScene"
 
@@ -80,6 +111,7 @@ func (h Handler) ListScene(c echo.Context) error {
 		scenes[i].IsLocked = h.isSceneLocked(c, scenes[i].IsLocked)
 		scenes[i].Progress, scenes[i].IsCompleted = h.sceneProgressForUser(c, scenes[i].ID)
 	}
+	applySequenceLock(scenes, isAdminCaller(c))
 
 	return c.JSON(http.StatusOK, scenes)
 

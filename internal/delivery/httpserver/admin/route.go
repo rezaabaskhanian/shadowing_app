@@ -44,6 +44,7 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.GET("/scenes/categories", h.ListSceneCategories)
 	g.GET("/scenes/:sceneID", h.GetScene)
 	g.PUT("/scenes/:sceneID", h.UpdateScene)
+	g.PATCH("/scenes/:sceneID/order", h.UpdateSceneOrder)
 	g.DELETE("/scenes/:sceneID", h.DeleteScene)
 
 	// بررسی پیشنهادهای صحنه‌ی کاربران

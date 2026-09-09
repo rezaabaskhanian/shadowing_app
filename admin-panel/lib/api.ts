@@ -230,6 +230,15 @@ export async function updateScene(id: string, payload: CreateScenePayload) {
   return jsonOrThrow(res);
 }
 
+export async function updateSceneOrder(id: string, order: number) {
+  const res = await authFetch(`/v1/admin/scenes/${id}/order`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order }),
+  });
+  return jsonOrThrow(res);
+}
+
 export async function deleteScene(id: string) {
   const res = await authFetch(`/v1/admin/scenes/${id}`, { method: "DELETE" });
   return jsonOrThrow(res);

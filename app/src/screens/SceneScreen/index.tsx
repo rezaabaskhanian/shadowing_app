@@ -740,6 +740,10 @@ export const SceneScreen = () => {
         t('lessonCompleteTitle'),
         t('lessonCompleteMessage'),
         [
+          {
+            text: t('startQuiz'),
+            onPress: () => navigation.navigate('SceneQuiz', { scenarioId }),
+          },
           { text: t('shadowAgain'), onPress: restartLesson },
           { text: t('backToHome'), onPress: resetToHome },
         ],
@@ -773,6 +777,8 @@ export const SceneScreen = () => {
     queryClient,
     toast,
     t,
+    navigation,
+    scenarioId,
   ]);
 
   const toggleRevealText = useCallback(() => {

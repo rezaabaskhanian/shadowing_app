@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Clock, XCircle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, Clock, Lightbulb, XCircle } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -80,6 +80,9 @@ export const TopicSuggestionScreen = () => {
           <ArrowLeft color={COLORS.text} size={22} />
         </TouchableOpacity>
 
+        <View style={styles.iconWrap}>
+          <Lightbulb color={COLORS.warning} size={22} />
+        </View>
         <Text style={styles.title}>{t('topicSuggestionTitle')}</Text>
         <Text style={styles.note}>{t('topicSuggestionNote')}</Text>
 
@@ -161,6 +164,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.warningLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   title: {
     color: COLORS.text,

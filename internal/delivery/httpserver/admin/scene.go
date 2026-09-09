@@ -81,6 +81,28 @@ func (h Handler) UpdateScene(c echo.Context) error {
 	return c.JSON(http.StatusOK, scene)
 }
 
+// UpdateSceneOrder فقط ترتیب یک صحنه در مسیر آموزشی را عوض می‌کند — برای
+// مرتب‌سازی سریع از لیست صحنه‌ها بدون باز کردن فرم کامل ویرایش.
+func (h Handler) UpdateSceneOrder(c echo.Context) error {
+	sceneID := c.Param("sceneID")
+
+	var req struct {
+		Order int `json:"order"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":   "invalid_request",
+			"message": "درخواست نامعتبر است",
+		})
+	}
+
+	if err := h.learningSvc.UpdateSceneOrder(c.Request().Context(), sceneID, req.Order); err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "ترتیب صحنه به‌روزرسانی شد"})
+}
+
 // DeleteScene یک صحنه را حذف می‌کند.
 func (h Handler) DeleteScene(c echo.Context) error {
 	sceneID := c.Param("sceneID")

@@ -17,4 +17,9 @@ func (h Handler) SetPublicSceneRoutes(e *echo.Echo) {
 
 	// یک صحنه همراه با هات‌اسپات‌ها و دیالوگ‌هایش
 	e.GET("/v1/scenes/:sceneID", h.GetScene, middlware.Auth(h.authSvc, h.authConfig))
+
+	// کوئیز درک شنیداریِ همین صحنه — کاملاً از روی دیالوگ‌های موجود ساخته
+	// می‌شود، محتوای دستی جدا لازم ندارد.
+	e.GET("/v1/scenes/:sceneID/quiz", h.GetSceneQuiz, middlware.Auth(h.authSvc, h.authConfig))
+	e.POST("/v1/scenes/:sceneID/quiz/submit", h.SubmitSceneQuiz, middlware.Auth(h.authSvc, h.authConfig))
 }

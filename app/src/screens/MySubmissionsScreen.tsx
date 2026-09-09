@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   pointsText: {
-    color: COLORS.tertiary,
+    color: COLORS.secondary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
     marginTop: 8,

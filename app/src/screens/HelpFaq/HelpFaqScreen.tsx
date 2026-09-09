@@ -101,6 +101,28 @@ const FAQ_ITEMS: FaqItem[] = [
     },
   },
   {
+    id: 'curriculum-path',
+    question: {
+      en: 'Why is a scene locked even though I have a subscription?',
+      fa: 'چرا یه صحنه قفله در حالی که اشتراک دارم؟',
+    },
+    answer: {
+      en: 'Scenes are arranged in a learning path (see the map icon on the Scenes tab). A locked scene there isn\'t about subscription — it just means you haven\'t finished the scene right before it in the path yet. Finish that one first and the next unlocks automatically. This is separate from subscription locks, which show a different message and send you to the paywall.',
+      fa: 'صحنه‌ها روی یه مسیر آموزشی چیده شدن (آیکن نقشه توی تب صحنه‌ها رو ببین). قفل‌بودن یه صحنه اونجا ربطی به اشتراک نداره — فقط یعنی صحنه‌ی درست قبل از اون توی مسیر رو هنوز تموم نکردی. اون رو تموم کن تا بعدی خودکار باز بشه. این با قفل اشتراک فرق داره که پیام جداگانه نشون می‌ده و می‌بردت به صفحه‌ی خرید.',
+    },
+  },
+  {
+    id: 'comprehension-quiz',
+    question: {
+      en: 'What is the quiz after a scene?',
+      fa: 'کوئیز بعد از هر صحنه چیه؟',
+    },
+    answer: {
+      en: 'After finishing all the lines in a scene, you can start a short quiz: you see the Persian translation of a line from that scene and pick the matching English sentence from a few options. It checks listening comprehension, not just pronunciation. Each correct answer adds a small amount of XP to that scene.',
+      fa: 'بعد از تموم‌کردن همه‌ی جمله‌های یک صحنه، می‌تونی یه کوئیز کوتاه شروع کنی: ترجمه‌ی فارسیِ یکی از جمله‌های همون صحنه رو می‌بینی و باید جمله‌ی انگلیسیِ درست رو از بین چند گزینه انتخاب کنی. این درک شنیداری رو می‌سنجه، نه فقط تلفظ. هر پاسخ درست کمی XP به همون صحنه اضافه می‌کنه.',
+    },
+  },
+  {
     id: 'leitner-box',
     question: {
       en: 'What is the Leitner box for?',
@@ -146,14 +168,14 @@ export const HelpFaqScreen = () => {
           return (
             <TouchableOpacity
               key={item.id}
-              style={styles.card}
+              style={[styles.card, isOpen && styles.cardOpen]}
               activeOpacity={0.85}
               onPress={() => toggle(item.id)}
             >
               <View style={styles.cardHeader}>
                 <Text style={styles.question}>{item.question[language]}</Text>
                 <View style={[styles.chevronWrap, isOpen && styles.chevronWrapOpen]}>
-                  <ChevronDown color={COLORS.muted} size={18} />
+                  <ChevronDown color={isOpen ? COLORS.primary : COLORS.muted} size={18} />
                 </View>
               </View>
               {isOpen && <Text style={styles.answer}>{item.answer[language]}</Text>}
@@ -203,6 +225,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 16,
     marginBottom: 12,
+  },
+  cardOpen: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
   },
   cardHeader: {
     flexDirection: 'row',

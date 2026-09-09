@@ -126,13 +126,13 @@ export const LanguageHabitScreen = () => {
 
                 <View style={styles.missionMetaRow}>
                   <View style={styles.missionMetaItem}>
-                    <Target color={COLORS.primary} size={14} />
+                    <Target color={COLORS.tertiary} size={14} />
                     <Text style={styles.missionMetaText}>
                       {mission.dialogues?.length || 0} {t('sentences')}
                     </Text>
                   </View>
                   <View style={styles.missionMetaItem}>
-                    <Clock color={COLORS.primary} size={14} />
+                    <Clock color={COLORS.tertiary} size={14} />
                     <Text style={styles.missionMetaText}>
                       {Math.max(1, Math.round((mission.estimated_duration_seconds || 0) / 60))} {t('min')}
                     </Text>
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.tertiaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   missionKicker: {
-    color: COLORS.primary,
+    color: COLORS.tertiary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 11,
     letterSpacing: 0.5,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   missionPurpose: {
-    color: COLORS.primary,
+    color: COLORS.tertiary,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 12,
     lineHeight: 18,

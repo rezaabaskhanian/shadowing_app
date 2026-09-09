@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"shadowing-backend/internal/pkg/claims"
 	"shadowing-backend/internal/pkg/errorhandling"
 	"shadowing-backend/internal/pkg/upload"
 	"shadowing-backend/internal/service/shadowing/dto"
@@ -32,6 +33,11 @@ import (
 // @Failure 400 {object} map[string]string
 // @Router /api/v1/shadowing/evaluate [post]
 func (h *Handler) EvaluateRecording(c echo.Context) error {
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "احراز هویت ناموفق"})
+	}
+
 	fileHeader, err := c.FormFile("audio")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -56,7 +62,7 @@ func (h *Handler) EvaluateRecording(c echo.Context) error {
 		LocalAudioPath:   localPath,
 	}
 
-	response, err := h.ShadowingSvc.EvaluateRecording(c.Request().Context(), req)
+	response, err := h.ShadowingSvc.EvaluateRecording(c.Request().Context(), userClaims.UserID, req)
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}

@@ -19,6 +19,14 @@ import { useLanguage } from '../data/i18n';
 
 const SWIPE_THRESHOLD = 120;
 
+/** رنگ بج سطح — طبق پیشرفت واقعی کلمه در جعبه‌ی لایتنر، نه یه رنگ ثابت:
+ * سطح‌های پایین (تازه اضافه‌شده) کهربایی، وسط آبی، سطح آخر (تقریباً حفظ‌شده) سبز. */
+const levelColor = (level: number): string => {
+  if (level >= MAX_LEVEL) return COLORS.tertiary;
+  if (level >= Math.ceil(MAX_LEVEL / 2)) return COLORS.info;
+  return COLORS.warning;
+};
+
 export const LeitnerScreen = () => {
   const { box, promote, demote, remove } = useVocab();
   const { t, language } = useLanguage();
@@ -75,7 +83,7 @@ export const LeitnerScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterTab, !dueOnly && styles.filterTabActive]}
+            style={[styles.filterTab, !dueOnly && styles.filterTabActiveGreen]}
             onPress={() => setDueOnly(false)}
             activeOpacity={0.8}
           >
@@ -268,8 +276,8 @@ const Flashcard = ({
         </Animated.View>
 
         <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>
+          <View style={[styles.levelBadge, { borderColor: levelColor(item.level) }]}>
+            <Text style={[styles.levelText, { color: levelColor(item.level) }]}>
               {t('level')} {item.level}/{MAX_LEVEL}
             </Text>
           </View>
@@ -362,6 +370,10 @@ const styles = StyleSheet.create({
   filterTabActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+  },
+  filterTabActiveGreen: {
+    backgroundColor: COLORS.tertiary,
+    borderColor: COLORS.tertiary,
   },
   filterTabText: {
     color: COLORS.textSecondary,

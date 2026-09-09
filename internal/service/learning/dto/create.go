@@ -8,4 +8,8 @@ type CreateSceneRequest struct {
 	Hotspots           []Hotspot `json:"hotspots"`
 	IsLocked           bool      `json:"is_locked"`
 	Category           string    `json:"category"`
+	// Order ترتیب این صحنه در مسیر آموزشی است (عدد کوچک‌تر = زودتر در مسیر).
+	// در ساخت صحنه‌ی جدید اختیاری است (پیش‌فرض ۰)؛ ادمین از لیست صحنه‌ها
+	// می‌تواند بعداً مرتب‌سازی کند.
+	Order int `json:"order"`
 }

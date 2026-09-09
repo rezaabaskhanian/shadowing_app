@@ -53,6 +53,7 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithMessage("خطا در ساخت سناریو").
 			WithKind(richerror.KindForbidden)
 	}
+	newScene.Order = req.Order
 
 	// ========== 4️⃣ اضافه کردن هات‌اسپات‌ها با دیالوگ‌ها ==========
 	hotspots, err := s.buildHotspots(ctx, op, req.Hotspots)

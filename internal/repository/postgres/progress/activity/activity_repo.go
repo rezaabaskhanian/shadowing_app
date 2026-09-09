@@ -25,11 +25,12 @@ type DayActivity struct {
 	Sessions int
 }
 
-// WeeklyActivity فعالیت ۷ روز اخیر کاربر (امروز و ۶ روز قبل) را از دو منبع
-// رویداد موجود تجمیع می‌کند: ضبط‌های شدوئینگ (shadowing_recordings) و
-// جلسات تمرین عادت زبانی (habit_practice_sessions). هیچ جدول تاریخچه‌ی
-// جدیدی لازم نیست؛ روزهای بدون فعالیت هم با صفر برمی‌گردند تا نمودار پیوسته
-// باشد.
+// WeeklyActivity فعالیت ۷ روز اخیر کاربر (امروز و ۶ روز قبل) را از سه منبع
+// رویداد موجود تجمیع می‌کند: ضبط‌های شدوئینگِ جلسه‌محورِ قدیمی
+// (shadowing_recordings)، نمره‌دهی‌های session-less مسیر واقعی اپ
+// (shadowing_evaluation_events)، و جلسات تمرین عادت زبانی
+// (habit_practice_sessions). هیچ جدول تاریخچه‌ی جدیدی لازم نیست؛ روزهای بدون
+// فعالیت هم با صفر برمی‌گردند تا نمودار پیوسته باشد.
 func (r *ActivityRepository) WeeklyActivity(ctx context.Context, userID uuid.UUID) ([]DayActivity, error) {
 	const op = "postgres.ActivityRepository.WeeklyActivity"
 
@@ -40,6 +41,10 @@ func (r *ActivityRepository) WeeklyActivity(ctx context.Context, userID uuid.UUI
 		activity AS (
 			SELECT date_trunc('day', created_at)::date AS day, duration AS seconds
 			FROM shadowing_recordings
+			WHERE user_id = $1 AND created_at >= current_date - interval '6 days'
+			UNION ALL
+			SELECT date_trunc('day', created_at)::date AS day, duration_seconds AS seconds
+			FROM shadowing_evaluation_events
 			WHERE user_id = $1 AND created_at >= current_date - interval '6 days'
 			UNION ALL
 			SELECT date_trunc('day', completed_at)::date AS day, duration_seconds AS seconds

@@ -452,6 +452,58 @@ func (r DB) UpdateDialogueWordTimings(ctx context.Context, dialogueID string, ti
 	return nil
 }
 
+// RandomDialogueTexts یک استخر متن انگلیسیِ تصادفی از دیالوگ‌های صحنه‌های
+// دیگر (هم‌سطح، در صورت داشتن difficulty) برمی‌گرداند — برای گزینه‌های غلطِ
+// کوئیز درک شنیداری، بدون نیاز به محتوای دستیِ جداگانه.
+func (r DB) RandomDialogueTexts(ctx context.Context, excludeSceneID string, difficulty string, limit int) ([]string, error) {
+	const op = "postgres.RandomDialogueTexts"
+
+	query := `SELECT DISTINCT d.original_text
+		FROM dialogues d
+		JOIN hotspots h ON h.id = d.hotspot_id
+		JOIN scenes s ON s.id = h.scene_id
+		WHERE h.scene_id != $1
+			AND s.status = 'published'
+			AND d.original_text != ''
+			AND ($2 = '' OR s.difficulty = $2)
+		ORDER BY random()
+		LIMIT $3`
+
+	rows, err := r.conn.Query(ctx, query, excludeSceneID, difficulty, limit)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to fetch distractor texts")
+	}
+	defer rows.Close()
+
+	var texts []string
+	for rows.Next() {
+		var text string
+		if err := rows.Scan(&text); err != nil {
+			return nil, richerror.New(op).WithErr(err).WithMessage("failed to scan distractor text")
+		}
+		texts = append(texts, text)
+	}
+
+	return texts, nil
+}
+
+// UpdateOrder فقط ستون "order" (ترتیب مسیر آموزشی) یک صحنه را عوض می‌کند —
+// بدون لمس هات‌اسپات‌ها/دیالوگ‌ها، برای مرتب‌سازی سریع از لیست ادمین.
+func (r DB) UpdateOrder(ctx context.Context, id string, order int) error {
+	const op = "postgres.UpdateSceneOrder"
+
+	query := `UPDATE scenes SET "order" = $1, updated_at = now() WHERE id = $2`
+	result, err := r.conn.Exec(ctx, query, order, id)
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update scene order")
+	}
+	if result.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+	}
+
+	return nil
+}
+
 // GetDialogueByID یک دیالوگ را مستقیم با شناسه‌اش می‌خواند.
 //
 // سرویس shadowing به این نیاز دارد تا متن واقعی هر مرحله را از دیتابیس

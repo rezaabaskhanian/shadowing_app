@@ -30,6 +30,25 @@ func (h Handler) GetScene(c echo.Context) error {
 	scene.IsLocked = false
 	scene.Progress, scene.IsCompleted = h.sceneProgressForUser(c, scene.ID)
 
+	// قفل ترتیبی: باید کل مسیر را از اول پیمود تا بفهمیم صحنه‌ی قبلی کامل
+	// شده یا نه — همان API لیست را داخلی صدا می‌زنیم تا منطق یک‌جا بماند.
+	if !isAdminCaller(c) {
+		if allScenes, listErr := h.learningSvc.ListScene(c.Request().Context()); listErr == nil {
+			for i := range allScenes {
+				_, allScenes[i].IsCompleted = h.sceneProgressForUser(c, allScenes[i].ID)
+			}
+			applySequenceLock(allScenes, false)
+			for _, s := range allScenes {
+				if s.ID == scene.ID && s.SequenceLocked {
+					return c.JSON(http.StatusForbidden, echo.Map{
+						"message":         "برای باز شدن این صحنه باید صحنه‌ی قبلی در مسیر آموزشی را کامل کنی",
+						"sequence_locked": true,
+					})
+				}
+			}
+		}
+	}
+
 	dialogueScores := h.dialogueProgressForUser(c, scene.ID)
 	for i := range scene.Hotspots {
 		for j := range scene.Hotspots[i].Dialogues {

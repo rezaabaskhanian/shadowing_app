@@ -6,6 +6,7 @@ import {
   deleteScene,
   getScene,
   listScenes,
+  updateSceneOrder,
 } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
 
@@ -72,6 +73,46 @@ export default function SceneList({
     }
   }
 
+  // جابه‌جایی یک صحنه در مسیر آموزشی: با همسایه‌اش (بر اساس order فعلی)
+  // مقدار order را عوض می‌کند. لیست بر اساس order مرتب نمایش داده می‌شود،
+  // پس این دقیقاً یعنی جابه‌جایی جایگاه در مسیر.
+  async function moveScene(sorted: SceneResp[], index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= sorted.length) return;
+    const a = sorted[index];
+    const b = sorted[target];
+    try {
+      await Promise.all([
+        updateSceneOrder(a.id, b.order),
+        updateSceneOrder(b.id, a.order),
+      ]);
+      load();
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
+
+  const sorted = [...scenes].sort((a, b) => a.order - b.order);
+  const needsNumbering =
+    sorted.length > 1 && sorted.every((s) => s.order === sorted[0].order);
+
+  async function autoNumber() {
+    if (!confirm("ترتیب فعلی مسیر بر اساس تاریخ ساخت شماره‌گذاری شود؟"))
+      return;
+    try {
+      const byCreatedAt = [...scenes].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      for (let i = 0; i < byCreatedAt.length; i++) {
+        await updateSceneOrder(byCreatedAt[i].id, i + 1);
+      }
+      notify("مسیر شماره‌گذاری شد", "ok");
+      load();
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
+
   return (
     <div>
       <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -96,13 +137,24 @@ export default function SceneList({
         </div>
       </div>
 
+      <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <p className="hint" style={{ margin: 0 }}>
+          ترتیب زیر همان ترتیب مسیر آموزشی در اپ است — با ▲/▼ صحنه را در مسیر جابه‌جا کن.
+        </p>
+        {needsNumbering && (
+          <button className="btn btn-sm" onClick={autoNumber}>
+            🔢 شماره‌گذاری اولیه بر اساس تاریخ ساخت
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="empty">در حال بارگذاری...</div>
       ) : scenes.length === 0 ? (
         <div className="empty">هنوز صحنه‌ای ثبت نشده است.</div>
       ) : (
         <div className="scene-grid">
-          {scenes
+          {sorted
             .filter((s) =>
               !categoryFilter
                 ? true
@@ -110,7 +162,9 @@ export default function SceneList({
                 ? !s.category
                 : s.category === categoryFilter
             )
-            .map((s) => (
+            .map((s) => {
+              const idx = sorted.findIndex((x) => x.id === s.id);
+              return (
             <div
               className="scene-item"
               key={s.id}
@@ -126,6 +180,7 @@ export default function SceneList({
               <div className="meta">
                 <h3>{s.title || "-"}</h3>
                 <span>{s.status}</span>
+                <span className="hint">🔢 ترتیب مسیر: {s.order}</span>
                 {s.category ? (
                   <span className="hint">🏷 {s.category}</span>
                 ) : (
@@ -134,18 +189,36 @@ export default function SceneList({
                   </span>
                 )}
               </div>
-              <button
-                className="btn btn-sm"
-                style={{ margin: "0 8px 8px" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEdit(s.id);
-                }}
+              <div
+                style={{ display: "flex", gap: 4, margin: "0 8px 8px" }}
+                onClick={(e) => e.stopPropagation()}
               >
-                ✏️ ویرایش
-              </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={idx <= 0}
+                  onClick={() => moveScene(sorted, idx, -1)}
+                  title="بالاتر در مسیر"
+                >
+                  ▲
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={idx < 0 || idx >= sorted.length - 1}
+                  onClick={() => moveScene(sorted, idx, 1)}
+                  title="پایین‌تر در مسیر"
+                >
+                  ▼
+                </button>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => handleEdit(s.id)}
+                >
+                  ✏️ ویرایش
+                </button>
+              </div>
             </div>
-          ))}
+              );
+            })}
         </div>
       )}
 
