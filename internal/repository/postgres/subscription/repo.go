@@ -139,6 +139,19 @@ func (r DB) GrantSubscription(ctx context.Context, userID, planID string, points
 	return nil
 }
 
+// UserPoints موجودی امتیاز فعلی یک کاربر را برمی‌گرداند — برای محدودکردن
+// مقدار قابل‌ریدیم روی خرید واقعی به موجودی واقعی‌اش.
+func (r DB) UserPoints(ctx context.Context, userID string) (int, error) {
+	const op = "postgressubscription.UserPoints"
+
+	var points int
+	err := r.conn.QueryRow(ctx, `SELECT points FROM users WHERE id = $1`, userID).Scan(&points)
+	if err != nil {
+		return 0, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن موجودی امتیاز")
+	}
+	return points, nil
+}
+
 // HasActiveSubscription می‌گوید آیا کاربر همین حالا اشتراک فعال و منقضی‌نشده
 // دارد یا نه — مبنای قفل‌کردن/بازکردن صحنه‌های غیررایگان.
 func (r DB) HasActiveSubscription(ctx context.Context, userID string) (bool, error) {

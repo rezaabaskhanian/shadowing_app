@@ -529,6 +529,11 @@ export const translations: Translations = {
     en: "Couldn't load plans. Please try again.",
     fa: 'طرح‌های اشتراک بارگذاری نشد. دوباره امتحان کن.',
   },
+  paywallRedeemPointsTitle: { en: 'Use my points', fa: 'استفاده از امتیازم' },
+  paywallRedeemPointsSub: {
+    en: 'You have {points} points — redeem them for {days} bonus days on this subscription.',
+    fa: '{points} امتیاز داری — می‌تونی خرجش کنی برای {days} روز اضافه روی این اشتراک.',
+  },
   lockedBadge: { en: 'Locked', fa: 'قفل' },
 
   // ---- Contact Us ----

@@ -85,8 +85,19 @@ const FAQ_ITEMS: FaqItem[] = [
       fa: 'تفاوت «امتیاز» (Points) با XP چیه؟',
     },
     answer: {
-      en: 'Points are a separate currency, earned only when a scene or topic you submitted yourself gets approved by an admin. They can be redeemed for a discount on subscription plans — they have nothing to do with regular practice.',
-      fa: 'امتیاز یه واحد کاملاً جداست که فقط وقتی صحنه یا پیشنهاد موضوعی که خودت ساختی توسط ادمین تایید بشه بهت داده می‌شه. فقط برای گرفتن تخفیف روی خرید اشتراک قابل استفاده‌ست و ربطی به تمرین معمولی نداره.',
+      en: 'Points are a separate currency, earned only when a scene or topic you submitted yourself gets approved by an admin. They can be redeemed for bonus days on a subscription purchase — they have nothing to do with regular practice.',
+      fa: 'امتیاز یه واحد کاملاً جداست که فقط وقتی صحنه یا پیشنهاد موضوعی که خودت ساختی توسط ادمین تایید بشه بهت داده می‌شه. برای گرفتن روز اضافه روی خرید اشتراک قابل استفاده‌ست و ربطی به تمرین معمولی نداره.',
+    },
+  },
+  {
+    id: 'redeem-points-subscription',
+    question: {
+      en: 'How do I use my points on a subscription purchase?',
+      fa: 'چطور امتیازم رو موقع خرید اشتراک استفاده کنم؟',
+    },
+    answer: {
+      en: 'On the subscription (Paywall) screen, if you have at least 100 points, a "Use my points" card shows up with a switch. Turn it on before buying: every 100 points gives you 3 bonus days added on top of the plan you buy. It doesn\'t reduce the price you pay — since that\'s fixed and already charged by Cafe Bazaar — it extends how long your subscription lasts instead. Only full 100-point blocks are spent; any leftover stays in your balance for next time.',
+      fa: 'توی صفحه‌ی خرید اشتراک (Paywall)، اگه حداقل ۱۰۰ امتیاز داشته باشی، یه کارت «استفاده از امتیازم» با یه سوییچ نشون داده می‌شه. قبل از خرید روشنش کن: هر ۱۰۰ امتیاز، ۳ روز اضافه روی پلنی که می‌خری بهت می‌ده. این کار قیمتی که پرداخت می‌کنی رو کم نمی‌کنه — چون اون از قبل نزد کافه‌بازار ثابت و پرداخت‌شده‌ست — به‌جاش مدت اشتراکت رو بیشتر می‌کنه. فقط بلوک‌های کامل ۱۰۰تایی خرج می‌شن؛ باقیمونده تو موجودیت می‌مونه برای دفعه‌ی بعد.',
     },
   },
   {

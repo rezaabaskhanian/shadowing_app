@@ -11,6 +11,9 @@ import (
 type verifyPurchaseRequest struct {
 	ProductID     string `json:"product_id"`
 	PurchaseToken string `json:"purchase_token"`
+	// PointsToRedeem اختیاری — امتیازی که کاربر می‌خواهد برای روز اضافه روی
+	// مدت اشتراک خرج کند. سمت سرور به موجودی واقعی‌اش محدود می‌شود.
+	PointsToRedeem int `json:"points_to_redeem"`
 }
 
 // VerifyPurchase یک خرید کافه‌بازاری (Poolakey) را سمت سرور تأیید می‌کند و در
@@ -26,7 +29,7 @@ func (h Handler) VerifyPurchase(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "درخواست نامعتبر"})
 	}
 
-	if err := h.billingSvc.VerifyAndGrant(c.Request().Context(), userClaims.UserID, req.ProductID, req.PurchaseToken); err != nil {
+	if err := h.billingSvc.VerifyAndGrant(c.Request().Context(), userClaims.UserID, req.ProductID, req.PurchaseToken, req.PointsToRedeem); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
 

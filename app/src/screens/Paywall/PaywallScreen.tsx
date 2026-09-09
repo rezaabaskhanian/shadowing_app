@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Lock, RotateCcw, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, Coins, Lock, RotateCcw, Sparkles } from 'lucide-react-native';
 import { useBazaar } from '@cafebazaar/react-native-poolakey';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { useScenes } from '../../data/ScenesContext';
-import { getSubscriptionPlans, verifyPurchase, SubscriptionPlan } from '../../api/billing';
+import { getSubscriptionPlans, verifyPurchase, bonusDaysForPoints, SubscriptionPlan } from '../../api/billing';
+import { getMyPoints } from '../../api/submissions';
 import { CAFEBAZAAR_RSA_KEY } from '../../api/config';
 
 const formatToman = (n: number) => n.toLocaleString('en-US');
@@ -25,6 +26,8 @@ export const PaywallScreen = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [points, setPoints] = useState(0);
+  const [redeemPoints, setRedeemPoints] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +45,9 @@ export const PaywallScreen = () => {
         setErrorDetail(err instanceof Error ? err.message : String(err));
         setPhase('error');
       });
+    getMyPoints()
+      .then((p) => active && setPoints(p))
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -49,6 +55,7 @@ export const PaywallScreen = () => {
 
   const selectedPlan = plans.find((p) => p.id === selectedId) || null;
   const busy = phase === 'buying' || phase === 'restoring';
+  const bonusDays = bonusDaysForPoints(points);
 
   const handleBuy = async () => {
     if (!selectedPlan || !selectedPlan.product_id) return;
@@ -56,7 +63,7 @@ export const PaywallScreen = () => {
     setErrorDetail(null);
     try {
       const result = await bazaar.purchaseProduct(selectedPlan.product_id);
-      await verifyPurchase(selectedPlan.product_id, result.purchaseToken);
+      await verifyPurchase(selectedPlan.product_id, result.purchaseToken, redeemPoints ? points : 0);
       // مصرف‌کردن خرید توی کافه‌بازار لازمه وگرنه چون این محصول non-consumable
       // ثبت شده، دفعه‌ی بعد (مثلاً بعد از انقضای اشتراک) دیگه قابل خرید نیست.
       await bazaar.consumePurchase(result.purchaseToken).catch(() => {});
@@ -153,6 +160,27 @@ export const PaywallScreen = () => {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        )}
+
+        {bonusDays > 0 && (
+          <View style={styles.pointsCard}>
+            <View style={styles.pointsIconWrap}>
+              <Coins color={COLORS.secondary} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pointsTitle}>{t('paywallRedeemPointsTitle')}</Text>
+              <Text style={styles.pointsSub}>
+                {t('paywallRedeemPointsSub')
+                  .replace('{points}', String(points))
+                  .replace('{days}', String(bonusDays))}
+              </Text>
+            </View>
+            <Switch
+              value={redeemPoints}
+              onValueChange={setRedeemPoints}
+              trackColor={{ true: COLORS.primary }}
+            />
           </View>
         )}
 
@@ -270,6 +298,36 @@ const styles = StyleSheet.create({
   },
   planNameActive: {
     color: COLORS.primary,
+  },
+  pointsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  pointsIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.backgroundSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointsTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+  },
+  pointsSub: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    marginTop: 2,
   },
   errorBox: {
     backgroundColor: COLORS.backgroundSoft,

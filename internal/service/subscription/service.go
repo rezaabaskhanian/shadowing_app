@@ -14,10 +14,29 @@ const (
 )
 
 // DiscountForPoints مبلغ تخفیف (تومان) قابل استفاده برای تعداد امتیاز داده‌شده
-// را حساب می‌کند (باقیمانده‌ی غیرقابل‌تبدیل نادیده گرفته می‌شود).
+// را حساب می‌کند (باقیمانده‌ی غیرقابل‌تبدیل نادیده گرفته می‌شود). فقط برای
+// گرنت دستی ادمین استفاده می‌شود — روی خرید واقعی کافه‌بازاری اعمال نمی‌شود
+// (پایین‌تر توضیح داده شده).
 func DiscountForPoints(points int) int {
 	units := points / PointsPerDiscountUnit
 	return units * DiscountTomanPerUnit
+}
+
+// PointsPerBonusDayUnit و BonusDaysPerUnit نرخ تبدیل امتیاز به «روز اضافه»
+// برای خریدهای واقعی را مشخص می‌کنند: هر ۱۰۰ امتیاز، ۳ روز اضافه روی مدت پلن.
+// چون قیمت خرید IAP کافه‌بازار قبل از رسیدن درخواست به سرور ما نهایی شده،
+// امکان کم‌کردن پول از آن نیست؛ برای همین اینجا امتیاز به‌جای تخفیف نقدی، به
+// مدت زمان اضافه تبدیل می‌شود.
+const (
+	PointsPerBonusDayUnit = 100
+	BonusDaysPerUnit      = 3
+)
+
+// BonusDaysForPoints تعداد روز اضافه‌ی قابل‌استفاده برای تعداد امتیاز
+// داده‌شده را حساب می‌کند.
+func BonusDaysForPoints(points int) int {
+	units := points / PointsPerBonusDayUnit
+	return units * BonusDaysPerUnit
 }
 
 type repository interface {
@@ -29,6 +48,9 @@ type repository interface {
 	HasActiveSubscription(ctx context.Context, userID string) (bool, error)
 	PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error)
 	RevenueStats(ctx context.Context, days int) (postgressubscription.RevenueStats, error)
+	// UserPoints موجودی امتیاز فعلی کاربر — برای محدودکردن مقدار قابل‌ریدیم به
+	// موجودی واقعی (ورودی کلاینت نباید به‌تنهایی معتبر حساب شود).
+	UserPoints(ctx context.Context, userID string) (int, error)
 }
 
 type Service struct {
@@ -74,6 +96,34 @@ func (s Service) Grant(ctx context.Context, userID string, plan Plan, pointsToRe
 		discount = plan.PriceToman
 	}
 	return s.repo.GrantSubscription(ctx, userID, plan.ID, pointsToRedeem, discount, plan.DurationDays, provider, purchaseToken)
+}
+
+// GrantWithBonusDays یک اشتراک واقعی (خرید تأییدشده‌ی IAP) را فعال می‌کند و
+// امتیازی که کاربر خواسته ریدیم کند را به‌جای تخفیف نقدی (که روی خرید واقعی
+// امکان‌پذیر نیست، چون قیمت قبلاً نزد کافه‌بازار نهایی شده) به روز اضافه روی
+// مدت پلن تبدیل می‌کند. pointsToRedeem را ورودی کلاینت تعیین می‌کند اما اینجا
+// به موجودی واقعی کاربر محدود می‌شود — کلاینت نمی‌تواند بیش از چیزی که واقعاً
+// دارد ریدیم کند.
+func (s Service) GrantWithBonusDays(ctx context.Context, userID string, plan Plan, pointsToRedeem int, provider, purchaseToken string) error {
+	if pointsToRedeem < 0 {
+		pointsToRedeem = 0
+	}
+	if pointsToRedeem > 0 {
+		balance, err := s.repo.UserPoints(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if pointsToRedeem > balance {
+			pointsToRedeem = balance
+		}
+	}
+	// فقط واحدهای کامل (هر ۱۰۰ تا) واقعاً کسر می‌شوند؛ باقیمانده‌ی غیرقابل‌تبدیل
+	// دست‌نخورده برای دفعه‌ی بعد در موجودی کاربر می‌ماند، نه اینکه بی‌فایده
+	// هدر برود.
+	units := pointsToRedeem / PointsPerBonusDayUnit
+	spentPoints := units * PointsPerBonusDayUnit
+	bonusDays := units * BonusDaysPerUnit
+	return s.repo.GrantSubscription(ctx, userID, plan.ID, spentPoints, 0, plan.DurationDays+bonusDays, provider, purchaseToken)
 }
 
 // HasActiveSubscription می‌گوید آیا کاربر اشتراک فعال دارد — مبنای قفل‌کردن
