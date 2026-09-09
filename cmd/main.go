@@ -143,10 +143,53 @@ func main() {
 
 	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc := setupservice(cfg)
 
+	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
+
 	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc)
 
 	server.Server()
 
+}
+
+// streakJobHour ساعتی از شبانه‌روز (به وقت سرور) که کار روزانه‌ی استریک اجرا
+// می‌شود — عصر، تا کاربری که هنوز امروز تمرین نکرده وقت داشته باشد پیش از
+// نیمه‌شب یادآوری بگیرد و استریکش را نجات بدهد.
+const streakJobHour = 20
+
+// runDailyStreakJob هر روز یک‌بار اجرا می‌شود: اول استریک‌های قدیمی (که
+// حداقل یک روز کامل بدون تمرین مانده‌اند) را می‌شکند، بعد به کاربرانی که
+// امروز هنوز تمرین نکرده‌اند ولی استریکشان هنوز نشکسته پوش یادآوری می‌فرستد.
+// خطاها فقط لاگ می‌شوند — یک اجرای ناموفق نباید سرور اصلی را متوقف کند و
+// اجرای فردا خودش دوباره تلاش می‌کند.
+func runDailyStreakJob(ctx context.Context, progressSvc progressservice.Service, notificationSvc notificationservice.Service) {
+	for {
+		time.Sleep(durationUntilNextHour(streakJobHour))
+
+		broken, err := progressSvc.BreakStaleStreaks(ctx)
+		if err != nil {
+			fmt.Println("streak job: break stale streaks failed:", err)
+		} else if broken > 0 {
+			fmt.Println("streak job: broke", broken, "stale streak(s)")
+		}
+
+		sent, err := notificationSvc.SendStreakReminders(ctx)
+		if err != nil {
+			fmt.Println("streak job: send reminders failed:", err)
+		} else if sent > 0 {
+			fmt.Println("streak job: sent", sent, "streak reminder(s)")
+		}
+	}
+}
+
+// durationUntilNextHour فاصله تا نزدیک‌ترین وقوع بعدی ساعت مشخص‌شده (به وقت
+// محلی سرور) را برمی‌گرداند؛ اگر همین امروز نگذشته باشد امروز، وگرنه فردا.
+func durationUntilNextHour(hour int) time.Duration {
+	now := time.Now()
+	next := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, now.Location())
+	if !next.After(now) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next.Sub(now)
 }
 
 func setupservice(cfg config.Config) (authservice.Service, userservice.Service,

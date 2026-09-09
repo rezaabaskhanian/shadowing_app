@@ -7,6 +7,7 @@ import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { SessionResultScreen } from '../../components/SessionResultScreen';
+import { StreakInfoModal } from '../../components/StreakInfoModal';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
 import { useScenes, sceneKeys } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
@@ -96,13 +97,19 @@ export const SceneScreen = () => {
   const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
   const { user } = useAuth();
   const [streakCount, setStreakCount] = useState(0);
+  const [streakFreezes, setStreakFreezes] = useState<number | undefined>(undefined);
+  const [streakInfoVisible, setStreakInfoVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (!user?.id) return;
       let active = true;
       getUserStreak(user.id)
-        .then((s) => active && setStreakCount(s.current_streak))
+        .then((s) => {
+          if (!active) return;
+          setStreakCount(s.current_streak);
+          setStreakFreezes(s.freezes);
+        })
         .catch(() => {});
       return () => {
         active = false;
@@ -118,6 +125,12 @@ export const SceneScreen = () => {
   // نسبت ساخته می‌شود تا کادر با خود تصویر هم‌شکل باشد و هیچ بخشی از عرض آن
   // بریده نشود؛ فقط برای تصویرهای خیلی کشیده‌ی عمودی یک سقف می‌گذاریم که کل
   // صفحه را نبلعند.
+  // نکته: عمداً کفی برای این ارتفاع نمی‌گذاریم — چون resizeMode تصویر contain
+  // است و عرض همیشه با عرض صفحه پر می‌شود، بلندترکردن کادر فراتر از نسبت
+  // واقعی تصویر باعث نمی‌شود تصویر بزرگ‌تر دیده شود؛ فقط بالا/پایینش فضای
+  // خالی (letterbox) اضافه می‌کند و محاسبه‌ی موقعیت هات‌اسپات/حباب دیالوگ را
+  // به‌هم می‌زند (چون آن محاسبه فرض می‌کند تصویر دقیقاً همان ارتفاع کادر را
+  // پر کرده است).
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_SCENE_ASPECT);
   const topViewHeight = Math.min(
     Math.round(screenWidth / imageAspectRatio),
@@ -1024,6 +1037,7 @@ export const SceneScreen = () => {
           refocusKey={isShadowingMode ? `${activeStepIndex}-${repeatCount}` : undefined}
           isShadowingMode={isShadowingMode}
           streakCount={streakCount}
+          onStreakPress={() => setStreakInfoVisible(true)}
           onForward={handleHeaderForwardPress}
           bubbleSpeaker={currentDialogue.speaker}
           bubbleText={!isShadowingMode ? currentDialogue.dialogue : undefined}
@@ -1143,6 +1157,13 @@ export const SceneScreen = () => {
           )}
         </View>
       )}
+
+      <StreakInfoModal
+        visible={streakInfoVisible}
+        onClose={() => setStreakInfoVisible(false)}
+        streak={streakCount}
+        freezes={streakFreezes}
+      />
     </View>
   );
 };

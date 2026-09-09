@@ -18,11 +18,12 @@ func New(conn *pgxpool.Pool) DB {
 }
 
 type Settings struct {
-	UserID               string   `json:"-"`
-	DailyReminderEnabled bool     `json:"daily_reminder_enabled"`
-	DailyReminderTimes   []string `json:"daily_reminder_times"`
-	ContentNotifEnabled  bool     `json:"content_notif_enabled"`
-	ContentSource        string   `json:"content_source"`
+	UserID                string   `json:"-"`
+	DailyReminderEnabled  bool     `json:"daily_reminder_enabled"`
+	DailyReminderTimes    []string `json:"daily_reminder_times"`
+	ContentNotifEnabled   bool     `json:"content_notif_enabled"`
+	ContentSource         string   `json:"content_source"`
+	StreakReminderEnabled bool     `json:"streak_reminder_enabled"`
 }
 
 type Broadcast struct {
@@ -40,18 +41,19 @@ func (r DB) GetSettings(ctx context.Context, userID string) (Settings, error) {
 	const op = "postgresnotification.GetSettings"
 
 	const query = `
-		SELECT daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source
+		SELECT daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled
 		FROM user_notification_settings WHERE user_id = $1
 	`
 	s := Settings{
-		UserID:               userID,
-		DailyReminderEnabled: false,
-		DailyReminderTimes:   []string{},
-		ContentNotifEnabled:  false,
-		ContentSource:        "mixed",
+		UserID:                userID,
+		DailyReminderEnabled:  false,
+		DailyReminderTimes:    []string{},
+		ContentNotifEnabled:   false,
+		ContentSource:         "mixed",
+		StreakReminderEnabled: false,
 	}
 	err := r.conn.QueryRow(ctx, query, userID).Scan(
-		&s.DailyReminderEnabled, &s.DailyReminderTimes, &s.ContentNotifEnabled, &s.ContentSource,
+		&s.DailyReminderEnabled, &s.DailyReminderTimes, &s.ContentNotifEnabled, &s.ContentSource, &s.StreakReminderEnabled,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -71,20 +73,21 @@ func (r DB) UpsertSettings(ctx context.Context, s Settings) error {
 
 	const query = `
 		INSERT INTO user_notification_settings
-			(user_id, daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, updated_at)
-		VALUES ($1, $2, $3, $4, $5, now())
+			(user_id, daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, now())
 		ON CONFLICT (user_id) DO UPDATE SET
-			daily_reminder_enabled = EXCLUDED.daily_reminder_enabled,
-			daily_reminder_times   = EXCLUDED.daily_reminder_times,
-			content_notif_enabled  = EXCLUDED.content_notif_enabled,
-			content_source         = EXCLUDED.content_source,
-			updated_at             = now()
+			daily_reminder_enabled  = EXCLUDED.daily_reminder_enabled,
+			daily_reminder_times    = EXCLUDED.daily_reminder_times,
+			content_notif_enabled   = EXCLUDED.content_notif_enabled,
+			content_source          = EXCLUDED.content_source,
+			streak_reminder_enabled = EXCLUDED.streak_reminder_enabled,
+			updated_at              = now()
 	`
 	times := s.DailyReminderTimes
 	if times == nil {
 		times = []string{}
 	}
-	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, times, s.ContentNotifEnabled, s.ContentSource)
+	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, times, s.ContentNotifEnabled, s.ContentSource, s.StreakReminderEnabled)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره تنظیمات نوتیفیکیشن")
 	}
@@ -145,6 +148,41 @@ func (r DB) OptedInTokens(ctx context.Context) ([]string, error) {
 	rows, err := r.conn.Query(ctx, query)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن توکن‌های مشترکین")
+	}
+	defer rows.Close()
+
+	var tokens []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		tokens = append(tokens, t)
+	}
+	return tokens, nil
+}
+
+// StreakReminderTokens توکن‌های کاربرانی را برمی‌گرداند که: یادآوری استریک را
+// روشن کرده‌اند، استریک فعالی دارند، و آخرین تمرینشان دقیقاً «دیروز» بوده —
+// یعنی امروز هنوز تمرین نکرده‌اند ولی هنوز هم فرصت دارند (استریک هنوز نشکسته).
+// کسانی که امروز تمرین کرده‌اند یا استریکشان از قبل شکسته/صفر است، اینجا
+// نمی‌آیند.
+func (r DB) StreakReminderTokens(ctx context.Context) ([]string, error) {
+	const op = "postgresnotification.StreakReminderTokens"
+
+	const query = `
+		SELECT DISTINCT dpt.token
+		FROM streaks s
+		JOIN user_notification_settings uns ON uns.user_id = s.user_id
+		JOIN device_push_tokens dpt ON dpt.user_id = s.user_id
+		WHERE uns.streak_reminder_enabled = true
+		  AND s.status = 'active'
+		  AND s.current > 0
+		  AND s.last_date::date = (CURRENT_DATE - 1)
+	`
+	rows, err := r.conn.Query(ctx, query)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن توکن‌های یادآوری استریک")
 	}
 	defer rows.Close()
 

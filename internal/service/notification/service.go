@@ -13,6 +13,7 @@ type repository interface {
 	UpsertDeviceToken(ctx context.Context, userID, token, platform string) error
 	TokensForUser(ctx context.Context, userID string) ([]string, error)
 	OptedInTokens(ctx context.Context) ([]string, error)
+	StreakReminderTokens(ctx context.Context) ([]string, error)
 	Stats(ctx context.Context) (dailyReminder, contentNotif, totalUsers int, err error)
 	SaveBroadcast(ctx context.Context, title, body, createdBy string, sentCount int) error
 	ListBroadcasts(ctx context.Context, limit int) ([]postgresnotification.Broadcast, error)
@@ -75,4 +76,25 @@ func (s Service) Broadcast(ctx context.Context, title, body, createdBy string) (
 		return sent, err
 	}
 	return sent, nil
+}
+
+// SendStreakReminders به کاربرانی که یادآوری استریک را روشن کرده‌اند و امروز
+// هنوز تمرین نکرده‌اند (ولی استریکشان هنوز نشکسته) پوش یادآوری می‌فرستد.
+// از یک اجرای روزانه‌ی زمان‌بندی‌شده (cmd/main.go) صدا زده می‌شود.
+func (s Service) SendStreakReminders(ctx context.Context) (int, error) {
+	if !s.push.Enabled() {
+		return 0, nil
+	}
+	tokens, err := s.repo.StreakReminderTokens(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(tokens) == 0 {
+		return 0, nil
+	}
+	return s.push.SendToTokens(
+		ctx, tokens,
+		"استریکت داره از دست می‌ره! 🔥",
+		"امروز هنوز تمرین نکردی — یه تمرین سریع بزن تا استریکت نشکنه.",
+	)
 }

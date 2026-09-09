@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Play, PlusCircle, Search, Settings, User as UserIcon, X } from 'lucide-react-native';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Play, PlusCircle, Search, Settings, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
+import { StreakInfoModal } from '../components/StreakInfoModal';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
@@ -21,6 +22,7 @@ import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import {
   getUserSummary,
+  getUserStreak,
   getUserAchievements,
   getWeeklyActivity,
   getSkillsBreakdown,
@@ -212,6 +214,11 @@ export const ProgressScreen = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [overallProgress, setOverallProgress] = React.useState(0);
+  const [streak, setStreak] = React.useState(0);
+  const [streakFreezes, setStreakFreezes] = React.useState<number | undefined>(undefined);
+  const [streakInfoVisible, setStreakInfoVisible] = React.useState(false);
+  const [totalXP, setTotalXP] = React.useState(0);
+  const [levelName, setLevelName] = React.useState('');
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
   const [weeklyActivity, setWeeklyActivity] = React.useState<DayActivity[]>([]);
   const [skills, setSkills] = React.useState<SkillsBreakdown>({ pronunciation: 0, fluency: 0, vocabulary: 0 });
@@ -221,7 +228,16 @@ export const ProgressScreen = () => {
       if (!user?.id) return;
       let active = true;
       getUserSummary(user.id)
-        .then((s) => active && setOverallProgress(s.overall_progress))
+        .then((s) => {
+          if (!active) return;
+          setOverallProgress(s.overall_progress);
+          setStreak(s.streak);
+          setTotalXP(s.total_xp);
+          setLevelName(s.level_name);
+        })
+        .catch(() => {});
+      getUserStreak(user.id)
+        .then((s) => active && setStreakFreezes(s.freezes))
         .catch(() => {});
       getUserAchievements(user.id)
         .then((list) => active && setAchievements(list))
@@ -250,6 +266,39 @@ export const ProgressScreen = () => {
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.pageTitle}>{t('greatJobTitle')}</Text>
       <Text style={styles.pageSub}>{t('greatJobSub')}</Text>
+
+      {/* Streak/Level/XP — لمس بج استریک توضیح می‌دهد که چیست؛ XP هم اینجا
+          برای اولین‌بار به کاربر نشان داده می‌شود (قبلاً فقط بک‌اند حسابش
+          می‌کرد و جایی رندر نمی‌شد). */}
+      <View style={styles.statsCard}>
+        <TouchableOpacity style={styles.statsTile} onPress={() => setStreakInfoVisible(true)}>
+          <Flame size={20} color={COLORS.secondary} fill={COLORS.secondary} />
+          <Text style={styles.statsValue}>{streak}</Text>
+          <Text style={styles.statsLabel}>{t('statsStreakLabel')}</Text>
+        </TouchableOpacity>
+        <View style={styles.statsDivider} />
+        <View style={styles.statsTile}>
+          <Award size={20} color={COLORS.primary} />
+          <Text style={styles.statsValue} numberOfLines={1}>
+            {levelName || '—'}
+          </Text>
+          <Text style={styles.statsLabel}>{t('statsLevelLabel')}</Text>
+        </View>
+        <View style={styles.statsDivider} />
+        <View style={styles.statsTile}>
+          <Zap size={20} color={COLORS.tertiary} fill={COLORS.tertiary} />
+          <Text style={styles.statsValue}>{totalXP}</Text>
+          <Text style={styles.statsLabel}>{t('statsXPLabel')}</Text>
+        </View>
+      </View>
+      <Text style={styles.xpExplainText}>{t('xpExplain')}</Text>
+
+      <StreakInfoModal
+        visible={streakInfoVisible}
+        onClose={() => setStreakInfoVisible(false)}
+        streak={streak}
+        freezes={streakFreezes}
+      />
 
       <View style={styles.scoreCard}>
         <View style={styles.scoreRing}>
@@ -588,6 +637,21 @@ export const ProfileScreen = () => {
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.pointsCard}
+        onPress={() => navigation.navigate('HelpFaq')}
+        activeOpacity={0.85}
+      >
+        <View style={styles.pointsIconWrap}>
+          <HelpCircle color={COLORS.primary} size={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pointsValue}>{t('helpFaq')}</Text>
+          <Text style={styles.pointsSub}>{t('helpFaqSub')}</Text>
+        </View>
+        <ChevronRight color={COLORS.muted} size={18} />
+      </TouchableOpacity>
+
       {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست */}
       <TouchableOpacity
         style={styles.pointsCard}
@@ -899,6 +963,43 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     marginTop: 2,
+  },
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 16,
+    marginTop: 16,
+  },
+  statsTile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statsDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: COLORS.border,
+  },
+  statsValue: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+  },
+  statsLabel: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+  },
+  xpExplainText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 6,
   },
   scoreCard: {
     backgroundColor: COLORS.surface,

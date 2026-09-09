@@ -10,8 +10,8 @@ import { FONT_FAMILY } from '../../theme/typography';
 // می‌رود تا نقطه واقعاً وسط صفحه بیفتد (نه اینکه فقط pan محدود شود و نقطه
 // همان‌جای لبه بماند). سقف را زیاد بالا نمی‌بریم تا حس نامعقول «چسبیدن به
 // تصویر» ایجاد نشود.
-const MIN_CAMERA_SCALE = 1.15;
-const MAX_CAMERA_SCALE = 1.9;
+const MIN_CAMERA_SCALE = 1.05;
+const MAX_CAMERA_SCALE = 1.45;
 
 interface ActiveCameraTarget {
   x: number;
@@ -84,6 +84,8 @@ interface SceneCameraHeroProps {
   refocusKey?: string | number;
   isShadowingMode: boolean;
   streakCount: number;
+  /** لمس بج استریک — باز کردن توضیح معنای استریک. */
+  onStreakPress: () => void;
   onForward: () => void;
   /** حباب دیالوگ بالای سر گوینده‌ی فعلی — متن/گوینده‌ی خط جاری. */
   bubbleSpeaker?: string;
@@ -115,6 +117,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   refocusKey,
   isShadowingMode,
   streakCount,
+  onStreakPress,
   onForward,
   bubbleSpeaker,
   bubbleText,
@@ -158,7 +161,15 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
       )
     : 0;
   const bubbleAnchorY = anchor ? anchor.y : topViewHeight * 0.5;
+  // اگر هات‌اسپات آن‌قدر نزدیک بالای کادر باشد که جعبه‌ی حباب از لبه‌ی بالای
+  // کادر (که با overflow:hidden بریده می‌شود) رد شود، حباب برعکس، پایین نقطه
+  // نمایش داده می‌شود. چون استریک/هدر شناور حین زوم مخفی می‌شود (کدِ پایین)،
+  // دیگر نیازی به فضای اضافه برای آن نیست — فقط یک حاشیه‌ی کوچک برای این‌که
+  // حباب دقیقاً روی لبه نچسبد.
+  const TOP_SAFE_MARGIN = 16;
+  const bubbleBelow = anchor ? bubbleAnchorY - bubbleSize.height < TOP_SAFE_MARGIN : false;
   const bubbleBottom = topViewHeight - bubbleAnchorY;
+  const bubbleTop = bubbleAnchorY;
 
   useEffect(() => {
     Animated.timing(bubbleAnim, {
@@ -230,6 +241,27 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
     panYAnim,
   ]);
 
+  // وقتی دوربین دارد روی هات‌اسپاتی زوم می‌کند (یا زوم‌شده باقی مانده)، بج
+  // استریک از روی تصویر برداشته می‌شود تا با حرکت دوربین/زوم تداخل نداشته
+  // باشد؛ با پایان صحنه یا نبود هدف، دوربین زوم‌اوت می‌کند و بج دوباره دیده
+  // می‌شود.
+  const cameraZoomedIn = !!activeTarget && !sceneFinished;
+
+  const bubbleInner = (
+    <View style={[styles.bubbleBox, { maxWidth: screenWidth * 0.78 }]}>
+      {bubbleSpeaker ? (
+        <Text style={styles.bubbleSpeaker} numberOfLines={1}>
+          {bubbleSpeaker.toUpperCase()}
+        </Text>
+      ) : null}
+      {bubbleContent ?? (
+        <Text style={styles.bubbleText} numberOfLines={4}>
+          {bubbleText}
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.playerTopView, { height: topViewHeight }]}>
       <View style={styles.zoomContainer}>
@@ -255,9 +287,12 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
       {/* حباب دیالوگ — بالای سر گوینده‌ی فعلی. موقعیتش دقیقاً همان نقطه‌ی
           واقعی روی‌صفحه‌ی هات‌اسپات است (نه فرضِ «همیشه وسط»)، چون برای
           هات‌اسپات‌های نزدیک لبه/گوشه دوربین نمی‌تواند نقطه را کامل وسط
-          بیاورد. با «bottom» (نه «top») لنگر می‌کنیم تا با رشد متن، حباب به
-          سمت بالا بزرگ شود و نوکش دقیقاً روی همان نقطه بماند؛ افقی هم طوری
-          محدود می‌شود که از لبه‌های صفحه بیرون نزند. */}
+          بیاورد. معمولاً با «bottom» لنگر می‌کنیم تا با رشد متن، حباب به سمت
+          بالا بزرگ شود و نوکش دقیقاً روی همان نقطه بماند؛ اما اگر هات‌اسپات
+          آن‌قدر نزدیک بالای تصویر باشد که جایی برای حباب نماند (bubbleBelow)،
+          برعکس عمل می‌کنیم: حباب را با «top» زیر نقطه می‌گذاریم و دم را از
+          بالای جعبه می‌چسبانیم. افقی هم طوری محدود می‌شود که از لبه‌های صفحه
+          بیرون نزند. */}
       <Animated.View
         pointerEvents="none"
         onLayout={(e) => {
@@ -268,13 +303,16 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
         }}
         style={[
           styles.bubbleWrap,
+          bubbleBelow ? { top: bubbleTop } : { bottom: bubbleBottom },
           {
             left: bubbleLeft,
-            bottom: bubbleBottom,
             opacity: bubbleAnim,
             transform: [
               {
-                translateY: bubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
+                translateY: bubbleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [bubbleBelow ? -10 : 10, 0],
+                }),
               },
               {
                 scale: bubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }),
@@ -283,28 +321,34 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
           },
         ]}
       >
-        <View style={[styles.bubbleBox, { maxWidth: screenWidth * 0.78 }]}>
-          {bubbleSpeaker ? (
-            <Text style={styles.bubbleSpeaker} numberOfLines={1}>
-              {bubbleSpeaker.toUpperCase()}
-            </Text>
-          ) : null}
-          {bubbleContent ?? (
-            <Text style={styles.bubbleText} numberOfLines={4}>
-              {bubbleText}
-            </Text>
-          )}
-        </View>
-        <View style={styles.bubbleTail} />
+        {bubbleBelow ? (
+          <>
+            <View style={styles.bubbleTailUp} />
+            {bubbleInner}
+          </>
+        ) : (
+          <>
+            {bubbleInner}
+            <View style={styles.bubbleTail} />
+          </>
+        )}
       </Animated.View>
 
       {/* Overlay Header: streak · (shadowing mode) next-step */}
       {/* تصویر زیر نوار وضعیت کشیده شده، پس دکمه‌ها باید پایین‌تر از آن بنشینند */}
       <View style={[styles.imageHeaderOverlay, { top: insetsTop + 8 }]}>
-        <View style={styles.streakOverlayBadge}>
+        {/* حین حرکت/زوم دوربین روی هات‌اسپات، بج استریک از روی تصویر برداشته
+            می‌شود؛ opacity (نه حذف از درخت) استفاده می‌شود تا دکمه‌ی بعدی با
+            «space-between» جابه‌جا نشود. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          disabled={cameraZoomedIn}
+          style={[styles.streakOverlayBadge, cameraZoomedIn && styles.hiddenOverlay]}
+          onPress={onStreakPress}
+        >
           <Text style={styles.streakOverlayText}>{streakCount}</Text>
           <Flame size={14} color={COLORS.secondary} fill={COLORS.secondary} />
-        </View>
+        </TouchableOpacity>
 
         {isShadowingMode && (
           <TouchableOpacity activeOpacity={0.85} style={styles.overlayIconBtn} onPress={onForward}>
@@ -376,6 +420,16 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     transform: [{ rotate: '45deg' }],
   },
+  // همان دم، برای حالتی که حباب زیر نقطه قرار می‌گیرد (bubbleBelow) — قبل از
+  // جعبه رندر می‌شود و با margin منفی از پایین به جعبه می‌چسبد.
+  bubbleTailUp: {
+    width: 14,
+    height: 14,
+    marginBottom: -7,
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    borderRadius: 2,
+    transform: [{ rotate: '45deg' }],
+  },
   imageHeaderOverlay: {
     position: 'absolute',
     left: 16,
@@ -406,5 +460,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
+  },
+  hiddenOverlay: {
+    opacity: 0,
   },
 });

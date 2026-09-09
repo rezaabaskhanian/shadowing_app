@@ -2,6 +2,7 @@ package progressservice
 
 import (
 	"context"
+	"log/slog"
 
 	sceneprogress "shadowing-backend/internal/domain/progress/scene_progress"
 	"shadowing-backend/internal/pkg/richerror"
@@ -32,6 +33,24 @@ func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, d
 
 	if err := s.sceneProRepo.RecordDialogueCompletion(ctx, uid, sid, did, score); err != nil {
 		return nil, richerror.New(op).WithErr(err)
+	}
+
+	// استریک روزانه: قبلاً فقط ماموریت‌های عادت زبانی این را آپدیت می‌کردند؛
+	// تمرین معمولی صحنه‌ها هم باید حساب شود. AddDay در خودِ استریک idempotent
+	// است (چند بار در یک روز فرقی نمی‌کند)، پس امن است این را روی هر دیالوگ
+	// کامل‌شده صدا بزنیم. خطای این بخش نباید ثبت پیشرفت صحنه را که کاربر همین
+	// حالا انجام داد خراب کند، فقط لاگ می‌شود.
+	dailyXP := 10
+	if score >= 50 {
+		dailyXP = 20
+	}
+	if _, err := s.AddDailyProgress(ctx, dto.AddDailyProgressRequest{
+		UserID:     userID,
+		DialogueID: dialogueID,
+		Score:      score,
+		XP:         dailyXP,
+	}); err != nil {
+		slog.Warn("progress: failed to record daily streak", "err", err)
 	}
 
 	completed, avgScore, err := s.sceneProRepo.CountCompletedDialogues(ctx, uid, sid)

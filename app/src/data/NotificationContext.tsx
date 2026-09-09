@@ -26,6 +26,9 @@ interface NotificationContextType {
   setContentNotificationEnabled: (val: boolean) => void;
   contentSource: ContentSource;
   setContentSource: (source: ContentSource) => void;
+  /** پوش سرور برای یادآوری استریک — کاربر باید صریحاً رضایت بدهد. */
+  streakReminderEnabled: boolean;
+  setStreakReminderEnabled: (val: boolean) => void;
   activeBanner: NotificationItem | null;
   dismissBanner: () => void;
   // آیتم واقعی (کلمه‌ی لایتنر یا جمله‌ی صحنه) را کالر می‌سازد — این کانتکست
@@ -45,6 +48,8 @@ const NotificationContext = createContext<NotificationContextType>({
   setContentNotificationEnabled: () => {},
   contentSource: 'mixed',
   setContentSource: () => {},
+  streakReminderEnabled: false,
+  setStreakReminderEnabled: () => {},
   activeBanner: null,
   dismissBanner: () => {},
   triggerTestNotification: () => {},
@@ -63,6 +68,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [studyReminderTimes, setStudyReminderTimesState] = useState<ReminderTime[]>([]);
   const [contentNotificationEnabled, setContentNotificationEnabledState] = useState(false);
   const [contentSource, setContentSourceState] = useState<ContentSource>('mixed');
+  const [streakReminderEnabled, setStreakReminderEnabledState] = useState(false);
   const [activeBanner, setActiveBanner] = useState<NotificationItem | null>(null);
 
   // بارگذاری تنظیمات واقعی از بک‌اند + ثبت توکن FCM، فقط وقتی کاربر لاگین کرده
@@ -76,6 +82,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setStudyReminderTimesState(times);
         setContentNotificationEnabledState(settings.content_notif_enabled);
         setContentSourceState(settings.content_source);
+        setStreakReminderEnabledState(settings.streak_reminder_enabled);
         // همیشه با وضعیت سرور همگام می‌شویم: اگر یادآوری خاموش است، لیست خالی
         // فرستاده می‌شود تا trigger‌های باقی‌مانده از قبل هم لغو شوند.
         NativeNotificationService.scheduleDailyReminders(
@@ -95,10 +102,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         daily_reminder_times: studyReminderTimes,
         content_notif_enabled: contentNotificationEnabled,
         content_source: contentSource,
+        streak_reminder_enabled: streakReminderEnabled,
         ...overrides,
       })
       .catch((err) => console.warn('[NotificationContext] failed to save settings:', err));
-  }, [studyReminderEnabled, studyReminderTimes, contentNotificationEnabled, contentSource]);
+  }, [studyReminderEnabled, studyReminderTimes, contentNotificationEnabled, contentSource, streakReminderEnabled]);
 
   const setStudyReminderEnabled = useCallback(
     (val: boolean) => {
@@ -157,6 +165,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     [persist]
   );
 
+  const setStreakReminderEnabled = useCallback(
+    (val: boolean) => {
+      setStreakReminderEnabledState(val);
+      persist({ streak_reminder_enabled: val });
+    },
+    [persist]
+  );
+
   const dismissBanner = useCallback(() => {
     setActiveBanner(null);
   }, []);
@@ -180,6 +196,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setContentNotificationEnabled,
       contentSource,
       setContentSource,
+      streakReminderEnabled,
+      setStreakReminderEnabled,
       activeBanner,
       dismissBanner,
       triggerTestNotification,
@@ -194,6 +212,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setContentNotificationEnabled,
       contentSource,
       setContentSource,
+      streakReminderEnabled,
+      setStreakReminderEnabled,
       activeBanner,
       dismissBanner,
       triggerTestNotification,

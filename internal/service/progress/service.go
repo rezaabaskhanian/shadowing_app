@@ -24,6 +24,10 @@ type StreakRepository interface {
 	Create(ctx context.Context, streak *domainStreak.Streak) error
 
 	Update(ctx context.Context, streak *domainStreak.Streak) error
+
+	// BreakStale استریک کاربرانی که حداقل یک روز کامل بدون تمرین گذشته را
+	// می‌شکند و تعداد ردیف‌های تغییریافته را برمی‌گرداند.
+	BreakStale(ctx context.Context) (int64, error)
 }
 
 // ============================================

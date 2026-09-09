@@ -100,3 +100,26 @@ func (r *StreakRepository) Update(ctx context.Context, s *streak.Streak) error {
 
 	return nil
 }
+
+// ============================================
+// BreakStale - شکستن استریک‌هایی که حداقل یک روز کامل ازشان گذشته
+// ============================================
+// last_date دقیقاً «دیروز» یعنی هنوز فرصت هست (شکسته نمی‌شود، مطابق منطق
+// AddDay در entity.go)؛ فقط وقتی last_date از دیروز هم قدیمی‌تر باشد (یعنی
+// حداقل یک روز کامل بدون هیچ تمرینی گذشته) استریک واقعاً می‌شکند.
+func (r *StreakRepository) BreakStale(ctx context.Context) (int64, error) {
+	const op = "postgres.StreakRepository.BreakStale"
+
+	const query = `
+		UPDATE streaks
+		SET status = 'broken', current = 0, updated_at = now()
+		WHERE status = 'active'
+		  AND current > 0
+		  AND last_date::date < (CURRENT_DATE - 1)
+	`
+	result, err := r.db.Exec(ctx, query)
+	if err != nil {
+		return 0, richerror.New(op).WithErr(err).WithMessage("failed to break stale streaks")
+	}
+	return result.RowsAffected(), nil
+}

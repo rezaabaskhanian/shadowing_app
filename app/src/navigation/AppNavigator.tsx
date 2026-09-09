@@ -37,6 +37,7 @@ import { HabitMissionResultScreen } from '../screens/LanguageHabit/HabitMissionR
 import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
 import { FeedbackScreen } from '../screens/Feedback/FeedbackScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
+import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { useLanguage } from '../data/i18n';
@@ -55,6 +56,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'TopicSuggestion',
   'Feedback',
   'ContactUs',
+  'HelpFaq',
   'Paywall',
   'ToastDemo',
 ];
@@ -248,6 +250,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="ContactUs"
         component={ContactUsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="HelpFaq"
+        component={HelpFaqScreen}
         options={{
           tabBarButton: () => null,
         }}

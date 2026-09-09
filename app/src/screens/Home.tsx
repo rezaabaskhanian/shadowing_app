@@ -23,6 +23,7 @@ import {
 import { ScenarioCard } from '../components/ScenarioCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
+import { StreakInfoModal } from '../components/StreakInfoModal';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
@@ -56,6 +57,8 @@ export const HomeScreen = () => {
   const dueCount = box.filter(isDue).length;
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [streak, setStreak] = React.useState(0);
+  const [streakFreezes, setStreakFreezes] = React.useState<number | undefined>(undefined);
+  const [streakInfoVisible, setStreakInfoVisible] = React.useState(false);
   const [todaySessions, setTodaySessions] = React.useState(0);
   const [todayMinutes, setTodayMinutes] = React.useState(0);
   const [fluency, setFluency] = React.useState(0);
@@ -65,7 +68,11 @@ export const HomeScreen = () => {
       if (!user?.id) return;
       let active = true;
       getUserStreak(user.id)
-        .then((s) => active && setStreak(s.current_streak))
+        .then((s) => {
+          if (!active) return;
+          setStreak(s.current_streak);
+          setStreakFreezes(s.freezes);
+        })
         .catch(() => {});
       getWeeklyActivity()
         .then((days) => {
@@ -148,11 +155,11 @@ export const HomeScreen = () => {
               <Text style={styles.langBadgeText}>{language.toUpperCase()}</Text>
             </TouchableOpacity>
 
-            {/* Streak Badge */}
-            <View style={styles.streakBadge}>
+            {/* Streak Badge — لمس برای توضیح معنای استریک */}
+            <TouchableOpacity style={styles.streakBadge} onPress={() => setStreakInfoVisible(true)}>
               <Flame size={16} color={COLORS.secondary} fill={COLORS.secondary} />
               <Text style={styles.streakText}>{streak}</Text>
-            </View>
+            </TouchableOpacity>
 
             {/* Drawer Trigger */}
             <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
@@ -162,6 +169,12 @@ export const HomeScreen = () => {
         </View>
 
         <AppDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
+        <StreakInfoModal
+          visible={streakInfoVisible}
+          onClose={() => setStreakInfoVisible(false)}
+          streak={streak}
+          freezes={streakFreezes}
+        />
 
         {/* TODAY'S SHADOWING PROGRESS CARD */}
         <View style={styles.progressCard}>

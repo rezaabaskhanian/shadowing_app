@@ -9,6 +9,8 @@ export interface NotificationSettings {
   daily_reminder_times: ReminderTime[];
   content_notif_enabled: boolean;
   content_source: ContentSource;
+  /** پوش یادآوری وقتی امروز هنوز تمرین نکرده‌ای ولی استریکت هنوز نشکسته. */
+  streak_reminder_enabled: boolean;
 }
 
 export async function getNotificationSettings(): Promise<NotificationSettings> {

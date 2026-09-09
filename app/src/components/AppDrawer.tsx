@@ -4,6 +4,7 @@ import {
   Dimensions,
   Modal,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import {
+  Bell,
   ChevronRight,
   Coins,
   HelpCircle,
@@ -26,6 +28,7 @@ import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
+import { useNotifications } from '../data/NotificationContext';
 import { getMyPoints } from '../api/submissions';
 
 const DRAWER_WIDTH = Math.min(320, Dimensions.get('window').width * 0.82);
@@ -41,6 +44,7 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
   const isFocused = useIsFocused();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
+  const { streakReminderEnabled, setStreakReminderEnabled } = useNotifications();
   const [points, setPoints] = useState(0);
   const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
 
@@ -166,7 +170,25 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
 
           <View style={styles.dividerLine} />
 
-          <TouchableOpacity style={styles.row} activeOpacity={0.7}>
+          {/* رضایت صریح کاربر برای پوش یادآوری استریک — پیش‌فرض خاموش. */}
+          <View style={styles.streakReminderRow}>
+            <View style={styles.streakReminderIconWrap}>
+              <Bell color={COLORS.primary} size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowText}>{t('streakReminderTitle')}</Text>
+              <Text style={styles.streakReminderSub}>{t('streakReminderSub')}</Text>
+            </View>
+            <Switch
+              value={streakReminderEnabled}
+              onValueChange={setStreakReminderEnabled}
+              trackColor={{ true: COLORS.primary }}
+            />
+          </View>
+
+          <View style={styles.dividerLine} />
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('HelpFaq')}>
             <HelpCircle color={COLORS.primary} size={18} />
             <Text style={styles.rowText}>{t('helpFaq')}</Text>
           </TouchableOpacity>
@@ -288,5 +310,25 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 14,
+  },
+  streakReminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  streakReminderIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakReminderSub: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    marginTop: 2,
   },
 });

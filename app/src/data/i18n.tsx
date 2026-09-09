@@ -93,6 +93,23 @@ export const translations: Translations = {
     en: "No achievements yet — keep practicing to unlock your first one!",
     fa: 'هنوز دستاوردی نداری — به تمرین ادامه بده تا اولینش رو باز کنی!',
   },
+  streakInfoBody: {
+    en: 'Practice at least once a day to keep this number growing. Miss a full day and your streak resets — unless you use a freeze to save it.',
+    fa: 'هر روز حداقل یک تمرین انجام بده تا این عدد بالا برود. اگر یک روز کامل تمرین نکنی، استریک صفر می‌شود — مگر با «فریز» نجاتش بدهی.',
+  },
+  close: { en: 'Close', fa: 'بستن' },
+  statsStreakLabel: { en: 'Day streak', fa: 'روز متوالی' },
+  statsLevelLabel: { en: 'Level', fa: 'سطح' },
+  statsXPLabel: { en: 'XP', fa: 'امتیاز تجربه' },
+  xpExplain: {
+    en: 'Earned by finishing scenes — 50 XP per completed scene. It sets your level.',
+    fa: 'با تمام‌کردن صحنه‌ها به دست می‌آید — هر صحنه‌ی کامل‌شده ۵۰ امتیاز. سطح تو را همین تعیین می‌کند.',
+  },
+  streakReminderTitle: { en: 'Streak reminder', fa: 'یادآوری استریک' },
+  streakReminderSub: {
+    en: "If you haven't practiced today, we'll send you a reminder so your streak doesn't break.",
+    fa: 'اگه امروز هنوز تمرین نکرده باشی، بهت یادآوری می‌فرستیم تا استریکت نشکنه.',
+  },
 
   // Profile Screen
   profileTitle: { en: 'Profile', fa: 'حساب کاربری' },
@@ -100,6 +117,10 @@ export const translations: Translations = {
   learnerLevel: { en: 'Level A2 Learner', fa: 'زبان‌آموز سطح A2' },
   appLanguage: { en: 'App Language', fa: 'زبان برنامه' },
   helpFaq: { en: 'Help & FAQ', fa: 'راهنما و سوالات متداول' },
+  helpFaqSub: {
+    en: 'Answers to common questions about practice, streaks, XP and points.',
+    fa: 'جواب سوالات پرتکرار درباره‌ی تمرین، استریک، XP و امتیاز.',
+  },
   logout: { en: 'Log Out', fa: 'خروج از حساب کاربری' },
 
   // Submit Scene

@@ -28,10 +28,11 @@ func (h Handler) GetNotificationSettings(c echo.Context) error {
 }
 
 type updateNotificationSettingsRequest struct {
-	DailyReminderEnabled bool     `json:"daily_reminder_enabled"`
-	DailyReminderTimes   []string `json:"daily_reminder_times"`
-	ContentNotifEnabled  bool     `json:"content_notif_enabled"`
-	ContentSource        string   `json:"content_source"`
+	DailyReminderEnabled  bool     `json:"daily_reminder_enabled"`
+	DailyReminderTimes    []string `json:"daily_reminder_times"`
+	ContentNotifEnabled   bool     `json:"content_notif_enabled"`
+	ContentSource         string   `json:"content_source"`
+	StreakReminderEnabled bool     `json:"streak_reminder_enabled"`
 }
 
 // maxReminderTimes سقف تعداد ساعت‌های یادآوری روزانه‌ی یک کاربر؛ چون هر ساعت
@@ -84,11 +85,12 @@ func (h Handler) UpdateNotificationSettings(c echo.Context) error {
 	dailyEnabled := req.DailyReminderEnabled && len(times) > 0
 
 	err = h.notificationSvc.UpsertSettings(c.Request().Context(), notificationservice.Settings{
-		UserID:               userClaims.UserID,
-		DailyReminderEnabled: dailyEnabled,
-		DailyReminderTimes:   times,
-		ContentNotifEnabled:  req.ContentNotifEnabled,
-		ContentSource:        req.ContentSource,
+		UserID:                userClaims.UserID,
+		DailyReminderEnabled:  dailyEnabled,
+		DailyReminderTimes:    times,
+		ContentNotifEnabled:   req.ContentNotifEnabled,
+		ContentSource:         req.ContentSource,
+		StreakReminderEnabled: req.StreakReminderEnabled,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در ذخیره تنظیمات نوتیفیکیشن"})
