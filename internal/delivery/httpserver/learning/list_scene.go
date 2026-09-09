@@ -74,6 +74,25 @@ func isAdminCaller(c echo.Context) bool {
 	return err == nil && userClaims.Role == "admin"
 }
 
+// freeSampleSceneIDs شناسه‌ی اولین صحنه‌ی منتشرشده‌ی هر سطح دشواری را
+// برمی‌گرداند — این صحنه‌ها همیشه رایگان‌اند (چه ادمین دستی قفلشان کرده
+// باشد چه کاربر اشتراک نداشته باشد)، تا هر کاربری بتواند از هر سه سطح یک
+// نمونه‌ی رایگان امتحان کند، مستقل از تنظیم دستی ادمین روی آن صحنه‌ی خاص.
+func freeSampleSceneIDs(scenes []dto.Scene) map[string]bool {
+	seenDifficulty := map[string]bool{}
+	free := map[string]bool{}
+	for _, s := range scenes {
+		if s.Status != "published" {
+			continue
+		}
+		if !seenDifficulty[s.Difficulty] {
+			seenDifficulty[s.Difficulty] = true
+			free[s.ID] = true
+		}
+	}
+	return free
+}
+
 // applySequenceLock صحنه‌های منتشرشده‌ی این اسلایس را به ترتیب (که GetAll
 // از قبل بر اساس "order" مرتب برگردانده) می‌پیماید و SequenceLocked هر صحنه
 // را پر می‌کند: تا وقتی صحنه‌ی منتشرشده‌ی قبلیِ *همان سطح دشواری* کامل نشده،
@@ -107,8 +126,13 @@ func (h Handler) ListScene(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 
+	freeSamples := freeSampleSceneIDs(scenes)
 	for i := range scenes {
-		scenes[i].IsLocked = h.isSceneLocked(c, scenes[i].IsLocked)
+		if freeSamples[scenes[i].ID] {
+			scenes[i].IsLocked = false
+		} else {
+			scenes[i].IsLocked = h.isSceneLocked(c, scenes[i].IsLocked)
+		}
 		scenes[i].Progress, scenes[i].IsCompleted = h.sceneProgressForUser(c, scenes[i].ID)
 	}
 	applySequenceLock(scenes, isAdminCaller(c))

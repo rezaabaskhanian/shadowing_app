@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, ChevronDown } from 'lucide-react-native';
+import {
+  Award,
+  Bell,
+  BookOpen,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  Flame,
+  Gift,
+  ListChecks,
+  Map as MapIcon,
+  Mic,
+  Shield,
+  Ticket,
+  Unlock,
+} from 'lucide-react-native';
 
-import { COLORS, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 
@@ -12,6 +27,25 @@ interface FaqItem {
   question: { en: string; fa: string };
   answer: { en: string; fa: string };
 }
+
+// هر باکس یه رنگ/آیکن مخصوص خودش داره فقط برای تنوع بصری و راحت‌تر
+// اسکن‌کردن لیست — بین دو باکس کنار هم عمداً رنگ تکرار نمی‌شه. رنگ‌های
+// طلایی (streak/xp/points) روی موضوعاتی که واقعاً به هم مربوطن تکرار شدن،
+// نه رندوم.
+const FAQ_ICON: Record<string, { icon: any; color: string }> = {
+  'what-is-shadowing': { icon: Mic, color: COLORS.primary },
+  'recording-privacy': { icon: Shield, color: COLORS.info },
+  'streak-meaning': { icon: Flame, color: COLORS.secondary },
+  'what-counts-as-practice': { icon: CheckCircle2, color: COLORS.tertiary },
+  'xp-level': { icon: Award, color: COLORS.warningDeep },
+  'points-vs-xp': { icon: Gift, color: COLORS.audioMine },
+  'redeem-points-subscription': { icon: Ticket, color: COLORS.secondary },
+  'curriculum-path': { icon: MapIcon, color: COLORS.primary },
+  'free-sample-scenes': { icon: Unlock, color: COLORS.info },
+  'comprehension-quiz': { icon: ListChecks, color: COLORS.tertiary },
+  'leitner-box': { icon: BookOpen, color: COLORS.info },
+  reminders: { icon: Bell, color: COLORS.warningDeep },
+};
 
 /**
  * محتوای ثابت سوالات متداول — عمداً داخل خودِ اپ (نه از سرور) چون تعدادش کمه
@@ -107,8 +141,19 @@ const FAQ_ITEMS: FaqItem[] = [
       fa: 'چرا یه صحنه قفله در حالی که اشتراک دارم؟',
     },
     answer: {
-      en: 'Scenes are arranged in a learning path (see the map icon on the Scenes tab). A locked scene there isn\'t about subscription — it just means you haven\'t finished the scene right before it in the path yet. Finish that one first and the next unlocks automatically. This is separate from subscription locks, which show a different message and send you to the paywall.',
-      fa: 'صحنه‌ها روی یه مسیر آموزشی چیده شدن (آیکن نقشه توی تب صحنه‌ها رو ببین). قفل‌بودن یه صحنه اونجا ربطی به اشتراک نداره — فقط یعنی صحنه‌ی درست قبل از اون توی مسیر رو هنوز تموم نکردی. اون رو تموم کن تا بعدی خودکار باز بشه. این با قفل اشتراک فرق داره که پیام جداگانه نشون می‌ده و می‌بردت به صفحه‌ی خرید.',
+      en: 'Scenes are arranged in a learning path (see the map icon on the Scenes tab), separately for each level — beginner, intermediate, advanced. A locked scene there isn\'t about subscription — it just means you haven\'t finished the scene right before it in that same level yet. Finish that one first and the next unlocks automatically. Since each level has its own independent path, being stuck on a beginner scene never blocks intermediate or advanced ones — you can jump straight into your level. This is also separate from subscription locks, which show a different message and send you to the paywall.',
+      fa: 'صحنه‌ها روی یه مسیر آموزشی چیده شدن (آیکن نقشه توی تب صحنه‌ها رو ببین)، و این مسیر برای هر سطح (مبتدی/متوسط/پیشرفته) جداست. قفل‌بودن یه صحنه اونجا ربطی به اشتراک نداره — فقط یعنی صحنه‌ی درست قبل از اون توی همون سطح رو هنوز تموم نکردی. اون رو تموم کن تا بعدی خودکار باز بشه. چون مسیر هر سطح مستقله، گیرکردن رو یه صحنه‌ی مبتدی هیچ‌وقت صحنه‌های متوسط/پیشرفته رو قفل نمی‌کنه — می‌تونی مستقیم بری سراغ سطح خودت. این هم جدا از قفل اشتراکه که پیام دیگه‌ای نشون می‌ده و می‌بردت به صفحه‌ی خرید.',
+    },
+  },
+  {
+    id: 'free-sample-scenes',
+    question: {
+      en: 'Which scenes can I try without a subscription?',
+      fa: 'بدون اشتراک کدوم صحنه‌ها رو می‌تونم امتحان کنم؟',
+    },
+    answer: {
+      en: 'The first scene of each level — beginner, intermediate, advanced — is always free, for every user, regardless of subscription. This is fixed by the app, not something an admin can lock, so you can always sample all three levels before deciding to subscribe.',
+      fa: 'اولین صحنه‌ی هر سطح — مبتدی، متوسط، پیشرفته — همیشه برای همه رایگانه، مستقل از اینکه اشتراک داری یا نه. این قانون تو خودِ اپ ثابته و ادمین نمی‌تونه قفلش کنه، پس همیشه می‌تونی از هر سه سطح یه نمونه امتحان کنی قبل از اینکه برای خرید اشتراک تصمیم بگیری.',
     },
   },
   {
@@ -165,17 +210,21 @@ export const HelpFaqScreen = () => {
 
         {FAQ_ITEMS.map((item) => {
           const isOpen = openId === item.id;
+          const { icon: Icon, color } = FAQ_ICON[item.id] || FAQ_ICON['what-is-shadowing'];
           return (
             <TouchableOpacity
               key={item.id}
-              style={[styles.card, isOpen && styles.cardOpen]}
+              style={[styles.card, isOpen && { borderColor: color, backgroundColor: hexToRgba(color, 0.06) }]}
               activeOpacity={0.85}
               onPress={() => toggle(item.id)}
             >
               <View style={styles.cardHeader}>
+                <View style={[styles.iconWrap, { backgroundColor: hexToRgba(color, 0.12) }]}>
+                  <Icon color={color} size={18} />
+                </View>
                 <Text style={styles.question}>{item.question[language]}</Text>
                 <View style={[styles.chevronWrap, isOpen && styles.chevronWrapOpen]}>
-                  <ChevronDown color={isOpen ? COLORS.primary : COLORS.muted} size={18} />
+                  <ChevronDown color={isOpen ? color : COLORS.muted} size={18} />
                 </View>
               </View>
               {isOpen && <Text style={styles.answer}>{item.answer[language]}</Text>}
@@ -226,15 +275,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  cardOpen: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   question: {
     flex: 1,

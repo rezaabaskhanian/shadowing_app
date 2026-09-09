@@ -108,6 +108,14 @@ export const HomeScreen = () => {
 
   const primaryScenario = scenes[0] || null;
 
+  // پیش‌نمایش خانه: فقط چند صحنه‌ی «بعدی» (ناتمام) رو نشون می‌ده، نه کل
+  // مسیر رو — دیدن همه از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
+  const HOME_PREVIEW_COUNT = 4;
+  const homePreviewScenes = (() => {
+    const upcoming = scenes.filter((s) => !s.isCompleted);
+    return (upcoming.length > 0 ? upcoming : scenes).slice(0, HOME_PREVIEW_COUNT);
+  })();
+
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
   };
@@ -306,13 +314,18 @@ export const HomeScreen = () => {
           </>
         )}
 
-        {/* WORLDS SECTION */}
-        <View style={styles.sectionHeader}>
+        {/* WORLDS SECTION — فقط چند مورد «بعدی» رو پیش‌نمایش می‌ده، نه کل
+            مسیر رو؛ وگرنه با صدها صحنه این صفحه خودش یه اسکرول بی‌پایان
+            می‌شد. دیدن کل مسیر از دکمه‌ی زیر می‌ره سراغ نقشه. */}
+        <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionLabel}>{t('worlds')}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('CurriculumMap')}>
+            <Text style={styles.viewPathLink}>{t('viewFullPath')}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.worldsList}>
-          {scenes.map((scenario, index) => (
+          {homePreviewScenes.map((scenario, index) => (
             <ScenarioCard
               key={scenario.id || index}
               title={scenario.title}
@@ -473,11 +486,22 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: 12,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   sectionLabel: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
     letterSpacing: 1.1,
+  },
+  viewPathLink: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
   },
   storyCard: {
     height: 200,

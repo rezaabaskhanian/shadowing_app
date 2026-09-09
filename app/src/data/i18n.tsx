@@ -28,6 +28,7 @@ export const translations: Translations = {
   fluency: { en: 'Fluency', fa: 'روانی کلام' },
   continueStory: { en: 'CONTINUE STORY', fa: 'ادامه داستان' },
   worlds: { en: 'WORLDS', fa: 'دنیای مکالمات' },
+  viewFullPath: { en: 'View full path', fa: 'مسیر کامل' },
   sentences: { en: 'sentences', fa: 'جمله' },
   min: { en: 'min', fa: 'دقیقه' },
   
