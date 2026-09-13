@@ -34,7 +34,8 @@ import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { useToast } from '../data/ToastContext';
 import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
-import { getAssessmentTest, getSpeakingProfile, type AssessmentItem } from '../api/assessment';
+import { getAssessmentTest, getSpeakingProfile, type AssessmentItem, type SpeakingProfile } from '../api/assessment';
+import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -74,30 +75,57 @@ export const HomeScreen = () => {
   const [levelName, setLevelName] = React.useState('');
   const [xpInfoVisible, setXpInfoVisible] = React.useState(false);
 
-  // کارتِ CTA تست تعیین سطح: فقط وقتی ادمین محتوا ساخته باشد و کاربر هنوز
-  // پروفایل گفتاری نداشته باشد نشان داده می‌شود؛ اگر یکی از این دو نباشد،
-  // کارت اصلاً رندر نمی‌شود (نه فقط مخفی — یعنی فیچر نامرئی است).
-  const [placementCtaItems, setPlacementCtaItems] = React.useState<AssessmentItem[] | null>(null);
+  // آیتم‌های تست: فقط وقتی ادمین محتوا ساخته باشد پر می‌شوند (وگرنه null، یعنی
+  // کل فیچر نامرئی است). برخلاف قبل، مستقل از داشتن/نداشتنِ پروفایلِ فعلی
+  // نگه‌داشته می‌شوند — چون هم کارتِ CTA (فقط برای کسی که هنوز نداده) و هم
+  // ردیفِ Drawer (برای گرفتنِ دوباره‌ی تست حتی بعد از داشتنِ پروفایل) به این
+  // نیاز دارند.
+  const [placementItems, setPlacementItems] = React.useState<AssessmentItem[] | null>(null);
+  const [speakingProfile, setSpeakingProfile] = React.useState<SpeakingProfile | null>(null);
   const [placementCtaDismissed, setPlacementCtaDismissed] = React.useState(false);
   const [placementModalVisible, setPlacementModalVisible] = React.useState(false);
 
+  const refreshPlacementState = React.useCallback(() => {
+    let active = true;
+    getAssessmentTest()
+      .then((items) => {
+        if (!active) return;
+        if (!items || items.length === 0) {
+          setPlacementItems(null);
+          setSpeakingProfile(null);
+          return;
+        }
+        setPlacementItems(items);
+        return getSpeakingProfile().then((profile) => {
+          if (active) setSpeakingProfile(profile);
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setPlacementItems(null);
+          setSpeakingProfile(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useFocusEffect(React.useCallback(() => refreshPlacementState(), [refreshPlacementState]));
+
+  // ماموریتِ امروز: صحنه‌ی پیشنهادی بر اساسِ سطح/مهارتِ ضعیف‌تر کاربر.
+  // مستقل از بقیه واکشی می‌شود و شکستش هیچ‌چیزِ دیگری را نمی‌شکند — کارتِ
+  // «ادامه داستان»ِ قدیمی همیشه به‌عنوانِ fallback آماده است.
+  const [todaysMission, setTodaysMission] = React.useState<TodaysMission | null>(null);
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      getAssessmentTest()
-        .then((items) => {
-          if (!active) return;
-          if (!items || items.length === 0) {
-            setPlacementCtaItems(null);
-            return;
-          }
-          return getSpeakingProfile().then((profile) => {
-            if (!active) return;
-            setPlacementCtaItems(profile ? null : items);
-          });
+      getTodaysMission()
+        .then((m) => {
+          if (active) setTodaysMission(m);
         })
         .catch(() => {
-          if (active) setPlacementCtaItems(null);
+          if (active) setTodaysMission(null);
         });
       return () => {
         active = false;
@@ -154,6 +182,15 @@ export const HomeScreen = () => {
   );
 
   const primaryScenario = scenes[0] || null;
+
+  // تصویر/عنوان/قفل‌بودن از روی صحنه‌ی از قبل بارگذاری‌شده گرفته می‌شود؛
+  // فقط برچسب‌های سطح/زمان/مهارت از پاسخِ /v1/mission/today می‌آید. اگر
+  // صحنه‌ی پیشنهادی هنوز در لیستِ محلی نباشد (تازه اضافه شده و کش نشده)
+  // بی‌سروصدا به همان «ادامه داستان»ِ قدیمی برمی‌گردیم.
+  const missionScene = todaysMission
+    ? scenes.find((s) => s.id === todaysMission.scene_id) || null
+    : null;
+  const featuredScenario = missionScene || primaryScenario;
 
   // پیش‌نمایش خانه: فقط چند صحنه‌ی «بعدی» (ناتمام) رو نشون می‌ده، نه کل
   // مسیر رو — دیدن همه از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
@@ -237,7 +274,12 @@ export const HomeScreen = () => {
           </View>
         </View>
 
-        <AppDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
+        <AppDrawer
+          visible={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          onOpenPlacementTest={placementItems ? () => setPlacementModalVisible(true) : undefined}
+          speakingLevel={speakingProfile?.level}
+        />
         <StreakInfoModal
           visible={streakInfoVisible}
           onClose={() => setStreakInfoVisible(false)}
@@ -284,8 +326,10 @@ export const HomeScreen = () => {
           </View>
         </View>
 
-        {/* PLACEMENT TEST CTA — فقط اگر ادمین محتوا ساخته و کاربر هنوز پروفایل ندارد */}
-        {placementCtaItems && !placementCtaDismissed && (
+        {/* PLACEMENT TEST CTA — فقط اگر ادمین محتوا ساخته و کاربر هنوز پروفایل ندارد؛
+            بعد از داشتنِ پروفایل، راه بازگشت به تست فقط از Drawer است (برای گرفتنِ
+            دوباره)، نه این کارت که مخصوصِ «هنوز نداده‌ای» است. */}
+        {placementItems && !speakingProfile && !placementCtaDismissed && (
           <TouchableOpacity
             style={styles.placementCtaCard}
             activeOpacity={0.85}
@@ -347,23 +391,27 @@ export const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* CONTINUE STORY SECTION */}
-        {primaryScenario && (
+        {/* TODAY'S MISSION / CONTINUE STORY SECTION — همان کارتِ همیشگی، فقط
+            وقتی /v1/mission/today چیزی برگردانده باشد شخصی‌سازی می‌شود؛ وگرنه
+            دقیقاً همان «ادامه داستان»ِ قدیمی (scenes[0]) است. */}
+        {featuredScenario && (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>{t('continueStory')}</Text>
+              <Text style={styles.sectionLabel}>
+                {missionScene ? t('todaysMission') : t('continueStory')}
+              </Text>
             </View>
 
             <TouchableOpacity
               activeOpacity={0.9}
               style={styles.storyCard}
-              onPress={() => navigation.navigate('Shadowing', { scenarioId: primaryScenario.id })}
+              onPress={() => openScene(featuredScenario)}
             >
               <ImageBackground
                 source={
-                  typeof primaryScenario.imageUri === 'string'
-                    ? { uri: primaryScenario.imageUri }
-                    : primaryScenario.imageUri
+                  typeof featuredScenario.imageUri === 'string'
+                    ? { uri: featuredScenario.imageUri }
+                    : featuredScenario.imageUri
                 }
                 style={styles.storyImage}
                 imageStyle={styles.storyImageStyle}
@@ -372,16 +420,39 @@ export const HomeScreen = () => {
 
                 <View style={styles.storyContent}>
                   <Text style={styles.storyCategory}>
-                    {(primaryScenario.category || '').toString().toUpperCase()}
+                    {(featuredScenario.category || '').toString().toUpperCase()}
                   </Text>
-                  <Text style={styles.storyTitle}>{primaryScenario.title}</Text>
+                  <Text style={styles.storyTitle}>{featuredScenario.title}</Text>
+
+                  {missionScene && todaysMission && (
+                    <View style={styles.missionBadgesRow}>
+                      <View style={styles.missionBadge}>
+                        <Text style={styles.missionBadgeText}>{todaysMission.level}</Text>
+                      </View>
+                      <View style={styles.missionBadge}>
+                        <Clock size={12} color={COLORS.white} />
+                        <Text style={styles.missionBadgeText}>
+                          {todaysMission.estimated_minutes} {t('min')}
+                        </Text>
+                      </View>
+                      <View style={styles.missionBadge}>
+                        <Text style={styles.missionBadgeText}>
+                          {todaysMission.focus_skill === 'pronunciation'
+                            ? t('pronunciation')
+                            : todaysMission.focus_skill === 'fluency'
+                            ? t('fluency')
+                            : t('speaking')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
 
                   {/* Progress Line */}
                   <View style={styles.storyProgressBg}>
                     <View
                       style={[
                         styles.storyProgressFill,
-                        { width: `${primaryScenario.progress || 0}%` },
+                        { width: `${featuredScenario.progress || 0}%` },
                       ]}
                     />
                   </View>
@@ -435,11 +506,13 @@ export const HomeScreen = () => {
         onRequestClose={() => setPlacementModalVisible(false)}
       >
         <PlacementTestFlow
-          items={placementCtaItems}
+          items={placementItems}
           onSkip={() => setPlacementModalVisible(false)}
           onDone={() => {
             setPlacementModalVisible(false);
-            setPlacementCtaItems(null);
+            // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
+            // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند.
+            refreshPlacementState();
           }}
         />
       </Modal>
@@ -652,6 +725,27 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 22,
     marginBottom: 14,
+  },
+  missionBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: -6,
+    marginBottom: 14,
+  },
+  missionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  missionBadgeText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
   },
   storyProgressBg: {
     height: 4,

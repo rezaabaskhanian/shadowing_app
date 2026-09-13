@@ -12,6 +12,7 @@ import (
 
 	landinghandler "shadowing-backend/internal/delivery/httpserver/landing"
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
+	missionhandler "shadowing-backend/internal/delivery/httpserver/mission"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
@@ -27,6 +28,7 @@ import (
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
+	missionservice "shadowing-backend/internal/service/mission"
 	notificationservice "shadowing-backend/internal/service/notification"
 	otpservice "shadowing-backend/internal/service/otp"
 	progressservice "shadowing-backend/internal/service/progress"
@@ -65,6 +67,8 @@ type Service struct {
 
 	assessmentHandler assessmenthandler.Handler
 
+	missionHandler missionhandler.Handler
+
 	habitHandler habithandler.Handler
 
 	leitnerHandler leitnerhandler.Handler
@@ -89,6 +93,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	otpSvc otpservice.Service,
 	landingSvc landingservice.Service,
 	assessmentSvc *assessmentservice.Service,
+	missionSvc *missionservice.Service,
 
 ) Service {
 
@@ -120,6 +125,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 		),
 
 		assessmentHandler: assessmenthandler.New(assessmentSvc, authSvc, authConfig, uploadDir),
+
+		missionHandler: missionhandler.New(missionSvc, authSvc, authConfig),
 
 		habitHandler: habithandler.New(habitSvc, authSvc, authConfig, uploadDir),
 
@@ -192,6 +199,7 @@ func (s Service) Server() {
 	s.adminHandler.SetAdminRoutes(e)
 
 	s.assessmentHandler.SetAssessmentRoutes(e)
+	s.missionHandler.SetMissionRoutes(e)
 
 	s.habitHandler.SetHabitRoutes(e)
 

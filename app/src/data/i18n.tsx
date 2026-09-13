@@ -642,9 +642,13 @@ export const translations: Translations = {
 
   placementCtaTitle: { en: 'Find your speaking level', fa: 'سطح گفتاری‌ت رو مشخص کن' },
   placementCtaSub: {
-    en: 'A quick 3-step test, about 1-2 minutes',
-    fa: 'یک تست کوتاه ۳ مرحله‌ای، حدود ۱ تا ۲ دقیقه',
+    en: 'A quick 5-step test, about 2-3 minutes',
+    fa: 'یک تست کوتاه ۵ مرحله‌ای، حدود ۲ تا ۳ دقیقه',
   },
+  placementDrawerTitle: { en: 'Speaking Level Test', fa: 'تست تعیین سطح' },
+  placementLevelBadge: { en: 'Level: {level}', fa: 'سطح: {level}' },
+  todaysMission: { en: "TODAY'S MISSION", fa: 'ماموریت امروز' },
+  speaking: { en: 'Speaking', fa: 'گفتار' },
 };
 
 /**

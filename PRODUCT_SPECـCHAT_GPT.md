@@ -1051,18 +1051,30 @@ Fills MVP item 2 (Speaking Assessment) and item 3 (Level) from section 24.
 - Test is skippable, not mandatory; invisible end-to-end (both the login gate in `App.tsx` and the Home CTA) until the admin has actually populated at least one item of each kind/category — no user is ever blocked on empty content.
 - Code: `internal/domain/assessment`, `internal/service/assessment`, `internal/repository/postgres/assessment`, `internal/delivery/httpserver/assessment` (mobile) + `internal/delivery/httpserver/admin/assessment_item.go` (admin CRUD), `admin-panel/app/dashboard/AssessmentPanel.tsx`, `app/src/screens/PlacementTest/*`, `app/src/api/assessment.ts`.
 - Explicitly NOT built (out of scope for Stage 1, revisit only if a real need shows up): retake history/versioning of SpeakingProfile, live AI/TTS generation of test sentences (rejected — cost + complexity, see reasoning kept in git history of this plan), any Vocabulary/Grammar dimension on the score (the evaluator doesn't support it, and inventing one would violate section 7's "no fake precision" rule).
+- UI polish (2026-09-13, same day): Level is now actually *visible* to the user, not just computed — a small chip in the Drawer under the username (`t('placementLevelBadge')`). The Drawer also always exposes a "Speaking Level Test" row (`onOpenPlacementTest` in `AppDrawer.tsx`) so a user can retake the test anytime after the first result, independent of the Home CTA card (which stays reserved for "you haven't taken it yet"). This closes the loop: Level is no longer dead data — it's end-to-end verified on a real device and one tap away from being retaken.
+
+**Personalized "Today's Mission" (2026-09-13)**
+
+Fills MVP item 15 (section 24) / spec section 10. First real consumer of the `SpeakingProfile` the Assessment feature produces — previously write-only data.
+
+- No new screen, no new DB table: read-time composition over data that already existed — `Scene.Difficulty` (beginner/intermediate/advanced, same tiers as assessment shadow items), `SpeakingProfile.Level` (A1-C1), `scene_progress`/`scene_dialogue_progress` completion, and the same pronunciation/fluency averages `GetSkillsBreakdown` already used.
+- Selection: target difficulty from `SpeakingProfile.Level` (A1/A2→beginner, B1→intermediate, B2/C1→advanced) → first incomplete scene at that difficulty (lowest `Order`) → falls back to any incomplete scene → falls back to the least-recently-completed scene at that difficulty once everything is done, so the card is never empty (`internal/service/mission/get_today.go`'s `pickScene`).
+- Graceful degradation everywhere, never a block: no profile yet → defaults to beginner and labels the card with the scene's own difficulty instead of a fake CEFR level (`is_estimated_level`); no shadowing attempts yet → generic "Speaking" focus label instead of inventing a "weak skill" from zero data; no published scenes at all → 404, mobile silently falls back to the old static "Continue Story" card (`scenes[0]`) with zero regression risk.
+- Replaced, not duplicated, the existing "Continue Story" card on Home (`app/src/screens/Home.tsx`) — adding a second card would have created a second competing "what do I do next" answer, which fails the Core-Loop-fit test. Same tap target, same navigation (`Shadowing` screen), now with level/minutes/focus-skill badges.
+- Code: `internal/service/mission`, `internal/delivery/httpserver/mission` (`GET /v1/mission/today`), `app/src/api/mission.ts`, `app/src/screens/Home.tsx`.
+- Explicitly NOT built: no caching/versioning of the recommendation (recomputed fresh per request — cheap enough at this scale), no vocabulary/goals dimension in the selection (spec section 10 lists them as future inputs; only level + weak-skill signal exist today), no admin-authorable content (this feature has none — pure computation).
 
 ## Next recommended (per the Decision Framework, section 31)
 
-**Personalized "Today's Mission"** — MVP item 15 in section 24, spec section 10.
+**Progress over time** — spec section 21.
 
-1. *User problem:* the app currently has no personalized starting point — every user sees the same scene list regardless of level or weak skill, and there's no daily "what should I practice right now" answer.
-2. *Why necessary:* this is the direct, obvious consumer of the Speaking Profile that just shipped. Without it, Level/SpeakingProfile data is measured but never used — pure vanity data.
-3. *MVP or Phase 2/3:* MVP (explicitly listed, section 24 item 15).
-4. *Core Loop fit:* yes — it's the "which Scene/practice do I route the user into" decision at the very top of the loop (section 28: SPEAKING PROFILE → Weak Skills + Goals → SCENARIO ENGINE).
-5. *Advantage vs ELSA:* not a differentiator by itself (ELSA does this too) — it's necessary parity, and the real payoff is that LingoFlow's version routes into a *visual Scene*, not an abstract lesson, so the differentiation stays intact.
+1. *User problem:* Home/skills-breakdown only shows current totals (streak, XP, Pronunciation/Fluency snapshot) — a user can't see whether they're actually improving week over week, which is a big part of what keeps a learner motivated long-term.
+2. *Why necessary:* every underlying data point already exists (`scene_dialogue_progress` has per-attempt scores with timestamps, `shadowing_evaluation_events` likewise) — this is a reporting/aggregation gap, not a data gap.
+3. *MVP or Phase 2/3:* MVP (section 24 item 16, "Progress").
+4. *Core Loop fit:* indirect — it's a feedback/retention loop around the Core Loop, not a step inside it (unlike Today's Mission, which routes the loop itself).
+5. *Advantage vs ELSA:* not a differentiator (ELSA has trend charts too) — necessary parity for retention.
 
-Closely related alternative if this is deprioritized: **Progress over time** (section 21) — the app currently shows only current totals (streak, XP, skills breakdown), not week-over-week per-skill trend. Lower urgency than Today's Mission because it doesn't unlock anything else downstream.
+Lower urgency than Today's Mission was, because it doesn't unlock anything else downstream — it's a pure motivation/retention feature, not a routing decision other features depend on.
 
 ## Explicitly not next (per the same framework)
 

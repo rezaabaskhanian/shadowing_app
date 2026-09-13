@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Modal,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -19,6 +20,7 @@ import {
   Lightbulb,
   LogOut,
   Mail,
+  Mic,
   Target,
   User as UserIcon,
   Zap,
@@ -35,10 +37,19 @@ const DRAWER_WIDTH = Math.min(320, Dimensions.get('window').width * 0.82);
 interface AppDrawerProps {
   visible: boolean;
   onClose: () => void;
+  /**
+   * وقتی داده شود یعنی ادمین محتوای تست تعیین سطح را ساخته — یک ردیف «تست
+   * تعیین سطح» نشان داده می‌شود که همیشه در دسترس است، چه کاربر هنوز پروفایل
+   * نداشته باشد (اولین بار) چه داشته باشد (برای گرفتنِ دوباره‌ی تست). اگر
+   * ندهی (یعنی ادمین هنوز محتوایی نساخته)، این ردیف اصلاً رندر نمی‌شود.
+   */
+  onOpenPlacementTest?: () => void;
+  /** سطح گفتاری فعلی کاربر (مثلاً "B1")؛ اگر هنوز تست نداده باشد undefined است. */
+  speakingLevel?: string;
 }
 
 // کشوی کناری (راست) شامل خلاصه کاربر، عادت زبانی، راهنما و خروج از حساب.
-export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
+export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel }: AppDrawerProps) => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { t } = useLanguage();
@@ -94,9 +105,18 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
             <View style={styles.avatarCircle}>
               <UserIcon size={22} color={COLORS.primary} />
             </View>
-            <Text style={styles.userName} numberOfLines={1}>
-              {user?.nickname || ''}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user?.nickname || ''}
+              </Text>
+              {speakingLevel && (
+                <View style={styles.levelChip}>
+                  <Text style={styles.levelChipText}>
+                    {t('placementLevelBadge').replace('{level}', speakingLevel)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* My Points banner */}
@@ -121,7 +141,10 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
 
           {/* Language Habit */}
 
-          <View style={{flex:1,justifyContent:'space-between',}}>
+          {/* بدنه‌ی قابل‌اسکرول: تعداد ردیف‌ها ممکنه با اضافه‌شدن فیچرهای بعدی
+              زیاد بشه، و روی گوشی‌های صفحه‌کوچیک (مثل Galaxy J5) بدون اسکرول
+              ردیف‌ها روی هم می‌ریزن یا از صفحه بیرون می‌زنن. */}
+          <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHeaderRow}>
             <Zap color={COLORS.secondary} size={18} />
             <Text style={styles.sectionTitle}>{t('habitCardTitle')}</Text>
@@ -165,9 +188,21 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
             <Text style={styles.rowText}>{t('habitContactUs')}</Text>
           </TouchableOpacity>
 
-          </View>
-
-          <View style={{ flex: 1 }} />
+          {onOpenPlacementTest && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => {
+                onClose();
+                onOpenPlacementTest();
+              }}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                <Mic color={COLORS.primary} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('placementDrawerTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.dividerLine} />
 
@@ -196,6 +231,7 @@ export const AppDrawer = ({ visible, onClose }: AppDrawerProps) => {
             </View>
             <Text style={styles.rowText}>{t('helpFaq')}</Text>
           </TouchableOpacity>
+          </ScrollView>
 
           <TouchableOpacity
             style={styles.row}
@@ -260,6 +296,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     flexShrink: 1,
   },
+  levelChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  levelChipText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 11,
+  },
   pointsCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,6 +336,9 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
+  },
+  menuScroll: {
+    flex: 1,
   },
   dividerLine: {
     height: 1,

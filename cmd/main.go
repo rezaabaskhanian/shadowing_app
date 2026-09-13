@@ -45,6 +45,7 @@ import (
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
+	missionservice "shadowing-backend/internal/service/mission"
 	notificationservice "shadowing-backend/internal/service/notification"
 	otpservice "shadowing-backend/internal/service/otp"
 	progressservice "shadowing-backend/internal/service/progress"
@@ -144,11 +145,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc)
 
 	server.Server()
 
@@ -199,7 +200,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -306,7 +307,12 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	assessmentLogRepo := postgresassessment.NewSubmissionLogRepository(MyPostgresgresRepo.DB)
 	assessmentSvc := assessmentservice.New(assessmentItemRepo, assessmentProfileRepo, assessmentLogRepo, evaluator, aiservice.New(settingsSvc))
 
+	// «ماموریتِ امروز»: صحنه‌ی پیشنهادی بر اساسِ سطحِ گفتاری + مهارتِ ضعیف‌تر
+	// کاربر. هیچ ریپازیتوریِ جدیدی نمی‌سازد، همان نمونه‌های بالا را دوباره
+	// تزریق می‌کند (internal/service/mission).
+	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc
 }
