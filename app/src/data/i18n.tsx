@@ -587,12 +587,12 @@ export const translations: Translations = {
   // ---- Placement Test (Quick Check) ----
   placementIntroTitle: { en: 'Speaking Placement Test', fa: 'تعیین سطح گفتاری' },
   placementIntroBody: {
-    en: 'A quick, 3-item check (about 1-2 minutes) so we can personalize your practice to your level.',
-    fa: 'یک تست کوتاه ۳ مرحله‌ای (حدود ۱ تا ۲ دقیقه) تا تمرین‌ها را دقیق‌تر متناسب با سطح تو بسازیم.',
+    en: 'A quick, 5-item check (about 2-3 minutes) so we can personalize your practice to your level.',
+    fa: 'یک تست کوتاه ۵ مرحله‌ای (حدود ۲ تا ۳ دقیقه) تا تمرین‌ها را دقیق‌تر متناسب با سطح تو بسازیم.',
   },
   placementIntroBullet1: {
-    en: 'Listen to a sentence and repeat it',
-    fa: 'یک جمله را می‌شنوی و آن را تکرار می‌کنی',
+    en: 'Listen to three sentences (easy to hard) and repeat each one',
+    fa: 'سه جمله (از ساده تا سخت) را می‌شنوی و هرکدام را تکرار می‌کنی',
   },
   placementIntroBullet2: {
     en: 'Two free-speaking prompts about yourself and an everyday situation',

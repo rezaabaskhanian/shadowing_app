@@ -58,8 +58,16 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
 
   const recordStartedAtRef = useRef<number>(0);
 
+  // مسیر مرجعِ *بالفعل* داده‌شده به AudioPlayer — عمداً جدا از currentItem
+  // نگه داشته می‌شود. اگر uri را همان لحظه‌ی ورود به آیتم Shadow ست کنیم،
+  // AudioPlayer فوراً یک افکتِ صف‌بندیِ ناهم‌زمان (reset+add) راه می‌اندازد؛
+  // اگر کاربر سریع دکمه‌ی پخش را بزند، دستور پخش با همان صف‌بندیِ هنوز
+  // ناتمام رقابت می‌کند و TrackPlayer در حالت خراب گیر می‌کند (که با فشردن
+  // دوباره‌ی دکمه هم درست نمی‌شود). با ست‌کردن uri فقط در لحظه‌ی فشردن دکمه،
+  // صف‌بندی و دستورِ پخش در یک افکت واحد اتفاق می‌افتند، نه دو افکتِ مسابقه‌ای.
+  const [activeReferenceUri, setActiveReferenceUri] = useState<string | null>(null);
+
   const currentItem = items[currentIndex];
-  const referenceUri = currentItem.kind === 'shadow' ? absUrl(currentItem.audio_url) : null;
 
   const bumpAndSet = (command: typeof actionCommand) => {
     setActionCommand(command);
@@ -86,9 +94,13 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
   }, []);
 
   const handlePlayReference = useCallback(() => {
+    if (currentItem.kind !== 'shadow') return;
+    // uri و دستور پخش را با هم، در یک تیک، ست می‌کنیم — نه اینکه uri از قبل
+    // (موقع ورود به آیتم) ست شده باشد و دستور پخش بعداً جداگانه برسد.
+    setActiveReferenceUri(absUrl(currentItem.audio_url));
     bumpAndSet('play_original');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentItem]);
 
   const handlePlayRecording = useCallback(() => {
     bumpAndSet('play_recording');
@@ -163,6 +175,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
       setRecordedDuration(0);
       setMicError(null);
       setActionCommand('none');
+      setActiveReferenceUri(null);
     } else {
       submit(nextAnswers);
     }
@@ -180,7 +193,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
       ]}
     >
       <AudioPlayer
-        uri={referenceUri}
+        uri={activeReferenceUri}
         shouldPlay={false}
         actionCommand={actionCommand}
         actionNonce={actionNonce}
