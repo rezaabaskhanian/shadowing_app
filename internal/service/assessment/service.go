@@ -19,6 +19,8 @@ type ItemRepository interface {
 	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]assessment.AssessmentItem, error)
 	// RandomActive - category برای kind=shadow نادیده گرفته می‌شود (رشته‌ی خالی بفرستید)
 	RandomActive(ctx context.Context, kind assessment.Kind, category assessment.Category) (*assessment.AssessmentItem, error)
+	// RandomActiveShadow - یک آیتم shadow فعال و تصادفی از یک سطح دشواری مشخص
+	RandomActiveShadow(ctx context.Context, difficulty assessment.Difficulty) (*assessment.AssessmentItem, error)
 }
 
 // ProfileRepository - پروفایل گفتاری هر کاربر (upsert، بدون نسخه‌بندی)

@@ -162,6 +162,26 @@ func (r *ItemRepository) RandomActive(ctx context.Context, kind assessment.Kind,
 	return it, nil
 }
 
+// RandomActiveShadow - یک آیتم shadow فعال و تصادفی از یک سطح دشواری مشخص.
+// برای اینکه سطح نهایی از میانگین چند جمله با دشواری‌های متفاوت ساخته شود،
+// نه از یک جمله‌ی تصادفی (که می‌تواند شانسی خوب/بد باشد).
+func (r *ItemRepository) RandomActiveShadow(ctx context.Context, difficulty assessment.Difficulty) (*assessment.AssessmentItem, error) {
+	const op = "postgresassessment.ItemRepository.RandomActiveShadow"
+
+	row := r.db.QueryRow(ctx, `SELECT `+itemColumns+` FROM assessment_items
+		WHERE kind = $1 AND difficulty = $2 AND is_active ORDER BY random() LIMIT 1`,
+		assessment.KindShadow, difficulty)
+
+	it, err := scanItem(row)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, richerror.New(op).WithMessage("no active shadow item found for this difficulty").WithKind(richerror.KindNotFound)
+		}
+		return nil, richerror.New(op).WithErr(err)
+	}
+	return it, nil
+}
+
 func nullable(s string) *string {
 	if s == "" {
 		return nil

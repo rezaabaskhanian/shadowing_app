@@ -3,6 +3,7 @@ package assessmentservice
 import (
 	"context"
 	"log/slog"
+	"math"
 	"os"
 
 	"shadowing-backend/internal/domain/assessment"
@@ -50,21 +51,20 @@ func (s *Service) SubmitAssessment(ctx context.Context, userIDStr string, submit
 	}
 
 	var results []dto.ItemResultDTO
-	var shadowResult *speecheval.EvaluationResult
+	var shadowResults []speecheval.EvaluationResult
 
 	for _, sub := range submitted {
-		s.processItem(ctx, userID, sub, itemByID, &results, &shadowResult)
+		s.processItem(ctx, userID, sub, itemByID, &results, &shadowResults)
 	}
 
-	if shadowResult == nil {
+	if len(shadowResults) == 0 {
 		return nil, richerror.New(op).
 			WithMessage("quick check incomplete: no shadow item was submitted").
 			WithKind(richerror.KindInvalid)
 	}
 
-	profile, err := assessment.NewSpeakingProfile(
-		userID, shadowResult.OverallScore, shadowResult.PronunciationScore, shadowResult.FluencyScore, shadowResult.Estimated,
-	)
+	avgOverall, avgPronunciation, avgFluency, anyEstimated := averageShadowResults(shadowResults)
+	profile, err := assessment.NewSpeakingProfile(userID, avgOverall, avgPronunciation, avgFluency, anyEstimated)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -91,7 +91,7 @@ func (s *Service) processItem(
 	sub dto.SubmitItem,
 	itemByID map[uuid.UUID]assessment.AssessmentItem,
 	results *[]dto.ItemResultDTO,
-	shadowResult **speecheval.EvaluationResult,
+	shadowResults *[]speecheval.EvaluationResult,
 ) {
 	defer func() {
 		if err := os.Remove(sub.LocalAudioPath); err != nil && !os.IsNotExist(err) {
@@ -115,7 +115,7 @@ func (s *Service) processItem(
 			AudioPath:       sub.LocalAudioPath,
 			DurationSeconds: sub.Duration,
 		})
-		*shadowResult = &result
+		*shadowResults = append(*shadowResults, result)
 
 		pron, flu, ov := result.PronunciationScore, result.FluencyScore, result.OverallScore
 		*results = append(*results, dto.ItemResultDTO{
@@ -142,6 +142,24 @@ func (s *Service) processItem(
 			slog.Warn("assessment: failed to log submission item", "err", err)
 		}
 	}
+}
+
+// averageShadowResults نمره‌ی نهایی را از میانگین چند جمله‌ی shadow (معمولاً
+// یکی از هر سطح دشواری) می‌سازد، نه از یک جمله‌ی تکی — یک جمله‌ی سخت که
+// شانسی بد گفته شود دیگر به‌تنهایی کل Level را خراب نمی‌کند.
+func averageShadowResults(results []speecheval.EvaluationResult) (avgOverall, avgPronunciation, avgFluency float64, anyEstimated bool) {
+	n := float64(len(results))
+	for _, r := range results {
+		avgOverall += r.OverallScore
+		avgPronunciation += r.PronunciationScore
+		avgFluency += r.FluencyScore
+		anyEstimated = anyEstimated || r.Estimated
+	}
+	return round1(avgOverall / n), round1(avgPronunciation / n), round1(avgFluency / n), anyEstimated
+}
+
+func round1(v float64) float64 {
+	return math.Round(v*10) / 10
 }
 
 func (s *Service) evaluateFreeSpeech(ctx context.Context, item assessment.AssessmentItem, audioPath string) (transcript, answered, feedback string) {
