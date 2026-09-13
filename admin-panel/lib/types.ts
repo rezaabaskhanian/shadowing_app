@@ -274,3 +274,29 @@ export interface Feedback {
   user_nickname: string;
   user_phone: string;
 }
+
+// ---------- آیتم‌های تست تعیین سطح (intro/situational/shadow) ----------
+export type AssessmentItemKind = "shadow" | "free_speech";
+export type AssessmentItemCategory = "intro" | "situational";
+
+export interface AssessmentItem {
+  id: string;
+  kind: AssessmentItemKind;
+  category: AssessmentItemCategory;
+  prompt_text: string;
+  target_text?: string; // فقط برای kind=shadow
+  audio_url?: string; // فقط برای kind=shadow
+  difficulty?: Difficulty;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AssessmentItemPayload {
+  kind: AssessmentItemKind;
+  category: AssessmentItemCategory;
+  prompt_text: string;
+  target_text: string;
+  audio_url: string;
+  difficulty: Difficulty | "";
+  is_active: boolean;
+}

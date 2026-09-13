@@ -1,11 +1,33 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { MessageCircle } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
-const splashImage =
-  'https://images.unsplash.com/photo-1436491865332-7a61a109c0f3?q=80&w=1200&auto=format&fit=crop';
+const appLogoMark = require('../assets/brand/app-logo-mark.png');
+
+// پس‌زمینه‌ی تیره + گرادیان بنفش/فیروزه‌ای مطابق لوگوی جدید اپ؛ فقط همین
+// صفحه از این پالت استفاده می‌کند، نه کل اپ (که همچنان تم روشن دارد).
+const BG_TOP = '#0c0c32';
+const BG_BOTTOM = '#3d1763';
+const WAVE_FROM = '#b355e2';
+const WAVE_TO = '#63c9ea';
+
+function mixHex(from: string, to: string, t: number) {
+  const parse = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [r1, g1, b1] = parse(from);
+  const [r2, g2, b2] = parse(to);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+const WAVE_BAR_COUNT = 28;
+const waveBarColors = Array.from({ length: WAVE_BAR_COUNT }).map((_, i) =>
+  mixHex(WAVE_FROM, WAVE_TO, i / (WAVE_BAR_COUNT - 1))
+);
 
 export const SplashScreen = () => {
   const pulse = useRef(new Animated.Value(0)).current;
@@ -48,8 +70,17 @@ export const SplashScreen = () => {
   });
 
   return (
-    <ImageBackground source={{ uri: splashImage }} style={styles.container} imageStyle={styles.image}>
-      <View style={styles.overlay} />
+    <View style={styles.container}>
+      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+        <Defs>
+          <SvgLinearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={BG_TOP} />
+            <Stop offset="100%" stopColor={BG_BOTTOM} />
+          </SvgLinearGradient>
+        </Defs>
+        <Rect x={0} y={0} width="100%" height="100%" fill="url(#bgGrad)" />
+      </Svg>
+
       <View style={styles.statusSpacer} />
 
       <View style={styles.heroCopy}>
@@ -57,14 +88,32 @@ export const SplashScreen = () => {
         <Text style={styles.subtitle}>Speak English{'\n'}Naturally</Text>
       </View>
 
+      <View style={styles.logoWrap}>
+        <Image source={appLogoMark} style={styles.logo} resizeMode="contain" />
+      </View>
+
       <View style={styles.voiceArea}>
         <View style={styles.wave}>
-          {Array.from({ length: 28 }).map((_, index) => (
-            <View key={index} style={[styles.waveBar, { height: 8 + ((index * 9) % 34) }]} />
+          {waveBarColors.map((color, index) => (
+            <View
+              key={index}
+              style={[styles.waveBar, { height: 8 + ((index * 9) % 34), backgroundColor: color }]}
+            />
           ))}
         </View>
-        <Animated.View style={[styles.voiceButton, { transform: [{ scale }] }]}>
-          <MessageCircle color={COLORS.white} size={30} fill={COLORS.white} />
+        <Animated.View style={[styles.voiceButtonWrap, { transform: [{ scale }] }]}>
+          <Svg width={92} height={92}>
+            <Defs>
+              <SvgLinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor={WAVE_FROM} />
+                <Stop offset="100%" stopColor={WAVE_TO} />
+              </SvgLinearGradient>
+            </Defs>
+            <Circle cx={46} cy={46} r={43} fill="url(#btnGrad)" stroke="rgba(255, 255, 255, 0.18)" strokeWidth={5} />
+          </Svg>
+          <View style={styles.voiceButtonIcon}>
+            <MessageCircle color={COLORS.white} size={30} fill={COLORS.white} />
+          </View>
         </Animated.View>
       </View>
 
@@ -74,24 +123,17 @@ export const SplashScreen = () => {
           <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
         </View>
       </View>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: BG_TOP,
     paddingHorizontal: 30,
     paddingTop: 52,
     paddingBottom: 54,
-  },
-  image: {
-    resizeMode: 'cover',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(4, 9, 20, 0.32)',
   },
   statusSpacer: {
     height: 1,
@@ -114,6 +156,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  logoWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 28,
+  },
+  logo: {
+    width: 220,
+    height: 220,
+  },
   voiceArea: {
     position: 'absolute',
     left: 30,
@@ -135,23 +186,27 @@ const styles = StyleSheet.create({
   waveBar: {
     width: 3,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
-    opacity: 0.82,
+    opacity: 0.9,
   },
-  voiceButton: {
+  voiceButtonWrap: {
     width: 92,
     height: 92,
-    borderRadius: 46,
-    backgroundColor: COLORS.primary,
-    borderWidth: 5,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: WAVE_FROM,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.58,
     shadowRadius: 24,
     elevation: 12,
+  },
+  voiceButtonIcon: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     marginTop: 'auto',
@@ -165,7 +220,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 5,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.24)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
   },
   progressFill: {

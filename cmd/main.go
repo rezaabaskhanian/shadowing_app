@@ -12,6 +12,7 @@ import (
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
+	postgresassessment "shadowing-backend/internal/repository/postgres/assessment"
 	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
 	posthabit "shadowing-backend/internal/repository/postgres/habit"
 	postgreslanding "shadowing-backend/internal/repository/postgres/landing"
@@ -35,6 +36,8 @@ import (
 
 	"context"
 
+	aiservice "shadowing-backend/internal/service/ai"
+	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
@@ -141,11 +144,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc)
 
 	server.Server()
 
@@ -196,7 +199,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -233,7 +236,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// نمره‌دهی تلفظ از سایدکار تشخیص گفتار استفاده می‌کند. اگر WHISPER_URL
 	// تنظیم نشده باشد یا سرویس بالا نباشد، ارزیاب خودش به نمره‌ی تخمینی
 	// برمی‌گردد و ضبط کاربر با خطا رد نمی‌شود.
-	var evaluator speecheval.Evaluator
+	var evaluator speecheval.EvaluatorTranscriber
 	if whisperURL := getEnv("WHISPER_URL", ""); whisperURL != "" {
 		evaluator = speecheval.NewWhisperEvaluator(whisperURL)
 		fmt.Println("speech evaluation: whisper at", whisperURL)
@@ -298,7 +301,12 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 		fmt.Println("cafebazaar billing: CAFEBAZAAR_* env not set, purchase verification disabled")
 	}
 
+	assessmentItemRepo := postgresassessment.NewItemRepository(MyPostgresgresRepo.DB)
+	assessmentProfileRepo := postgresassessment.NewProfileRepository(MyPostgresgresRepo.DB)
+	assessmentLogRepo := postgresassessment.NewSubmissionLogRepository(MyPostgresgresRepo.DB)
+	assessmentSvc := assessmentservice.New(assessmentItemRepo, assessmentProfileRepo, assessmentLogRepo, evaluator, aiservice.New(settingsSvc))
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc
 }

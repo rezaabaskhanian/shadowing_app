@@ -47,6 +47,12 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.PATCH("/scenes/:sceneID/order", h.UpdateSceneOrder)
 	g.DELETE("/scenes/:sceneID", h.DeleteScene)
 
+	// آیتم‌های تست تعیین سطح (intro/situational/shadow)
+	g.POST("/assessment-items", h.CreateAssessmentItem)
+	g.GET("/assessment-items", h.ListAssessmentItems)
+	g.PUT("/assessment-items/:id", h.UpdateAssessmentItem)
+	g.DELETE("/assessment-items/:id", h.DeleteAssessmentItem)
+
 	// بررسی پیشنهادهای صحنه‌ی کاربران
 	g.GET("/scene-submissions", h.ListSceneSubmissions)
 	g.GET("/scene-submissions/:id", h.GetSceneSubmission)

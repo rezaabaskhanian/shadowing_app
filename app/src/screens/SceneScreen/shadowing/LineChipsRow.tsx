@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Lock } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -21,8 +22,35 @@ export const LineChipsRow: React.FC<{
   recordedLines: number[];
   activeLineIndex: number;
   onSelectLine: (index: number) => void;
-}> = ({ lineCount, recordedLines, activeLineIndex, onSelectLine }) => {
+  /**
+   * فقط در مرحله‌ی مقایسه true است: از اولین جمله‌ی ضبط‌نشده به بعد، حتی
+   * جمله‌های ضبط‌شده‌ی جداافتاده (مثلاً ۵ وقتی ۴ ضبط نشده) قفل نشان داده
+   * می‌شوند — چون انتخابشان هم مسدود است (رجوع کن به `selectLine` در
+   * SceneScreen).
+   */
+  sequentialLockEnabled?: boolean;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی (Record نارنجی، Compare سبز و ...) برای چیپِ انتخاب‌شده. */
+  accentColor?: string;
+  /** نسخه‌ی کم‌رنگِ همون accentColor، برای پس‌زمینه‌ی نرمِ چیپِ انتخاب‌شده. */
+  accentLightColor?: string;
+}> = ({
+  lineCount,
+  recordedLines,
+  activeLineIndex,
+  onSelectLine,
+  sequentialLockEnabled,
+  accentColor = COLORS.primary,
+  accentLightColor = COLORS.primaryLight,
+}) => {
   const scrollRef = useRef<ScrollView>(null);
+
+  let firstUnrecorded = lineCount;
+  for (let i = 0; i < lineCount; i++) {
+    if (!recordedLines.includes(i)) {
+      firstUnrecorded = i;
+      break;
+    }
+  }
 
   useEffect(() => {
     // چیپِ فعال را وسطِ نوار نگه می‌داریم تا با جلورفتنِ جمله‌ها (دستی یا با
@@ -42,25 +70,31 @@ export const LineChipsRow: React.FC<{
       {Array.from({ length: lineCount }).map((_, idx) => {
         const recorded = recordedLines.includes(idx);
         const active = idx === activeLineIndex;
+        const locked = !!sequentialLockEnabled && idx >= firstUnrecorded;
         return (
           <TouchableOpacity
             key={idx}
             style={[
               styles.chip,
               recorded ? styles.chipRecorded : null,
-              active ? styles.chipActive : null,
+              active ? [styles.chipActiveBase, { borderColor: accentColor, backgroundColor: accentLightColor }] : null,
+              locked ? styles.chipLocked : null,
             ]}
             onPress={() => onSelectLine(idx)}
           >
-            <Text
-              style={[
-                styles.chipText,
-                recorded ? styles.chipTextRecorded : null,
-                active ? styles.chipTextActive : null,
-              ]}
-            >
-              {idx + 1}
-            </Text>
+            {locked ? (
+              <Lock size={12} color={COLORS.muted} />
+            ) : (
+              <Text
+                style={[
+                  styles.chipText,
+                  recorded ? styles.chipTextRecorded : null,
+                  active ? { color: accentColor } : null,
+                ]}
+              >
+                {idx + 1}
+              </Text>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -92,10 +126,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.tertiaryLight,
     borderColor: COLORS.tertiary,
   },
-  chipActive: {
-    borderColor: COLORS.primary,
+  chipActiveBase: {
     borderWidth: 2,
-    backgroundColor: COLORS.primaryLight,
+  },
+  chipLocked: {
+    backgroundColor: COLORS.surfaceLight,
+    borderColor: COLORS.border,
+    opacity: 0.6,
   },
   chipText: {
     color: COLORS.muted,
@@ -104,8 +141,5 @@ const styles = StyleSheet.create({
   },
   chipTextRecorded: {
     color: COLORS.tertiary,
-  },
-  chipTextActive: {
-    color: COLORS.primary,
   },
 });

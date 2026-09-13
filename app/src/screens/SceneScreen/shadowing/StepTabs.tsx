@@ -13,6 +13,37 @@ const STEP_TABS: { num: 1 | 2 | 3 | 4; key: StepKey }[] = [
   { num: 4, key: 'tabCompare' },
 ];
 
+// هر مرحله رنگ فعالِ خودش را دارد — نه فقط برای تنوع بصری، بلکه تا کاربر با
+// یه نگاه به رنگ تب، بدون خوندن متن بفهمه کدوم مرحله‌ست: آبی (دریافتی/گوش
+// دادن) → بنفشِ برند (تکرار) → نارنجی (ضبط) → سبز (همون رنگِ «تکمیل/نتیجه‌ی
+// خوب» که جای دیگه‌ی اپ هم برای مقایسه/امتیاز استفاده می‌شه).
+//
+// آبی و نارنجیِ خودِ پالت (COLORS.info و COLORS.secondary) عمداً استفاده
+// نشدند: هر دو برای بج/آیکونِ کوچیک روی پس‌زمینه‌ی خیلی کم‌رنگ طراحی شده‌اند،
+// و به‌عنوان متن یا پس‌زمینه‌ی توپر با آیکونِ سفید کنتراستشان با سفید کمتر از
+// حد قابل‌قبول است (آبی ~۳.۷:۱ ، نارنجی ~۲:۱). این‌جا چون هم به‌عنوان متن روی
+// سفید هم پس‌زمینه‌ی توپرِ زیرِ آیکون سفید استفاده می‌شوند، از نسخه‌ی تیره‌ترِ
+// همون رنگ‌ها استفاده شده (هر دو بالای ۵:۱، هم‌تراز با primary/tertiary).
+const STEP_LISTEN_BLUE = '#1D4ED8';
+const STEP_RECORD_ORANGE = '#C2410C';
+
+export const STEP_ACCENT_COLOR: Record<number, string> = {
+  0: STEP_LISTEN_BLUE,
+  1: COLORS.primary,
+  2: STEP_RECORD_ORANGE,
+  3: COLORS.tertiary,
+};
+
+// نسخه‌ی کم‌رنگِ همون رنگ‌ها، برای پس‌زمینه‌ی نرم پشت دکمه‌ها/چیپ‌های فعالِ
+// داخل هر مرحله (همون کاری که COLORS.primaryLight برای بنفش می‌کرد). این‌جا
+// خودِ توکن‌های info/secondary مشکلی ندارند چون فقط پس‌زمینه‌ی رقیقند، نه متن.
+export const STEP_ACCENT_LIGHT_COLOR: Record<number, string> = {
+  0: COLORS.infoLight,
+  1: COLORS.primaryLight,
+  2: COLORS.secondaryLight,
+  3: COLORS.tertiaryLight,
+};
+
 /**
  * نوار تب‌های پیوسته‌ی ۴مرحله. در فارسی برعکس نمایش داده می‌شود (RTL) چون
  * ترتیب چیدمان بصری باید با جهت متن رابط هماهنگ باشد، ولی `activeStepIndex`
@@ -33,6 +64,7 @@ export const StepTabs: React.FC<{
         const stepIdx = st.num - 1;
         const active = activeStepIndex === stepIdx;
         const done = completedSteps.includes(stepIdx);
+        const accentColor = STEP_ACCENT_COLOR[stepIdx] ?? COLORS.primary;
         return (
           <TouchableOpacity
             key={st.num}
@@ -42,11 +74,16 @@ export const StepTabs: React.FC<{
           >
             <View style={styles.segmentedTabLabelRow}>
               {done && <Check size={12} color={COLORS.tertiary} />}
-              <Text style={[styles.segmentedTabText, active ? styles.segmentedTabTextActive : null]}>
+              <Text
+                style={[
+                  styles.segmentedTabText,
+                  active ? [styles.segmentedTabTextActive, { color: accentColor }] : null,
+                ]}
+              >
                 {t(st.key)}
               </Text>
             </View>
-            {active && <View style={styles.segmentedTabIndicator} />}
+            {active && <View style={[styles.segmentedTabIndicator, { backgroundColor: accentColor }]} />}
           </TouchableOpacity>
         );
       })}
@@ -78,7 +115,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   segmentedTabTextActive: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
   },
   segmentedTabIndicator: {
@@ -86,6 +122,5 @@ const styles = StyleSheet.create({
     height: 3,
     width: '70%',
     borderRadius: 2,
-    backgroundColor: COLORS.primary,
   },
 });

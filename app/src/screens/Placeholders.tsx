@@ -12,7 +12,9 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
+import { SceneListCardSkeleton } from '../components/SceneListCardSkeleton';
 import { StreakInfoModal } from '../components/StreakInfoModal';
+import { XpInfoModal } from '../components/XpInfoModal';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
@@ -39,7 +41,7 @@ type LevelFilter = string | 'all';
 
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
-  const { scenes } = useScenes();
+  const { scenes, loading } = useScenes();
   const { t } = useLanguage();
   const toast = useToast();
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
@@ -112,7 +114,7 @@ export const ScenesScreen = () => {
         )}
       </View>
 
-      {categories.length > 1 && (
+      {!loading && categories.length > 1 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -135,7 +137,7 @@ export const ScenesScreen = () => {
         </ScrollView>
       )}
 
-      {levels.length > 1 && (
+      {!loading && levels.length > 1 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -173,7 +175,13 @@ export const ScenesScreen = () => {
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
 
-      {filteredScenes.length === 0 ? (
+      {loading ? (
+        <View style={styles.featuredList}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SceneListCardSkeleton key={i} />
+          ))}
+        </View>
+      ) : filteredScenes.length === 0 ? (
         <Text style={styles.emptyCategoryText}>{t('noScenariosMatch')}</Text>
       ) : (
         <View style={styles.featuredList}>
@@ -231,6 +239,7 @@ export const ProgressScreen = () => {
   const [streak, setStreak] = React.useState(0);
   const [streakFreezes, setStreakFreezes] = React.useState<number | undefined>(undefined);
   const [streakInfoVisible, setStreakInfoVisible] = React.useState(false);
+  const [xpInfoVisible, setXpInfoVisible] = React.useState(false);
   const [totalXP, setTotalXP] = React.useState(0);
   const [levelName, setLevelName] = React.useState('');
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
@@ -281,9 +290,9 @@ export const ProgressScreen = () => {
       <Text style={styles.pageTitle}>{t('greatJobTitle')}</Text>
       <Text style={styles.pageSub}>{t('greatJobSub')}</Text>
 
-      {/* Streak/Level/XP — لمس بج استریک توضیح می‌دهد که چیست؛ XP هم اینجا
-          برای اولین‌بار به کاربر نشان داده می‌شود (قبلاً فقط بک‌اند حسابش
-          می‌کرد و جایی رندر نمی‌شد). */}
+      {/* Streak/Level/XP — لمس بج استریک و بج XP توضیح می‌دهد از کجا می‌آیند
+          (همون الگوی StreakInfoModal برای XpInfoModal هم تکرار شده). خودِ
+          «سطح» توضیح جدا ندارد چون مستقیماً از همون XP محاسبه می‌شود. */}
       <View style={styles.statsCard}>
         <TouchableOpacity style={styles.statsTile} onPress={() => setStreakInfoVisible(true)}>
           <Flame size={20} color={COLORS.secondary} fill={COLORS.secondary} />
@@ -299,19 +308,24 @@ export const ProgressScreen = () => {
           <Text style={styles.statsLabel}>{t('statsLevelLabel')}</Text>
         </View>
         <View style={styles.statsDivider} />
-        <View style={styles.statsTile}>
+        <TouchableOpacity style={styles.statsTile} onPress={() => setXpInfoVisible(true)}>
           <Zap size={20} color={COLORS.tertiary} fill={COLORS.tertiary} />
           <Text style={styles.statsValue}>{totalXP}</Text>
           <Text style={styles.statsLabel}>{t('statsXPLabel')}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.xpExplainText}>{t('xpExplain')}</Text>
 
       <StreakInfoModal
         visible={streakInfoVisible}
         onClose={() => setStreakInfoVisible(false)}
         streak={streak}
         freezes={streakFreezes}
+      />
+      <XpInfoModal
+        visible={xpInfoVisible}
+        onClose={() => setXpInfoVisible(false)}
+        totalXP={totalXP}
+        levelName={levelName}
       />
 
       <View style={styles.scoreCard}>
@@ -997,13 +1011,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
-  },
-  xpExplainText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 6,
   },
   scoreCard: {
     backgroundColor: COLORS.surface,

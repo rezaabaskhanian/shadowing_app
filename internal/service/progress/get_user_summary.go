@@ -47,6 +47,10 @@ func (s *Service) GetUserSummary(ctx context.Context, userID string) (*dto.GetUs
 		}
 	}
 
+	for _, a := range achievements {
+		totalXP += a.XP
+	}
+
 	// 5️⃣ محاسبه سطح
 	level, levelName, _ := s.calculateLevel(totalXP)
 

@@ -10,6 +10,7 @@ import (
 // provider رابط مشترک بین ارائه‌دهنده‌های مختلف هوش مصنوعی (Claude, Gemini, DeepSeek) است.
 type provider interface {
 	generateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error)
+	checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error)
 	enabled() bool
 }
 

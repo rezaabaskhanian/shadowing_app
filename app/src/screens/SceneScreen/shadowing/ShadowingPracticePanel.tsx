@@ -17,6 +17,10 @@ import { RecordingsList } from './RecordingsList';
 interface ShadowingPracticePanelProps {
   language: string;
   t: (key: string) => string;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی (آبی/بنفش/نارنجی/سبز)؛ نگاه کن به STEP_ACCENT_COLOR در StepTabs. */
+  accentColor: string;
+  /** نسخه‌ی کم‌رنگِ همون accentColor؛ نگاه کن به STEP_ACCENT_LIGHT_COLOR در StepTabs. */
+  accentLightColor: string;
   activeStepIndex: number;
   onChangeStep: (stepIdx: number) => void;
   currentDialogue: DialogueItem;
@@ -106,6 +110,8 @@ interface ShadowingPracticePanelProps {
 export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   language,
   t,
+  accentColor,
+  accentLightColor,
   activeStepIndex,
   onChangeStep,
   currentDialogue,
@@ -159,6 +165,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
           recordedLines={recordedLines}
           activeLineIndex={activeLineIndex}
           onSelectLine={onSelectLine}
+          sequentialLockEnabled={activeStepIndex === 3}
+          accentColor={accentColor}
+          accentLightColor={accentLightColor}
         />
       )}
 
@@ -167,6 +176,8 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         repeatCount={repeatCount}
         totalRepeats={totalRepeats}
         onNextStep={onNextStep}
+        accentColor={accentColor}
+        accentLightColor={accentLightColor}
         t={t}
       />
 
@@ -179,11 +190,14 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         masterPositionSeconds={masterPositionSeconds}
         textDisplayMode={textDisplayMode}
         onChangeTextDisplayMode={onChangeTextDisplayMode}
+        accentColor={accentColor}
+        accentLightColor={accentLightColor}
         t={t}
       />
 
       <PracticeWaveformCard
         activeStepIndex={activeStepIndex}
+        accentColor={accentColor}
         playing={playing}
         actionCommand={actionCommand}
         hasRecordingForCurrentLine={hasRecordingForCurrentLine}

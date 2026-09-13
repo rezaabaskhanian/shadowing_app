@@ -20,6 +20,8 @@ import type { AudioActionCommand } from '../types';
  */
 export const PlayerControlsBar: React.FC<{
   activeStepIndex: number;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی؛ وقتی واقعاً درحال ضبطیم، قرمزِ ثابت جایگزینش می‌شود. */
+  accentColor: string;
   playing: boolean;
   actionCommand: AudioActionCommand;
   /** شروع ضبط؛ پارامتر یعنی صدای مرجع هم هم‌زمان پخش شود (مرحله‌ی شدو). */
@@ -35,6 +37,7 @@ export const PlayerControlsBar: React.FC<{
   onPlayMyRecording: () => void;
 }> = ({
   activeStepIndex,
+  accentColor,
   playing,
   actionCommand,
   onStartRecord,
@@ -88,7 +91,11 @@ export const PlayerControlsBar: React.FC<{
 
       <TouchableOpacity
         activeOpacity={0.85}
-        style={[styles.centerMicBtn, recording ? styles.centerMicBtnActive : null]}
+        style={[
+          styles.centerMicBtn,
+          { backgroundColor: accentColor },
+          recording ? styles.centerMicBtnActive : null,
+        ]}
         onPress={() => {
           // مرحله‌های ۱ و ۲ هر دو ضبط‌اند و یک‌جور کار می‌کنند: یک‌بار زدن شروع،
           // یک‌بار دیگر پایان. (قبلاً مرحله‌ی ۲ نگه‌داشتنی بود؛ هم با بقیه‌ی اپ
@@ -139,9 +146,9 @@ export const PlayerControlsBar: React.FC<{
         }
       >
         {activeStepIndex === 3 ? (
-          <RotateCcw size={16} color={COLORS.primary} />
+          <RotateCcw size={16} color={accentColor} />
         ) : (
-          <Play size={16} color={COLORS.primary} />
+          <Play size={16} color={accentColor} />
         )}
       </TouchableOpacity>
 
@@ -182,7 +189,6 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.level1,

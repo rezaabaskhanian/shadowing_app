@@ -28,6 +28,9 @@ export const DialogueSentenceBox: React.FC<{
   masterPositionSeconds?: number;
   textDisplayMode: TextDisplayMode;
   onChangeTextDisplayMode: (mode: TextDisplayMode) => void;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی، برای دکمه‌ها/بنرهای فعالِ همین جعبه. */
+  accentColor: string;
+  accentLightColor: string;
   t: (key: string) => string;
 }> = ({
   activeStepIndex,
@@ -38,6 +41,8 @@ export const DialogueSentenceBox: React.FC<{
   masterPositionSeconds,
   textDisplayMode,
   onChangeTextDisplayMode,
+  accentColor,
+  accentLightColor,
   t,
 }) => (
   <View style={styles.dialogueBox}>
@@ -45,25 +50,25 @@ export const DialogueSentenceBox: React.FC<{
         دکمه انتخاب می‌کند کدام‌یک. */}
     <View style={styles.displayModeRow}>
       <TouchableOpacity
-        style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnActive]}
+        style={[styles.displayModeBtn, textDisplayMode === 'bubble' && { backgroundColor: accentLightColor }]}
         onPress={() => onChangeTextDisplayMode('bubble')}
       >
         <MessageCircle
           size={13}
-          color={textDisplayMode === 'bubble' ? COLORS.primary : COLORS.muted}
+          color={textDisplayMode === 'bubble' ? accentColor : COLORS.muted}
         />
         <Text
-          style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && styles.displayModeBtnTextActive]}
+          style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && { color: accentColor }]}
         >
           {t('textInBubble')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnActive]}
+        style={[styles.displayModeBtn, textDisplayMode === 'card' && { backgroundColor: accentLightColor }]}
         onPress={() => onChangeTextDisplayMode('card')}
       >
-        <AlignLeft size={13} color={textDisplayMode === 'card' ? COLORS.primary : COLORS.muted} />
-        <Text style={[styles.displayModeBtnText, textDisplayMode === 'card' && styles.displayModeBtnTextActive]}>
+        <AlignLeft size={13} color={textDisplayMode === 'card' ? accentColor : COLORS.muted} />
+        <Text style={[styles.displayModeBtnText, textDisplayMode === 'card' && { color: accentColor }]}>
           {t('textInCard')}
         </Text>
       </TouchableOpacity>
@@ -80,26 +85,32 @@ export const DialogueSentenceBox: React.FC<{
     <Text style={styles.translationText}>{currentDialogue.translation}</Text>
 
     {activeStepIndex === 2 && (
-      <TouchableOpacity style={styles.revealBtn} onPress={onToggleRevealText}>
+      <TouchableOpacity style={[styles.revealBtn, { backgroundColor: accentLightColor }]} onPress={onToggleRevealText}>
         {textRevealed ? (
-          <EyeOff size={13} color={COLORS.primary} />
+          <EyeOff size={13} color={accentColor} />
         ) : (
-          <Eye size={13} color={COLORS.primary} />
+          <Eye size={13} color={accentColor} />
         )}
-        <Text style={styles.revealBtnText}>{textRevealed ? t('hideText') : t('showText')}</Text>
+        <Text style={[styles.revealBtnText, { color: accentColor }]}>{textRevealed ? t('hideText') : t('showText')}</Text>
       </TouchableOpacity>
     )}
 
     {/* لغت‌های همین جمله؛ با زدن روی هرکدام به جعبه‌ی لایتنر می‌رود.
         در مرحله‌ی ضبط نمایش داده نمی‌شود تا حواس کاربر از حفظ‌گویی پرت نشود. */}
     {activeStepIndex !== 2 && (
-      <DialogueVocabChips words={currentDialogue.words} onOpenLeitner={onOpenLeitner} t={t} />
+      <DialogueVocabChips
+        words={currentDialogue.words}
+        onOpenLeitner={onOpenLeitner}
+        accentColor={accentColor}
+        accentLightColor={accentLightColor}
+        t={t}
+      />
     )}
 
     {activeStepIndex === 1 && (
-      <View style={styles.shadowBannerPill}>
-        <Sparkles size={14} color={COLORS.primary} />
-        <Text style={styles.shadowBannerText}>{t('repeatAlongBanner')}</Text>
+      <View style={[styles.shadowBannerPill, { backgroundColor: accentLightColor }]}>
+        <Sparkles size={14} color={accentColor} />
+        <Text style={[styles.shadowBannerText, { color: accentColor }]}>{t('repeatAlongBanner')}</Text>
       </View>
     )}
 
@@ -133,16 +144,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: COLORS.surfaceLight,
   },
-  displayModeBtnActive: {
-    backgroundColor: COLORS.primaryLight,
-  },
   displayModeBtnText: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 10,
-  },
-  displayModeBtnTextActive: {
-    color: COLORS.primary,
   },
   translationText: {
     color: COLORS.textSecondary,
@@ -160,10 +165,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: COLORS.primaryLight,
   },
   revealBtnText: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
   },
@@ -172,14 +175,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 6,
-    backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
     marginBottom: 8,
   },
   shadowBannerText: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
   },

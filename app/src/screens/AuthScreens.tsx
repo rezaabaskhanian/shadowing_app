@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -159,6 +159,8 @@ const LoginScreen = ({
   );
 };
 
+const OTP_LENGTH = 5;
+
 // مرحله‌ی مشترک وارد کردن کد پیامکی؛ هم ثبت‌نام هم بازیابی رمز از این
 // استفاده می‌کنند. onVerified توکن یک‌بارمصرف حاصل از otp/verify را
 // برمی‌گرداند که مرحله‌ی بعد (register/reset-pass) به آن نیاز دارد.
@@ -178,23 +180,47 @@ const OtpStep = ({
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const autoSubmittedRef = useRef(false);
 
-  const handleVerify = async () => {
-    if (code.trim().length < 4) {
+  const handleVerify = async (value?: string) => {
+    const finalCode = (value ?? code).trim();
+    if (finalCode.length < OTP_LENGTH) {
       setError(t('fillAllFields'));
       return;
     }
     setError('');
     setLoading(true);
     try {
-      const token = await verifyOtpApi(phone, code.trim(), purpose);
+      const token = await verifyOtpApi(phone, finalCode, purpose);
       onVerified(token);
     } catch (e: any) {
+      autoSubmittedRef.current = false;
       setError(isNetworkError(e) ? t('networkError') : e?.message || t('registerFailed'));
     } finally {
       setLoading(false);
     }
   };
+
+  const handleChangeCode = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+    setCode(digits);
+    if (error) setError('');
+  };
+
+  // کدی که با پیامک خودکار خونده می‌شه (iOS: textContentType="oneTimeCode"،
+  // اندروید: autoComplete="sms-otp") یا دستی کامل می‌شه، به‌محض رسیدن به
+  // ۵ رقم خودکار تایید می‌شه؛ نیازی به فشردن دکمه نیست.
+  useEffect(() => {
+    if (code.length === OTP_LENGTH && !loading && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      handleVerify(code);
+    }
+    if (code.length < OTP_LENGTH) {
+      autoSubmittedRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   const handleResend = async () => {
     setError('');
@@ -224,22 +250,39 @@ const OtpStep = ({
         </Text>
       </View>
 
-      <View style={styles.inputWrap}>
-        <ShieldCheck color={COLORS.textSecondary} size={20} />
+      <TouchableOpacity
+        activeOpacity={1}
+        style={styles.otpBoxesRow}
+        onPress={() => inputRef.current?.focus()}
+      >
+        {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.otpBox,
+              i < code.length && styles.otpBoxFilled,
+              i === code.length && styles.otpBoxActive,
+            ]}
+          >
+            <Text style={styles.otpBoxText}>{code[i] ?? ''}</Text>
+          </View>
+        ))}
         <TextInput
-          placeholder={t('otpCodeLabel')}
-          placeholderTextColor={COLORS.textSecondary}
-          style={styles.input}
-          keyboardType="number-pad"
+          ref={inputRef}
           value={code}
-          onChangeText={setCode}
-          maxLength={5}
+          onChangeText={handleChangeCode}
+          keyboardType="number-pad"
+          maxLength={OTP_LENGTH}
+          autoComplete="sms-otp"
+          textContentType="oneTimeCode"
+          autoFocus
+          style={styles.otpHiddenInput}
         />
-      </View>
+      </TouchableOpacity>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleVerify} disabled={loading}>
+      <TouchableOpacity style={styles.primaryButton} onPress={() => handleVerify()} disabled={loading}>
         {loading ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
@@ -684,6 +727,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 14,
     textAlign: 'center',
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 14,
+    position: 'relative',
+  },
+  otpBox: {
+    width: 52,
+    height: 58,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpBoxFilled: {
+    borderColor: COLORS.primary,
+  },
+  otpBoxActive: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+  },
+  otpBoxText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 22,
+  },
+  otpHiddenInput: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0,
   },
   forgotButton: {
     alignSelf: 'flex-end',

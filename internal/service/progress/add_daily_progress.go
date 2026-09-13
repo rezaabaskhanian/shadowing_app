@@ -70,6 +70,20 @@ func (s *Service) AddDailyProgress(ctx context.Context, req dto.AddDailyProgress
 		}
 	}
 
+	// دستاورد: نمره کامل (۱۰۰)
+	if req.Score >= 100 {
+		exists, err := s.achievementRepo.Exists(ctx, userID, achievement.AchievementPerfectScore)
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		if !exists {
+			newAchiev, err := s.unlockAchievement(ctx, userID.String(), achievement.AchievementPerfectScore)
+			if err == nil {
+				newAchievements = append(newAchievements, newAchiev.Name)
+			}
+		}
+	}
+
 	// دستاورد: استریک ۷ روزه
 	if userStreak.Current >= 7 {
 		exists, err := s.achievementRepo.Exists(ctx, userID, achievement.AchievementStreak7)

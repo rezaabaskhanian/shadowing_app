@@ -44,7 +44,7 @@ export const PronunciationFeedback: React.FC<{
         </Text>
         {!!onRetry && (
           <TouchableOpacity style={styles.retryBtn} onPress={onRetry}>
-            <RotateCcw size={12} color={COLORS.primary} />
+            <RotateCcw size={12} color={COLORS.tertiary} />
             <Text style={styles.retryBtnText}>{t('tryAgain')}</Text>
           </TouchableOpacity>
         )}
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   retryBtnText: {
-    color: COLORS.primary,
+    color: COLORS.tertiary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
   },

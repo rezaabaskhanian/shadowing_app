@@ -118,3 +118,49 @@ func (p *anthropicProvider) generateScene(ctx context.Context, prompt, difficult
 	}
 	return scene, nil
 }
+
+func (p *anthropicProvider) checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
+	const op = "aiservice.anthropicProvider.checkRelevance"
+
+	key := p.apiKey()
+	if key == "" {
+		return RelevanceResult{}, richerror.New(op).WithMessage("کلید ANTHROPIC_API_KEY تنظیم نشده است")
+	}
+
+	userText := fmt.Sprintf("Question: %s\nTranscript: %s", strings.TrimSpace(question), strings.TrimSpace(transcript))
+
+	client, err := p.clientFor(key)
+	if err != nil {
+		return RelevanceResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+	}
+	resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     p.model(),
+		MaxTokens: 1024,
+		System: []anthropic.TextBlockParam{{
+			Text: relevanceSystemPrompt,
+		}},
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(userText)),
+		},
+	})
+	if err != nil {
+		return RelevanceResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Claude): %v", err))
+	}
+
+	var raw strings.Builder
+	for _, block := range resp.Content {
+		if b, ok := block.AsAny().(anthropic.TextBlock); ok {
+			raw.WriteString(b.Text)
+		}
+	}
+
+	jsonStr := extractJSON(raw.String())
+	var result RelevanceResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return RelevanceResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (Claude) قابل پردازش نبود")
+	}
+	return result, nil
+}

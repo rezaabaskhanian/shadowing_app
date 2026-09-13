@@ -102,8 +102,8 @@ export const translations: Translations = {
   statsLevelLabel: { en: 'Level', fa: 'سطح' },
   statsXPLabel: { en: 'XP', fa: 'امتیاز تجربه' },
   xpExplain: {
-    en: 'Earned by finishing scenes — 50 XP per completed scene. It sets your level.',
-    fa: 'با تمام‌کردن صحنه‌ها به دست می‌آید — هر صحنه‌ی کامل‌شده ۵۰ امتیاز. سطح تو را همین تعیین می‌کند.',
+    en: 'You get 50 XP for fully completing a scene, plus 5 XP for each correct answer in its quiz. Your total XP sets your level.',
+    fa: 'با تمام‌کردن کامل یک صحنه ۵۰ امتیاز می‌گیری، به‌علاوه ۵ امتیاز برای هر جواب درست توی کوییز همون صحنه. مجموع این امتیازها سطح تو را تعیین می‌کند.',
   },
   streakReminderTitle: { en: 'Streak reminder', fa: 'یادآوری استریک' },
   streakReminderSub: {
@@ -227,6 +227,10 @@ export const translations: Translations = {
     en: 'Record yourself first — you need a recording before you can compare it.',
     fa: 'اول باید صدای خودت رو ضبط کنی؛ برای رفتن به مقایسه حتماً باید یک ضبط داشته باشی.',
   },
+  sequentialRecordingRequiredMessage: {
+    en: 'You need to record the earlier lines first before you can listen to or compare this one.',
+    fa: 'باید جمله‌های قبل از این را هم ضبط کرده باشی تا بتوانی این یکی را بشنوی یا مقایسه کنی.',
+  },
   nextStep: { en: 'Next step', fa: 'مرحله بعد' },
   startShadowing: { en: 'Start Shadowing', fa: 'شروع سایه‌زنی' },
   stopShadowing: { en: 'Stop Shadowing', fa: 'توقف سایه‌زنی' },
@@ -324,7 +328,7 @@ export const translations: Translations = {
   forgotPassword: { en: 'Forgot Password?', fa: 'رمز عبور را فراموش کرده‌اید؟' },
   login: { en: 'Log In', fa: 'ورود' },
   sendOtp: { en: 'Send SMS Code', fa: 'ارسال کد پیامکی' },
-  enterOtp: { en: 'Enter 4-Digit Code', fa: 'کد ۴ رقمی را وارد کنید' },
+  enterOtp: { en: 'Enter 5-Digit Code', fa: 'کد ۵ رقمی را وارد کنید' },
   verifyAndLogin: { en: 'Verify & Sign In', fa: 'تأیید و ورود' },
   dontHaveAccount: { en: 'Don\'t have an account?', fa: 'حساب کاربری ندارید؟' },
   alreadyHaveAccount: { en: 'Already have an account?', fa: 'حساب کاربری دارید؟' },
@@ -579,6 +583,68 @@ export const translations: Translations = {
   },
   toastDemoMenuLabel: { en: 'Toast Preview', fa: 'پیش‌نمایش پیام‌ها' },
   toastDemoMenuSub: { en: 'Dev-only: see every toast style', fa: 'فقط برای توسعه: دیدن همه‌ی استایل‌های پیام' },
+
+  // ---- Placement Test (Quick Check) ----
+  placementIntroTitle: { en: 'Speaking Placement Test', fa: 'تعیین سطح گفتاری' },
+  placementIntroBody: {
+    en: 'A quick, 3-item check (about 1-2 minutes) so we can personalize your practice to your level.',
+    fa: 'یک تست کوتاه ۳ مرحله‌ای (حدود ۱ تا ۲ دقیقه) تا تمرین‌ها را دقیق‌تر متناسب با سطح تو بسازیم.',
+  },
+  placementIntroBullet1: {
+    en: 'Listen to a sentence and repeat it',
+    fa: 'یک جمله را می‌شنوی و آن را تکرار می‌کنی',
+  },
+  placementIntroBullet2: {
+    en: 'Two free-speaking prompts about yourself and an everyday situation',
+    fa: 'دو سؤال آزاد؛ یکی درباره‌ی خودت و یکی درباره‌ی یک موقعیت روزمره',
+  },
+  placementIntroBullet3: {
+    en: "At the end, you'll see your speaking level",
+    fa: 'در پایان، سطح گفتاری‌ت را می‌بینی',
+  },
+  placementStartBtn: { en: 'Start', fa: 'شروع' },
+  placementSkipBtn: { en: 'Skip for now', fa: 'فعلاً رد کن' },
+
+  placementItemProgress: { en: 'Item {current} of {total}', fa: 'آیتم {current} از {total}' },
+  placementShadowKicker: { en: 'Listen, then repeat', fa: 'گوش بده و تکرار کن' },
+  placementFreeSpeechKicker: { en: 'Speak freely', fa: 'آزادانه صحبت کن' },
+  placementPlayReference: { en: 'Play sample audio', fa: 'پخش صدای نمونه' },
+  placementStartRecordBtn: { en: 'Start recording', fa: 'شروع ضبط' },
+  placementStopRecordBtn: { en: 'Stop recording', fa: 'توقف ضبط' },
+  placementRecordingLabel: { en: 'Recording…', fa: 'در حال ضبط...' },
+  placementPlaybackBtn: { en: 'Play my recording', fa: 'پخش ضبط من' },
+  placementRerecordBtn: { en: 'Record again', fa: 'ضبط دوباره' },
+  placementConfirmNextBtn: { en: 'Confirm & continue', fa: 'تایید و ادامه' },
+  placementConfirmFinishBtn: { en: 'Finish & submit', fa: 'اتمام و ارسال نتیجه' },
+  placementMicDenied: {
+    en: 'Microphone access was denied. Allow it in your phone settings.',
+    fa: 'دسترسی به میکروفن رد شد. از تنظیمات گوشی اجازه بده.',
+  },
+  placementSubmitting: {
+    en: 'Submitting and scoring your answers…',
+    fa: 'در حال ارسال و بررسی نتیجه...',
+  },
+  placementSubmitFailed: {
+    en: "Couldn't submit your results. Check your connection.",
+    fa: 'ارسال نتیجه انجام نشد. اتصال اینترنت را بررسی کن.',
+  },
+  placementRetryBtn: { en: 'Try again', fa: 'تلاش دوباره' },
+
+  placementResultTitle: { en: 'Your speaking level', fa: 'سطح گفتاری شما' },
+  placementResultEstimatedNote: {
+    en: 'This is a rough estimate.',
+    fa: 'این نتیجه تقریبی است.',
+  },
+  placementFreeSpeechSectionTitle: { en: 'Free-speaking items', fa: 'بخش‌های گفتار آزاد' },
+  placementRelevanceYes: { en: 'Answered', fa: 'پاسخ داده شد' },
+  placementRelevancePartial: { en: 'Partially answered', fa: 'تا حدی پاسخ داده شد' },
+  placementRelevanceNo: { en: 'Not answered', fa: 'پاسخ داده نشد' },
+
+  placementCtaTitle: { en: 'Find your speaking level', fa: 'سطح گفتاری‌ت رو مشخص کن' },
+  placementCtaSub: {
+    en: 'A quick 3-step test, about 1-2 minutes',
+    fa: 'یک تست کوتاه ۳ مرحله‌ای، حدود ۱ تا ۲ دقیقه',
+  },
 };
 
 /**

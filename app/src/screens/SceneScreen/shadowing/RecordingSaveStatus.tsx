@@ -5,6 +5,10 @@ import { Check, Save } from 'lucide-react-native';
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { feedbackCardStyles } from './sharedStyles';
+import { STEP_ACCENT_COLOR } from './StepTabs';
+
+// این کامپوننت فقط توی مرحله‌ی «ضبط» رندر می‌شود، پس مستقیم رنگ همون مرحله را می‌گیرد.
+const RECORD_ACCENT = STEP_ACCENT_COLOR[2];
 
 /**
  * ردیف زیر کارت ویوفرمِ مرحله‌ی ضبط: هشدارِ «ضبط ممکن نیست» (اگر پیش بیاید)
@@ -43,7 +47,7 @@ export const RecordingSaveStatus: React.FC<{
               {savedFileName || t('recordingSaved')}
             </Text>
             <TouchableOpacity onPress={onOpenRecordings}>
-              <Text style={styles.saveStatusLink}>{t('myRecordings')}</Text>
+              <Text style={[styles.saveStatusLink, { color: RECORD_ACCENT }]}>{t('myRecordings')}</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -78,7 +82,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   saveStatusLink: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
   },

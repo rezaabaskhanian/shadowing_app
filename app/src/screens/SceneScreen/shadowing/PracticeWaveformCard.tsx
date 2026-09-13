@@ -15,6 +15,9 @@ import { CompareAudioSection } from './CompareAudioSection';
  */
 export const PracticeWaveformCard: React.FC<{
   activeStepIndex: number;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی؛ فقط برای موجِ عمومیِ Listen/Record استفاده می‌شود
+   * (Shadow و Compare رنگ‌های معناداری از قبل دارند: صدای مرجع/خودت). */
+  accentColor: string;
   playing: boolean;
   actionCommand: AudioActionCommand;
   hasRecordingForCurrentLine: boolean;
@@ -31,6 +34,7 @@ export const PracticeWaveformCard: React.FC<{
   t: (key: string) => string;
 }> = ({
   activeStepIndex,
+  accentColor,
   playing,
   actionCommand,
   hasRecordingForCurrentLine,
@@ -77,12 +81,12 @@ export const PracticeWaveformCard: React.FC<{
                   (activeStepIndex === 2 && actionCommand === 'start_record')
                     ? 8 + ((idx * 7) % 20)
                     : 8,
-                backgroundColor: COLORS.primary,
+                backgroundColor: accentColor,
               },
             ]}
           />
         ))}
-        <View style={styles.waveformPlayhead} />
+        <View style={[styles.waveformPlayhead, { backgroundColor: accentColor }]} />
       </View>
     )}
   </View>
@@ -117,7 +121,6 @@ const styles = StyleSheet.create({
     left: '50%',
     width: 2,
     borderRadius: 1,
-    backgroundColor: COLORS.primary,
   },
   waveformDivider: {
     height: 1,

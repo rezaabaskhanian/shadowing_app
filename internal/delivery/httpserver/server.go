@@ -6,6 +6,7 @@ import (
 
 	"shadowing-backend/internal/config"
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
+	assessmenthandler "shadowing-backend/internal/delivery/httpserver/assessment"
 	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
 	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
@@ -18,6 +19,7 @@ import (
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	aiservice "shadowing-backend/internal/service/ai"
+	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
@@ -61,6 +63,8 @@ type Service struct {
 
 	adminHandler adminhandler.Handler
 
+	assessmentHandler assessmenthandler.Handler
+
 	habitHandler habithandler.Handler
 
 	leitnerHandler leitnerhandler.Handler
@@ -84,6 +88,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	leitnerSvc leitnerservice.Service,
 	otpSvc otpservice.Service,
 	landingSvc landingservice.Service,
+	assessmentSvc *assessmentservice.Service,
 
 ) Service {
 
@@ -99,6 +104,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 
 		adminHandler: adminhandler.New(
 			learningSvc,
+			assessmentSvc,
 			aiservice.New(settingsSvc),
 			ttsservice.New(settingsSvc),
 			proxyservice.New(settingsSvc),
@@ -112,6 +118,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 			feedbackSvc,
 			authSvc, authConfig, uploadDir, uploadURLPath,
 		),
+
+		assessmentHandler: assessmenthandler.New(assessmentSvc, authSvc, authConfig, uploadDir),
 
 		habitHandler: habithandler.New(habitSvc, authSvc, authConfig, uploadDir),
 
@@ -182,6 +190,8 @@ func (s Service) Server() {
 	s.progressHndler.SetProgressRoutes(e)
 
 	s.adminHandler.SetAdminRoutes(e)
+
+	s.assessmentHandler.SetAssessmentRoutes(e)
 
 	s.habitHandler.SetHabitRoutes(e)
 

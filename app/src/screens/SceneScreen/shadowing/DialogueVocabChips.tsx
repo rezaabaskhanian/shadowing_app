@@ -15,8 +15,11 @@ import type { WordEntry } from '../../../data/scenarios';
 export const DialogueVocabChips: React.FC<{
   words?: WordEntry[];
   onOpenLeitner: () => void;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی. */
+  accentColor: string;
+  accentLightColor: string;
   t: (key: string) => string;
-}> = ({ words, onOpenLeitner, t }) => {
+}> = ({ words, onOpenLeitner, accentColor, accentLightColor, t }) => {
   const { has, add, remove, box } = useVocab();
 
   if (!words || words.length === 0) return null;
@@ -36,7 +39,7 @@ export const DialogueVocabChips: React.FC<{
               {added ? (
                 <Check size={13} color={COLORS.tertiary} />
               ) : (
-                <Plus size={13} color={COLORS.primary} />
+                <Plus size={13} color={accentColor} />
               )}
               <Text style={[styles.vocabChipWord, added ? styles.vocabChipWordAdded : null]}>
                 {w.word}
@@ -48,9 +51,9 @@ export const DialogueVocabChips: React.FC<{
       </View>
 
       {/* میان‌بر به جعبه‌ی لایتنر (جایگزین لینکی که در WordsSheet بود) */}
-      <TouchableOpacity style={styles.leitnerBoxLink} onPress={onOpenLeitner}>
-        <Layers size={14} color={COLORS.primary} />
-        <Text style={styles.leitnerBoxLinkText}>
+      <TouchableOpacity style={[styles.leitnerBoxLink, { backgroundColor: accentLightColor }]} onPress={onOpenLeitner}>
+        <Layers size={14} color={accentColor} />
+        <Text style={[styles.leitnerBoxLinkText, { color: accentColor }]}>
           {t('leitnerBoxTitle')} ({box.length})
         </Text>
       </TouchableOpacity>
@@ -67,14 +70,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginBottom: 10,
   },
   leitnerBoxLinkText: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
   },

@@ -1,5 +1,7 @@
 import type {
   AdminUsersResp,
+  AssessmentItem,
+  AssessmentItemPayload,
   BroadcastItem,
   CreateScenePayload,
   Difficulty,
@@ -349,6 +351,41 @@ export async function listFeedbacks(): Promise<Feedback[]> {
   const res = await authFetch("/v1/admin/feedbacks", { method: "GET" });
   const data = await jsonOrThrow(res);
   return (data.feedbacks || []) as Feedback[];
+}
+
+// ---------- آیتم‌های تست تعیین سطح (intro/situational/shadow) ----------
+export async function listAssessmentItems(): Promise<AssessmentItem[]> {
+  const res = await authFetch("/v1/admin/assessment-items", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.items || []) as AssessmentItem[];
+}
+
+export async function createAssessmentItem(
+  payload: AssessmentItemPayload
+): Promise<AssessmentItem> {
+  const res = await authFetch("/v1/admin/assessment-items", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function updateAssessmentItem(
+  id: string,
+  payload: AssessmentItemPayload
+): Promise<AssessmentItem> {
+  const res = await authFetch(`/v1/admin/assessment-items/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteAssessmentItem(id: string) {
+  const res = await authFetch(`/v1/admin/assessment-items/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
 }
 
 export async function approveTopicSuggestion(

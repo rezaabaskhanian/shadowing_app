@@ -4,6 +4,11 @@ import { Pause, Play } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
+import { STEP_ACCENT_COLOR } from './StepTabs';
+
+// این کامپوننت فقط توی مرحله‌ی «ضبط» رندر می‌شود، پس مستقیم رنگ همون مرحله
+// (نارنجی) را می‌گیرد؛ نسخه‌ی تیره‌ترش برای کنتراست کافی با متن/آیکون سفید.
+const RECORD_ACCENT = STEP_ACCENT_COLOR[2];
 
 /**
  * لیست جمله‌های صحنه با وضعیت ضبطشان.
@@ -41,7 +46,11 @@ export const RecordingsList: React.FC<{
           {t('myLinesTitle')} ({recordedCount}/{lines.length})
         </Text>
         <TouchableOpacity
-          style={[styles.recPlayAllBtn, recordedCount === 0 ? styles.recBtnDisabled : null]}
+          style={[
+            styles.recPlayAllBtn,
+            { backgroundColor: RECORD_ACCENT },
+            recordedCount === 0 ? styles.recBtnDisabled : null,
+          ]}
           disabled={recordedCount === 0}
           onPress={isPlayingAll ? onStopPlayAll : onPlayAll}
         >
@@ -76,7 +85,7 @@ export const RecordingsList: React.FC<{
 
             {recorded ? (
               <TouchableOpacity style={styles.recRowPlayBtn} onPress={() => onPlayLine(idx)}>
-                <Play size={13} color={COLORS.primary} fill={COLORS.primary} />
+                <Play size={13} color={RECORD_ACCENT} fill={RECORD_ACCENT} />
               </TouchableOpacity>
             ) : (
               <View style={styles.recRowPendingDot} />
@@ -115,7 +124,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: COLORS.primary,
   },
   recPlayAllText: {
     color: COLORS.white,
@@ -134,7 +142,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   recRowActive: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.secondaryLight,
   },
   recRowTextWrap: {
     flex: 1,

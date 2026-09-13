@@ -25,6 +25,7 @@ import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
 import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
+import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
@@ -234,6 +235,11 @@ export const SceneScreen = () => {
 
   // آیا مرحله‌ی فعلی دور خودکار دارد یا دست خود کاربر است.
   const isAutoStep = stepIsAuto(activeStepIndex);
+  // رنگ اختصاصیِ همین مرحله (آبی/بنفش/نارنجی/سبز) — برای المان‌های داخل پنل
+  // که فقط نشانگرِ «فعال/انتخاب‌شده»اند، نه چیزی با معنیِ ثابت (مثل قرمزِ
+  // درحال‌ضبط یا سبزِ نمره‌ی خوب که جای خودشان می‌مانند).
+  const stepAccentColor = STEP_ACCENT_COLOR[activeStepIndex] ?? COLORS.primary;
+  const stepAccentLightColor = STEP_ACCENT_LIGHT_COLOR[activeStepIndex] ?? COLORS.primaryLight;
   // تعداد دور پیشنهادی مرحله‌ی فعلی (از تنظیمات کاربر)؛ ۰ یعنی بی‌نهایت.
   const targetRepeats = repeatsPerStep;
 
@@ -255,6 +261,18 @@ export const SceneScreen = () => {
     () => Object.keys(recordings).map(Number),
     [recordings]
   );
+
+  // اولین جمله‌ای که هنوز ضبط ندارد. در مرحله‌ی مقایسه هیچ جمله‌ای از این
+  // اندیس به بعد قابل‌دسترس نیست — حتی اگر خودش جدا ضبط شده باشد (مثلاً ۳ و
+  // ۵ ضبط شده‌اند ولی ۴ نه)؛ وگرنه پرشِ ناپیوسته معنیِ «مقایسه‌ی کامل مسیر
+  // خودت» را زیر سؤال می‌برد. اگر همه‌چیز ضبط شده باشد برابر طول لیست است،
+  // یعنی هیچ محدودیتی نمی‌ماند.
+  const firstUnrecordedLineIndex = useMemo(() => {
+    for (let i = 0; i < dialogueItems.length; i++) {
+      if (!recordings[i]) return i;
+    }
+    return dialogueItems.length;
+  }, [recordings, dialogueItems]);
 
   // برچسب کوتاه هر جمله برای لیست؛ خودِ متن‌ها ممکن است بلند باشند و لیست را
   // شلوغ کنند، پس در همان‌جا کوتاه می‌شوند.
@@ -330,6 +348,12 @@ export const SceneScreen = () => {
    */
   const playDialogueAt = useCallback(
     (idx: number) => {
+      // در مرحله‌ی مقایسه، جمله‌ای که پشتِ اولین جمله‌ی ضبط‌نشده است قابل‌شنیدن
+      // نیست — نه صدای مرجع، نه صدای خودت.
+      if (activeStepIndex === 3 && idx >= firstUnrecordedLineIndex) {
+        toast.warning(t('sequentialRecordingRequiredMessage'), { title: t('recordingRequiredTitle') });
+        return;
+      }
       if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
       if (!dialogueItems[idx]) return;
       // نوار «ذخیره شد» مال جمله‌ی قبلی است؛ با عوض‌شدن جمله باید برود.
@@ -337,7 +361,7 @@ export const SceneScreen = () => {
       setSavedFileName(null);
       dispatch({ type: 'PLAY_LINE', index: idx, items: dialogueItems });
     },
-    [dialogueItems]
+    [dialogueItems, activeStepIndex, firstUnrecordedLineIndex, toast, t]
   );
 
   const handleEnterScene = () => {
@@ -683,9 +707,13 @@ export const SceneScreen = () => {
   const selectLine = useCallback(
     (lineIndex: number) => {
       if (lineIndex < 0 || lineIndex >= dialogueItems.length) return;
+      if (activeStepIndex === 3 && lineIndex >= firstUnrecordedLineIndex) {
+        toast.warning(t('sequentialRecordingRequiredMessage'), { title: t('recordingRequiredTitle') });
+        return;
+      }
       dispatch({ type: 'SELECT_LINE', index: lineIndex, items: dialogueItems });
     },
-    [dialogueItems]
+    [dialogueItems, activeStepIndex, firstUnrecordedLineIndex, toast, t]
   );
 
   /**
@@ -911,12 +939,6 @@ export const SceneScreen = () => {
     dispatch({ type: playing ? 'PAUSE' : 'RESUME' });
   };
 
-  // دکمه‌ی فلش روی تصویر: مرحله‌ی بعدی را باز می‌کند؛ روی آخرین مرحله، از
-  // صحنه خارج شده و نتیجه‌ی جلسه نمایش داده می‌شود.
-  const handleHeaderForwardPress = () => {
-    goToNextStep();
-  };
-
   const defaultCoverUri =
     'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop';
   const coverImage = scenario?.imageUri
@@ -1041,10 +1063,9 @@ export const SceneScreen = () => {
           // با تعویض مرحله‌ی تمرین و همچنین شروع هر دور تکرار، دوربین دوباره
           // روی هات‌اسپات زوم می‌کند.
           refocusKey={isShadowingMode ? `${activeStepIndex}-${repeatCount}` : undefined}
-          isShadowingMode={isShadowingMode}
           streakCount={streakCount}
           onStreakPress={() => setStreakInfoVisible(true)}
-          onForward={handleHeaderForwardPress}
+          onExit={resetToHome}
           bubbleSpeaker={currentDialogue.speaker}
           bubbleText={!isShadowingMode ? currentDialogue.dialogue : undefined}
           bubbleContent={
@@ -1086,6 +1107,8 @@ export const SceneScreen = () => {
             <ShadowingPracticePanel
               language={language}
               t={t}
+              accentColor={stepAccentColor}
+              accentLightColor={stepAccentLightColor}
               activeStepIndex={activeStepIndex}
               onChangeStep={requestStepChange}
               currentDialogue={currentDialogue}
@@ -1140,6 +1163,7 @@ export const SceneScreen = () => {
           )}
           <PlayerControlsBar
             activeStepIndex={activeStepIndex}
+            accentColor={stepAccentColor}
             playing={playing}
             actionCommand={actionCommand}
             onStartRecord={(withReference) =>
@@ -1157,7 +1181,7 @@ export const SceneScreen = () => {
           />
           {lineAudioMissing && <Text style={styles.noAudioHint}>{t('lineHasNoAudio')}</Text>}
           {activeStepIndex === 2 && canRecord && (
-            <Text style={styles.recordHint}>
+            <Text style={[styles.recordHint, { color: stepAccentColor }]}>
               {actionCommand === 'start_record' ? t('tapToStopRecord') : t('tapToRecord')}
             </Text>
           )}
@@ -1201,7 +1225,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   recordHint: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
     textAlign: 'center',

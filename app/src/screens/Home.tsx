@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BackHandler,
   ImageBackground,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,17 +20,22 @@ import {
   Play,
   Repeat,
   Sparkles,
+  X,
+  Zap,
 } from 'lucide-react-native';
 import { ScenarioCard } from '../components/ScenarioCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
 import { StreakInfoModal } from '../components/StreakInfoModal';
+import { XpInfoModal } from '../components/XpInfoModal';
 import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { useToast } from '../data/ToastContext';
-import { getUserStreak, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
+import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
+import { getAssessmentTest, getSpeakingProfile, type AssessmentItem } from '../api/assessment';
+import { PlacementTestFlow } from './PlacementTest';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
@@ -64,6 +70,40 @@ export const HomeScreen = () => {
   const [todaySessions, setTodaySessions] = React.useState(0);
   const [todayMinutes, setTodayMinutes] = React.useState(0);
   const [fluency, setFluency] = React.useState(0);
+  const [totalXP, setTotalXP] = React.useState(0);
+  const [levelName, setLevelName] = React.useState('');
+  const [xpInfoVisible, setXpInfoVisible] = React.useState(false);
+
+  // کارتِ CTA تست تعیین سطح: فقط وقتی ادمین محتوا ساخته باشد و کاربر هنوز
+  // پروفایل گفتاری نداشته باشد نشان داده می‌شود؛ اگر یکی از این دو نباشد،
+  // کارت اصلاً رندر نمی‌شود (نه فقط مخفی — یعنی فیچر نامرئی است).
+  const [placementCtaItems, setPlacementCtaItems] = React.useState<AssessmentItem[] | null>(null);
+  const [placementCtaDismissed, setPlacementCtaDismissed] = React.useState(false);
+  const [placementModalVisible, setPlacementModalVisible] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      getAssessmentTest()
+        .then((items) => {
+          if (!active) return;
+          if (!items || items.length === 0) {
+            setPlacementCtaItems(null);
+            return;
+          }
+          return getSpeakingProfile().then((profile) => {
+            if (!active) return;
+            setPlacementCtaItems(profile ? null : items);
+          });
+        })
+        .catch(() => {
+          if (active) setPlacementCtaItems(null);
+        });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -74,6 +114,13 @@ export const HomeScreen = () => {
           if (!active) return;
           setStreak(s.current_streak);
           setStreakFreezes(s.freezes);
+        })
+        .catch(() => {});
+      getUserSummary(user.id)
+        .then((s) => {
+          if (!active) return;
+          setTotalXP(s.total_xp);
+          setLevelName(s.level_name);
         })
         .catch(() => {});
       getWeeklyActivity()
@@ -177,6 +224,12 @@ export const HomeScreen = () => {
               <Text style={styles.streakText}>{streak}</Text>
             </TouchableOpacity>
 
+            {/* XP Badge — لمس توضیح می‌دهد XP از کجا می‌آید (مثل بج استریک). */}
+            <TouchableOpacity style={styles.xpBadge} onPress={() => setXpInfoVisible(true)}>
+              <Zap size={16} color={COLORS.tertiary} fill={COLORS.tertiary} />
+              <Text style={styles.xpText}>{totalXP}</Text>
+            </TouchableOpacity>
+
             {/* Drawer Trigger */}
             <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
               <Menu size={18} color={COLORS.text} />
@@ -190,6 +243,12 @@ export const HomeScreen = () => {
           onClose={() => setStreakInfoVisible(false)}
           streak={streak}
           freezes={streakFreezes}
+        />
+        <XpInfoModal
+          visible={xpInfoVisible}
+          onClose={() => setXpInfoVisible(false)}
+          totalXP={totalXP}
+          levelName={levelName}
         />
 
         {/* TODAY'S SHADOWING PROGRESS CARD */}
@@ -224,6 +283,29 @@ export const HomeScreen = () => {
             </View>
           </View>
         </View>
+
+        {/* PLACEMENT TEST CTA — فقط اگر ادمین محتوا ساخته و کاربر هنوز پروفایل ندارد */}
+        {placementCtaItems && !placementCtaDismissed && (
+          <TouchableOpacity
+            style={styles.placementCtaCard}
+            activeOpacity={0.85}
+            onPress={() => setPlacementModalVisible(true)}
+          >
+            <View style={styles.placementCtaIconCircle}>
+              <Mic size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.placementCtaTextContainer}>
+              <Text style={styles.placementCtaTitle}>{t('placementCtaTitle')}</Text>
+              <Text style={styles.placementCtaSub}>{t('placementCtaSub')}</Text>
+            </View>
+            <TouchableOpacity
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              onPress={() => setPlacementCtaDismissed(true)}
+            >
+              <X size={18} color={COLORS.muted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* QUICK ACCESS: SHADOWING & LEITNER BOX */}
         <View style={styles.quickActionsRow}>
@@ -346,6 +428,21 @@ export const HomeScreen = () => {
         {/* Bottom padding for tab bar */}
         <View style={{ height: 90 }} />
       </ScrollView>
+
+      <Modal
+        visible={placementModalVisible}
+        animationType="slide"
+        onRequestClose={() => setPlacementModalVisible(false)}
+      >
+        <PlacementTestFlow
+          items={placementCtaItems}
+          onSkip={() => setPlacementModalVisible(false)}
+          onDone={() => {
+            setPlacementModalVisible(false);
+            setPlacementCtaItems(null);
+          }}
+        />
+      </Modal>
     </View>
   );
 };
@@ -409,6 +506,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   streakText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 15,
+  },
+  xpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
+  },
+  xpText: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
@@ -607,6 +720,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   quickCardSub: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  placementCtaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 12,
+    marginBottom: 20,
+  },
+  placementCtaIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryLight,
+  },
+  placementCtaTextContainer: {
+    flex: 1,
+  },
+  placementCtaTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+  },
+  placementCtaSub: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 11,

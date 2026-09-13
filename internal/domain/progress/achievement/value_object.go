@@ -8,8 +8,6 @@ const (
 	AchievementPerfectScore AchievementType = "perfect_score" // نمره کامل
 	AchievementStreak7      AchievementType = "streak_7"      // استریک ۷ روزه
 	AchievementStreak30     AchievementType = "streak_30"     // استریک ۳۰ روزه
-	AchievementMastery      AchievementType = "mastery"       // استاد شدن
-	AchievementSpeed        AchievementType = "speed"         // سرعت در پاسخ
 )
 
 // AchievementRarity - نادر بودن دستاورد

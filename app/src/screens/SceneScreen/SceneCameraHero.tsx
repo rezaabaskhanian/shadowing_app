@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ArrowRight, Flame } from 'lucide-react-native';
+import { Flame, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -82,11 +82,11 @@ interface SceneCameraHeroProps {
    * مرحله‌ی تمرین استفاده می‌شود.
    */
   refocusKey?: string | number;
-  isShadowingMode: boolean;
   streakCount: number;
   /** لمس بج استریک — باز کردن توضیح معنای استریک. */
   onStreakPress: () => void;
-  onForward: () => void;
+  /** خروج از صحنه و برگشت به خانه. */
+  onExit: () => void;
   /** حباب دیالوگ بالای سر گوینده‌ی فعلی — متن/گوینده‌ی خط جاری. */
   bubbleSpeaker?: string;
   bubbleText?: string;
@@ -104,7 +104,7 @@ interface SceneCameraHeroProps {
 /**
  * ناحیه‌ی تصویر بالای صفحه‌ی صحنه: عکس صحنه + دوربینی که با زوم و pan روی
  * هات‌اسپات فعال وسط‌چین می‌شود + کنترل‌های شناور روی تصویر (استریک و دکمه‌ی
- * مرحله‌ی بعد). تمام منطق انیمیشن دوربین همین‌جا کپسوله شده.
+ * خروج به خانه). تمام منطق انیمیشن دوربین همین‌جا کپسوله شده.
  */
 export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   coverImage,
@@ -115,10 +115,9 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   activeTarget,
   sceneFinished,
   refocusKey,
-  isShadowingMode,
   streakCount,
   onStreakPress,
-  onForward,
+  onExit,
   bubbleSpeaker,
   bubbleText,
   bubbleContent,
@@ -334,11 +333,11 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
         )}
       </Animated.View>
 
-      {/* Overlay Header: streak · (shadowing mode) next-step */}
+      {/* Overlay Header: streak · exit-to-home */}
       {/* تصویر زیر نوار وضعیت کشیده شده، پس دکمه‌ها باید پایین‌تر از آن بنشینند */}
       <View style={[styles.imageHeaderOverlay, { top: insetsTop + 8 }]}>
         {/* حین حرکت/زوم دوربین روی هات‌اسپات، بج استریک از روی تصویر برداشته
-            می‌شود؛ opacity (نه حذف از درخت) استفاده می‌شود تا دکمه‌ی بعدی با
+            می‌شود؛ opacity (نه حذف از درخت) استفاده می‌شود تا دکمه‌ی خروج با
             «space-between» جابه‌جا نشود. */}
         <TouchableOpacity
           activeOpacity={0.85}
@@ -350,11 +349,9 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
           <Flame size={14} color={COLORS.secondary} fill={COLORS.secondary} />
         </TouchableOpacity>
 
-        {isShadowingMode && (
-          <TouchableOpacity activeOpacity={0.85} style={styles.overlayIconBtn} onPress={onForward}>
-            <ArrowRight size={18} color={COLORS.text} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity activeOpacity={0.85} style={styles.overlayIconBtn} onPress={onExit}>
+          <X size={18} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
     </View>

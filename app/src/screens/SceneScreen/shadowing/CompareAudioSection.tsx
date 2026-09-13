@@ -48,7 +48,7 @@ export const CompareAudioSection: React.FC<{
       </View>
       <View style={styles.abRowBody}>
         <Text style={styles.compareLabel}>{t('masterAudio')}</Text>
-        <WaveBars active color={COLORS.primary} />
+        <WaveBars active color={COLORS.audioOriginal} />
       </View>
     </TouchableOpacity>
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.tertiary,
   },
   scoreBtnText: {
     color: COLORS.white,

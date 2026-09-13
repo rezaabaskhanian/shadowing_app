@@ -18,8 +18,11 @@ export const RepeatProgressRow: React.FC<{
   repeatCount: number;
   totalRepeats: number;
   onNextStep: () => void;
+  /** رنگ اختصاصیِ مرحله‌ی فعلی، برای نقطه‌های تکرار و دکمه‌ی مرحله‌ی بعد. */
+  accentColor: string;
+  accentLightColor: string;
   t: (key: string) => string;
-}> = ({ autoRepeat, repeatCount, totalRepeats, onNextStep, t }) => {
+}> = ({ autoRepeat, repeatCount, totalRepeats, onNextStep, accentColor, accentLightColor, t }) => {
   // در حالت بی‌نهایت شمارنده‌ی نقطه‌ای معنی ندارد و فقط عدد دور را نشان می‌دهیم.
   const unlimited = totalRepeats === 0;
 
@@ -36,7 +39,7 @@ export const RepeatProgressRow: React.FC<{
               {Array.from({ length: totalRepeats }).map((_, idx) => (
                 <View
                   key={idx}
-                  style={[styles.repeatDot, idx < repeatCount ? styles.repeatDotActive : null]}
+                  style={[styles.repeatDot, idx < repeatCount ? { backgroundColor: accentColor } : null]}
                 />
               ))}
             </View>
@@ -49,9 +52,13 @@ export const RepeatProgressRow: React.FC<{
         <Text style={styles.repeatHintText}>{t('selfPacedHint')}</Text>
       )}
 
-      <TouchableOpacity style={styles.nextStepBtn} activeOpacity={0.8} onPress={onNextStep}>
-        <Text style={styles.nextStepBtnText}>{t('nextStep')}</Text>
-        <ChevronRight size={14} color={COLORS.primary} />
+      <TouchableOpacity
+        style={[styles.nextStepBtn, { backgroundColor: accentLightColor }]}
+        activeOpacity={0.8}
+        onPress={onNextStep}
+      >
+        <Text style={[styles.nextStepBtnText, { color: accentColor }]}>{t('nextStep')}</Text>
+        <ChevronRight size={14} color={accentColor} />
       </TouchableOpacity>
     </View>
   );
@@ -94,20 +101,15 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: COLORS.border,
   },
-  repeatDotActive: {
-    backgroundColor: COLORS.primary,
-  },
   nextStepBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   nextStepBtnText: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
   },

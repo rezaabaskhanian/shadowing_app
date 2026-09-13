@@ -8,12 +8,12 @@ export const COLORS = {
   surfaceHigh: '#e2e8f8',
   surfaceHighest: '#dce2f3',
 
-  // Brand & Accent Colors
-  primary: '#3525cd', // Indigo — CTAs, active states, focus
-  primaryDark: '#2a1ea3',
-  primaryContainer: '#4f46e5',
-  primaryLight: 'rgba(53, 37, 205, 0.10)',
-  onPrimaryContainer: '#dad7ff',
+  // Brand & Accent Colors — بنفشِ برگرفته از لوگوی جدید (مارپیچ بنفش/فیروزه‌ای/نارنجی)
+  primary: '#6D28D9', // Violet — CTAs, active states, focus
+  primaryDark: '#5B21B6',
+  primaryContainer: '#8B5CF6',
+  primaryLight: 'rgba(109, 40, 217, 0.10)',
+  onPrimaryContainer: '#ede4ff',
 
   // Gold — فقط استریک، دستاورد و امتیاز/سکه. برای وضعیت (pending/ضعیف)،
   // آمار، دسته‌بندی یا حالتِ فعال از این توکن استفاده نکن؛ آن‌ها توکن

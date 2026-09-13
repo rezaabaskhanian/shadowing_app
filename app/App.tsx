@@ -18,9 +18,46 @@ import { NotificationBanner } from './src/components/NotificationBanner';
 import { ToastProvider } from './src/data/ToastContext';
 import { queryClient } from './src/data/queryClient';
 import { Toast } from './src/components/Toast';
+import { getAssessmentTest, getSpeakingProfile, type AssessmentItem } from './src/api/assessment';
+import { PlacementTestFlow } from './src/screens/PlacementTest';
+
+type PlacementGateStatus = 'checking' | 'show' | 'hide';
 
 function AppContent({ showSplash }: { showSplash: boolean }) {
   const { isAuthenticated, isRestoring } = useAuth();
+  const [placementStatus, setPlacementStatus] = useState<PlacementGateStatus>('checking');
+  const [placementItems, setPlacementItems] = useState<AssessmentItem[] | null>(null);
+
+  // فقط یک‌بار به‌ازای هر ورود بررسی می‌شود: اگر ادمین محتوایی برای تست
+  // نساخته باشد، کل فیچر باید نامرئی بماند و اصلاً سراغ پروفایل نمی‌رویم؛
+  // اگر محتوا هست ولی کاربر قبلاً تست داده (پروفایل دارد)، هم رد می‌شویم.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let active = true;
+    (async () => {
+      try {
+        const items = await getAssessmentTest();
+        if (!active) return;
+        if (!items || items.length === 0) {
+          setPlacementStatus('hide');
+          return;
+        }
+        const profile = await getSpeakingProfile();
+        if (!active) return;
+        if (profile) {
+          setPlacementStatus('hide');
+        } else {
+          setPlacementItems(items);
+          setPlacementStatus('show');
+        }
+      } catch {
+        if (active) setPlacementStatus('hide');
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
   if (showSplash || isRestoring) {
     return (
@@ -37,6 +74,28 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
         <StatusBar barStyle="light-content" />
         <NotificationBanner />
         <AuthScreens />
+      </NotificationProvider>
+    );
+  }
+
+  if (placementStatus === 'checking') {
+    return (
+      <>
+        <StatusBar barStyle="light-content" />
+        <SplashScreen />
+      </>
+    );
+  }
+
+  if (placementStatus === 'show') {
+    return (
+      <NotificationProvider>
+        <StatusBar barStyle="light-content" />
+        <PlacementTestFlow
+          items={placementItems}
+          onSkip={() => setPlacementStatus('hide')}
+          onDone={() => setPlacementStatus('hide')}
+        />
       </NotificationProvider>
     );
   }
