@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { getDeviceLanguage } from '../utils/deviceLanguage';
 
 export type Language = 'en' | 'fa';
 
@@ -78,15 +79,43 @@ export const translations: Translations = {
   noScenariosMatch: { en: 'No scenarios match your filters.', fa: 'سناریویی با این فیلترها پیدا نشد.' },
   searchScenesPlaceholder: { en: 'Search scenarios…', fa: 'جست‌وجوی سناریوها…' },
 
+  // Onboarding Walkthrough (first app open only)
+  onboardingSkip: { en: 'Skip', fa: 'رد کردن' },
+  onboardingNext: { en: 'Next', fa: 'بعدی' },
+  onboardingGetStarted: { en: "Let's go", fa: 'بزن بریم' },
+  onboardingSlide1Title: { en: 'See it. Hear it.', fa: 'ببین. بشنو.' },
+  onboardingSlide1Sub: {
+    en: 'Step into real situations — a cafe, a hotel, an interview — and hear how native speakers actually talk.',
+    fa: 'وارد موقعیت‌های واقعی شو — کافه، هتل، مصاحبه — و بشنو که یک انگلیسی‌زبان بومی واقعاً چطور صحبت می‌کنه.',
+  },
+  onboardingSlide2Title: { en: 'Shadow it. Record it.', fa: 'تقلید کن. ضبط کن.' },
+  onboardingSlide2Sub: {
+    en: 'Repeat right along with the speaker, then record your own voice and compare.',
+    fa: 'همزمان با گوینده تکرار کن، بعد صدای خودت رو ضبط کن و با اصلش مقایسه کن.',
+  },
+  onboardingSlide3Title: { en: 'Get feedback. Improve.', fa: 'بازخورد بگیر. پیشرفت کن.' },
+  onboardingSlide3Sub: {
+    en: "AI checks your pronunciation and fluency and tells you exactly what to fix. Retry until it clicks.",
+    fa: 'هوش‌مصنوعی تلفظ و روانی گفتارت رو می‌سنجه و دقیق می‌گه چی رو اصلاح کنی. دوباره امتحان کن تا جا بیفته.',
+  },
+
   // Progress Screen
   greatJobTitle: { en: 'Great Job!', fa: 'عالی بود!' },
   greatJobSub: { en: 'You did amazing on today\'s practice.', fa: 'عملکرد فوق‌العاده‌ای در تمرین امروز داشتید.' },
   overallScore: { en: 'Overall Score', fa: 'نمره کل' },
   pronunciation: { en: 'Clarity', fa: 'وضوح' },
   vocabulary: { en: 'Vocabulary', fa: 'دایره واژگان' },
+  grammar: { en: 'Grammar', fa: 'گرامر' },
   listening: { en: 'Listening', fa: 'شنیداری' },
   weeklyActivity: { en: 'Weekly Activity', fa: 'فعالیت هفتگی' },
   weeklyActivitySub: { en: 'Minutes practiced per day', fa: 'دقیقه‌های تمرین در هر روز' },
+  progressTrend: { en: 'Progress Over Time', fa: 'پیشرفت در طول زمان' },
+  progressTrendSub: { en: 'Your average speaking score, week by week', fa: 'میانگین نمره‌ی گفتاری شما، هفته به هفته' },
+  progressTrendEmpty: {
+    en: 'Practice a few sessions to start seeing your trend here.',
+    fa: 'چند تمرین انجام بده تا روند پیشرفتت اینجا نمایش داده بشه.',
+  },
+  progressTrendWeekLabel: { en: 'Wk', fa: 'هفته' },
   skillBreakdown: { en: 'Skill Breakdown', fa: 'تفکیک مهارت‌ها' },
   achievementsTitle: { en: 'Achievements', fa: 'دستاوردها' },
   achievementsEmpty: {
@@ -110,6 +139,26 @@ export const translations: Translations = {
     en: "If you haven't practiced today, we'll send you a reminder so your streak doesn't break.",
     fa: 'اگه امروز هنوز تمرین نکرده باشی، بهت یادآوری می‌فرستیم تا استریکت نشکنه.',
   },
+  vocabReminderTitle: { en: 'Vocabulary reminder', fa: 'یادآوری واژگان' },
+  vocabReminderSub: {
+    en: "When a word in your Leitner box is due for review, we'll send you a reminder.",
+    fa: 'وقتی کلمه‌ای تو جعبه‌ی لایتنرت سررسید مرور بشه، بهت یادآوری می‌فرستیم.',
+  },
+  weeklyDigestTitle: { en: 'Weekly report', fa: 'گزارش هفتگی' },
+  weeklyDigestSub: {
+    en: 'A weekly summary of your speaking progress and weakest skill — only when you actually practiced.',
+    fa: 'خلاصه‌ی هفتگیِ پیشرفت گفتاری‌ات و ضعیف‌ترین مهارتت — فقط وقتی واقعاً تمرین کرده باشی.',
+  },
+  learningGoalTitle: { en: 'Learning goal', fa: 'هدف یادگیری' },
+  learningGoalSub: {
+    en: "Optional — helps us lean today's mission toward scenes that fit your goal.",
+    fa: 'اختیاری — کمک می‌کنه Today’s Mission بیشتر سمت صحنه‌های مرتبط با هدفت بره.',
+  },
+  learningGoalNone: { en: 'None', fa: 'هیچ‌کدام' },
+  learningGoalTravel: { en: 'Travel', fa: 'سفر' },
+  learningGoalWork: { en: 'Work', fa: 'کار' },
+  learningGoalDailyLife: { en: 'Daily Life', fa: 'زندگی روزمره' },
+  learningGoalStudy: { en: 'Study', fa: 'تحصیل' },
 
   // Profile Screen
   profileTitle: { en: 'Profile', fa: 'حساب کاربری' },
@@ -311,6 +360,30 @@ export const translations: Translations = {
     en: 'You recorded and compared every sentence in this scene.',
     fa: 'همه‌ی جمله‌های این صحنه را ضبط و مقایسه کردی.'
   },
+
+  // AI Conversation — گفتگوی آزاد صوتی بعد از تمام‌شدنِ یک صحنه
+  startAiConversation: { en: 'Practice free conversation', fa: 'گفتگوی آزاد با هوش مصنوعی' },
+  aiConversationTitle: { en: 'AI Conversation', fa: 'گفتگو با هوش مصنوعی' },
+  aiConversationRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
+  aiConversationSending: { en: 'Sending...', fa: 'در حال ارسال...' },
+  aiConversationRetryHint: { en: "Didn't catch that — try again", fa: 'متوجه نشدم — دوباره امتحان کن' },
+  aiConversationEndedTitle: { en: 'Conversation complete! 🎉', fa: 'گفتگو تمام شد! 🎉' },
+  aiConversationEndedMessage: { en: 'Great job practicing!', fa: 'آفرین، تمرین خوبی بود!' },
+  aiConversationTurnProgress: { en: 'Turn {current} of {total}', fa: 'نوبت {current} از {total}' },
+  aiConversationLoadError: { en: 'Could not start the conversation', fa: 'شروع گفتگو ممکن نشد' },
+  grammarTipLabel: { en: 'Better:', fa: 'بهتره اینطوری بگی:' },
+
+  // Free Speech — یک بار توضیحِ آزاد بعد از تمام‌شدنِ یک صحنه (بدون پاسخِ AI)
+  startFreeSpeech: { en: 'Describe what happened', fa: 'توضیح بده چی شد' },
+  freeSpeechTitle: { en: 'Free Speech', fa: 'توضیح آزاد' },
+  freeSpeechPrompt: {
+    en: 'Describe, in your own words, what happened in this situation.',
+    fa: 'با کلمات خودت توضیح بده توی این موقعیت چی اتفاق افتاد.',
+  },
+  freeSpeechRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
+  freeSpeechYourAnswer: { en: 'What you said', fa: 'چیزی که گفتی' },
+  freeSpeechTryAgain: { en: 'Try again', fa: 'دوباره امتحان کن' },
+  freeSpeechRetryHint: { en: "Didn't catch that — try again", fa: 'متوجه نشدم — دوباره امتحان کن' },
   lessonIncompleteTitle: { en: 'Lesson not finished yet', fa: 'درس هنوز تمام نشده' },
   lessonIncompleteMessage: {
     en: "You haven't compared every sentence yet — finish the remaining ones first.",
@@ -675,7 +748,13 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  // دیفالت از رویِ locale خودِ دستگاه است، نه همیشه یک زبانِ ثابت — مخاطب
+  // اصلی LingoFlow کاربر ایرانی است (بخش ۱۹ سند محصول)، پس گوشیِ فارسی باید
+  // همان اول فارسی ببیند، ولی این نباید هر نصب (مثلاً ریویوی استور) را هم
+  // به‌زور فارسی کند. همان getDeviceLanguage که سرویس نوتیفیکیشن از قبل
+  // استفاده می‌کند، اینجا هم دوباره استفاده می‌شود. کاربر همچنان می‌تواند از
+  // تنظیمات دستی سوییچ کند.
+  const [language, setLanguage] = useState<Language>(() => getDeviceLanguage());
 
   // t باید پایدار باشد: در سراسر اپ داخل dependency array هوک‌ها می‌نشیند، پس
   // اگر هر رندر تابع تازه‌ای باشد، آن هوک‌ها هم بی‌دلیل دوباره اجرا می‌شوند.

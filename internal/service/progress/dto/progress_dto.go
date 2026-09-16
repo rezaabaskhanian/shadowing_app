@@ -110,6 +110,20 @@ type GetSkillsBreakdownResponse struct {
 	Pronunciation int `json:"pronunciation"`
 	Fluency       int `json:"fluency"`
 	Vocabulary    int `json:"vocabulary"`
+	Grammar       int `json:"grammar"`
+}
+
+// ============================================
+// GetProgressTrend
+// ============================================
+type GetProgressTrendResponse struct {
+	Weeks []WeekTrendDTO `json:"weeks"`
+}
+
+type WeekTrendDTO struct {
+	WeekStart string `json:"week_start"` // "2006-01-02", شروع هفته (دوشنبه)
+	Speaking  int    `json:"speaking"`   // میانگین تلفظ/روانی گفتار آن هفته (0-100)
+	Sessions  int    `json:"sessions"`   // تعداد ضبط/نمره‌دهی آن هفته؛ ۰ یعنی هفته بدون تمرین
 }
 
 // ============================================

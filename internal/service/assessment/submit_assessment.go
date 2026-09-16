@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"sync"
 
 	"shadowing-backend/internal/domain/assessment"
 	"shadowing-backend/internal/pkg/richerror"
@@ -50,11 +51,31 @@ func (s *Service) SubmitAssessment(ctx context.Context, userIDStr string, submit
 		itemByID[it.ID] = it
 	}
 
+	// آیتم‌ها مستقل از هم‌اند (هر کدام صدای خودشان را رونویسی/نمره‌دهی
+	// می‌کنند)، پس هم‌زمان پردازش می‌شوند نه پشت‌سرهم — با ۵ آیتم و چند
+	// فراخوانیِ شبکه‌ای (Whisper + AI) به‌ازای هرکدام، پردازشِ ترتیبی چند
+	// برابر بیشتر از لازم طول می‌کشید. هر گوروتین فقط اندیسِ خودش را در
+	// outcomes می‌نویسد، پس رقابتی روی حافظه‌ی مشترک وجود ندارد.
+	outcomes := make([]itemOutcome, len(submitted))
+	var wg sync.WaitGroup
+	for i, sub := range submitted {
+		wg.Add(1)
+		go func(i int, sub dto.SubmitItem) {
+			defer wg.Done()
+			outcomes[i] = s.processItem(ctx, userID, sub, itemByID)
+		}(i, sub)
+	}
+	wg.Wait()
+
 	var results []dto.ItemResultDTO
 	var shadowResults []speecheval.EvaluationResult
-
-	for _, sub := range submitted {
-		s.processItem(ctx, userID, sub, itemByID, &results, &shadowResults)
+	for _, o := range outcomes {
+		if o.result != nil {
+			results = append(results, *o.result)
+		}
+		if o.shadow != nil {
+			shadowResults = append(shadowResults, *o.shadow)
+		}
 	}
 
 	if len(shadowResults) == 0 {
@@ -82,6 +103,13 @@ func (s *Service) SubmitAssessment(ctx context.Context, userIDStr string, submit
 	}, nil
 }
 
+// itemOutcome نتیجه‌ی پردازشِ یک آیتم — هر گوروتین یکی از این‌ها را در
+// اندیسِ خودش در outcomes می‌نویسد، بدون نیاز به قفل.
+type itemOutcome struct {
+	result *dto.ItemResultDTO
+	shadow *speecheval.EvaluationResult
+}
+
 // processItem یک آیتم ارسالی را پردازش می‌کند و همیشه (موفق یا ناموفق) فایل
 // موقت آن را پاک می‌کند — مطابق قاعده‌ی کلی پروژه که صدای کاربر روی سرور
 // نگه‌داری نمی‌شود.
@@ -90,9 +118,7 @@ func (s *Service) processItem(
 	userID uuid.UUID,
 	sub dto.SubmitItem,
 	itemByID map[uuid.UUID]assessment.AssessmentItem,
-	results *[]dto.ItemResultDTO,
-	shadowResults *[]speecheval.EvaluationResult,
-) {
+) itemOutcome {
 	defer func() {
 		if err := os.Remove(sub.LocalAudioPath); err != nil && !os.IsNotExist(err) {
 			slog.Warn("assessment: failed to remove temp recording", "err", err)
@@ -101,11 +127,11 @@ func (s *Service) processItem(
 
 	id, err := uuid.Parse(sub.ItemID)
 	if err != nil {
-		return
+		return itemOutcome{}
 	}
 	item, ok := itemByID[id]
 	if !ok {
-		return
+		return itemOutcome{}
 	}
 
 	switch item.Kind {
@@ -115,33 +141,41 @@ func (s *Service) processItem(
 			AudioPath:       sub.LocalAudioPath,
 			DurationSeconds: sub.Duration,
 		})
-		*shadowResults = append(*shadowResults, result)
 
 		pron, flu, ov := result.PronunciationScore, result.FluencyScore, result.OverallScore
-		*results = append(*results, dto.ItemResultDTO{
-			ItemID:             sub.ItemID,
-			Kind:               string(item.Kind),
-			PronunciationScore: &pron,
-			FluencyScore:       &flu,
-			OverallScore:       &ov,
-		})
-		if err := s.log.Insert(ctx, userID, item.ID, result.Transcript, "", "", &pron, &flu, &ov); err != nil {
+		if err := s.log.Insert(ctx, userID, item.ID, result.Transcript, "", "", "", "", &pron, &flu, &ov); err != nil {
 			slog.Warn("assessment: failed to log submission item", "err", err)
+		}
+		return itemOutcome{
+			result: &dto.ItemResultDTO{
+				ItemID:             sub.ItemID,
+				Kind:               string(item.Kind),
+				PronunciationScore: &pron,
+				FluencyScore:       &flu,
+				OverallScore:       &ov,
+			},
+			shadow: &result,
 		}
 
 	case assessment.KindFreeSpeech:
-		transcript, answered, feedback := s.evaluateFreeSpeech(ctx, item, sub.LocalAudioPath)
-		*results = append(*results, dto.ItemResultDTO{
-			ItemID:            sub.ItemID,
-			Kind:              string(item.Kind),
-			Transcript:        transcript,
-			RelevanceAnswered: answered,
-			RelevanceFeedback: feedback,
-		})
-		if err := s.log.Insert(ctx, userID, item.ID, transcript, answered, feedback, nil, nil, nil); err != nil {
+		transcript, answered, feedback, grammarCorrection, grammarExplanation := s.evaluateFreeSpeech(ctx, item, sub.LocalAudioPath)
+		if err := s.log.Insert(ctx, userID, item.ID, transcript, answered, feedback, grammarCorrection, grammarExplanation, nil, nil, nil); err != nil {
 			slog.Warn("assessment: failed to log submission item", "err", err)
 		}
+		return itemOutcome{
+			result: &dto.ItemResultDTO{
+				ItemID:             sub.ItemID,
+				Kind:               string(item.Kind),
+				Transcript:         transcript,
+				RelevanceAnswered:  answered,
+				RelevanceFeedback:  feedback,
+				GrammarCorrection:  grammarCorrection,
+				GrammarExplanation: grammarExplanation,
+			},
+		}
 	}
+
+	return itemOutcome{}
 }
 
 // averageShadowResults نمره‌ی نهایی را از میانگین چند جمله‌ی shadow (معمولاً
@@ -162,17 +196,40 @@ func round1(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
-func (s *Service) evaluateFreeSpeech(ctx context.Context, item assessment.AssessmentItem, audioPath string) (transcript, answered, feedback string) {
+// evaluateFreeSpeech رونویسی + بررسیِ ربط + بررسیِ گرامر را انجام می‌دهد.
+// ربط و گرامر مستقل از هم هستند (هر دو فقط به transcript نیاز دارند)، پس
+// هم‌زمان فراخوانی می‌شوند نه پشت‌سرهم — دو فراخوانیِ AI پشت‌سرهم تقریباً دو
+// برابرِ یک فراخوانی طول می‌کشید. شکستِ یکی مانع محاسبه‌ی دیگری نمی‌شود، و
+// هیچ‌کدام کل ارسال را نمی‌شکند (فقط فیلدهای مربوطه خالی می‌مانند).
+func (s *Service) evaluateFreeSpeech(ctx context.Context, item assessment.AssessmentItem, audioPath string) (transcript, answered, feedback, grammarCorrection, grammarExplanation string) {
 	transcript, err := s.evaluator.TranscribeOnly(ctx, audioPath)
 	if err != nil {
 		slog.Warn("assessment: transcription failed", "err", err)
-		return "", "no", unavailableFeedback
+		return "", "no", unavailableFeedback, "", ""
 	}
 
-	rel, err := s.ai.CheckAnswerRelevance(ctx, item.PromptText, transcript)
-	if err != nil {
-		slog.Warn("assessment: relevance check failed", "err", err)
-		return transcript, "no", unavailableFeedback
-	}
-	return transcript, rel.Answered, rel.Feedback
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		if rel, err := s.ai.CheckAnswerRelevance(ctx, item.PromptText, transcript); err == nil {
+			answered, feedback = rel.Answered, rel.Feedback
+		} else {
+			slog.Warn("assessment: relevance check failed", "err", err)
+			answered, feedback = "no", unavailableFeedback
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if grammar, err := s.ai.CheckGrammar(ctx, transcript); err == nil {
+			grammarCorrection, grammarExplanation = grammar.Corrected, grammar.Explanation
+		} else {
+			slog.Warn("assessment: grammar check failed", "err", err)
+		}
+	}()
+
+	wg.Wait()
+	return transcript, answered, feedback, grammarCorrection, grammarExplanation
 }

@@ -33,6 +33,21 @@ type updateNotificationSettingsRequest struct {
 	ContentNotifEnabled   bool     `json:"content_notif_enabled"`
 	ContentSource         string   `json:"content_source"`
 	StreakReminderEnabled bool     `json:"streak_reminder_enabled"`
+	VocabReminderEnabled  bool     `json:"vocab_reminder_enabled"`
+	LearningGoal          string   `json:"learning_goal"`
+	WeeklyDigestEnabled   bool     `json:"weekly_digest_enabled"`
+}
+
+// allowedLearningGoals گزینه‌های ثابتِ قابل‌انتخاب برای هدف یادگیری —
+// همان‌هایی که پیکر سمت اپ نشان می‌دهد؛ هر مقدار دیگری بی‌صدا نادیده گرفته
+// می‌شود (هدف تنظیم‌نشده باقی می‌ماند) تا رشته‌ی دلخواه/ناهماهنگ در دیتابیس
+// ذخیره نشود.
+var allowedLearningGoals = map[string]bool{
+	"":           true,
+	"Travel":     true,
+	"Work":       true,
+	"Daily Life": true,
+	"Study":      true,
 }
 
 // maxReminderTimes سقف تعداد ساعت‌های یادآوری روزانه‌ی یک کاربر؛ چون هر ساعت
@@ -79,6 +94,9 @@ func (h Handler) UpdateNotificationSettings(c echo.Context) error {
 	if req.ContentSource != "leitner" && req.ContentSource != "sentences" && req.ContentSource != "mixed" {
 		req.ContentSource = "mixed"
 	}
+	if !allowedLearningGoals[req.LearningGoal] {
+		req.LearningGoal = ""
+	}
 
 	times := normalizeReminderTimes(req.DailyReminderTimes)
 	// یادآوری روزانه بدون هیچ ساعتی معنایی ندارد؛ خاموش حساب می‌شود.
@@ -91,6 +109,9 @@ func (h Handler) UpdateNotificationSettings(c echo.Context) error {
 		ContentNotifEnabled:   req.ContentNotifEnabled,
 		ContentSource:         req.ContentSource,
 		StreakReminderEnabled: req.StreakReminderEnabled,
+		VocabReminderEnabled:  req.VocabReminderEnabled,
+		LearningGoal:          req.LearningGoal,
+		WeeklyDigestEnabled:   req.WeeklyDigestEnabled,
 	})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در ذخیره تنظیمات نوتیفیکیشن"})

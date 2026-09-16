@@ -90,6 +90,15 @@ export const PlacementTestResultScreen: React.FC<PlacementTestResultScreenProps>
                   {!!item.relevance_feedback && (
                     <Text style={styles.relevanceFeedback}>{item.relevance_feedback}</Text>
                   )}
+                  {!!item.grammar_correction && (
+                    <View style={styles.grammarTip}>
+                      <Text style={styles.grammarTipLabel}>{t('grammarTipLabel')}</Text>
+                      <Text style={styles.grammarTipText}>{item.grammar_correction}</Text>
+                      {!!item.grammar_explanation && (
+                        <Text style={styles.grammarTipExplanation}>{item.grammar_explanation}</Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -193,6 +202,27 @@ const styles = StyleSheet.create({
   relevanceFeedback: {
     ...TEXT_STYLES.labelMd,
     color: COLORS.textSecondary,
+  },
+  grammarTip: {
+    marginTop: SPACING.xs,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.s,
+  },
+  grammarTipLabel: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  grammarTipText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  grammarTipExplanation: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   continueBtn: {
     backgroundColor: COLORS.primary,

@@ -32,9 +32,15 @@ func (s *Service) GetSkillsBreakdown(ctx context.Context, userID string) (*dto.G
 		vocabulary = int(avgLevel / maxLeitnerLevel * 100)
 	}
 
+	grammar := 0
+	if clean, total, err := s.grammarRepo.CleanRate(ctx, uid); err == nil && total > 0 {
+		grammar = int(float64(clean) / float64(total) * 100)
+	}
+
 	return &dto.GetSkillsBreakdownResponse{
 		Pronunciation: int(avgPronunciation),
 		Fluency:       int(avgFluency),
 		Vocabulary:    vocabulary,
+		Grammar:       grammar,
 	}, nil
 }

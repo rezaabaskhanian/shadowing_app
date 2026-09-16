@@ -22,19 +22,19 @@ func NewSubmissionLogRepository(db *pgxpool.Pool) *SubmissionLogRepository {
 func (r *SubmissionLogRepository) Insert(
 	ctx context.Context,
 	userID, itemID uuid.UUID,
-	transcript, relevanceAnswered, relevanceFeedback string,
+	transcript, relevanceAnswered, relevanceFeedback, grammarCorrection, grammarExplanation string,
 	pronunciationScore, fluencyScore, overallScore *float64,
 ) error {
 	const op = "postgresassessment.SubmissionLogRepository.Insert"
 
 	query := `INSERT INTO assessment_submission_items (
 		id, user_id, item_id, transcript, relevance_answered, relevance_feedback,
-		pronunciation_score, fluency_score, overall_score
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+		grammar_correction, grammar_explanation, pronunciation_score, fluency_score, overall_score
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := r.db.Exec(ctx, query,
 		uuid.New(), userID, itemID, nullable(transcript), nullable(relevanceAnswered), nullable(relevanceFeedback),
-		pronunciationScore, fluencyScore, overallScore,
+		nullable(grammarCorrection), nullable(grammarExplanation), pronunciationScore, fluencyScore, overallScore,
 	)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to log assessment submission item")

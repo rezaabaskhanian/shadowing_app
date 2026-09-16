@@ -31,13 +31,17 @@ type SubmitItem struct {
 }
 
 type ItemResultDTO struct {
-	ItemID   string `json:"item_id"`
-	Kind     string `json:"kind"`
+	ItemID string `json:"item_id"`
+	Kind   string `json:"kind"`
 	// Transcript فقط برای free_speech پر می‌شود.
 	Transcript string `json:"transcript,omitempty"`
 	// RelevanceAnswered/RelevanceFeedback فقط برای free_speech.
 	RelevanceAnswered string `json:"relevance_answered,omitempty"`
 	RelevanceFeedback string `json:"relevance_feedback,omitempty"`
+	// GrammarCorrection/GrammarExplanation فقط برای free_speech، و فقط وقتی
+	// خطای گرامریِ قابل‌توجهی پیدا شده باشد (بخش ۱۸ سند محصول).
+	GrammarCorrection  string `json:"grammar_correction,omitempty"`
+	GrammarExplanation string `json:"grammar_explanation,omitempty"`
 	// امتیازها فقط برای shadow پر می‌شوند؛ برای free_speech عمداً nil می‌مانند
 	// تا نمره‌ی ساختگی نمایش داده نشود.
 	PronunciationScore *float64 `json:"pronunciation_score,omitempty"`

@@ -40,6 +40,8 @@ import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
 import { CurriculumMapScreen } from '../screens/CurriculumMap/CurriculumMapScreen';
 import { QuizScreen } from '../screens/Quiz/QuizScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
+import { AIConversationScreen } from '../screens/AIConversation';
+import { FreeSpeechScreen } from '../screens/FreeSpeech';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { useLanguage } from '../data/i18n';
 
@@ -59,6 +61,8 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'HelpFaq',
   'CurriculumMap',
   'SceneQuiz',
+  'AIConversation',
+  'FreeSpeech',
   'Paywall',
   'ToastDemo',
 ];
@@ -266,6 +270,20 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="SceneQuiz"
         component={QuizScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="AIConversation"
+        component={AIConversationScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="FreeSpeech"
+        component={FreeSpeechScreen}
         options={{
           tabBarButton: () => null,
         }}

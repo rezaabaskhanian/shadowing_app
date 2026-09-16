@@ -117,6 +117,94 @@ func (p *geminiProvider) generateScene(ctx context.Context, prompt, difficulty s
 	return scene, nil
 }
 
+func (p *geminiProvider) checkGrammar(ctx context.Context, transcript string) (GrammarResult, error) {
+	const op = "aiservice.geminiProvider.checkGrammar"
+
+	key := p.apiKey()
+	if key == "" {
+		return GrammarResult{}, richerror.New(op).WithMessage("کلید GEMINI_API_KEY تنظیم نشده است")
+	}
+
+	client, err := p.clientFor(ctx, key)
+	if err != nil {
+		return GrammarResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در ساخت کلاینت Gemini: %v", err))
+	}
+
+	resp, err := client.Models.GenerateContent(
+		ctx,
+		p.model(),
+		genai.Text(transcript),
+		&genai.GenerateContentConfig{
+			SystemInstruction: genai.NewContentFromText(grammarSystemPrompt, genai.RoleUser),
+			ResponseMIMEType:  "application/json",
+		},
+	)
+	if err != nil {
+		return GrammarResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
+	}
+
+	jsonStr := extractJSON(resp.Text())
+	var result GrammarResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return GrammarResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (Gemini) قابل پردازش نبود")
+	}
+	return result, nil
+}
+
+func (p *geminiProvider) converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
+	const op = "aiservice.geminiProvider.converse"
+
+	key := p.apiKey()
+	if key == "" {
+		return ConversationResult{}, richerror.New(op).WithMessage("کلید GEMINI_API_KEY تنظیم نشده است")
+	}
+
+	client, err := p.clientFor(ctx, key)
+	if err != nil {
+		return ConversationResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در ساخت کلاینت Gemini: %v", err))
+	}
+
+	systemPrompt := fmt.Sprintf(conversationSystemPromptTemplate, sceneTitle, sceneDescription, sceneCategory, turnNumber, maxTurns, wrapUpFromTurn)
+
+	contents := make([]*genai.Content, 0, len(history)+1)
+	for _, turn := range history {
+		var role genai.Role = genai.RoleUser
+		if turn.Role == "assistant" {
+			role = genai.RoleModel
+		}
+		contents = append(contents, genai.NewContentFromText(turn.Text, role))
+	}
+	if len(contents) == 0 {
+		contents = append(contents, genai.NewContentFromText("(Begin the conversation in character.)", genai.RoleUser))
+	}
+
+	resp, err := client.Models.GenerateContent(
+		ctx,
+		p.model(),
+		contents,
+		&genai.GenerateContentConfig{
+			SystemInstruction: genai.NewContentFromText(systemPrompt, genai.RoleUser),
+			ResponseMIMEType:  "application/json",
+		},
+	)
+	if err != nil {
+		return ConversationResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
+	}
+
+	jsonStr := extractJSON(resp.Text())
+	var result ConversationResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return ConversationResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (Gemini) قابل پردازش نبود")
+	}
+	return result, nil
+}
+
 func (p *geminiProvider) checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
 	const op = "aiservice.geminiProvider.checkRelevance"
 

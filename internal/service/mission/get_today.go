@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"math"
+	"strings"
 	"time"
 
 	"shadowing-backend/internal/domain/assessment"
@@ -94,26 +95,20 @@ func (s *Service) GetTodaysMission(ctx context.Context, userID string) (*dto.Tod
 		}
 	}
 
-	chosen := pickScene(candidates, targetDifficulty, completed, completedAt)
+	goal := ""
+	if g, goalErr := s.goals.GetLearningGoal(ctx, userID); goalErr == nil {
+		goal = g
+	} else {
+		slog.Warn("mission: failed to load learning goal, skipping goal-based bias", "err", goalErr)
+	}
+
+	chosen := pickScene(candidates, targetDifficulty, completed, completedAt, goal)
 
 	if isEstimated {
 		level = capitalize(string(chosen.Difficulty))
 	}
 
-	focusSkill := "speaking"
-	if pron, flu, skillErr := s.skills.AvgScoresByUser(ctx, uid); skillErr == nil {
-		switch {
-		case pron == 0 && flu == 0:
-			// هیچ ضبطی هنوز ثبت نشده — ادعای «مهارت ضعیف» از روی داده‌ی صفر
-			// جعلی است، پس برچسب عمومی نگه داشته می‌شود.
-		case pron <= flu:
-			focusSkill = "pronunciation"
-		default:
-			focusSkill = "fluency"
-		}
-	} else {
-		slog.Warn("mission: failed to load skill scores, using generic focus skill", "err", skillErr)
-	}
+	focusSkill := computeFocusSkill(ctx, s, uid)
 
 	estimatedMinutes := minEstimatedMinutes
 	if sceneUUID, parseErr := uuid.Parse(string(chosen.ID)); parseErr == nil {
@@ -140,17 +135,20 @@ func (s *Service) GetTodaysMission(ctx context.Context, userID string) (*dto.Tod
 // pickScene به ترتیبِ اولویت: صحنه‌ی ناتمام در سطحِ هدف → هر صحنه‌ی ناتمامِ
 // دیگر → آخرین صحنه‌ی تمام‌شده در سطحِ هدف (وقتی همه تمام شده‌اند) → اولین
 // کاندیدا (fallback نهاییِ نظری، عملاً هیچ‌وقت نباید به اینجا برسد چون
-// candidates خالی نیست).
-func pickScene(candidates []scene.Scene, target scene.DifficultyLevel, completed map[string]bool, completedAt map[string]time.Time) scene.Scene {
-	for _, sc := range candidates {
-		if sc.Difficulty == target && !completed[string(sc.ID)] {
-			return sc
-		}
+// candidates خالی نیست). داخل دو لایه‌ی اول، اگر کاربر goal انتخاب کرده باشد
+// و صحنه‌ای با Category هم‌راستا با آن در همان لایه موجود باشد، همان ترجیح
+// داده می‌شود — این یک اولویت‌دهیِ نرم است، هیچ صحنه‌ای هرگز به‌خاطر
+// نامرتبط‌بودنِ Category کنار گذاشته (filter) نمی‌شود.
+func pickScene(candidates []scene.Scene, target scene.DifficultyLevel, completed map[string]bool, completedAt map[string]time.Time, goal string) scene.Scene {
+	if sc, ok := pickPreferred(candidates, goal, func(sc scene.Scene) bool {
+		return sc.Difficulty == target && !completed[string(sc.ID)]
+	}); ok {
+		return sc
 	}
-	for _, sc := range candidates {
-		if !completed[string(sc.ID)] {
-			return sc
-		}
+	if sc, ok := pickPreferred(candidates, goal, func(sc scene.Scene) bool {
+		return !completed[string(sc.ID)]
+	}); ok {
+		return sc
 	}
 
 	var best scene.Scene
@@ -172,4 +170,87 @@ func pickScene(candidates []scene.Scene, target scene.DifficultyLevel, completed
 		return best
 	}
 	return candidates[0]
+}
+
+// matchesGoal بررسی می‌کند آیا Category صحنه با goal کاربر هم‌راستاست —
+// چون Category یک رشته‌ی آزاد است که هر صحنه توسط ادمین دستی وارد می‌شود
+// (نه یک enum ثابت)، مقایسه با substring دوطرفه و case-insensitive انجام
+// می‌شود تا هم "Travel" با category "Travel" و هم با چیزی مثل "Airport &
+// Travel" مچ شود.
+func matchesGoal(sc scene.Scene, goal string) bool {
+	if goal == "" {
+		return false
+	}
+	category := strings.TrimSpace(sc.Category)
+	if category == "" {
+		return false
+	}
+	g, c := strings.ToLower(goal), strings.ToLower(category)
+	return strings.Contains(c, g) || strings.Contains(g, c)
+}
+
+// pickPreferred اولین صحنه‌ی برآورده‌کننده‌ی filter را برمی‌گرداند، مگر
+// اینکه در همان مجموعه صحنه‌ای با Category هم‌راستا با goal پیدا شود که در
+// آن صورت آن ترجیح داده می‌شود. ترتیبِ candidates حفظ می‌شود، پس رفتار برای
+// goal خالی (پیش‌فرضِ همه‌ی کاربرانِ فعلی) دقیقاً همان رفتار قبلی است.
+func pickPreferred(candidates []scene.Scene, goal string, filter func(scene.Scene) bool) (scene.Scene, bool) {
+	var first scene.Scene
+	foundFirst := false
+	for _, sc := range candidates {
+		if !filter(sc) {
+			continue
+		}
+		if !foundFirst {
+			first, foundFirst = sc, true
+		}
+		if matchesGoal(sc, goal) {
+			return sc, true
+		}
+	}
+	return first, foundFirst
+}
+
+const maxLeitnerLevel = 5
+
+type skillScore struct {
+	name  string
+	score float64
+}
+
+// computeFocusSkill ضعیف‌ترین مهارت کاربر را از میان چهار مهارتِ واقعاً
+// اندازه‌گیری‌شده (Pronunciation/Fluency/Vocabulary/Grammar — همان چهارتایی
+// که GetSkillsBreakdown نشان می‌دهد) انتخاب می‌کند. هر مهارت فقط وقتی وارد
+// مقایسه می‌شود که داده‌ی واقعی پشتش باشد، تا یک صفرِ ناشی از «هنوز داده‌ای
+// نیست» به‌غلط به‌عنوان «مهارت ضعیف» برچسب نخورد؛ اگر هیچ مهارتی داده نداشت
+// برچسبِ عمومی «speaking» باقی می‌ماند.
+func computeFocusSkill(ctx context.Context, s *Service, uid uuid.UUID) string {
+	var available []skillScore
+
+	if pron, flu, skillErr := s.skills.AvgScoresByUser(ctx, uid); skillErr == nil {
+		if !(pron == 0 && flu == 0) {
+			available = append(available, skillScore{"pronunciation", pron}, skillScore{"fluency", flu})
+		}
+	} else {
+		slog.Warn("mission: failed to load skill scores, using generic focus skill", "err", skillErr)
+	}
+
+	if avgLevel, wordCount, err := s.leitner.AvgLevelByUser(ctx, uid); err == nil && wordCount > 0 {
+		available = append(available, skillScore{"vocabulary", avgLevel / maxLeitnerLevel * 100})
+	}
+
+	if clean, total, err := s.grammar.CleanRate(ctx, uid); err == nil && total > 0 {
+		available = append(available, skillScore{"grammar", float64(clean) / float64(total) * 100})
+	}
+
+	if len(available) == 0 {
+		return "speaking"
+	}
+
+	weakest := available[0]
+	for _, sk := range available[1:] {
+		if sk.score < weakest.score {
+			weakest = sk
+		}
+	}
+	return weakest.name
 }

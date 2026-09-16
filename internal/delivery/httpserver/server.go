@@ -6,7 +6,9 @@ import (
 
 	"shadowing-backend/internal/config"
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
+	aiconversationhandler "shadowing-backend/internal/delivery/httpserver/aiconversation"
 	assessmenthandler "shadowing-backend/internal/delivery/httpserver/assessment"
+	freespeechhandler "shadowing-backend/internal/delivery/httpserver/freespeech"
 	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
 	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
@@ -20,10 +22,12 @@ import (
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	aiservice "shadowing-backend/internal/service/ai"
+	aiconversationservice "shadowing-backend/internal/service/aiconversation"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
+	freespeechservice "shadowing-backend/internal/service/freespeech"
 	habitservice "shadowing-backend/internal/service/habit"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
@@ -69,6 +73,10 @@ type Service struct {
 
 	missionHandler missionhandler.Handler
 
+	aiConversationHandler aiconversationhandler.Handler
+
+	freeSpeechHandler freespeechhandler.Handler
+
 	habitHandler habithandler.Handler
 
 	leitnerHandler leitnerhandler.Handler
@@ -94,6 +102,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 	landingSvc landingservice.Service,
 	assessmentSvc *assessmentservice.Service,
 	missionSvc *missionservice.Service,
+	aiConversationSvc *aiconversationservice.Service,
+	freeSpeechSvc *freespeechservice.Service,
 
 ) Service {
 
@@ -127,6 +137,10 @@ func New(cfg config.Config, userSvc userservice.Service,
 		assessmentHandler: assessmenthandler.New(assessmentSvc, authSvc, authConfig, uploadDir),
 
 		missionHandler: missionhandler.New(missionSvc, authSvc, authConfig),
+
+		aiConversationHandler: aiconversationhandler.New(aiConversationSvc, authSvc, authConfig, uploadDir),
+
+		freeSpeechHandler: freespeechhandler.New(freeSpeechSvc, authSvc, authConfig, uploadDir),
 
 		habitHandler: habithandler.New(habitSvc, authSvc, authConfig, uploadDir),
 
@@ -200,6 +214,9 @@ func (s Service) Server() {
 
 	s.assessmentHandler.SetAssessmentRoutes(e)
 	s.missionHandler.SetMissionRoutes(e)
+	s.aiConversationHandler.SetAIConversationRoutes(e)
+
+	s.freeSpeechHandler.SetFreeSpeechRoutes(e)
 
 	s.habitHandler.SetHabitRoutes(e)
 

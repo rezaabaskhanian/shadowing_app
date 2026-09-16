@@ -37,6 +37,9 @@ export interface ItemResult {
   transcript?: string;
   relevance_answered?: 'yes' | 'partial' | 'no' | string;
   relevance_feedback?: string;
+  /** فقط وقتی خطای گرامریِ قابل‌توجهی پیدا شده باشد پر می‌شود. */
+  grammar_correction?: string;
+  grammar_explanation?: string;
   pronunciation_score?: number;
   fluency_score?: number;
   overall_score?: number;

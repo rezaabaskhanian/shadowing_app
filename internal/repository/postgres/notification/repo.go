@@ -5,6 +5,7 @@ import (
 
 	"shadowing-backend/internal/pkg/richerror"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -24,6 +25,9 @@ type Settings struct {
 	ContentNotifEnabled   bool     `json:"content_notif_enabled"`
 	ContentSource         string   `json:"content_source"`
 	StreakReminderEnabled bool     `json:"streak_reminder_enabled"`
+	VocabReminderEnabled  bool     `json:"vocab_reminder_enabled"`
+	LearningGoal          string   `json:"learning_goal"`
+	WeeklyDigestEnabled   bool     `json:"weekly_digest_enabled"`
 }
 
 type Broadcast struct {
@@ -41,7 +45,7 @@ func (r DB) GetSettings(ctx context.Context, userID string) (Settings, error) {
 	const op = "postgresnotification.GetSettings"
 
 	const query = `
-		SELECT daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled
+		SELECT daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled, vocab_reminder_enabled, learning_goal, weekly_digest_enabled
 		FROM user_notification_settings WHERE user_id = $1
 	`
 	s := Settings{
@@ -51,9 +55,12 @@ func (r DB) GetSettings(ctx context.Context, userID string) (Settings, error) {
 		ContentNotifEnabled:   false,
 		ContentSource:         "mixed",
 		StreakReminderEnabled: false,
+		VocabReminderEnabled:  false,
+		LearningGoal:          "",
+		WeeklyDigestEnabled:   false,
 	}
 	err := r.conn.QueryRow(ctx, query, userID).Scan(
-		&s.DailyReminderEnabled, &s.DailyReminderTimes, &s.ContentNotifEnabled, &s.ContentSource, &s.StreakReminderEnabled,
+		&s.DailyReminderEnabled, &s.DailyReminderTimes, &s.ContentNotifEnabled, &s.ContentSource, &s.StreakReminderEnabled, &s.VocabReminderEnabled, &s.LearningGoal, &s.WeeklyDigestEnabled,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -73,25 +80,46 @@ func (r DB) UpsertSettings(ctx context.Context, s Settings) error {
 
 	const query = `
 		INSERT INTO user_notification_settings
-			(user_id, daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
+			(user_id, daily_reminder_enabled, daily_reminder_times, content_notif_enabled, content_source, streak_reminder_enabled, vocab_reminder_enabled, learning_goal, weekly_digest_enabled, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
 		ON CONFLICT (user_id) DO UPDATE SET
 			daily_reminder_enabled  = EXCLUDED.daily_reminder_enabled,
 			daily_reminder_times    = EXCLUDED.daily_reminder_times,
 			content_notif_enabled   = EXCLUDED.content_notif_enabled,
 			content_source          = EXCLUDED.content_source,
 			streak_reminder_enabled = EXCLUDED.streak_reminder_enabled,
+			vocab_reminder_enabled  = EXCLUDED.vocab_reminder_enabled,
+			learning_goal           = EXCLUDED.learning_goal,
+			weekly_digest_enabled   = EXCLUDED.weekly_digest_enabled,
 			updated_at              = now()
 	`
 	times := s.DailyReminderTimes
 	if times == nil {
 		times = []string{}
 	}
-	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, times, s.ContentNotifEnabled, s.ContentSource, s.StreakReminderEnabled)
+	_, err := r.conn.Exec(ctx, query, s.UserID, s.DailyReminderEnabled, times, s.ContentNotifEnabled, s.ContentSource, s.StreakReminderEnabled, s.VocabReminderEnabled, s.LearningGoal, s.WeeklyDigestEnabled)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره تنظیمات نوتیفیکیشن")
 	}
 	return nil
+}
+
+// GetLearningGoal فقط هدف یادگیریِ کاربر را برمی‌گرداند (بدون بقیه‌ی
+// تنظیمات نوتیفیکیشن) — برای missionservice که فقط همین یک فیلد را برای
+// اولویت‌دهیِ نرم به انتخاب صحنه لازم دارد. اگر کاربر هنوز ردیفی نساخته یا
+// هدفی انتخاب نکرده، رشته‌ی خالی برمی‌گردد.
+func (r DB) GetLearningGoal(ctx context.Context, userID string) (string, error) {
+	const op = "postgresnotification.GetLearningGoal"
+
+	var goal string
+	err := r.conn.QueryRow(ctx, `SELECT learning_goal FROM user_notification_settings WHERE user_id = $1`, userID).Scan(&goal)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", nil
+		}
+		return "", richerror.New(op).WithErr(err).WithMessage("خطا در خواندن هدف یادگیری")
+	}
+	return goal, nil
 }
 
 // UpsertDeviceToken توکن FCM دستگاه را ثبت/به‌روزرسانی می‌کند (هر توکن یکتاست).
@@ -195,6 +223,69 @@ func (r DB) StreakReminderTokens(ctx context.Context) ([]string, error) {
 		tokens = append(tokens, t)
 	}
 	return tokens, nil
+}
+
+// VocabReminderTokens توکن‌های کاربرانی را برمی‌گرداند که یادآوری واژگان را
+// روشن کرده‌اند و حداقل یک کلمه در جعبه‌ی لایتنرشان سررسیده شده (next_review
+// گذشته). کاربری که جعبه‌اش خالی است یا هیچ کلمه‌ی سررسیده‌ای ندارد، اینجا
+// نمی‌آید — این یادآوری فقط وقتی واقعاً کاری برای انجام‌دادن هست فرستاده می‌شود.
+func (r DB) VocabReminderTokens(ctx context.Context) ([]string, error) {
+	const op = "postgresnotification.VocabReminderTokens"
+
+	const query = `
+		SELECT DISTINCT dpt.token
+		FROM leitner_words lw
+		JOIN user_notification_settings uns ON uns.user_id = lw.user_id
+		JOIN device_push_tokens dpt ON dpt.user_id = lw.user_id
+		WHERE uns.vocab_reminder_enabled = true
+		  AND lw.next_review <= now()
+	`
+	rows, err := r.conn.Query(ctx, query)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن توکن‌های یادآوری واژگان")
+	}
+	defer rows.Close()
+
+	var tokens []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		tokens = append(tokens, t)
+	}
+	return tokens, nil
+}
+
+// WeeklyDigestOptedInUserIDs شناسه‌ی کاربرانی را برمی‌گرداند که پوش هفتگی را
+// روشن کرده‌اند و حداقل یک توکن دستگاه دارند — بدون توکن، محاسبه‌ی گزارش
+// برای آن کاربر بی‌فایده است. برخلاف StreakReminderTokens/VocabReminderTokens
+// (یک پیامِ ثابت برای همه)، پیامِ این گزارش شخصی‌سازی‌شده است، پس اینجا فقط
+// شناسه‌ی کاربر برمی‌گردد؛ توکن‌های هرکدام جداگانه با TokensForUser خوانده می‌شود.
+func (r DB) WeeklyDigestOptedInUserIDs(ctx context.Context) ([]uuid.UUID, error) {
+	const op = "postgresnotification.WeeklyDigestOptedInUserIDs"
+
+	const query = `
+		SELECT DISTINCT uns.user_id
+		FROM user_notification_settings uns
+		JOIN device_push_tokens dpt ON dpt.user_id = uns.user_id
+		WHERE uns.weekly_digest_enabled = true
+	`
+	rows, err := r.conn.Query(ctx, query)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن مشترکین گزارش هفتگی")
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 // Stats تعداد کاربرانی که هر کدام از دو نوع نوتیفیکیشن را فعال کرده‌اند برمی‌گرداند.

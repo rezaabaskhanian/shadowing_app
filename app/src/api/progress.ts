@@ -61,11 +61,24 @@ export interface SkillsBreakdown {
   pronunciation: number;
   fluency: number;
   vocabulary: number;
+  grammar: number;
 }
 
 export async function getSkillsBreakdown(): Promise<SkillsBreakdown> {
   const res = await authFetch('/v1/progress/skills', { method: 'GET' });
   return (await jsonOrThrow(res)) as SkillsBreakdown;
+}
+
+export interface WeekTrend {
+  week_start: string; // "2006-01-02"
+  speaking: number; // 0-100
+  sessions: number;
+}
+
+export async function getProgressTrend(): Promise<WeekTrend[]> {
+  const res = await authFetch('/v1/progress/trend', { method: 'GET' });
+  const data = await jsonOrThrow(res);
+  return (data.weeks || []) as WeekTrend[];
 }
 
 export interface SceneProgressUpdate {

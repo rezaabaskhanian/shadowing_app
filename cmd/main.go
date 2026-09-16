@@ -12,8 +12,10 @@ import (
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
+	postgresaiconversation "shadowing-backend/internal/repository/postgres/aiconversation"
 	postgresassessment "shadowing-backend/internal/repository/postgres/assessment"
 	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
+	postgresfreespeech "shadowing-backend/internal/repository/postgres/freespeech"
 	posthabit "shadowing-backend/internal/repository/postgres/habit"
 	postgreslanding "shadowing-backend/internal/repository/postgres/landing"
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
@@ -22,6 +24,7 @@ import (
 	postgresotp "shadowing-backend/internal/repository/postgres/otp"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
+	postgresgrammar "shadowing-backend/internal/repository/postgres/progress/grammar"
 	postgresssceneprogress "shadowing-backend/internal/repository/postgres/progress/scene_progress"
 	postgressstreak "shadowing-backend/internal/repository/postgres/progress/streak"
 	postgressettings "shadowing-backend/internal/repository/postgres/settings"
@@ -37,10 +40,12 @@ import (
 	"context"
 
 	aiservice "shadowing-backend/internal/service/ai"
+	aiconversationservice "shadowing-backend/internal/service/aiconversation"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
+	freespeechservice "shadowing-backend/internal/service/freespeech"
 	habitservice "shadowing-backend/internal/service/habit"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
@@ -57,6 +62,7 @@ import (
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
+	ttsservice "shadowing-backend/internal/service/tts"
 
 	userservice "shadowing-backend/internal/service/user"
 
@@ -145,11 +151,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc)
 
 	server.Server()
 
@@ -182,6 +188,25 @@ func runDailyStreakJob(ctx context.Context, progressSvc progressservice.Service,
 		} else if sent > 0 {
 			fmt.Println("streak job: sent", sent, "streak reminder(s)")
 		}
+
+		vocabSent, err := notificationSvc.SendVocabReminders(ctx)
+		if err != nil {
+			fmt.Println("streak job: send vocab reminders failed:", err)
+		} else if vocabSent > 0 {
+			fmt.Println("streak job: sent", vocabSent, "vocab reminder(s)")
+		}
+
+		// گزارش هفتگی فقط دوشنبه‌ها اجرا می‌شود — همان روزِ شروعِ هفته که
+		// TrendByUser هم بر همان اساس هفته‌ها را می‌شمارد (بخش ۲۱ سند
+		// محصول)، تا وقتی می‌رسد هفته‌ی قبل واقعاً کامل شده باشد.
+		if time.Now().Weekday() == time.Monday {
+			digestSent, err := notificationSvc.SendWeeklyDigests(ctx)
+			if err != nil {
+				fmt.Println("streak job: send weekly digests failed:", err)
+			} else if digestSent > 0 {
+				fmt.Println("streak job: sent", digestSent, "weekly digest(s)")
+			}
+		}
 	}
 }
 
@@ -200,7 +225,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -251,8 +276,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	sceneprogressRepo := postgresssceneprogress.NewSceneProgressRepository(MyPostgresgresRepo.DB)
 	activityRepo := postgresactivity.New(MyPostgresgresRepo.DB)
 	leitnerRepo := postgresleitner.New(MyPostgresgresRepo.DB)
+	grammarRepo := postgresgrammar.New(MyPostgresgresRepo.DB)
 
-	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo, recordingRepo, leitnerRepo, activityRepo)
+	progressSvc := progressservice.New(streakRepo, achievementRepo, sceneprogressRepo, recordingRepo, leitnerRepo, activityRepo, grammarRepo)
 
 	leitnerSvc := leitnerservice.New(leitnerRepo)
 
@@ -266,7 +292,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	notificationRepo := postgresnotification.New(MyPostgresgresRepo.DB)
 	pushSvc := pushservice.New(settingsSvc)
-	notificationSvc := notificationservice.New(notificationRepo, pushSvc)
+	notificationSvc := notificationservice.New(notificationRepo, pushSvc, recordingRepo, leitnerRepo, grammarRepo)
 
 	submissionRepo := postgressubmission.New(MyPostgresgresRepo.DB)
 	submissionSvc := submissionservice.New(submissionRepo)
@@ -310,9 +336,27 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// «ماموریتِ امروز»: صحنه‌ی پیشنهادی بر اساسِ سطحِ گفتاری + مهارتِ ضعیف‌تر
 	// کاربر. هیچ ریپازیتوریِ جدیدی نمی‌سازد، همان نمونه‌های بالا را دوباره
 	// تزریق می‌کند (internal/service/mission).
-	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo)
+	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo, leitnerRepo, grammarRepo, notificationRepo)
+
+	// گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه: همان ElevenLabs (ttsservice) که
+	// پنل ادمین برای صدای دیالوگ‌ها استفاده می‌کند، اینجا برای صدای پاسخ AI
+	// هم به کار می‌رود؛ هیچ زیرساخت TTS جدیدی لازم نبود.
+	const uploadURLPath = "/uploads"
+	conversationRepo := postgresaiconversation.NewConversationRepository(MyPostgresgresRepo.DB)
+	turnRepo := postgresaiconversation.NewTurnRepository(MyPostgresgresRepo.DB)
+	aiConversationSvc := aiconversationservice.New(
+		conversationRepo, turnRepo, learnningRepo,
+		aiservice.New(settingsSvc), ttsservice.New(settingsSvc), evaluator,
+		uploadDir, uploadURLPath,
+	)
+
+	// Free Speech: یک بار توضیحِ آزاد بعد از تمام‌شدنِ یک صحنه، بدون AI-reply
+	// و بدون مکالمه‌ی چندنوبتی — همان سه‌تایی transcribe/relevance/grammar که
+	// در Assessment هم استفاده می‌شود، فقط از نقطه‌ی تمام‌شدنِ صحنه صدا زده می‌شود.
+	freeSpeechLogRepo := postgresfreespeech.New(MyPostgresgresRepo.DB)
+	freeSpeechSvc := freespeechservice.New(learnningRepo, freeSpeechLogRepo, aiservice.New(settingsSvc), evaluator)
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc
 }

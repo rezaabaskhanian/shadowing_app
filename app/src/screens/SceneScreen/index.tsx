@@ -772,6 +772,15 @@ export const SceneScreen = () => {
             text: t('startQuiz'),
             onPress: () => navigation.navigate('SceneQuiz', { scenarioId }),
           },
+          {
+            text: t('startAiConversation'),
+            onPress: () => navigation.navigate('AIConversation', { scenarioId }),
+          },
+          {
+            text: t('startFreeSpeech'),
+            onPress: () =>
+              navigation.navigate('FreeSpeech', { scenarioId, sceneTitle: scenario?.title }),
+          },
           { text: t('shadowAgain'), onPress: restartLesson },
           { text: t('backToHome'), onPress: resetToHome },
         ],
@@ -807,6 +816,7 @@ export const SceneScreen = () => {
     t,
     navigation,
     scenarioId,
+    scenario,
   ]);
 
   const toggleRevealText = useCallback(() => {

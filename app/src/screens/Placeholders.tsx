@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, User as UserIcon, X, Zap } from 'lucide-react-native';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, TrendingUp, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { SceneListCardSkeleton } from '../components/SceneListCardSkeleton';
 import { StreakInfoModal } from '../components/StreakInfoModal';
@@ -29,9 +29,11 @@ import {
   getUserAchievements,
   getWeeklyActivity,
   getSkillsBreakdown,
+  getProgressTrend,
   type Achievement,
   type DayActivity,
   type SkillsBreakdown,
+  type WeekTrend,
 } from '../api/progress';
 
 export { HomeScreen } from './Home';
@@ -226,10 +228,11 @@ const WEEKDAY_LABELS: Record<number, { en: string; fa: string }> = {
   6: { en: 'Sat', fa: 'پ' },
 };
 
-const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary', string> = {
+const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary' | 'grammar', string> = {
   pronunciation: COLORS.primary,
   fluency: COLORS.tertiary,
   vocabulary: COLORS.info,
+  grammar: COLORS.audioMine,
 };
 
 export const ProgressScreen = () => {
@@ -244,7 +247,8 @@ export const ProgressScreen = () => {
   const [levelName, setLevelName] = React.useState('');
   const [achievements, setAchievements] = React.useState<Achievement[]>([]);
   const [weeklyActivity, setWeeklyActivity] = React.useState<DayActivity[]>([]);
-  const [skills, setSkills] = React.useState<SkillsBreakdown>({ pronunciation: 0, fluency: 0, vocabulary: 0 });
+  const [skills, setSkills] = React.useState<SkillsBreakdown>({ pronunciation: 0, fluency: 0, vocabulary: 0, grammar: 0 });
+  const [trend, setTrend] = React.useState<WeekTrend[]>([]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -271,19 +275,24 @@ export const ProgressScreen = () => {
       getSkillsBreakdown()
         .then((s) => active && setSkills(s))
         .catch(() => {});
+      getProgressTrend()
+        .then((weeks) => active && setTrend(weeks))
+        .catch(() => {});
       return () => {
         active = false;
       };
     }, [user?.id])
   );
 
-  const skillItems: { key: 'pronunciation' | 'fluency' | 'vocabulary'; percent: number; color: string }[] = [
+  const skillItems: { key: 'pronunciation' | 'fluency' | 'vocabulary' | 'grammar'; percent: number; color: string }[] = [
     { key: 'pronunciation', percent: skills.pronunciation, color: SKILL_COLORS.pronunciation },
     { key: 'fluency', percent: skills.fluency, color: SKILL_COLORS.fluency },
     { key: 'vocabulary', percent: skills.vocabulary, color: SKILL_COLORS.vocabulary },
+    { key: 'grammar', percent: skills.grammar, color: SKILL_COLORS.grammar },
   ];
   const weeklyActivityMax = Math.max(1, ...weeklyActivity.map((d) => d.minutes));
   const todayStr = new Date().toISOString().slice(0, 10);
+  const trendHasData = trend.some((w) => w.sessions > 0);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -380,6 +389,49 @@ export const ProgressScreen = () => {
             );
           })}
         </View>
+      </View>
+
+      {/* Progress Over Time */}
+      <View style={[styles.settingCard, { marginTop: 16 }]}>
+        <View style={styles.sectionHeaderRow}>
+          <TrendingUp color={COLORS.tertiary} size={20} />
+          <Text style={styles.settingCardTitle}>{t('progressTrend')}</Text>
+        </View>
+        <Text style={styles.optionSub}>{t('progressTrendSub')}</Text>
+
+        {trendHasData ? (
+          <View style={styles.weekChartRow}>
+            {trend.map((week, i) => {
+              const heightPct = Math.max(4, week.speaking);
+              const hasData = week.sessions > 0;
+              const isLast = i === trend.length - 1;
+              const d = new Date(week.week_start + 'T00:00:00');
+              const label = `${d.getMonth() + 1}/${d.getDate()}`;
+              return (
+                <View key={week.week_start} style={styles.weekBarCol}>
+                  <View style={styles.weekBarTrack}>
+                    <View
+                      style={[
+                        styles.weekBarFill,
+                        {
+                          height: `${heightPct}%`,
+                          backgroundColor: !hasData
+                            ? COLORS.border
+                            : isLast
+                            ? COLORS.tertiary
+                            : hexToRgba(COLORS.tertiary, 0.45),
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.weekBarLabel, isLast && styles.weekBarLabelActive]}>{label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={styles.optionSub}>{t('progressTrendEmpty')}</Text>
+        )}
       </View>
 
       {/* Skill Breakdown */}

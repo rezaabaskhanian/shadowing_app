@@ -33,13 +33,54 @@ type SkillsRepository interface {
 	AvgScoresByUser(ctx context.Context, userID uuid.UUID) (avgPronunciation, avgFluency float64, err error)
 }
 
+// LeitnerRepository همان اینترفیسی است که progressservice برای مهارت
+// Vocabulary در GetSkillsBreakdown استفاده می‌کند — دوباره تزریق می‌شود تا
+// focusSkill هم Vocabulary را در نظر بگیرد.
+type LeitnerRepository interface {
+	AvgLevelByUser(ctx context.Context, userID uuid.UUID) (avgLevel float64, wordCount int, err error)
+}
+
+// GrammarRepository همان اینترفیسی است که progressservice برای مهارت
+// Grammar در GetSkillsBreakdown استفاده می‌کند — دوباره تزریق می‌شود تا
+// focusSkill هم Grammar را در نظر بگیرد.
+type GrammarRepository interface {
+	CleanRate(ctx context.Context, userID uuid.UUID) (clean, total int, err error)
+}
+
+// GoalRepository هدف یادگیریِ اختیاریِ کاربر را می‌خواند (تنظیم‌شده از
+// Drawer/Settings، ذخیره‌شده در همان جدولِ user_notification_settings).
+// طبق تصمیمِ محصولی صریح، این فقط برای اولویت‌دهیِ نرم به انتخاب صحنه
+// استفاده می‌شود — هرگز فیلتر سخت/exclusion.
+type GoalRepository interface {
+	GetLearningGoal(ctx context.Context, userID string) (string, error)
+}
+
 type Service struct {
 	scenes        SceneRepository
 	sceneProgress SceneProgressRepository
 	profiles      ProfileRepository
 	skills        SkillsRepository
+	leitner       LeitnerRepository
+	grammar       GrammarRepository
+	goals         GoalRepository
 }
 
-func New(scenes SceneRepository, sceneProgress SceneProgressRepository, profiles ProfileRepository, skills SkillsRepository) *Service {
-	return &Service{scenes: scenes, sceneProgress: sceneProgress, profiles: profiles, skills: skills}
+func New(
+	scenes SceneRepository,
+	sceneProgress SceneProgressRepository,
+	profiles ProfileRepository,
+	skills SkillsRepository,
+	leitner LeitnerRepository,
+	grammar GrammarRepository,
+	goals GoalRepository,
+) *Service {
+	return &Service{
+		scenes:        scenes,
+		sceneProgress: sceneProgress,
+		profiles:      profiles,
+		skills:        skills,
+		leitner:       leitner,
+		grammar:       grammar,
+		goals:         goals,
+	}
 }

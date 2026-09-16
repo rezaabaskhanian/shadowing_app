@@ -31,7 +31,7 @@ type ProfileRepository interface {
 
 // SubmissionLogRepository - لاگ متنی هر آیتم ارسالی (بدون صدا)
 type SubmissionLogRepository interface {
-	Insert(ctx context.Context, userID, itemID uuid.UUID, transcript, relevanceAnswered, relevanceFeedback string, pronunciationScore, fluencyScore, overallScore *float64) error
+	Insert(ctx context.Context, userID, itemID uuid.UUID, transcript, relevanceAnswered, relevanceFeedback, grammarCorrection, grammarExplanation string, pronunciationScore, fluencyScore, overallScore *float64) error
 }
 
 type Service struct {

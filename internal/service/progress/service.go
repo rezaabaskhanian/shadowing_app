@@ -9,6 +9,7 @@ import (
 
 	domainSceneProgress "shadowing-backend/internal/domain/progress/scene_progress"
 	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
+	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 
 	"github.com/google/uuid"
 )
@@ -16,6 +17,9 @@ import (
 // DayActivity - فعالیت یک روز (دقیقه/تعداد جلسه)، همسان با ریپازیتوری
 // (مثل الگوی UserActivity = postgresuser.UserActivityRow در سرویس user)
 type DayActivity = postgresactivity.DayActivity
+
+// WeekTrend - میانگین امتیاز گفتاری کاربر در یک هفته، همسان با ریپازیتوری
+type WeekTrend = postgresrecording.WeekTrend
 
 type StreakRepository interface {
 	// GetByUser - دریافت استریک کاربر
@@ -60,11 +64,17 @@ type SceneProgressRepository interface {
 // ضبط‌های واقعی شدوئینگ (برای «درصد مهارت‌ها»)
 type RecordingStatsRepository interface {
 	AvgScoresByUser(ctx context.Context, userID uuid.UUID) (avgPronunciation, avgFluency float64, err error)
+	TrendByUser(ctx context.Context, userID uuid.UUID) ([]WeekTrend, error)
 }
 
 // LeitnerStatsRepository - میانگین سطح لایتنر کاربر (برای مهارت Vocabulary)
 type LeitnerStatsRepository interface {
 	AvgLevelByUser(ctx context.Context, userID uuid.UUID) (avgLevel float64, wordCount int, err error)
+}
+
+// GrammarStatsRepository - نرخِ رونویسیِ آزادِ بدون خطای گرامری (برای مهارت Grammar)
+type GrammarStatsRepository interface {
+	CleanRate(ctx context.Context, userID uuid.UUID) (clean, total int, err error)
 }
 
 // WeeklyActivityRepository - تجمیع فعالیت روزانه‌ی کاربر برای نمودار هفتگی
@@ -82,6 +92,7 @@ type Service struct {
 	recordingRepo   RecordingStatsRepository
 	leitnerRepo     LeitnerStatsRepository
 	activityRepo    WeeklyActivityRepository
+	grammarRepo     GrammarStatsRepository
 }
 
 // New - سازنده با بازگشت Pointer
@@ -92,6 +103,7 @@ func New(
 	recordingRepo RecordingStatsRepository,
 	leitnerRepo LeitnerStatsRepository,
 	activityRepo WeeklyActivityRepository,
+	grammarRepo GrammarStatsRepository,
 ) *Service {
 	return &Service{
 		streakRepo:      streakRepo,
@@ -100,5 +112,6 @@ func New(
 		recordingRepo:   recordingRepo,
 		leitnerRepo:     leitnerRepo,
 		activityRepo:    activityRepo,
+		grammarRepo:     grammarRepo,
 	}
 }

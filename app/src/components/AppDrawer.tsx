@@ -14,14 +14,17 @@ import {
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import {
   Bell,
+  BookOpen,
   ChevronRight,
   Coins,
+  Compass,
   HelpCircle,
   Lightbulb,
   LogOut,
   Mail,
   Mic,
   Target,
+  TrendingUp,
   User as UserIcon,
   Zap,
 } from 'lucide-react-native';
@@ -31,6 +34,7 @@ import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { useNotifications } from '../data/NotificationContext';
 import { getMyPoints } from '../api/submissions';
+import type { LearningGoal } from '../api/notifications';
 
 const DRAWER_WIDTH = Math.min(320, Dimensions.get('window').width * 0.82);
 
@@ -54,7 +58,16 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
   const isFocused = useIsFocused();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
-  const { streakReminderEnabled, setStreakReminderEnabled } = useNotifications();
+  const {
+    streakReminderEnabled,
+    setStreakReminderEnabled,
+    vocabReminderEnabled,
+    setVocabReminderEnabled,
+    learningGoal,
+    setLearningGoal,
+    weeklyDigestEnabled,
+    setWeeklyDigestEnabled,
+  } = useNotifications();
   const [points, setPoints] = useState(0);
   const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
 
@@ -225,6 +238,85 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
 
           <View style={styles.dividerLine} />
 
+          {/* رضایت صریح کاربر برای پوش یادآوری کلمه‌های سررسیده‌ی لایتنر —
+              پیش‌فرض خاموش، عیناً هم‌الگوی یادآوری استریک بالا. */}
+          <View style={styles.streakReminderRow}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+              <BookOpen color={COLORS.info} size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowText}>{t('vocabReminderTitle')}</Text>
+              <Text style={styles.streakReminderSub}>{t('vocabReminderSub')}</Text>
+            </View>
+            <Switch
+              value={vocabReminderEnabled}
+              onValueChange={setVocabReminderEnabled}
+              trackColor={{ true: COLORS.primary }}
+            />
+          </View>
+
+          <View style={styles.dividerLine} />
+
+          {/* رضایت صریح کاربر برای پوش گزارش هفتگیِ پیشرفت گفتاری — پیش‌فرض
+              خاموش، عیناً هم‌الگوی یادآوری استریک/واژگان بالا. */}
+          <View style={styles.streakReminderRow}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
+              <TrendingUp color={COLORS.tertiary} size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowText}>{t('weeklyDigestTitle')}</Text>
+              <Text style={styles.streakReminderSub}>{t('weeklyDigestSub')}</Text>
+            </View>
+            <Switch
+              value={weeklyDigestEnabled}
+              onValueChange={setWeeklyDigestEnabled}
+              trackColor={{ true: COLORS.primary }}
+            />
+          </View>
+
+          <View style={styles.dividerLine} />
+
+          {/* هدف یادگیری اختیاری — فقط برای اولویت‌دهیِ نرم به انتخاب صحنه در
+              Today's Mission، نه فیلتر. توگل نیست چون تک‌انتخابی از چند
+              گزینه‌ی ثابت است، عیناً هم‌الگوی contentSource در تنظیمات نوتیف. */}
+          <View style={styles.goalRow}>
+            <View style={styles.streakReminderRow}>
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
+                <Compass color={COLORS.tertiary} size={18} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowText}>{t('learningGoalTitle')}</Text>
+                <Text style={styles.streakReminderSub}>{t('learningGoalSub')}</Text>
+              </View>
+            </View>
+            <View style={styles.goalPillGroup}>
+              {(
+                [
+                  { id: '', label: t('learningGoalNone') },
+                  { id: 'Travel', label: t('learningGoalTravel') },
+                  { id: 'Work', label: t('learningGoalWork') },
+                  { id: 'Daily Life', label: t('learningGoalDailyLife') },
+                  { id: 'Study', label: t('learningGoalStudy') },
+                ] as { id: LearningGoal; label: string }[]
+              ).map((opt) => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.goalPill, learningGoal === opt.id && styles.goalPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => setLearningGoal(opt.id)}
+                >
+                  <Text
+                    style={[styles.goalPillText, learningGoal === opt.id && styles.goalPillTextActive]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.dividerLine} />
+
           <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('HelpFaq')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
               <HelpCircle color={COLORS.primary} size={18} />
@@ -385,5 +477,34 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
+  },
+  goalRow: {
+    paddingVertical: 10,
+  },
+  goalPillGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  goalPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  goalPillActive: {
+    borderColor: COLORS.tertiary,
+    backgroundColor: COLORS.tertiaryLight,
+  },
+  goalPillText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+  },
+  goalPillTextActive: {
+    color: COLORS.tertiary,
   },
 });

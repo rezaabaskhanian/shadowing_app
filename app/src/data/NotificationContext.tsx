@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import type { LearningGoal } from '../api/notifications';
+
 export interface NotificationItem {
   id: string;
   type: 'leitner' | 'sentence' | 'reminder';
@@ -29,6 +31,15 @@ interface NotificationContextType {
   /** پوش سرور برای یادآوری استریک — کاربر باید صریحاً رضایت بدهد. */
   streakReminderEnabled: boolean;
   setStreakReminderEnabled: (val: boolean) => void;
+  /** پوش سرور برای یادآوری کلمه‌های سررسیده‌ی لایتنر — کاربر باید صریحاً رضایت بدهد. */
+  vocabReminderEnabled: boolean;
+  setVocabReminderEnabled: (val: boolean) => void;
+  /** هدف یادگیریِ اختیاری — فقط برای اولویت‌دهیِ نرم به انتخاب صحنه در Today's Mission. */
+  learningGoal: LearningGoal;
+  setLearningGoal: (val: LearningGoal) => void;
+  /** پوش هفتگیِ خلاصه‌ی پیشرفت گفتاری — کاربر باید صریحاً رضایت بدهد. */
+  weeklyDigestEnabled: boolean;
+  setWeeklyDigestEnabled: (val: boolean) => void;
   activeBanner: NotificationItem | null;
   dismissBanner: () => void;
   // آیتم واقعی (کلمه‌ی لایتنر یا جمله‌ی صحنه) را کالر می‌سازد — این کانتکست
@@ -50,6 +61,12 @@ const NotificationContext = createContext<NotificationContextType>({
   setContentSource: () => {},
   streakReminderEnabled: false,
   setStreakReminderEnabled: () => {},
+  vocabReminderEnabled: false,
+  setVocabReminderEnabled: () => {},
+  learningGoal: '',
+  setLearningGoal: () => {},
+  weeklyDigestEnabled: false,
+  setWeeklyDigestEnabled: () => {},
   activeBanner: null,
   dismissBanner: () => {},
   triggerTestNotification: () => {},
@@ -69,6 +86,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [contentNotificationEnabled, setContentNotificationEnabledState] = useState(false);
   const [contentSource, setContentSourceState] = useState<ContentSource>('mixed');
   const [streakReminderEnabled, setStreakReminderEnabledState] = useState(false);
+  const [vocabReminderEnabled, setVocabReminderEnabledState] = useState(false);
+  const [learningGoal, setLearningGoalState] = useState<LearningGoal>('');
+  const [weeklyDigestEnabled, setWeeklyDigestEnabledState] = useState(false);
   const [activeBanner, setActiveBanner] = useState<NotificationItem | null>(null);
 
   // بارگذاری تنظیمات واقعی از بک‌اند + ثبت توکن FCM، فقط وقتی کاربر لاگین کرده
@@ -83,6 +103,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setContentNotificationEnabledState(settings.content_notif_enabled);
         setContentSourceState(settings.content_source);
         setStreakReminderEnabledState(settings.streak_reminder_enabled);
+        setVocabReminderEnabledState(settings.vocab_reminder_enabled);
+        setLearningGoalState(settings.learning_goal);
+        setWeeklyDigestEnabledState(settings.weekly_digest_enabled);
         // همیشه با وضعیت سرور همگام می‌شویم: اگر یادآوری خاموش است، لیست خالی
         // فرستاده می‌شود تا trigger‌های باقی‌مانده از قبل هم لغو شوند.
         NativeNotificationService.scheduleDailyReminders(
@@ -103,10 +126,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         content_notif_enabled: contentNotificationEnabled,
         content_source: contentSource,
         streak_reminder_enabled: streakReminderEnabled,
+        vocab_reminder_enabled: vocabReminderEnabled,
+        learning_goal: learningGoal,
+        weekly_digest_enabled: weeklyDigestEnabled,
         ...overrides,
       })
       .catch((err) => console.warn('[NotificationContext] failed to save settings:', err));
-  }, [studyReminderEnabled, studyReminderTimes, contentNotificationEnabled, contentSource, streakReminderEnabled]);
+  }, [studyReminderEnabled, studyReminderTimes, contentNotificationEnabled, contentSource, streakReminderEnabled, vocabReminderEnabled, learningGoal, weeklyDigestEnabled]);
 
   const setStudyReminderEnabled = useCallback(
     (val: boolean) => {
@@ -173,6 +199,30 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     [persist]
   );
 
+  const setVocabReminderEnabled = useCallback(
+    (val: boolean) => {
+      setVocabReminderEnabledState(val);
+      persist({ vocab_reminder_enabled: val });
+    },
+    [persist]
+  );
+
+  const setLearningGoal = useCallback(
+    (val: LearningGoal) => {
+      setLearningGoalState(val);
+      persist({ learning_goal: val });
+    },
+    [persist]
+  );
+
+  const setWeeklyDigestEnabled = useCallback(
+    (val: boolean) => {
+      setWeeklyDigestEnabledState(val);
+      persist({ weekly_digest_enabled: val });
+    },
+    [persist]
+  );
+
   const dismissBanner = useCallback(() => {
     setActiveBanner(null);
   }, []);
@@ -198,6 +248,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setContentSource,
       streakReminderEnabled,
       setStreakReminderEnabled,
+      vocabReminderEnabled,
+      setVocabReminderEnabled,
+      learningGoal,
+      setLearningGoal,
+      weeklyDigestEnabled,
+      setWeeklyDigestEnabled,
       activeBanner,
       dismissBanner,
       triggerTestNotification,
@@ -214,6 +270,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setContentSource,
       streakReminderEnabled,
       setStreakReminderEnabled,
+      vocabReminderEnabled,
+      setVocabReminderEnabled,
+      learningGoal,
+      setLearningGoal,
+      weeklyDigestEnabled,
+      setWeeklyDigestEnabled,
       activeBanner,
       dismissBanner,
       triggerTestNotification,

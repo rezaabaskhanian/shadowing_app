@@ -20,13 +20,35 @@ import { queryClient } from './src/data/queryClient';
 import { Toast } from './src/components/Toast';
 import { getAssessmentTest, getSpeakingProfile, type AssessmentItem } from './src/api/assessment';
 import { PlacementTestFlow } from './src/screens/PlacementTest';
+import { OnboardingScreens } from './src/screens/OnboardingScreens';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type PlacementGateStatus = 'checking' | 'show' | 'hide';
+type OnboardingGateStatus = 'checking' | 'show' | 'hide';
+
+const ONBOARDING_SEEN_KEY = 'onboarding_v1_seen';
 
 function AppContent({ showSplash }: { showSplash: boolean }) {
   const { isAuthenticated, isRestoring } = useAuth();
   const [placementStatus, setPlacementStatus] = useState<PlacementGateStatus>('checking');
   const [placementItems, setPlacementItems] = useState<AssessmentItem[] | null>(null);
+
+  // والک‌ثروِ اولین بازکردنِ اپ — مستقل از لاگین است (قبل از اینکه بدانیم
+  // کاربر هست یا نیست نمایش داده می‌شود)، فقط یک‌بار در طول عمر نصب.
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingGateStatus>('checking');
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(ONBOARDING_SEEN_KEY)
+      .then((seen) => active && setOnboardingStatus(seen === '1' ? 'hide' : 'show'))
+      .catch(() => active && setOnboardingStatus('hide'));
+    return () => {
+      active = false;
+    };
+  }, []);
+  const completeOnboarding = () => {
+    setOnboardingStatus('hide');
+    AsyncStorage.setItem(ONBOARDING_SEEN_KEY, '1').catch(() => {});
+  };
 
   // فقط یک‌بار به‌ازای هر ورود بررسی می‌شود: اگر ادمین محتوایی برای تست
   // نساخته باشد، کل فیچر باید نامرئی بماند و اصلاً سراغ پروفایل نمی‌رویم؛
@@ -59,11 +81,20 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
     };
   }, [isAuthenticated]);
 
-  if (showSplash || isRestoring) {
+  if (showSplash || isRestoring || onboardingStatus === 'checking') {
     return (
       <>
         <StatusBar barStyle="light-content" />
         <SplashScreen />
+      </>
+    );
+  }
+
+  if (onboardingStatus === 'show') {
+    return (
+      <>
+        <StatusBar barStyle="dark-content" />
+        <OnboardingScreens onDone={completeOnboarding} />
       </>
     );
   }
