@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { Alert, BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +8,7 @@ import { FONT_FAMILY } from '../../theme/typography';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { SessionResultScreen } from '../../components/SessionResultScreen';
 import { StreakInfoModal } from '../../components/StreakInfoModal';
+import { LessonCompleteModal } from '../../components/LessonCompleteModal';
 import { expandScenarioToDialogueItems, type Scenario } from '../../data/scenarios';
 import { useScenes, sceneKeys } from '../../data/ScenesContext';
 import { useLanguage } from '../../data/i18n';
@@ -100,6 +101,7 @@ export const SceneScreen = () => {
   const [streakCount, setStreakCount] = useState(0);
   const [streakFreezes, setStreakFreezes] = useState<number | undefined>(undefined);
   const [streakInfoVisible, setStreakInfoVisible] = useState(false);
+  const [lessonCompleteVisible, setLessonCompleteVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -787,28 +789,7 @@ export const SceneScreen = () => {
       // تیکِ صحنه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ کش را بی‌اعتبار
       // می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
       queryClient.invalidateQueries({ queryKey: sceneKeys.list });
-      Alert.alert(
-        t('lessonCompleteTitle'),
-        t('lessonCompleteMessage'),
-        [
-          {
-            text: t('startQuiz'),
-            onPress: () => navigation.navigate('SceneQuiz', { scenarioId }),
-          },
-          {
-            text: t('startAiConversation'),
-            onPress: () => navigation.navigate('AIConversation', { scenarioId }),
-          },
-          {
-            text: t('startFreeSpeech'),
-            onPress: () =>
-              navigation.navigate('FreeSpeech', { scenarioId, sceneTitle: scenario?.title }),
-          },
-          { text: t('shadowAgain'), onPress: restartLesson },
-          { text: t('backToHome'), onPress: resetToHome },
-        ],
-        { cancelable: false }
-      );
+      setLessonCompleteVisible(true);
       return;
     }
 
@@ -826,21 +807,7 @@ export const SceneScreen = () => {
       items: dialogueItems,
       forceIndex: firstUndone,
     });
-  }, [
-    dialogueItems,
-    gradableIndexes,
-    comparedCount,
-    evaluations,
-    recordings,
-    resetToHome,
-    restartLesson,
-    queryClient,
-    toast,
-    t,
-    navigation,
-    scenarioId,
-    scenario,
-  ]);
+  }, [dialogueItems, gradableIndexes, comparedCount, evaluations, recordings, queryClient, toast, t]);
 
   const toggleRevealText = useCallback(() => {
     setTextRevealed((prev) => !prev);
@@ -1225,6 +1192,34 @@ export const SceneScreen = () => {
         onClose={() => setStreakInfoVisible(false)}
         streak={streakCount}
         freezes={streakFreezes}
+      />
+
+      <LessonCompleteModal
+        visible={lessonCompleteVisible}
+        onStartQuiz={() => {
+          setLessonCompleteVisible(false);
+          navigation.navigate('SceneQuiz', { scenarioId });
+        }}
+        onStartAiConversation={() => {
+          setLessonCompleteVisible(false);
+          navigation.navigate('AIConversation', { scenarioId });
+        }}
+        onStartFreeSpeech={() => {
+          setLessonCompleteVisible(false);
+          navigation.navigate('FreeSpeech', {
+            scenarioId,
+            sceneTitle: scenario?.title,
+            sceneLines: dialogueItems.map((d) => ({ speaker: d.speaker, text: d.dialogue })),
+          });
+        }}
+        onPracticeAgain={() => {
+          setLessonCompleteVisible(false);
+          restartLesson();
+        }}
+        onBackHome={() => {
+          setLessonCompleteVisible(false);
+          resetToHome();
+        }}
       />
     </View>
   );

@@ -22,6 +22,10 @@ export interface GeminiLiveEvents {
   onTurnComplete?: () => void;
   /** کاربر وسطِ صحبتِ AI حرف زد — پخشِ صدای فعلی باید فوراً قطع شود. */
   onInterrupted?: () => void;
+  /** تکه‌ی بعدیِ رونویسیِ صدای خودِ کاربر (باید به رونویسیِ همین نوبت append شود). */
+  onInputTranscriptDelta?: (textDelta: string) => void;
+  /** تکه‌ی بعدیِ رونویسیِ صدای پاسخِ AI. */
+  onOutputTranscriptDelta?: (textDelta: string) => void;
   /** Gemini از قبل خبر می‌دهد session به‌زودی (طبق ExpireTime) بسته می‌شود. */
   onGoAway?: (timeLeftMs: number | null) => void;
   onError?: (message: string) => void;
@@ -56,11 +60,17 @@ export class GeminiLiveSocket {
     ws.onopen = () => {
       this.setStatus('setup');
       // پیامِ setup باید همیشه اولین پیام بعد از باز شدنِ اتصال باشد.
+      // inputAudioTranscription/outputAudioTranscription داخلِ generationConfig
+      // رونویسیِ صدای کاربر و پاسخِ AI را هم می‌خواهد — هزینه‌ی توکنِ متنیِ
+      // اضافه دارد (جدا از هزینه‌ی صدا)، ولی برای PoC لازم است تا ببینیم
+      // دقیقاً چه چیزی شنیده/گفته شده.
       const setupMsg = {
         setup: {
           model: model.startsWith('models/') ? model : `models/${model}`,
           generationConfig: {
             responseModalities: ['AUDIO'],
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
           },
         },
       };
@@ -136,6 +146,12 @@ export class GeminiLiveSocket {
       const sc = msg.serverContent;
       if (sc.interrupted) {
         this.events.onInterrupted?.();
+      }
+      if (sc.inputTranscription?.text) {
+        this.events.onInputTranscriptDelta?.(sc.inputTranscription.text);
+      }
+      if (sc.outputTranscription?.text) {
+        this.events.onOutputTranscriptDelta?.(sc.outputTranscription.text);
       }
       const parts = sc.modelTurn?.parts ?? [];
       for (const part of parts) {

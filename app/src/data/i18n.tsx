@@ -391,6 +391,7 @@ export const translations: Translations = {
     fa: 'با کلمات خودت توضیح بده توی این موقعیت چی اتفاق افتاد.',
   },
   freeSpeechRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
+  freeSpeechRecapLabel: { en: 'What happened in the scene', fa: 'یادآوری: توی این صحنه چی گذشت' },
   freeSpeechYourAnswer: { en: 'What you said', fa: 'چیزی که گفتی' },
   freeSpeechTryAgain: { en: 'Try again', fa: 'دوباره امتحان کن' },
   freeSpeechRetryHint: { en: "Didn't catch that — try again", fa: 'متوجه نشدم — دوباره امتحان کن' },

@@ -41,11 +41,15 @@ export const RealtimePoCScreen: React.FC = () => {
   const [userTurns, setUserTurns] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [expireAt, setExpireAt] = useState<Date | null>(null);
+  const [userTranscript, setUserTranscript] = useState('');
+  const [aiTranscript, setAiTranscript] = useState('');
 
   const socketRef = useRef<GeminiLiveSocket | null>(null);
   const turnAudioChunksRef = useRef<string[]>([]);
   const micStartedAtRef = useRef<number | null>(null);
   const firstAudioAtRef = useRef<number | null>(null);
+  const userTranscriptRef = useRef('');
+  const aiTranscriptRef = useRef('');
 
   const log = useCallback((line: string) => {
     setLogs((prev) => {
@@ -83,6 +87,11 @@ export const RealtimePoCScreen: React.FC = () => {
       return;
     }
 
+    userTranscriptRef.current = '';
+    aiTranscriptRef.current = '';
+    setUserTranscript('');
+    setAiTranscript('');
+
     try {
       log('در حال گرفتن ephemeral token از بک‌اند...');
       const { token, model, expire_at } = await fetchRealtimeToken();
@@ -102,10 +111,26 @@ export const RealtimePoCScreen: React.FC = () => {
           }
           turnAudioChunksRef.current.push(chunk);
         },
+        onInputTranscriptDelta: (delta) => {
+          userTranscriptRef.current += delta;
+          setUserTranscript(userTranscriptRef.current);
+        },
+        onOutputTranscriptDelta: (delta) => {
+          aiTranscriptRef.current += delta;
+          setAiTranscript(aiTranscriptRef.current);
+        },
         onTurnComplete: async () => {
           const chunks = turnAudioChunksRef.current;
           turnAudioChunksRef.current = [];
           firstAudioAtRef.current = null;
+
+          if (userTranscriptRef.current) log(`👤 شما: "${userTranscriptRef.current}"`);
+          if (aiTranscriptRef.current) log(`🤖 AI: "${aiTranscriptRef.current}"`);
+          userTranscriptRef.current = '';
+          aiTranscriptRef.current = '';
+          setUserTranscript('');
+          setAiTranscript('');
+
           if (chunks.length === 0) {
             log('turnComplete رسید ولی هیچ صدایی بافر نشده بود');
             return;
@@ -194,6 +219,23 @@ export const RealtimePoCScreen: React.FC = () => {
       </View>
       {expireAt && <Text style={styles.expireText}>expire_at: {expireAt.toLocaleTimeString()}</Text>}
 
+      {(userTranscript || aiTranscript) && (
+        <View style={styles.transcriptBox}>
+          {!!userTranscript && (
+            <Text style={styles.transcriptLine}>
+              <Text style={styles.transcriptLabel}>شما: </Text>
+              {userTranscript}
+            </Text>
+          )}
+          {!!aiTranscript && (
+            <Text style={styles.transcriptLine}>
+              <Text style={styles.transcriptLabel}>AI: </Text>
+              {aiTranscript}
+            </Text>
+          )}
+        </View>
+      )}
+
       <View style={styles.controlsRow}>
         {canConnect ? (
           <TouchableOpacity style={[styles.controlBtn, styles.connectBtn]} onPress={handleConnect}>
@@ -260,6 +302,16 @@ const styles = StyleSheet.create({
   },
   statusText: { color: COLORS.muted, fontFamily: FONT_FAMILY.medium, fontSize: 13 },
   expireText: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11, paddingHorizontal: 20, marginTop: 2 },
+  transcriptBox: {
+    marginTop: 12,
+    marginHorizontal: 20,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceLight,
+    gap: 4,
+  },
+  transcriptLabel: { fontFamily: FONT_FAMILY.bold, color: COLORS.text },
+  transcriptLine: { fontFamily: FONT_FAMILY.regular, color: COLORS.text, fontSize: 13 },
   controlsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 16 },
   controlBtn: {
     flexDirection: 'row',

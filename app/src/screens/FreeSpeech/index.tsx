@@ -40,6 +40,7 @@ export const FreeSpeechScreen: React.FC = () => {
   const route = useRoute<any>();
   const scenarioId: string | undefined = route.params?.scenarioId;
   const sceneTitle: string = route.params?.sceneTitle || '';
+  const sceneLines: { speaker: string; text: string }[] = route.params?.sceneLines || [];
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [micError, setMicError] = useState<string | null>(null);
@@ -123,7 +124,20 @@ export const FreeSpeechScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {phase !== 'result' && (
-          <Text style={styles.promptText}>{t('freeSpeechPrompt')}</Text>
+          <>
+            <Text style={styles.promptText}>{t('freeSpeechPrompt')}</Text>
+            {sceneLines.length > 0 && (
+              <View style={styles.recapCard}>
+                <Text style={styles.recapLabel}>{t('freeSpeechRecapLabel')}</Text>
+                {sceneLines.map((line, idx) => (
+                  <Text key={idx} style={styles.recapLine}>
+                    <Text style={styles.recapSpeaker}>{line.speaker}: </Text>
+                    {line.text}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
         )}
 
         {phase === 'analyzing' && (
@@ -229,6 +243,28 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.l,
+  },
+  recapCard: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.m,
+    marginBottom: SPACING.l,
+    gap: 4,
+  },
+  recapLabel: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  recapSpeaker: {
+    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.text,
+  },
+  recapLine: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
   centerBlock: {
     alignItems: 'center',
