@@ -18,6 +18,7 @@ export interface StartConversationResult {
   scene_title: string;
   opening_turn: ConversationTurnDTO;
   max_user_turns: number;
+  max_hints: number;
 }
 
 export interface SendTurnResult {
@@ -73,4 +74,46 @@ export async function sendConversationTurn(
 
   const res = await authFetch('/v1/ai-conversation/turn', { method: 'POST', body: form });
   return (await jsonOrThrow(res)) as SendTurnResult;
+}
+
+export interface ConversationSuggestion {
+  text: string;
+  translation_fa: string;
+  /** فقط بعد از اولین پخشِ همین جمله پر می‌شود (صدا تنبل ساخته می‌شود). */
+  audio_url?: string;
+}
+
+export interface SuggestResult {
+  hint_id: string;
+  suggestions: ConversationSuggestion[];
+  hints_used: number;
+  max_hints: number;
+}
+
+/**
+ * پیشنهادِ جواب به آخرین پیامِ AI (۲ جمله‌ی انگلیسی + ترجمه‌ی فارسی). سقفِ
+ * تعدادِ پیشنهاد در هر گفتگو سمتِ سرور اعمال می‌شود؛ زدنِ دوباره روی همان نوبت
+ * همان نتیجه را برمی‌گرداند و از سقف کم نمی‌کند.
+ */
+export async function getConversationSuggestions(conversationId: string): Promise<SuggestResult> {
+  const res = await authFetch('/v1/ai-conversation/suggest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversation_id: conversationId }),
+  });
+  return (await jsonOrThrow(res)) as SuggestResult;
+}
+
+/**
+ * صدای یکی از جمله‌های پیشنهادی. اگر سرور صدایی نداشته باشد (TTS تنظیم نیست
+ * یا شکست خورده) audio_url خالی برمی‌گردد.
+ */
+export async function getSuggestionAudio(hintId: string, index: number): Promise<string | undefined> {
+  const res = await authFetch('/v1/ai-conversation/suggest/audio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hint_id: hintId, index }),
+  });
+  const data = (await jsonOrThrow(res)) as { audio_url?: string };
+  return data.audio_url || undefined;
 }

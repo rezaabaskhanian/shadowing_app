@@ -22,6 +22,9 @@ interface PlacementTestRecordScreenProps {
   onSubmitted: (result: SubmitAssessmentResult) => void;
 }
 
+/** سقفِ طولِ هر ضبطِ تست تعیین سطح؛ رسیدن به آن ضبط را خودکار متوقف می‌کند. */
+const MAX_RECORD_SECONDS = 10;
+
 type ItemPhase = 'idle' | 'recording' | 'recorded';
 type SubmitPhase = 'recording' | 'submitting' | 'submit_error';
 type PlaybackState = 'idle' | 'loading' | 'playing';
@@ -64,6 +67,10 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
   const [finalAnswers, setFinalAnswers] = useState<SubmitAssessmentItem[] | null>(null);
 
   const recordStartedAtRef = useRef<number>(0);
+  // وقتی توقفِ ضبط درخواست شده (دستی یا خودکار) ولی وضعیتِ «stopped» هنوز
+  // نرسیده، تایمر نباید دوباره stop بفرستد.
+  const stopRequestedRef = useRef(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // مسیر مرجعِ *بالفعل* داده‌شده به AudioPlayer — عمداً جدا از currentItem
   // نگه داشته می‌شود. اگر uri را همان لحظه‌ی ورود به آیتم Shadow ست کنیم،
@@ -105,6 +112,27 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
     return () => loop.stop();
   }, [itemPhase, pulse]);
 
+  // شمارشِ ثانیه‌های ضبط + توقفِ خودکار در MAX_RECORD_SECONDS. زمان از لحظه‌ای
+  // حساب می‌شود که ضبط واقعاً شروع شده (recordStartedAtRef)، نه لحظه‌ی فشردنِ دکمه.
+  useEffect(() => {
+    if (itemPhase !== 'recording') {
+      setElapsedSeconds(0);
+      return;
+    }
+    const id = setInterval(() => {
+      const startedAt = recordStartedAtRef.current;
+      if (!startedAt) return;
+      const elapsed = (Date.now() - startedAt) / 1000;
+      setElapsedSeconds(Math.min(MAX_RECORD_SECONDS, Math.floor(elapsed)));
+      if (elapsed >= MAX_RECORD_SECONDS && !stopRequestedRef.current) {
+        stopRequestedRef.current = true;
+        setActionCommand('stop_record');
+        setActionNonce((n) => n + 1);
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [itemPhase]);
+
   const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
 
@@ -128,6 +156,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
   }, [t]);
 
   const handleStopRecord = useCallback(() => {
+    stopRequestedRef.current = true;
     bumpAndSet('stop_record');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -159,6 +188,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
     (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
       if (status === 'recording') {
         recordStartedAtRef.current = Date.now();
+        stopRequestedRef.current = false;
         setItemPhase('recording');
         return;
       }
@@ -173,7 +203,8 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
       const elapsedSeconds = recordStartedAtRef.current
         ? (Date.now() - recordStartedAtRef.current) / 1000
         : 0;
-      const duration = Math.max(1, Math.round(elapsedSeconds || 1));
+      // توقفِ خودکار کمی بعد از ثانیه‌ی دهم می‌رسد؛ مدتِ گزارش‌شده از سقف بیشتر نشود.
+      const duration = Math.min(MAX_RECORD_SECONDS, Math.max(1, Math.round(elapsedSeconds || 1)));
 
       setRecordedPath(filePath);
       setRecordedMime(mimeType);
@@ -344,6 +375,19 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
                 ? t('placementStartRecordBtn')
                 : ''}
             </Text>
+            {itemPhase === 'recording' ? (
+              <Text style={styles.recordTimer}>
+                {t('placementRecordTimer')
+                  .replace('{elapsed}', String(elapsedSeconds))
+                  .replace('{max}', String(MAX_RECORD_SECONDS))}
+              </Text>
+            ) : (
+              itemPhase === 'idle' && (
+                <Text style={styles.recordLimitHint}>
+                  {t('placementMaxDurationHint').replace('{max}', String(MAX_RECORD_SECONDS))}
+                </Text>
+              )
+            )}
 
             {itemPhase === 'recorded' && (
               <View style={styles.recordedActions}>
@@ -515,6 +559,15 @@ const styles = StyleSheet.create({
   },
   recordBtnActive: {
     backgroundColor: COLORS.error,
+  },
+  recordTimer: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.error,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  recordLimitHint: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.muted,
   },
   recordHint: {
     ...TEXT_STYLES.labelMd,

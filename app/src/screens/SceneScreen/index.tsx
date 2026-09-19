@@ -975,15 +975,44 @@ export const SceneScreen = () => {
   // ================= SESSION RESULT SCREEN (SHOWN AFTER "FINISH SESSION") =================
   if (showResult) {
     return (
-      <SessionResultScreen
-        score={sessionScores.score}
-        pronunciation={sessionScores.pronunciation}
-        fluency={sessionScores.fluency}
-        rhythm={sessionScores.rhythm}
-        lines={sessionResultLines}
-        onPracticeAgain={restartLesson}
-        onFinishLesson={handleFinishLesson}
-      />
+      <>
+        <SessionResultScreen
+          score={sessionScores.score}
+          pronunciation={sessionScores.pronunciation}
+          fluency={sessionScores.fluency}
+          rhythm={sessionScores.rhythm}
+          lines={sessionResultLines}
+          onPracticeAgain={restartLesson}
+          onFinishLesson={handleFinishLesson}
+        />
+        <LessonCompleteModal
+          visible={lessonCompleteVisible}
+          onStartQuiz={() => {
+            setLessonCompleteVisible(false);
+            navigation.navigate('SceneQuiz', { scenarioId });
+          }}
+          onStartAiConversation={() => {
+            setLessonCompleteVisible(false);
+            navigation.navigate('AIConversation', { scenarioId });
+          }}
+          onStartFreeSpeech={() => {
+            setLessonCompleteVisible(false);
+            navigation.navigate('FreeSpeech', {
+              scenarioId,
+              sceneTitle: scenario?.title,
+              sceneLines: dialogueItems.map((d) => ({ speaker: d.speaker, text: d.dialogue })),
+            });
+          }}
+          onPracticeAgain={() => {
+            setLessonCompleteVisible(false);
+            restartLesson();
+          }}
+          onBackHome={() => {
+            setLessonCompleteVisible(false);
+            resetToHome();
+          }}
+        />
+      </>
     );
   }
 
@@ -1192,34 +1221,6 @@ export const SceneScreen = () => {
         onClose={() => setStreakInfoVisible(false)}
         streak={streakCount}
         freezes={streakFreezes}
-      />
-
-      <LessonCompleteModal
-        visible={lessonCompleteVisible}
-        onStartQuiz={() => {
-          setLessonCompleteVisible(false);
-          navigation.navigate('SceneQuiz', { scenarioId });
-        }}
-        onStartAiConversation={() => {
-          setLessonCompleteVisible(false);
-          navigation.navigate('AIConversation', { scenarioId });
-        }}
-        onStartFreeSpeech={() => {
-          setLessonCompleteVisible(false);
-          navigation.navigate('FreeSpeech', {
-            scenarioId,
-            sceneTitle: scenario?.title,
-            sceneLines: dialogueItems.map((d) => ({ speaker: d.speaker, text: d.dialogue })),
-          });
-        }}
-        onPracticeAgain={() => {
-          setLessonCompleteVisible(false);
-          restartLesson();
-        }}
-        onBackHome={() => {
-          setLessonCompleteVisible(false);
-          resetToHome();
-        }}
       />
     </View>
   );

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Mic, PartyPopper, Square } from 'lucide-react-native';
+import { CircleX, Lightbulb, Mic, PartyPopper, Square, Volume2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -14,7 +14,10 @@ import { absUrl } from '../../api/config';
 import {
   startConversation,
   sendConversationTurn,
+  getConversationSuggestions,
+  getSuggestionAudio,
   type ConversationRole,
+  type ConversationSuggestion,
 } from '../../api/conversation';
 
 interface Message {
@@ -23,6 +26,11 @@ interface Message {
   audioUrl?: string;
   grammarCorrection?: string;
   grammarExplanation?: string;
+}
+
+interface HintState {
+  hintId: string;
+  suggestions: ConversationSuggestion[];
 }
 
 type LoadPhase = 'loading' | 'ready' | 'load_error';
@@ -34,6 +42,11 @@ type ActionCommand = 'none' | 'start_record' | 'stop_record' | 'play_original';
  * ورودی از دکمه‌ی چهارمِ Alert تکمیل درس در SceneScreen (scenarioId به‌عنوان
  * پارامتر مسیر). هر نوبت: کاربر ضبط می‌کند → رونویسی+پاسخ AI برمی‌گردد →
  * صدای AI (اگر ElevenLabs تنظیم شده باشد) پخش می‌شود. حداکثر ۶ تا ۸ نوبت.
+ *
+ * دکمه‌ی «پیشنهاد جواب»: وقتی کاربر نمی‌داند به آخرین پیامِ AI چه بگوید،
+ * ۲ جمله‌ی انگلیسی + ترجمه‌ی فارسی می‌گیرد و می‌تواند صدای هر کدام را
+ * بشنود و تکرار کند (سقفِ تعدادش سمتِ سرور اعمال می‌شود). پیشنهاد فقط برای
+ * نوبتِ فعلی معتبر است و با رسیدنِ پاسخِ بعدیِ AI پاک می‌شود.
  */
 export const AIConversationScreen: React.FC = () => {
   const { t } = useLanguage();
@@ -44,6 +57,9 @@ export const AIConversationScreen: React.FC = () => {
 
   const scrollRef = useRef<ScrollView>(null);
   const recordStartedAtRef = useRef<number>(0);
+  // شناسه‌ی پیشنهادِ فعلی؛ تا اگر صدای یک جمله بعد از رفتن به نوبتِ بعد
+  // رسید، وسط ضبط/پاسخِ جدید پخش نشود.
+  const activeHintIdRef = useRef<string | null>(null);
 
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('loading');
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -52,6 +68,13 @@ export const AIConversationScreen: React.FC = () => {
   const [turnNumber, setTurnNumber] = useState(0);
   const [maxUserTurns, setMaxUserTurns] = useState(8);
   const [isEnded, setIsEnded] = useState(false);
+  const [maxHints, setMaxHints] = useState(3);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [hint, setHint] = useState<HintState | null>(null);
+  const [hintOpen, setHintOpen] = useState(false);
+  const [hintLoading, setHintLoading] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
+  const [audioLoadingIndex, setAudioLoadingIndex] = useState<number | null>(null);
 
   const [recordPhase, setRecordPhase] = useState<RecordPhase>('idle');
   const [micError, setMicError] = useState<string | null>(null);
@@ -84,6 +107,7 @@ export const AIConversationScreen: React.FC = () => {
         setConversationId(res.conversation_id);
         setSceneTitle(res.scene_title);
         setMaxUserTurns(res.max_user_turns);
+        if (res.max_hints) setMaxHints(res.max_hints);
         setMessages([
           { role: res.opening_turn.role, text: res.opening_turn.text, audioUrl: res.opening_turn.audio_url },
         ]);
@@ -101,7 +125,7 @@ export const AIConversationScreen: React.FC = () => {
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [messages, hintOpen]);
 
   const sendTurn = useCallback(
     async (filePath: string, mimeType?: string) => {
@@ -122,6 +146,11 @@ export const AIConversationScreen: React.FC = () => {
         ]);
         setTurnNumber(result.turn_number);
         setIsEnded(result.is_ended);
+        // پیشنهادِ قبلی برای پیامِ قبلیِ AI بود؛ برای نوبتِ جدید باید دوباره بخواهد.
+        activeHintIdRef.current = null;
+        setHint(null);
+        setHintOpen(false);
+        setHintError(null);
         playAudio(result.assistant_audio_url);
       } catch (err) {
         setRetryError(err instanceof Error ? err.message : t('aiConversationRetryHint'));
@@ -165,6 +194,66 @@ export const AIConversationScreen: React.FC = () => {
       sendTurn(filePath, mimeType);
     },
     [sendTurn, t]
+  );
+
+  const handleHint = useCallback(async () => {
+    // پیشنهادِ همین نوبت قبلاً گرفته شده (فقط بسته شده): بازکردنِ دوباره
+    // بدونِ درخواستِ شبکه و بدونِ کم‌شدن از سقف.
+    if (hint) {
+      setHintOpen(true);
+      return;
+    }
+    if (!conversationId || hintLoading) return;
+    setHintError(null);
+    setHintLoading(true);
+    try {
+      const res = await getConversationSuggestions(conversationId);
+      activeHintIdRef.current = res.hint_id;
+      setHint({ hintId: res.hint_id, suggestions: res.suggestions });
+      setHintsUsed(res.hints_used);
+      setMaxHints(res.max_hints);
+      setHintOpen(true);
+    } catch {
+      setHintError(t('aiConversationHintError'));
+    } finally {
+      setHintLoading(false);
+    }
+  }, [conversationId, hint, hintLoading, t]);
+
+  const handlePlaySuggestion = useCallback(
+    async (index: number) => {
+      if (!hint) return;
+      const suggestion = hint.suggestions[index];
+      if (suggestion.audio_url) {
+        playAudio(suggestion.audio_url);
+        return;
+      }
+      const hintId = hint.hintId;
+      setHintError(null);
+      setAudioLoadingIndex(index);
+      try {
+        const url = await getSuggestionAudio(hintId, index);
+        if (activeHintIdRef.current !== hintId) return;
+        if (!url) {
+          setHintError(t('aiConversationHintAudioError'));
+          return;
+        }
+        setHint((prev) =>
+          prev && prev.hintId === hintId
+            ? {
+                ...prev,
+                suggestions: prev.suggestions.map((sg, i) => (i === index ? { ...sg, audio_url: url } : sg)),
+              }
+            : prev
+        );
+        playAudio(url);
+      } catch {
+        if (activeHintIdRef.current === hintId) setHintError(t('aiConversationHintAudioError'));
+      } finally {
+        setAudioLoadingIndex(null);
+      }
+    },
+    [hint, playAudio, t]
   );
 
   const handleDone = useCallback(() => {
@@ -239,8 +328,43 @@ export const AIConversationScreen: React.FC = () => {
             <ActivityIndicator size="small" color={COLORS.primary} />
           </View>
         )}
+        {hint && hintOpen && recordPhase !== 'sending' && (
+          <View style={styles.hintCard}>
+            <View style={styles.hintCardHeader}>
+              <Text style={styles.hintCardTitle}>{t('aiConversationHintTitle')}</Text>
+              <TouchableOpacity
+                onPress={() => setHintOpen(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={t('aiConversationHintClose')}
+              >
+                <X size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {hint.suggestions.map((sg, i) => (
+              <View key={i} style={[styles.hintItem, i > 0 && styles.hintItemDivider]}>
+                <View style={styles.hintItemTexts}>
+                  <Text style={styles.hintItemText}>{sg.text}</Text>
+                  {!!sg.translation_fa && <Text style={styles.hintItemTranslation}>{sg.translation_fa}</Text>}
+                </View>
+                <TouchableOpacity
+                  style={styles.hintPlayBtn}
+                  onPress={() => handlePlaySuggestion(i)}
+                  disabled={recordPhase !== 'idle' || audioLoadingIndex !== null}
+                  activeOpacity={0.8}
+                >
+                  {audioLoadingIndex === i ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <Volume2 size={18} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
+      {hintError && <Text style={styles.errorText}>{hintError}</Text>}
       {retryError && <Text style={styles.errorText}>{retryError}</Text>}
       {micError && <Text style={styles.errorText}>{micError}</Text>}
 
@@ -255,6 +379,26 @@ export const AIConversationScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.recordArea}>
+          {!hintOpen && (hint || hintsUsed < maxHints) && (
+            <TouchableOpacity
+              style={[styles.hintBtn, recordPhase !== 'idle' && styles.hintBtnDisabled]}
+              onPress={handleHint}
+              disabled={recordPhase !== 'idle' || hintLoading}
+              activeOpacity={0.8}
+            >
+              {hintLoading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Lightbulb size={16} color={COLORS.primary} />
+              )}
+              <Text style={styles.hintBtnText}>{t('aiConversationHintBtn')}</Text>
+              {!hint && (
+                <Text style={styles.hintBtnCount}>
+                  {t('aiConversationHintsLeft').replace('{count}', String(maxHints - hintsUsed))}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.recordBtn, recordPhase === 'recording' && styles.recordBtnActive]}
             onPress={recordPhase === 'recording' ? handleStopRecord : handleStartRecord}
@@ -392,6 +536,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.s,
     paddingTop: SPACING.s,
+  },
+  hintBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.l,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs + 2,
+  },
+  hintBtnDisabled: {
+    opacity: 0.5,
+  },
+  hintBtnText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  hintBtnCount: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.muted,
+  },
+  hintCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    padding: SPACING.m,
+    ...SHADOWS.level1,
+  },
+  hintCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs,
+  },
+  hintCardTitle: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+  },
+  hintItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    paddingVertical: SPACING.s,
+  },
+  hintItemDivider: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  hintItemTexts: {
+    flex: 1,
+  },
+  hintItemText: {
+    ...TEXT_STYLES.bodyMd,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  hintItemTranslation: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  hintPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recordBtn: {
     width: 72,

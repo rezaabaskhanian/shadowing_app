@@ -375,6 +375,12 @@ export const translations: Translations = {
   aiConversationTurnProgress: { en: 'Turn {current} of {total}', fa: 'نوبت {current} از {total}' },
   aiConversationLoadError: { en: 'Could not start the conversation', fa: 'شروع گفتگو ممکن نشد' },
   grammarTipLabel: { en: 'Better:', fa: 'بهتره اینطوری بگی:' },
+  aiConversationHintBtn: { en: 'Suggest a reply', fa: 'پیشنهاد جواب' },
+  aiConversationHintsLeft: { en: '{count} left', fa: '{count} تا مونده' },
+  aiConversationHintTitle: { en: 'You could say:', fa: 'می‌تونی بگی:' },
+  aiConversationHintError: { en: 'Could not get a suggestion — try again', fa: 'پیشنهاد گرفته نشد — دوباره امتحان کن' },
+  aiConversationHintAudioError: { en: 'Audio is not available right now', fa: 'الان صدا در دسترس نیست' },
+  aiConversationHintClose: { en: 'Close', fa: 'بستن' },
 
   // ورودیِ کشو برای گفتگو با اپ — از میان دروسِ تمام‌شده به‌صورت رندوم انتخاب می‌شود
   drawerConversationTitle: { en: 'Chat with the app', fa: 'گفت‌وگو با اپلیکیشن' },
@@ -698,6 +704,8 @@ export const translations: Translations = {
   placementPlayReference: { en: 'Play sample audio', fa: 'پخش صدای نمونه' },
   placementStartRecordBtn: { en: 'Start recording', fa: 'شروع ضبط' },
   placementStopRecordBtn: { en: 'Stop recording', fa: 'توقف ضبط' },
+  placementMaxDurationHint: { en: 'Up to {max} seconds', fa: 'حداکثر {max} ثانیه' },
+  placementRecordTimer: { en: '{elapsed} / {max} s', fa: '{elapsed} از {max} ثانیه' },
   placementRecordingLabel: { en: 'Recording…', fa: 'در حال ضبط...' },
   placementPlaybackBtn: { en: 'Play my recording', fa: 'پخش ضبط من' },
   placementRerecordBtn: { en: 'Record again', fa: 'ضبط دوباره' },
