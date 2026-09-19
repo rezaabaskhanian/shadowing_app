@@ -20,6 +20,22 @@ import (
 type WhisperEvaluator struct {
 	client   *WhisperClient
 	fallback *HybridEvaluator
+	// external (اختیاری) رونویسیِ خامِ سریع‌تر روی یک سرویس خارجی است؛ فقط برای
+	// TranscribeOnly. نمره‌دهی تلفظ (Evaluate) همیشه روی Whisperِ محلی می‌ماند چون
+	// به احتمالِ هر کلمه نیاز دارد.
+	external externalTranscriber
+}
+
+// externalTranscriber رونویسیِ خام روی یک سرویس خارجی (مثل Groq).
+type externalTranscriber interface {
+	Enabled() bool
+	Transcribe(ctx context.Context, audioPath string) (string, error)
+}
+
+// SetExternalTranscriber رونویسیِ خارجی را برای TranscribeOnly فعال می‌کند. اگر
+// Enabled() false باشد (کلید ست نیست) یا خطا بدهد، به Whisperِ محلی برمی‌گردد.
+func (e *WhisperEvaluator) SetExternalTranscriber(x externalTranscriber) {
+	e.external = x
 }
 
 func NewWhisperEvaluator(baseURL string) *WhisperEvaluator {

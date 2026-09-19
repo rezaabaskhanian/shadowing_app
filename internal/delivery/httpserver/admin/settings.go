@@ -35,6 +35,8 @@ type settingsResponse struct {
 	DeepSeekModel string      `json:"deepseek_model"`
 	ElevenLabs    settingItem `json:"elevenlabs_api_key"`
 	VoiceID       settingItem `json:"elevenlabs_voice_id"`
+	Groq          settingItem `json:"groq_api_key"`
+	GroqSTTModel  string      `json:"groq_stt_model"`
 	FCMKey        settingItem `json:"fcm_service_account_json"`
 }
 
@@ -62,6 +64,8 @@ func (h Handler) GetSettings(c echo.Context) error {
 		DeepSeekModel: s.Get(settingsservice.KeyDeepSeekModel),
 		ElevenLabs:    get(settingsservice.KeyElevenLabsAPIKey),
 		VoiceID:       get(settingsservice.KeyElevenLabsVoiceID),
+		Groq:          get(settingsservice.KeyGroqAPIKey),
+		GroqSTTModel:  s.Get(settingsservice.KeyGroqSTTModel),
 		FCMKey:        get(settingsservice.KeyFCMServiceAccount),
 	})
 }

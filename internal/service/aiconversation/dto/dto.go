@@ -8,8 +8,10 @@ type StartConversationRequest struct {
 }
 
 type TurnDTO struct {
-	Role     string `json:"role"`
-	Text     string `json:"text"`
+	Role string `json:"role"`
+	Text string `json:"text"`
+	// TextFA ترجمه‌ی فارسیِ Text؛ اپ پشتِ دکمه‌ی «ترجمه» نشان می‌دهد. ذخیره نمی‌شود.
+	TextFA   string `json:"text_fa,omitempty"`
 	AudioURL string `json:"audio_url,omitempty"`
 }
 
@@ -27,6 +29,7 @@ type StartConversationResponse struct {
 type SendTurnResponse struct {
 	UserTranscript    string `json:"user_transcript"`
 	AssistantText     string `json:"assistant_text"`
+	AssistantTextFA   string `json:"assistant_text_fa,omitempty"`
 	AssistantAudioURL string `json:"assistant_audio_url,omitempty"`
 	// UserGrammarCorrection/UserGrammarExplanation فقط وقتی خطای گرامریِ
 	// قابل‌توجهی در نوبتِ کاربر پیدا شده باشد پر می‌شوند (بخش ۱۸ سند محصول).

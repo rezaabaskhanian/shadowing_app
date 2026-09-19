@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Lightbulb, Mic, PartyPopper, Square, X } from 'lucide-react-native';
+import { CircleX, Languages, Lightbulb, Mic, PartyPopper, Square, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -23,6 +23,8 @@ import {
 interface Message {
   role: ConversationRole;
   text: string;
+  // ترجمه‌ی فارسیِ پیامِ AI؛ فقط پشتِ دکمه‌ی «ترجمه» نشان داده می‌شود.
+  textFa?: string;
   audioUrl?: string;
   grammarCorrection?: string;
   grammarExplanation?: string;
@@ -97,6 +99,8 @@ export const AIConversationScreen: React.FC = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sceneTitle, setSceneTitle] = useState(initialSceneTitle);
   const [messages, setMessages] = useState<Message[]>([]);
+  // اندیسِ پیام‌هایی که ترجمه‌شان باز است (پیش‌فرض همه بسته: اول خودش بفهمد).
+  const [shownTranslations, setShownTranslations] = useState<Record<number, boolean>>({});
   const [turnNumber, setTurnNumber] = useState(0);
   const [maxUserTurns, setMaxUserTurns] = useState(8);
   const [isEnded, setIsEnded] = useState(false);
@@ -140,7 +144,12 @@ export const AIConversationScreen: React.FC = () => {
         setMaxUserTurns(res.max_user_turns);
         if (res.max_hints) setMaxHints(res.max_hints);
         setMessages([
-          { role: res.opening_turn.role, text: res.opening_turn.text, audioUrl: res.opening_turn.audio_url },
+          {
+            role: res.opening_turn.role,
+            text: res.opening_turn.text,
+            textFa: res.opening_turn.text_fa,
+            audioUrl: res.opening_turn.audio_url,
+          },
         ]);
         setLoadPhase('ready');
         playAudio(res.opening_turn.audio_url);
@@ -173,7 +182,12 @@ export const AIConversationScreen: React.FC = () => {
             grammarCorrection: result.user_grammar_correction,
             grammarExplanation: result.user_grammar_explanation,
           },
-          { role: 'assistant', text: result.assistant_text, audioUrl: result.assistant_audio_url },
+          {
+            role: 'assistant',
+            text: result.assistant_text,
+            textFa: result.assistant_text_fa,
+            audioUrl: result.assistant_audio_url,
+          },
         ]);
         setTurnNumber(result.turn_number);
         setIsEnded(result.is_ended);
@@ -330,6 +344,22 @@ export const AIConversationScreen: React.FC = () => {
             style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant]}
           >
             <Text style={[styles.bubbleText, msg.role === 'user' && styles.bubbleTextUser]}>{msg.text}</Text>
+            {msg.role === 'assistant' && !!msg.textFa && (
+              <>
+                {!!shownTranslations[i] && <Text style={styles.translationText}>{msg.textFa}</Text>}
+                <TouchableOpacity
+                  style={styles.translateBtn}
+                  onPress={() => setShownTranslations((prev) => ({ ...prev, [i]: !prev[i] }))}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  activeOpacity={0.7}
+                >
+                  <Languages size={14} color={COLORS.primary} />
+                  <Text style={styles.translateBtnText}>
+                    {shownTranslations[i] ? t('aiConversationHideTranslation') : t('aiConversationTranslate')}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
             {msg.role === 'user' && !!msg.grammarCorrection && (
               <View style={styles.grammarTip}>
                 <Text style={styles.grammarTipLabel}>{t('grammarTipLabel')}</Text>
@@ -518,6 +548,26 @@ const styles = StyleSheet.create({
   bubbleText: {
     ...TEXT_STYLES.bodyMd,
     color: COLORS.text,
+  },
+  translationText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  translateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: SPACING.xs,
+  },
+  translateBtnText: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
   },
   bubbleTextUser: {
     color: COLORS.white,

@@ -298,6 +298,13 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	if err := settingsSvc.LoadAll(context.Background()); err != nil {
 		fmt.Println("warning: failed to load settings from db:", err)
 	}
+
+	// رونویسیِ خام (توضیح آزاد، گفتگو با AI، آیتم‌های گفتار آزادِ تست سطح) اگر
+	// GROQ_API_KEY در پنل ادمین ست شده باشد روی Whisperِ Groq انجام می‌شود، وگرنه یا
+	// اگر خطا داد، روی Whisperِ محلی. نمره‌دهی تلفظ همیشه محلی می‌ماند.
+	if we, ok := evaluator.(*speecheval.WhisperEvaluator); ok {
+		we.SetExternalTranscriber(speecheval.NewGroqClient(settingsSvc))
+	}
 	// وقتی چند instance از بک‌اند پشتِ لودبالانسر اجرا می‌شوند، تغییرِ تنظیمات
 	// از پنل ادمین روی یک instance باید به بقیه هم برسد — این polling دوره‌ای
 	// همان کار را می‌کند (نگاه کنید به settingsservice.Service.StartAutoRefresh).

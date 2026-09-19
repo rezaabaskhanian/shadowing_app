@@ -10,6 +10,8 @@ export type ConversationRole = 'user' | 'assistant';
 export interface ConversationTurnDTO {
   role: ConversationRole;
   text: string;
+  /** ترجمه‌ی فارسیِ text (پشتِ دکمه‌ی «ترجمه»)؛ ممکن است نباشد. */
+  text_fa?: string;
   audio_url?: string;
 }
 
@@ -24,6 +26,7 @@ export interface StartConversationResult {
 export interface SendTurnResult {
   user_transcript: string;
   assistant_text: string;
+  assistant_text_fa?: string;
   assistant_audio_url?: string;
   /** فقط وقتی خطای گرامریِ قابل‌توجهی در نوبتِ کاربر پیدا شده باشد پر می‌شوند. */
   user_grammar_correction?: string;

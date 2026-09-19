@@ -19,7 +19,10 @@ type TokenUsage struct {
 
 // ConversationResult - پاسخ AI در نقشِ شخصیتِ صحنه + سیگنال پایانِ گفتگو.
 type ConversationResult struct {
-	Reply     string     `json:"reply"`
+	Reply string `json:"reply"`
+	// ReplyFA ترجمه‌ی فارسیِ Reply است؛ اپ پشتِ دکمه‌ی «ترجمه» نشان می‌دهد (بخش ۱۹
+	// سند محصول: راهنمایی دوزبانه برای مبتدی‌ها). ممکن است خالی باشد.
+	ReplyFA   string     `json:"reply_fa"`
 	ShouldEnd bool       `json:"should_end"`
 	Usage     TokenUsage `json:"-"`
 }
@@ -43,8 +46,9 @@ Rules:
 - Do NOT conclude, say goodbye, or set "should_end": true before turn %[6]d — even if the scene's immediate transactional goal (e.g. "how much is this jacket?") is already resolved, keep the conversation going naturally with follow-up questions or related sub-topics until then.
 - From turn %[6]d onward, start naturally wrapping up (say goodbye / conclude the interaction) and set "should_end": true.
 - If the conversation history is empty, this call is to open the conversation: greet the learner in character and ask an opening question relevant to the scene; do not set should_end.
+- "reply_fa" is a natural, accurate Persian translation of "reply" (meaning, not word-for-word).
 - Output ONLY a single valid JSON object, no markdown, no commentary:
-{"reply": string, "should_end": boolean}`
+{"reply": string, "reply_fa": string, "should_end": boolean}`
 
 // Converse یک نوبتِ گفتگوی آزاد را با ارائه‌دهنده‌ی فعال پاسخ می‌دهد.
 func (s Service) Converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {

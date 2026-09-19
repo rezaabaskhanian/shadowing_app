@@ -141,6 +141,8 @@ export interface SettingsResp {
   deepseek_model: string;
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
+  groq_api_key: SettingItem;
+  groq_stt_model: string;
   fcm_service_account_json: SettingItem;
 }
 

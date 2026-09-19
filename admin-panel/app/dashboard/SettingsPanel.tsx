@@ -22,6 +22,12 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
   { key: "ELEVENLABS_VOICE_ID", label: "شناسه صدای ElevenLabs", hint: "خالی بگذار برای صدای پیش‌فرض" },
   {
+    key: "GROQ_API_KEY",
+    label: "کلید Groq (رونویسی سریع صدا برای توضیح آزاد و گفتگوی AI)",
+    hint: "خالی = فقط Whisper خودِ سرور (کندتر). اگر Groq خطا بدهد، خودکار به Whisper سرور برمی‌گردد",
+  },
+  { key: "GROQ_STT_MODEL", label: "مدل رونویسی Groq", hint: "مثلاً whisper-large-v3 — خالی بگذار برای پیش‌فرض (whisper-large-v3-turbo)" },
+  {
     key: "FCM_SERVICE_ACCOUNT_JSON",
     label: "کلید سرویس Firebase (FCM، برای نوتیفیکیشن Push)",
     hint: "کل محتوای فایل JSON کلید سرویس Firebase را اینجا جای‌گذاری کن",
@@ -139,6 +145,7 @@ export default function SettingsPanel({
       DEEPSEEK_API_KEY: settings.deepseek_api_key,
       ELEVENLABS_API_KEY: settings.elevenlabs_api_key,
       ELEVENLABS_VOICE_ID: settings.elevenlabs_voice_id,
+      GROQ_API_KEY: settings.groq_api_key,
       FCM_SERVICE_ACCOUNT_JSON: settings.fcm_service_account_json,
     };
     return map[key];

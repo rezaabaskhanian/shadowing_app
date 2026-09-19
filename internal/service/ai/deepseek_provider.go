@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -211,7 +213,36 @@ func (p *deepseekProvider) checkGrammar(ctx context.Context, transcript string) 
 	return result, nil
 }
 
+// errDeepseekUnparsable خطای «جواب قابل‌استفاده نبود» (محتوای خالی/غیرJSON) را
+// علامت می‌زند تا converse فقط برای همین حالت دوباره تلاش کند، نه برای هر خطایی.
+var errDeepseekUnparsable = errors.New("deepseek: unparsable response")
+
+// deepseekUnparsable خطای قابل‌تشخیص می‌سازد و بخشی از جوابِ خام را لاگ می‌کند؛
+// قبلاً فقط «قابل پردازش نبود» می‌آمد و معلوم نبود DeepSeek چه برگردانده.
+func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, cause error) error {
+	snippet := strings.TrimSpace(raw)
+	if len(snippet) > 300 {
+		snippet = snippet[:300]
+	}
+	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "cause", cause)
+	return richerror.New(op).
+		WithErr(fmt.Errorf("%w (%s): %v", errDeepseekUnparsable, stage, cause)).
+		WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+}
+
+// converse یک بار دوباره تلاش می‌کند اگر جواب DeepSeek خالی/غیرقابل‌استفاده بود —
+// حالتِ JSON آن گاهی محتوای خالی برمی‌گرداند و تلاش دوم معمولاً جواب می‌دهد.
+// خطاهای دیگر (شبکه، کلید، سهمیه) دوباره تلاش نمی‌شوند.
 func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
+	result, err := p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+	if err != nil && errors.Is(err, errDeepseekUnparsable) {
+		slog.Warn("deepseek: retrying converse once after unusable response")
+		return p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+	}
+	return result, err
+}
+
+func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
 	const op = "aiservice.deepseekProvider.converse"
 
 	key := p.apiKey()
@@ -258,7 +289,7 @@ func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescri
 
 	var chatResp deepseekChatResponse
 	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
-		return ConversationResult{}, richerror.New(op).WithErr(err).WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -274,11 +305,19 @@ func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescri
 		return ConversationResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	content := chatResp.Choices[0].Message.Content
 	var result ConversationResult
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return ConversationResult{}, richerror.New(op).WithErr(err).
-			WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+	if err := json.Unmarshal([]byte(extractJSON(content)), &result); err != nil {
+		// گاهی مدل JSON نمی‌دهد و مستقیم جمله‌ی جواب را می‌نویسد؛ همان را جواب می‌گیریم
+		// (به‌جای اینکه کاربر متنِ جایگزین ببیند). محتوای خالی یا نیمه‌JSON خطاست.
+		if t := strings.TrimSpace(content); t != "" && !strings.Contains(t, "{") {
+			result = ConversationResult{Reply: t}
+		} else {
+			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, err)
+		}
+	}
+	if strings.TrimSpace(result.Reply) == "" {
+		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, errors.New("empty reply"))
 	}
 	if chatResp.Usage != nil {
 		result.Usage = TokenUsage{

@@ -371,6 +371,8 @@ export const translations: Translations = {
   sceneWordsTitle: { en: 'Words in this scene', fa: 'واژه‌های این صحنه' },
   sceneWordsMore: { en: '+{count} more', fa: '+{count} تا دیگه' },
   sceneWordsLess: { en: 'Show less', fa: 'کمتر' },
+  aiConversationTranslate: { en: 'Translate', fa: 'ترجمه' },
+  aiConversationHideTranslation: { en: 'Hide translation', fa: 'مخفی کردن ترجمه' },
   aiConversationTitle: { en: 'AI Conversation', fa: 'گفتگو با هوش مصنوعی' },
   aiConversationRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
   aiConversationSending: { en: 'Sending...', fa: 'در حال ارسال...' },

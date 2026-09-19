@@ -15,8 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultWrapUpText = "Thanks for practicing! Let's wrap up here."
-
 // SendTurn یک نوبتِ صوتیِ کاربر را رونویسی، در تاریخچه ثبت و پاسخ AI را
 // (متن + صدا) برمی‌گرداند. صدای کاربر هیچ‌وقت روی سرور نگه داشته نمی‌شود.
 func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, localAudioPath string) (*dto.SendTurnResponse, error) {
@@ -88,8 +86,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 
 	turnNumber := conv.TurnCount + 1
 
-	assistantText := defaultWrapUpText
-	shouldEnd := true
+	assistantText, assistantTextFA, shouldEnd := fallbackReply(turnNumber)
 	var usage aiservice.TokenUsage
 	converseStart := time.Now()
 	if s.ai.Enabled() {
@@ -100,10 +97,10 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		aiHistory = append(aiHistory, aiservice.ConversationTurn{Role: string(aiconversation.RoleUser), Text: transcript})
 
 		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, aiHistory, turnNumber,
-			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil {
-			assistantText, shouldEnd, usage = result.Reply, result.ShouldEnd, result.Usage
+			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil && strings.TrimSpace(result.Reply) != "" {
+			assistantText, assistantTextFA, shouldEnd, usage = result.Reply, strings.TrimSpace(result.ReplyFA), result.ShouldEnd, result.Usage
 		} else {
-			slog.Warn("aiconversation: converse failed, using fallback reply", "err", aiErr)
+			slog.Warn("aiconversation: converse failed or empty, using fallback reply", "err", aiErr)
 		}
 	}
 
@@ -150,6 +147,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	return &dto.SendTurnResponse{
 		UserTranscript:         transcript,
 		AssistantText:          assistantText,
+		AssistantTextFA:        assistantTextFA,
 		AssistantAudioURL:      audioURL,
 		UserGrammarCorrection:  grammarCorrection,
 		UserGrammarExplanation: grammarExplanation,

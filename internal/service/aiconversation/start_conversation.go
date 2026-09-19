@@ -3,6 +3,7 @@ package aiconversationservice
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"shadowing-backend/internal/domain/aiconversation"
 	"shadowing-backend/internal/pkg/richerror"
@@ -11,8 +12,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-const defaultOpeningText = "Hi! Let's practice a conversation. Ready when you are!"
 
 // StartConversation یک گفتگوی تازه می‌سازد و اولین نوبت (از طرف AI) را
 // برمی‌گرداند. اگر AI یا TTS در دسترس نباشند، هیچ‌کدام درخواست را نمی‌شکنند —
@@ -34,12 +33,12 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
 	}
 
-	openingText := defaultOpeningText
+	openingText, openingTextFA := defaultOpeningText, defaultOpeningTextFA
 	var usage aiservice.TokenUsage
 	if s.ai.Enabled() {
 		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, nil, 0,
-			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil {
-			openingText, usage = result.Reply, result.Usage
+			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil && strings.TrimSpace(result.Reply) != "" {
+			openingText, openingTextFA, usage = result.Reply, strings.TrimSpace(result.ReplyFA), result.Usage
 		} else {
 			slog.Warn("aiconversation: opening converse call failed, using fallback", "err", aiErr)
 		}
@@ -73,6 +72,7 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 		OpeningTurn: dto.TurnDTO{
 			Role:     string(aiconversation.RoleAssistant),
 			Text:     openingText,
+			TextFA:   openingTextFA,
 			AudioURL: audioURL,
 		},
 		MaxUserTurns: aiconversation.MaxUserTurns,

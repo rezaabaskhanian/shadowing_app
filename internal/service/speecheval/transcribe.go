@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"shadowing-backend/internal/pkg/audio"
@@ -47,6 +48,24 @@ func (e *WhisperEvaluator) TranscribeOnly(ctx context.Context, audioPath string)
 	defer os.Remove(wavPath)
 	convertDur := time.Since(convertStart)
 
+	// اول سرویس خارجیِ سریع (اگر تنظیم شده)؛ اگر خطا داد یا timeout شد، همان WAV
+	// روی Whisperِ محلی می‌رود تا کاربر هیچ‌وقت به‌خاطرِ قطعیِ سرویس خارجی بی‌جواب نماند.
+	if e.external != nil && e.external.Enabled() {
+		extStart := time.Now()
+		text, extErr := e.external.Transcribe(ctx, wavPath)
+		if extErr == nil && strings.TrimSpace(text) != "" {
+			slog.Info("speecheval: transcribe timing",
+				"provider", "groq",
+				"convert_ms", convertDur.Milliseconds(),
+				"stt_ms", time.Since(extStart).Milliseconds(),
+				"chars", len(text),
+			)
+			return text, nil
+		}
+		slog.Warn("speecheval: external transcription failed, using local whisper",
+			"err", extErr, "empty", extErr == nil, "ms", time.Since(extStart).Milliseconds())
+	}
+
 	whisperStart := time.Now()
 	tr, err := e.client.TranscribeText(ctx, wavPath)
 	if err != nil {
@@ -56,6 +75,7 @@ func (e *WhisperEvaluator) TranscribeOnly(ctx context.Context, audioPath string)
 	// لاگِ زمان‌بندی: برای اینکه معلوم شود کندیِ «توضیح آزاد»/«گفتگو با AI» از
 	// ffmpeg است یا Whisper، نه حدس.
 	slog.Info("speecheval: transcribe timing",
+		"provider", "local",
 		"convert_ms", convertDur.Milliseconds(),
 		"whisper_ms", time.Since(whisperStart).Milliseconds(),
 		"audio_seconds", tr.Duration,

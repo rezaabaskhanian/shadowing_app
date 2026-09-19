@@ -19,6 +19,8 @@ const (
 	KeyDeepSeekModel     = "DEEPSEEK_MODEL"
 	KeyElevenLabsAPIKey  = "ELEVENLABS_API_KEY"
 	KeyElevenLabsVoiceID = "ELEVENLABS_VOICE_ID"
+	KeyGroqAPIKey        = "GROQ_API_KEY"
+	KeyGroqSTTModel      = "GROQ_STT_MODEL"
 	KeyFCMServiceAccount = "FCM_SERVICE_ACCOUNT_JSON"
 )
 
@@ -33,6 +35,8 @@ var AllowedKeys = map[string]bool{
 	KeyDeepSeekModel:     true,
 	KeyElevenLabsAPIKey:  true,
 	KeyElevenLabsVoiceID: true,
+	KeyGroqAPIKey:        true,
+	KeyGroqSTTModel:      true,
 	KeyFCMServiceAccount: true,
 }
 
