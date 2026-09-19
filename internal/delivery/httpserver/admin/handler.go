@@ -1,6 +1,7 @@
 package adminhandler
 
 import (
+	"shadowing-backend/internal/pkg/filestore"
 	aiservice "shadowing-backend/internal/service/ai"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
@@ -36,11 +37,9 @@ type Handler struct {
 	authSvc    authservice.Service
 	authConfig authservice.Config
 
-	// uploadDir مسیر ذخیره‌سازی فایل‌های آپلودشده روی دیسک است
-	uploadDir string
-
-	// publicPath پیشوند URL عمومی که فایل‌ها با آن سرو می‌شوند (مثلاً /uploads)
-	publicPath string
+	// store محل ذخیره‌ی فایل‌های آپلودی/تولیدشده (تصویر/صدا) است — روی دیسکِ
+	// محلی یا object storage، بسته به تنظیمِ OBJECT_STORAGE_* (filestore.New).
+	store filestore.Store
 }
 
 func New(
@@ -59,7 +58,7 @@ func New(
 	feedbackSvc feedbackservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
-	uploadDir, publicPath string,
+	store filestore.Store,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -77,7 +76,6 @@ func New(
 		feedbackSvc:        feedbackSvc,
 		authSvc:            authSvc,
 		authConfig:         authConfig,
-		uploadDir:          uploadDir,
-		publicPath:         publicPath,
+		store:              store,
 	}
 }

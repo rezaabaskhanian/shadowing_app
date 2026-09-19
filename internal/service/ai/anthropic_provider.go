@@ -219,6 +219,10 @@ func (p *anthropicProvider) converse(ctx context.Context, sceneTitle, sceneDescr
 		return ConversationResult{}, richerror.New(op).WithErr(err).
 			WithMessage("پاسخ مدل (Claude) قابل پردازش نبود")
 	}
+	result.Usage = TokenUsage{
+		InputTokens:  int(resp.Usage.InputTokens),
+		OutputTokens: int(resp.Usage.OutputTokens),
+	}
 	return result, nil
 }
 

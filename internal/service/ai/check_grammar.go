@@ -23,5 +23,11 @@ Rules:
 
 // CheckGrammar متن آزادانه‌ی کاربر را با ارائه‌دهنده‌ی فعال بررسی می‌کند.
 func (s Service) CheckGrammar(ctx context.Context, transcript string) (GrammarResult, error) {
-	return s.activeProvider().checkGrammar(ctx, transcript)
+	var result GrammarResult
+	err := withLimit(ctx, func() error {
+		var err error
+		result, err = s.activeProvider().checkGrammar(ctx, transcript)
+		return err
+	})
+	return result, err
 }

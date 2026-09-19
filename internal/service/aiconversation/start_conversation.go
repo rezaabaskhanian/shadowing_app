@@ -6,6 +6,7 @@ import (
 
 	"shadowing-backend/internal/domain/aiconversation"
 	"shadowing-backend/internal/pkg/richerror"
+	aiservice "shadowing-backend/internal/service/ai"
 	"shadowing-backend/internal/service/aiconversation/dto"
 
 	"github.com/google/uuid"
@@ -34,10 +35,11 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 	}
 
 	openingText := defaultOpeningText
+	var usage aiservice.TokenUsage
 	if s.ai.Enabled() {
 		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, nil, 0,
 			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil {
-			openingText = result.Reply
+			openingText, usage = result.Reply, result.Usage
 		} else {
 			slog.Warn("aiconversation: opening converse call failed, using fallback", "err", aiErr)
 		}
@@ -49,6 +51,8 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+	conv.TotalInputTokens = usage.InputTokens
+	conv.TotalOutputTokens = usage.OutputTokens
 	if err := s.conversations.Create(ctx, conv); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -57,6 +61,8 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+	openingTurn.InputTokens = usage.InputTokens
+	openingTurn.OutputTokens = usage.OutputTokens
 	if err := s.turns.Insert(ctx, openingTurn); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}

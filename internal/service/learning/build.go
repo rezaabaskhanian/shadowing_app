@@ -132,15 +132,22 @@ func (s Service) buildHotspots(ctx context.Context, op richerror.Op, reqHotspots
 // transcribeReferenceAudio زمان‌بندی کلمه‌به‌کلمه‌ی فایل صوتی مرجع را از
 // whisper-service می‌گیرد. audioURL همیشه به شکل «<publicPath>/<filename>»
 // است (بدون زیرپوشه — نگاه کنید به generate_audio.go/upload_audio.go)، پس
-// نام فایل همان بخش آخر URL و مسیر دیسک آن uploadDir/filename است.
+// نام فایل همان بخش آخر URL است. store.Open آن را (چه از دیسکِ محلی چه با
+// دانلود از object storage) در یک مسیرِ دیسکِ محلی در دسترس می‌گذارد — چون
+// whisper client فقط مسیر دیسک می‌پذیرد.
 func (s Service) transcribeReferenceAudio(ctx context.Context, audioURL, text string) []scene.WordTiming {
 	if s.whisperURL == "" || text == "" {
 		return nil
 	}
 
-	client := speecheval.NewWhisperClient(s.whisperURL)
-	localPath := filepath.Join(s.uploadDir, filepath.Base(audioURL))
+	localPath, cleanup, err := s.store.Open(ctx, filepath.Base(audioURL))
+	if err != nil {
+		fmt.Println("warning: could not open reference audio for", audioURL, "-", err)
+		return nil
+	}
+	defer cleanup()
 
+	client := speecheval.NewWhisperClient(s.whisperURL)
 	result, err := client.Transcribe(ctx, localPath, text)
 	if err != nil {
 		fmt.Println("warning: reference audio transcription failed for", audioURL, "-", err)

@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mic, CircleCheck } from 'lucide-react-native';
+import { Mic, Headphones, MessageCircle, TrendingUp, Clock } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -12,6 +13,16 @@ interface PlacementTestIntroScreenProps {
   onStart: () => void;
   onSkip: () => void;
 }
+
+const ICON_CIRCLE_SIZE = 96;
+
+/** هر بولت آیکن و رنگ خودش را دارد تا سه مرحله‌ی فلو (گوش‌دادن، گفتار آزاد،
+ * نتیجه) با یک نگاه از هم متمایز باشند، نه سه ردیف یک‌شکل با تیک سبز. */
+const BULLET_META = [
+  { Icon: Headphones, color: COLORS.primary, bg: COLORS.primaryLight },
+  { Icon: MessageCircle, color: COLORS.info, bg: COLORS.infoLight },
+  { Icon: TrendingUp, color: COLORS.secondary, bg: COLORS.secondaryLight },
+];
 
 /**
  * معرفیِ تست تعیین سطح گفتاری، قبل از شروع ضبط سه آیتم. کاربر می‌تواند
@@ -34,19 +45,43 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
     <View style={[styles.container, { paddingTop: insets.top + SPACING.xl, paddingBottom: insets.bottom + SPACING.l }]}>
       <View style={styles.content}>
         <View style={styles.iconCircle}>
-          <Mic size={36} color={COLORS.primary} />
+          <Svg width={ICON_CIRCLE_SIZE} height={ICON_CIRCLE_SIZE} style={StyleSheet.absoluteFill}>
+            <Defs>
+              <SvgLinearGradient id="introIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor={COLORS.primaryContainer} />
+                <Stop offset="100%" stopColor={COLORS.primaryDark} />
+              </SvgLinearGradient>
+            </Defs>
+            <Circle
+              cx={ICON_CIRCLE_SIZE / 2}
+              cy={ICON_CIRCLE_SIZE / 2}
+              r={ICON_CIRCLE_SIZE / 2}
+              fill="url(#introIconGrad)"
+            />
+          </Svg>
+          <Mic size={38} color={COLORS.white} />
         </View>
 
         <Text style={styles.title}>{t('placementIntroTitle')}</Text>
         <Text style={styles.body}>{t('placementIntroBody')}</Text>
 
+        <View style={styles.timePill}>
+          <Clock size={14} color={COLORS.textSecondary} />
+          <Text style={styles.timePillText}>{t('placementIntroTimeEstimate')}</Text>
+        </View>
+
         <View style={styles.bulletList}>
-          {bullets.map((bullet, index) => (
-            <View key={index} style={styles.bulletRow}>
-              <CircleCheck size={18} color={COLORS.tertiary} />
-              <Text style={styles.bulletText}>{bullet}</Text>
-            </View>
-          ))}
+          {bullets.map((bullet, index) => {
+            const { Icon, color, bg } = BULLET_META[index];
+            return (
+              <View key={index} style={styles.bulletRow}>
+                <View style={[styles.bulletIconWrap, { backgroundColor: bg }]}>
+                  <Icon size={18} color={color} />
+                </View>
+                <Text style={styles.bulletText}>{bullet}</Text>
+              </View>
+            );
+          })}
         </View>
       </View>
 
@@ -74,13 +109,17 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xl,
   },
   iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: COLORS.primaryLight,
+    width: ICON_CIRCLE_SIZE,
+    height: ICON_CIRCLE_SIZE,
+    borderRadius: ICON_CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.l,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 6,
   },
   title: {
     ...TEXT_STYLES.headlineMd,
@@ -92,7 +131,21 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.bodyMd,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    marginBottom: SPACING.m,
+  },
+  timePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceHigh,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
     marginBottom: SPACING.l,
+  },
+  timePillText: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.textSecondary,
   },
   bulletList: {
     alignSelf: 'stretch',
@@ -101,13 +154,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     padding: SPACING.m,
-    gap: SPACING.s,
+    gap: SPACING.m,
     ...SHADOWS.level1,
   },
   bulletRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.s,
+    alignItems: 'center',
+    gap: SPACING.m,
+  },
+  bulletIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bulletText: {
     ...TEXT_STYLES.bodyMd,
@@ -122,6 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.l,
     paddingVertical: SPACING.m,
     alignItems: 'center',
+    ...SHADOWS.level2,
   },
   startBtnText: {
     color: COLORS.white,

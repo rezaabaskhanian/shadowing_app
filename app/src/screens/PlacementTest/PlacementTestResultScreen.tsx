@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Award, CircleCheck, CircleX, TriangleAlert } from 'lucide-react-native';
+import { Award, CircleCheck, CircleX, Mic, TriangleAlert, Zap } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -26,6 +26,29 @@ const relevanceMeta = (answered: ItemResult['relevance_answered']) => {
   return { Icon: CircleX, color: COLORS.muted, labelKey: 'placementRelevanceNo' };
 };
 
+/** نگاشتِ سطح CEFR به همان سه‌تایی beginner/intermediate/advanced که رمپِ
+ * رنگیِ بج‌های سطح صحنه‌ها هم استفاده می‌کند — مطابق
+ * difficultyForLevel در internal/service/mission/get_today.go سمت بک‌اند،
+ * تا رنگِ «سطح گفتاری» همون معنایی رو بده که جای دیگه‌ی اپ می‌ده. */
+const levelMeta = (level: string) => {
+  if (level === 'B1') return { color: COLORS.levelIntermediateBg, bg: COLORS.infoLight };
+  if (level === 'B2' || level === 'C1') return { color: COLORS.levelAdvancedBg, bg: COLORS.primaryLight };
+  return { color: COLORS.levelBeginnerBg, bg: COLORS.tertiaryLight }; // A1, A2 یا نامشخص
+};
+
+/** رنگِ عددِ نمره بر اساس بازه — بازخورد سریعِ چشمی، نه فقط رقم خشک. */
+const scoreColor = (value: number) => {
+  if (value >= 80) return COLORS.success;
+  if (value >= 50) return COLORS.warning;
+  return COLORS.error;
+};
+
+const SCORE_META = [
+  { key: 'overall', Icon: Award, labelKey: 'scoreOverall' },
+  { key: 'pronunciation', Icon: Mic, labelKey: 'scorePronunciation' },
+  { key: 'fluency', Icon: Zap, labelKey: 'scoreFluency' },
+] as const;
+
 /**
  * نتیجه‌ی نهایی: سطح گفتاری بزرگ در بالا، ریزنمره‌ی آیتم Shadow، و برای هر
  * آیتمِ گفتار آزاد فقط بازخورد کیفیِ ربط‌داشتن پاسخ (بدون نمره‌ی عددیِ ساختگی).
@@ -40,6 +63,12 @@ export const PlacementTestResultScreen: React.FC<PlacementTestResultScreenProps>
 
   const freeSpeechResults = result.items.filter((item) => item.kind === 'free_speech');
   const promptByItemId = new Map(items.map((item) => [item.id, item.prompt_text]));
+  const level = levelMeta(result.level);
+  const scoreValues = {
+    overall: result.overall_score,
+    pronunciation: result.pronunciation_score,
+    fluency: result.fluency_score,
+  };
 
   return (
     <View
@@ -49,28 +78,32 @@ export const PlacementTestResultScreen: React.FC<PlacementTestResultScreenProps>
       ]}
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.levelCard}>
-          <Award size={40} color={COLORS.primary} />
+        <View style={[styles.levelCard, { borderColor: level.color }]}>
+          <View style={[styles.levelIconWrap, { backgroundColor: level.bg }]}>
+            <Award size={32} color={level.color} />
+          </View>
           <Text style={styles.levelLabel}>{t('placementResultTitle')}</Text>
-          <Text style={styles.levelValue}>{result.level}</Text>
+          <Text style={[styles.levelValue, { color: level.color }]}>{result.level}</Text>
           {result.is_estimated && (
             <Text style={styles.estimatedNote}>{t('placementResultEstimatedNote')}</Text>
           )}
         </View>
 
         <View style={styles.scoreRow}>
-          <View style={styles.scoreChip}>
-            <Text style={styles.scoreValue}>{Math.round(result.overall_score)}</Text>
-            <Text style={styles.scoreLabel}>{t('scoreOverall')}</Text>
-          </View>
-          <View style={styles.scoreChip}>
-            <Text style={styles.scoreValue}>{Math.round(result.pronunciation_score)}</Text>
-            <Text style={styles.scoreLabel}>{t('scorePronunciation')}</Text>
-          </View>
-          <View style={styles.scoreChip}>
-            <Text style={styles.scoreValue}>{Math.round(result.fluency_score)}</Text>
-            <Text style={styles.scoreLabel}>{t('scoreFluency')}</Text>
-          </View>
+          {SCORE_META.map(({ key, Icon, labelKey }) => {
+            const value = Math.round(scoreValues[key]);
+            const color = scoreColor(value);
+            return (
+              <View key={key} style={styles.scoreChip}>
+                <Icon size={16} color={color} />
+                <Text style={[styles.scoreValue, { color }]}>{value}</Text>
+                <Text style={styles.scoreLabel}>{t(labelKey)}</Text>
+                <View style={styles.scoreBarTrack}>
+                  <View style={[styles.scoreBarFill, { width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }]} />
+                </View>
+              </View>
+            );
+          })}
         </View>
 
         {freeSpeechResults.length > 0 && (
@@ -79,7 +112,7 @@ export const PlacementTestResultScreen: React.FC<PlacementTestResultScreenProps>
             {freeSpeechResults.map((item) => {
               const { Icon, color, labelKey } = relevanceMeta(item.relevance_answered);
               return (
-                <View key={item.item_id} style={styles.freeSpeechCard}>
+                <View key={item.item_id} style={[styles.freeSpeechCard, { borderLeftColor: color }]}>
                   <Text style={styles.freeSpeechPrompt}>
                     {promptByItemId.get(item.item_id) || ''}
                   </Text>
@@ -126,11 +159,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 2,
     padding: SPACING.l,
     marginTop: SPACING.m,
     ...SHADOWS.level1,
+  },
+  levelIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   levelLabel: {
     ...TEXT_STYLES.labelMd,
@@ -139,7 +178,6 @@ const styles = StyleSheet.create({
   },
   levelValue: {
     ...TEXT_STYLES.displayLg,
-    color: COLORS.primary,
     marginTop: SPACING.xs,
   },
   estimatedNote: {
@@ -158,16 +196,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.backgroundSoft,
     borderRadius: BORDER_RADIUS.m,
     paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.xs,
     alignItems: 'center',
+    gap: 2,
   },
   scoreValue: {
     ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
   },
   scoreLabel: {
     ...TEXT_STYLES.labelSm,
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  scoreBarTrack: {
+    alignSelf: 'stretch',
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.borderLight,
+    marginHorizontal: SPACING.s,
+    overflow: 'hidden',
+  },
+  scoreBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   freeSpeechSection: {
     marginTop: SPACING.l,
@@ -183,6 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderLeftWidth: 4,
     padding: SPACING.m,
     gap: SPACING.xs,
   },

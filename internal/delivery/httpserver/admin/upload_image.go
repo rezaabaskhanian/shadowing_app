@@ -20,7 +20,7 @@ func (h Handler) UploadImage(c echo.Context) error {
 		})
 	}
 
-	url, filename, err := upload.SaveImage(fileHeader, h.uploadDir, h.publicPath)
+	url, filename, err := upload.SaveImage(c.Request().Context(), fileHeader, h.store)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "upload_failed",

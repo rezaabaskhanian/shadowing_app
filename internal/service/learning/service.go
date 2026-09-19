@@ -4,6 +4,7 @@ import (
 	"context"
 
 	domain "shadowing-backend/internal/domain/learning/scene"
+	"shadowing-backend/internal/pkg/filestore"
 
 	"github.com/google/uuid"
 )
@@ -37,14 +38,15 @@ type Service struct {
 	// مرجع است؛ اگر خالی باشد، دیالوگ‌ها بدون word_timings ذخیره می‌شوند و
 	// اپ فقط هایلایت کلمه‌به‌کلمه را نشان نمی‌دهد — مثل الگوی habitservice.
 	whisperURL string
-	// uploadDir مسیر دیسکِ فایل‌های صوتی آپلودشده (همان مسیری که آدرس عمومی
+	// store محلِ ذخیره‌ی فایل‌های صوتی آپلودشده (همان جایی که آدرس عمومی
 	// audio_url به آن اشاره می‌کند) — برای اینکه بتوانیم فایل را مستقیم به
-	// whisper-service بدهیم.
-	uploadDir string
+	// whisper-service بدهیم (store.Open آن را روی دیسکِ محلی در دسترس می‌گذارد،
+	// چه از دیسکِ محلی چه با دانلود از object storage).
+	store filestore.Store
 }
 
-func New(repo Repository, whisperURL, uploadDir string) Service {
-	return Service{repo: repo, whisperURL: whisperURL, uploadDir: uploadDir}
+func New(repo Repository, whisperURL string, store filestore.Store) Service {
+	return Service{repo: repo, whisperURL: whisperURL, store: store}
 }
 
 /*

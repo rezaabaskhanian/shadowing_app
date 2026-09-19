@@ -3,9 +3,6 @@ package aiconversationservice
 import (
 	"context"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/google/uuid"
 )
@@ -25,17 +22,11 @@ func (s *Service) synthesize(ctx context.Context, text string) string {
 		return ""
 	}
 
-	dir := filepath.Join(s.uploadDir, "ai-conversation")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		slog.Warn("aiconversation: failed to prepare tts upload dir", "err", err)
+	filename := "ai-conversation/" + uuid.NewString() + ".mp3"
+	url, err := s.store.Save(ctx, filename, audio, "audio/mpeg")
+	if err != nil {
+		slog.Warn("aiconversation: failed to store tts file", "err", err)
 		return ""
 	}
-
-	filename := uuid.NewString() + ".mp3"
-	if err := os.WriteFile(filepath.Join(dir, filename), audio, 0o644); err != nil {
-		slog.Warn("aiconversation: failed to write tts file", "err", err)
-		return ""
-	}
-
-	return strings.TrimRight(s.publicPath, "/") + "/ai-conversation/" + filename
+	return url
 }

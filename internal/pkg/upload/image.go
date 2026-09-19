@@ -1,12 +1,13 @@
 package upload
 
 import (
+	"context"
 	"io"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"shadowing-backend/internal/pkg/filestore"
 	"shadowing-backend/internal/pkg/richerror"
 
 	"github.com/google/uuid"
@@ -22,10 +23,21 @@ var allowedImageExt = map[string]bool{
 
 const MaxImageSize = 10 << 20 // 10MB
 
-// SaveImage یک فایل تصویر آپلودشده (multipart) را روی دیسک ذخیره می‌کند و
-// URL عمومی + نام فایل را برمی‌گرداند. بین آپلود ادمین و آپلود کاربر عادی
-// (پیشنهاد صحنه) مشترک است تا منطق اعتبارسنجی/ذخیره تکرار نشود.
-func SaveImage(fileHeader *multipart.FileHeader, uploadDir, publicPath string) (url, filename string, err error) {
+// contentTypeByExt چون فایل مستقیم از multipart بایت خام خوانده می‌شود، نه
+// از os.Create که content-type را حدس می‌زد؛ برای S3 لازم است صریح بدهیم.
+var contentTypeByExt = map[string]string{
+	".png":  "image/png",
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".webp": "image/webp",
+	".gif":  "image/gif",
+}
+
+// SaveImage یک فایل تصویر آپلودشده (multipart) را ذخیره می‌کند (روی دیسک یا
+// object storage، بسته به store) و URL عمومی + نام فایل را برمی‌گرداند. بین
+// آپلود ادمین و آپلود کاربر عادی (پیشنهاد صحنه) مشترک است تا منطق
+// اعتبارسنجی/ذخیره تکرار نشود.
+func SaveImage(ctx context.Context, fileHeader *multipart.FileHeader, store filestore.Store) (url, filename string, err error) {
 	const op = "upload.SaveImage"
 
 	if fileHeader.Size > MaxImageSize {
@@ -37,29 +49,21 @@ func SaveImage(fileHeader *multipart.FileHeader, uploadDir, publicPath string) (
 		return "", "", richerror.New(op).WithMessage("فرمت تصویر مجاز نیست. مجاز: png, jpg, jpeg, webp, gif")
 	}
 
-	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
-		return "", "", richerror.New(op).WithErr(err).WithMessage("خطا در آماده‌سازی محل ذخیره‌سازی")
-	}
-
 	src, err := fileHeader.Open()
 	if err != nil {
 		return "", "", richerror.New(op).WithErr(err).WithMessage("خطا در خواندن فایل")
 	}
 	defer src.Close()
 
-	filename = uuid.NewString() + ext
-	dstPath := filepath.Join(uploadDir, filename)
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return "", "", richerror.New(op).WithErr(err).WithMessage("خطا در خواندن فایل")
+	}
 
-	dst, err := os.Create(dstPath)
+	filename = uuid.NewString() + ext
+	url, err = store.Save(ctx, filename, data, contentTypeByExt[ext])
 	if err != nil {
 		return "", "", richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره فایل")
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
-		return "", "", richerror.New(op).WithErr(err).WithMessage("خطا در نوشتن فایل")
-	}
-
-	url = strings.TrimRight(publicPath, "/") + "/" + filename
 	return url, filename, nil
 }

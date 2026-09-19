@@ -54,5 +54,11 @@ func (s Service) Enabled() bool {
 
 // GenerateScene محتوای یک صحنه را با ارائه‌دهنده‌ی فعال تولید می‌کند.
 func (s Service) GenerateScene(ctx context.Context, prompt, difficulty string) (GeneratedScene, error) {
-	return s.activeProvider().generateScene(ctx, prompt, difficulty)
+	var result GeneratedScene
+	err := withLimit(ctx, func() error {
+		var err error
+		result, err = s.activeProvider().generateScene(ctx, prompt, difficulty)
+		return err
+	})
+	return result, err
 }

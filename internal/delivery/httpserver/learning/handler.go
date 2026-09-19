@@ -1,6 +1,7 @@
 package learninghandler
 
 import (
+	"shadowing-backend/internal/pkg/filestore"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
@@ -24,9 +25,8 @@ type Handler struct {
 
 	authConfig authservice.Config
 
-	// uploadDir/publicPath برای آپلود تصویر پیشنهاد صحنه توسط کاربر عادی
-	uploadDir  string
-	publicPath string
+	// store برای آپلود تصویر پیشنهاد صحنه توسط کاربر عادی
+	store filestore.Store
 }
 
 func New(
@@ -39,7 +39,7 @@ func New(
 	progressSvc *progressservice.Service,
 	authSvc authservice.Service,
 	authConfig authservice.Config,
-	uploadDir, publicPath string,
+	store filestore.Store,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -51,7 +51,6 @@ func New(
 		progressSvc:        progressSvc,
 		authSvc:            authSvc,
 		authConfig:         authConfig,
-		uploadDir:          uploadDir,
-		publicPath:         publicPath,
+		store:              store,
 	}
 }

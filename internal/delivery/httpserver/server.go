@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"shadowing-backend/internal/config"
+	"shadowing-backend/internal/pkg/filestore"
+
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 	aiconversationhandler "shadowing-backend/internal/delivery/httpserver/aiconversation"
 	assessmenthandler "shadowing-backend/internal/delivery/httpserver/assessment"
@@ -16,6 +18,7 @@ import (
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	missionhandler "shadowing-backend/internal/delivery/httpserver/mission"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
+	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
 
@@ -82,6 +85,8 @@ type Service struct {
 	leitnerHandler leitnerhandler.Handler
 
 	landingHandler landinghandler.Handler
+
+	realtimePoCHandler realtimepochandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -107,10 +112,19 @@ func New(cfg config.Config, userSvc userservice.Service,
 
 ) Service {
 
+	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
+	// صدای TTS گفتگوی AI) است — دیسکِ محلی مگر OBJECT_STORAGE_* تنظیم شده
+	// باشد (نگاه کنید به filestore.New). خطا فقط وقتی برمی‌گردد که object
+	// storage تنظیم شده ولی کلاینتش ساخته نشود؛ دیسکِ محلی هیچ‌وقت خطا نمی‌دهد.
+	store, err := filestore.New(uploadDir, uploadURLPath)
+	if err != nil {
+		fmt.Println("warning: object storage init failed, falling back is not possible:", err)
+	}
+
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
-			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, uploadDir, uploadURLPath,
+			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store,
 		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
@@ -131,7 +145,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			userSvc,
 			landingSvc,
 			feedbackSvc,
-			authSvc, authConfig, uploadDir, uploadURLPath,
+			authSvc, authConfig, store,
 		),
 
 		assessmentHandler: assessmenthandler.New(assessmentSvc, authSvc, authConfig, uploadDir),
@@ -147,6 +161,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 		leitnerHandler: leitnerhandler.New(leitnerSvc, authSvc, authConfig),
 
 		landingHandler: landinghandler.New(landingSvc),
+
+		realtimePoCHandler: realtimepochandler.New(settingsSvc, authSvc, authConfig),
 	}
 }
 
@@ -224,6 +240,9 @@ func (s Service) Server() {
 
 	// محتوای عمومی صفحه‌ی معرفی (www.lingoflow.ir) — بدون احراز هویت
 	s.landingHandler.SetPublicLandingRoutes(e)
+
+	// PoC موقتِ معماری Realtime Voice — نگاه کنید به realtimepoc.Handler
+	s.realtimePoCHandler.SetRealtimePoCRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

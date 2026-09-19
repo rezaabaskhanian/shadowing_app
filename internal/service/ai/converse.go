@@ -8,10 +8,20 @@ type ConversationTurn struct {
 	Text string
 }
 
+// TokenUsage - مصرفِ توکنِ یک فراخوانیِ converse() طبق ارائه‌دهنده‌ی فعال.
+// چون کل تاریخچه‌ی گفتگو هر بار دوباره فرستاده می‌شود، InputTokens با طولِ
+// گفتگو رشد می‌کند؛ این عدد برای گزارشِ هزینه ذخیره می‌شود، نه برای مصرفِ
+// runtime.
+type TokenUsage struct {
+	InputTokens  int
+	OutputTokens int
+}
+
 // ConversationResult - پاسخ AI در نقشِ شخصیتِ صحنه + سیگنال پایانِ گفتگو.
 type ConversationResult struct {
-	Reply     string `json:"reply"`
-	ShouldEnd bool   `json:"should_end"`
+	Reply     string     `json:"reply"`
+	ShouldEnd bool       `json:"should_end"`
+	Usage     TokenUsage `json:"-"`
 }
 
 // conversationSystemPromptTemplate هم برای Claude، هم Gemini و هم DeepSeek
@@ -37,5 +47,11 @@ Rules:
 
 // Converse یک نوبتِ گفتگوی آزاد را با ارائه‌دهنده‌ی فعال پاسخ می‌دهد.
 func (s Service) Converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
-	return s.activeProvider().converse(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+	var result ConversationResult
+	err := withLimit(ctx, func() error {
+		var err error
+		result, err = s.activeProvider().converse(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+		return err
+	})
+	return result, err
 }

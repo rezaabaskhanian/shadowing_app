@@ -3,7 +3,6 @@ package adminhandler
 import (
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,6 +18,15 @@ var allowedAudioExt = map[string]bool{
 	".ogg":  true,
 	".webm": true,
 	".aac":  true,
+}
+
+var audioContentTypeByExt = map[string]string{
+	".mp3":  "audio/mpeg",
+	".wav":  "audio/wav",
+	".m4a":  "audio/mp4",
+	".ogg":  "audio/ogg",
+	".webm": "audio/webm",
+	".aac":  "audio/aac",
 }
 
 const maxAudioSize = 20 << 20 // 20MB
@@ -50,13 +58,6 @@ func (h Handler) UploadAudio(c echo.Context) error {
 		})
 	}
 
-	if err := os.MkdirAll(h.uploadDir, 0o755); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error":   "storage_error",
-			"message": "خطا در آماده‌سازی محل ذخیره‌سازی",
-		})
-	}
-
 	src, err := fileHeader.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -66,26 +67,22 @@ func (h Handler) UploadAudio(c echo.Context) error {
 	}
 	defer src.Close()
 
-	filename := uuid.NewString() + ext
-	dstPath := filepath.Join(h.uploadDir, filename)
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error":   "read_error",
+			"message": "خطا در خواندن فایل",
+		})
+	}
 
-	dst, err := os.Create(dstPath)
+	filename := uuid.NewString() + ext
+	url, err := h.store.Save(c.Request().Context(), filename, data, audioContentTypeByExt[ext])
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error":   "storage_error",
 			"message": "خطا در ذخیره فایل",
 		})
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error":   "storage_error",
-			"message": "خطا در نوشتن فایل",
-		})
-	}
-
-	url := strings.TrimRight(h.publicPath, "/") + "/" + filename
 
 	return c.JSON(http.StatusCreated, map[string]string{
 		"url":      url,

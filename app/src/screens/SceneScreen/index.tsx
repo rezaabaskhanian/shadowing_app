@@ -122,21 +122,8 @@ export const SceneScreen = () => {
   // نمایش داده نشود.
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  // نسبت واقعی ابعاد تصویر صحنه. ارتفاع ناحیه‌ی بالای صفحه دقیقاً از روی همین
-  // نسبت ساخته می‌شود تا کادر با خود تصویر هم‌شکل باشد و هیچ بخشی از عرض آن
-  // بریده نشود؛ فقط برای تصویرهای خیلی کشیده‌ی عمودی یک سقف می‌گذاریم که کل
-  // صفحه را نبلعند.
-  // نکته: عمداً کفی برای این ارتفاع نمی‌گذاریم — چون resizeMode تصویر contain
-  // است و عرض همیشه با عرض صفحه پر می‌شود، بلندترکردن کادر فراتر از نسبت
-  // واقعی تصویر باعث نمی‌شود تصویر بزرگ‌تر دیده شود؛ فقط بالا/پایینش فضای
-  // خالی (letterbox) اضافه می‌کند و محاسبه‌ی موقعیت هات‌اسپات/حباب دیالوگ را
-  // به‌هم می‌زند (چون آن محاسبه فرض می‌کند تصویر دقیقاً همان ارتفاع کادر را
-  // پر کرده است).
+  // نسبت واقعی ابعاد تصویر صحنه.
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_SCENE_ASPECT);
-  const topViewHeight = Math.min(
-    Math.round(screenWidth / imageAspectRatio),
-    Math.round(screenHeight * 0.6)
-  );
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [inScene, setInScene] = useState(false); // false = Intro overview, true = Active player
@@ -193,6 +180,23 @@ export const SceneScreen = () => {
     playingRecordingUrl,
     playAllQueue,
   } = pb;
+
+  // ارتفاع ناحیه‌ی بالای صفحه (کادر عکس صحنه). پایه‌اش دقیقاً از روی نسبتِ
+  // خودِ تصویر ساخته می‌شود تا هیچ بخشی از عرضش بریده نشود (سقفِ ۰.۶ صفحه
+  // فقط برای تصویرهای خیلی کشیده‌ی عمودی است).
+  //
+  // کف را در همه‌ی مراحل حداقل نصفِ صفحه می‌کنیم — حتی اگر تصویر (که معمولاً
+  // landscape است) به‌تنهایی این‌قدر بلند نشود. فضای اضافه با letterbox
+  // (پس‌زمینه‌ی هم‌رنگ بالا/پایین تصویر) پر می‌شود، نه با کِش‌آمدنِ تصویر.
+  //
+  // heroImageHeight ارتفاعِ واقعیِ رندرشده‌ی خودِ عکس (بدون احتساب letterbox)
+  // است — SceneCameraHero موقعیتِ هات‌اسپات/حباب را باید نسبت به همین محاسبه
+  // کند، نه نسبت به کل کادر، وگرنه با letterbox، دوربین روی نقطه‌ی اشتباه
+  // زوم می‌کند.
+  const imageFitHeight = Math.round(screenWidth / imageAspectRatio);
+  const baseTopViewHeight = Math.min(imageFitHeight, Math.round(screenHeight * 0.6));
+  const topViewHeight = Math.max(baseTopViewHeight, Math.round(screenHeight * 0.5));
+  const heroImageHeight = Math.min(imageFitHeight, topViewHeight);
 
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const autoMode = true;
@@ -352,6 +356,7 @@ export const SceneScreen = () => {
       // نیست — نه صدای مرجع، نه صدای خودت.
       if (activeStepIndex === 3 && idx >= firstUnrecordedLineIndex) {
         toast.warning(t('sequentialRecordingRequiredMessage'), { title: t('recordingRequiredTitle') });
+       
         return;
       }
       if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
@@ -740,6 +745,24 @@ export const SceneScreen = () => {
   );
 
   /**
+   * جمله‌هایی که برای صفحه‌ی نتیجه‌ی پایانِ جلسه نشان داده می‌شوند: فقط
+   * آن‌هایی که واقعاً نمره‌ی سرور گرفته‌اند (evaluations[idx])، به ترتیبِ
+   * دیالوگ. تحلیلِ کلمه‌به‌کلمه‌ی هرکدام مستقیماً همان EvaluationResult است —
+   * نه یک لیستِ واژگانِ ثابت که ربطی به صدای واقعیِ کاربر نداشت.
+   */
+  const sessionResultLines = useMemo(
+    () =>
+      gradableIndexes
+        .filter((idx) => evaluations[idx])
+        .map((idx) => ({
+          dialogue: dialogueItems[idx].dialogue,
+          translation: dialogueItems[idx].translation,
+          evaluation: evaluations[idx],
+        })),
+    [gradableIndexes, evaluations, dialogueItems]
+  );
+
+  /**
    * شروع دوباره‌ی همین صحنه از مرحله‌ی اول و جمله‌ی اول.
    *
    * ضبط‌ها و نمره‌ها عمداً پاک نمی‌شوند: درس همچنان تمام‌شده حساب می‌شود و
@@ -990,9 +1013,7 @@ export const SceneScreen = () => {
         pronunciation={sessionScores.pronunciation}
         fluency={sessionScores.fluency}
         rhythm={sessionScores.rhythm}
-        englishText={currentDialogue.dialogue}
-        translation={currentDialogue.translation}
-        words={currentDialogue.words}
+        lines={sessionResultLines}
         onPracticeAgain={restartLesson}
         onFinishLesson={handleFinishLesson}
       />
@@ -1066,6 +1087,7 @@ export const SceneScreen = () => {
           coverImage={coverImage}
           onCoverLoad={handleCoverLoad}
           topViewHeight={topViewHeight}
+          imageHeight={heroImageHeight}
           screenWidth={screenWidth}
           insetsTop={insets.top}
           activeTarget={activeCameraTarget}

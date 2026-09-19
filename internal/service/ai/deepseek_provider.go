@@ -59,6 +59,10 @@ type deepseekChatResponse struct {
 	Choices []struct {
 		Message deepseekChatMessage `json:"message"`
 	} `json:"choices"`
+	Usage *struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
 	Error *struct {
 		Message string `json:"message"`
 	} `json:"error"`
@@ -275,6 +279,12 @@ func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescri
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return ConversationResult{}, richerror.New(op).WithErr(err).
 			WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+	}
+	if chatResp.Usage != nil {
+		result.Usage = TokenUsage{
+			InputTokens:  chatResp.Usage.PromptTokens,
+			OutputTokens: chatResp.Usage.CompletionTokens,
+		}
 	}
 	return result, nil
 }

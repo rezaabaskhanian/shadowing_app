@@ -29,7 +29,15 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-const DEFAULT_DURATION = 3000;
+// طول توست به نوعش وابسته است: success معمولاً چند کلمه‌ست و زود خونده می‌شه،
+// warning/error اغلب عنوان + یک جمله‌ی کامل دارند (مثلاً پیام «ضبط لازم است»)
+// و به زمان بیشتری برای خوانده‌شدن نیاز دارند.
+const DEFAULT_DURATIONS: Record<ToastType, number> = {
+  success: 3500,
+  info: 5000,
+  warning: 6500,
+  error: 6500,
+};
 
 /**
  * صف‌بندی ساده: هر لحظه فقط یک توست دیده می‌شود؛ اگر توست جدیدی وقتی یکی روی
@@ -58,7 +66,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         type,
         message,
         title: options?.title,
-        duration: options?.duration ?? DEFAULT_DURATION,
+        duration: options?.duration ?? DEFAULT_DURATIONS[type],
       };
       setCurrent((prevCurrent) => {
         if (prevCurrent) {

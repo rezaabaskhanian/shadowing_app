@@ -1,7 +1,7 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, ActivityIndicator, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mic, RotateCcw, Square, Volume2, CircleX } from 'lucide-react-native';
+import { Mic, RotateCcw, Square, Volume2, CircleX, Headphones, MessageCircle } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -25,6 +25,13 @@ interface PlacementTestRecordScreenProps {
 type ItemPhase = 'idle' | 'recording' | 'recorded';
 type SubmitPhase = 'recording' | 'submitting' | 'submit_error';
 type PlaybackState = 'idle' | 'loading' | 'playing';
+
+/** رنگ/آیکنِ هر نوع آیتم — تا کاربر با یک نگاه بفهمد الان تو مرحله‌ی
+ * «گوش‌بده‌وتکرارکن» است یا «آزادانه صحبت‌کن»، نه فقط از متنِ کیکر. */
+const KIND_META = {
+  shadow: { Icon: Headphones, color: COLORS.primary, bg: COLORS.primaryLight },
+  free_speech: { Icon: MessageCircle, color: COLORS.info, bg: COLORS.infoLight },
+} as const;
 
 /**
  * قدم به قدمِ سه آیتم تست: برای آیتم Shadow، صدای مرجع را پخش می‌کند و بعد
@@ -68,6 +75,38 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
   const [activeReferenceUri, setActiveReferenceUri] = useState<string | null>(null);
 
   const currentItem = items[currentIndex];
+  const kindMeta = KIND_META[currentItem?.kind ?? 'shadow'];
+
+  // حلقه‌ی پالسِ دورِ دکمه‌ی میکروفون فقط وقتی در حال ضبط هستیم؛ بازخوردِ
+  // زنده می‌دهد که دستگاه دارد صدا می‌گیرد، نه یک دکمه‌ی ایستا.
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (itemPhase !== 'recording') {
+      pulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [itemPhase, pulse]);
+
+  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
+  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
 
   const bumpAndSet = (command: typeof actionCommand) => {
     setActionCommand(command);
@@ -228,18 +267,30 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
                 .replace('{total}', String(items.length))}
             </Text>
             <View style={styles.progressDots}>
-              {items.map((_, i) => (
-                <View key={i} style={[styles.dot, i <= currentIndex && styles.dotActive]} />
+              {items.map((item, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    i <= currentIndex && {
+                      backgroundColor: KIND_META[item.kind].color,
+                      width: i === currentIndex ? 20 : 8,
+                    },
+                  ]}
+                />
               ))}
             </View>
           </View>
 
           <View style={styles.promptCard}>
-            <Text style={styles.kicker}>
-              {currentItem.kind === 'shadow'
-                ? t('placementShadowKicker')
-                : t('placementFreeSpeechKicker')}
-            </Text>
+            <View style={[styles.kickerPill, { backgroundColor: kindMeta.bg }]}>
+              <kindMeta.Icon size={14} color={kindMeta.color} />
+              <Text style={[styles.kicker, { color: kindMeta.color }]}>
+                {currentItem.kind === 'shadow'
+                  ? t('placementShadowKicker')
+                  : t('placementFreeSpeechKicker')}
+              </Text>
+            </View>
             <Text style={styles.promptText}>{currentItem.prompt_text}</Text>
 
             {currentItem.kind === 'shadow' && (
@@ -263,17 +314,27 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
 
           <View style={styles.recordArea}>
             {itemPhase !== 'recorded' && (
-              <TouchableOpacity
-                style={[styles.recordBtn, itemPhase === 'recording' && styles.recordBtnActive]}
-                onPress={itemPhase === 'recording' ? handleStopRecord : handleStartRecord}
-                activeOpacity={0.85}
-              >
-                {itemPhase === 'recording' ? (
-                  <Square size={26} color={COLORS.white} fill={COLORS.white} />
-                ) : (
-                  <Mic size={28} color={COLORS.white} />
+              <View style={styles.recordBtnWrap}>
+                {itemPhase === 'recording' && (
+                  <Animated.View
+                    style={[
+                      styles.recordPulseRing,
+                      { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+                    ]}
+                  />
                 )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.recordBtn, itemPhase === 'recording' && styles.recordBtnActive]}
+                  onPress={itemPhase === 'recording' ? handleStopRecord : handleStartRecord}
+                  activeOpacity={0.85}
+                >
+                  {itemPhase === 'recording' ? (
+                    <Square size={26} color={COLORS.white} fill={COLORS.white} />
+                  ) : (
+                    <Mic size={28} color={COLORS.white} />
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
 
             <Text style={styles.recordHint}>
@@ -375,9 +436,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: COLORS.border,
   },
-  dotActive: {
-    backgroundColor: COLORS.primary,
-  },
   promptCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -388,10 +446,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...SHADOWS.level1,
   },
+  kickerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    marginBottom: SPACING.s,
+  },
   kicker: {
     ...TEXT_STYLES.labelSm,
-    color: COLORS.primary,
-    marginBottom: SPACING.s,
     textTransform: 'uppercase',
   },
   promptText: {
@@ -425,6 +490,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.m,
+  },
+  recordBtnWrap: {
+    width: 84,
+    height: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordPulseRing: {
+    position: 'absolute',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: COLORS.error,
   },
   recordBtn: {
     width: 84,

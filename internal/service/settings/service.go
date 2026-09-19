@@ -2,8 +2,10 @@ package settingsservice
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sync"
+	"time"
 )
 
 // کلیدهای شناخته‌شده‌ی تنظیمات قابل‌تغییر از پنل ادمین (بدون نیاز به ری‌استارت سرور).
@@ -90,4 +92,34 @@ func (s *Service) Set(ctx context.Context, key, value string) error {
 // IsSet مشخص می‌کند مقدار کلید (چه از دیتابیس، چه از env) خالی نیست.
 func (s *Service) IsSet(key string) bool {
 	return s.Get(key) != ""
+}
+
+// defaultRefreshInterval فاصله‌ی پیش‌فرضِ سینک دوره‌ای کش با دیتابیس است.
+// چون کش فقط در حافظه‌ی همین پروسه زندگی می‌کند، وقتی چند instance از بک‌اند
+// پشتِ لودبالانسر اجرا می‌شوند، Set() فقط کشِ instanceای که درخواستِ پنل ادمین
+// بهش رسیده را آپدیت می‌کند — بقیه‌ی instanceها بدون این polling تا ری‌استارت
+// مقدار قدیمی (کلید/مدل/provider) را می‌بینند.
+const defaultRefreshInterval = 30 * time.Second
+
+// StartAutoRefresh هر interval یک‌بار کش را دوباره از دیتابیس می‌خواند تا
+// تغییراتی که از پنل ادمین روی یک instanceِ دیگر ثبت شده‌اند، با حداکثر تاخیرِ
+// interval به این instance هم برسند. باید یک‌بار، بعد از LoadAll اولیه، با
+// go settingsSvc.StartAutoRefresh(ctx, 0) صدا زده شود (خودش تا لغوِ ctx در
+// پس‌زمینه می‌ماند؛ interval صفر یعنی از defaultRefreshInterval استفاده کن).
+func (s *Service) StartAutoRefresh(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = defaultRefreshInterval
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := s.LoadAll(ctx); err != nil {
+				slog.Warn("settings: periodic refresh failed", "err", err)
+			}
+		}
+	}
 }

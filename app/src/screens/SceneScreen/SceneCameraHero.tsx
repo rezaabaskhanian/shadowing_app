@@ -39,10 +39,16 @@ interface SceneCamera {
 function computeSceneCamera(
   target: { x: number; y: number },
   screenWidth: number,
-  topViewHeight: number
+  topViewHeight: number,
+  imageHeight: number
 ): SceneCamera {
+  // اگر کادر بلندتر از ارتفاعِ واقعیِ رندرشده‌ی عکس باشد (letterbox عمودی —
+  // مثلاً در مرحله‌ی شدو که کادر عمداً حداقل نصفِ صفحه است)، y نرمال‌شده‌ی
+  // هدف باید نسبت به خودِ عکس حساب شود، نه کل کادر؛ وگرنه دوربین روی نقطه‌ای
+  // شیفته‌شده به‌اندازه‌ی حاشیه‌ی letterbox زوم می‌کند.
+  const verticalMargin = (topViewHeight - imageHeight) / 2;
   const offsetX = target.x * screenWidth - screenWidth / 2;
-  const offsetY = target.y * topViewHeight - topViewHeight / 2;
+  const offsetY = verticalMargin + target.y * imageHeight - topViewHeight / 2;
 
   // زومی که این‌قدر جابه‌جایی را (بدون فضای خالی کنار تصویر) ممکن می‌کند:
   // |offset| <= (dim/2)*(1-1/scale)  →  scale >= 1 / (1 - 2*|offset|/dim)
@@ -72,6 +78,9 @@ interface SceneCameraHeroProps {
   coverImage: any;
   onCoverLoad: (event: any) => void;
   topViewHeight: number;
+  /** ارتفاعِ واقعیِ رندرشده‌ی خودِ عکس داخل کادر (بدون letterbox). وقتی کادر
+   * بلندتر از این باشد، فضای اضافه بالا/پایینِ عکس با letterbox پر می‌شود. */
+  imageHeight: number;
   screenWidth: number;
   insetsTop: number;
   activeTarget: ActiveCameraTarget | undefined;
@@ -110,6 +119,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   coverImage,
   onCoverLoad,
   topViewHeight,
+  imageHeight,
   screenWidth,
   insetsTop,
   activeTarget,
@@ -140,14 +150,15 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   // وسط صفحه می‌افتند، پس حباب هم همان‌جا لنگر می‌شود.
   const anchor = useMemo(() => {
     if (!activeTarget) return null;
-    const { scale, panX, panY } = computeSceneCamera(activeTarget, screenWidth, topViewHeight);
+    const { scale, panX, panY } = computeSceneCamera(activeTarget, screenWidth, topViewHeight, imageHeight);
+    const verticalMargin = (topViewHeight - imageHeight) / 2;
     const offsetX = activeTarget.x * screenWidth - screenWidth / 2;
-    const offsetY = activeTarget.y * topViewHeight - topViewHeight / 2;
+    const offsetY = verticalMargin + activeTarget.y * imageHeight - topViewHeight / 2;
     return {
       x: screenWidth / 2 + scale * (offsetX + panX),
       y: topViewHeight / 2 + scale * (offsetY + panY),
     };
-  }, [activeTarget, screenWidth, topViewHeight]);
+  }, [activeTarget, screenWidth, topViewHeight, imageHeight]);
 
   // موقعیت نهایی جعبه‌ی حباب: نوکِ حباب دقیقاً روی خودِ هات‌اسپات می‌نشیند
   // (بدون هیچ جابه‌جایی مصنوعی)؛ فقط افقی کمی محدود می‌شود که جعبه از لبه‌ی
@@ -215,7 +226,8 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
     const { scale: targetScale, panX: targetPanX, panY: targetPanY } = computeSceneCamera(
       activeTarget,
       screenWidth,
-      topViewHeight
+      topViewHeight,
+      imageHeight
     );
 
     // اول کامل از حالت زوم خارج شو (بازگشت به نمای عادی)، بعد به هات‌اسپات
@@ -235,6 +247,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
     refocusKey,
     screenWidth,
     topViewHeight,
+    imageHeight,
     zoomAnim,
     panXAnim,
     panYAnim,

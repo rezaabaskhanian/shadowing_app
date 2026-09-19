@@ -13,8 +13,12 @@ type Conversation struct {
 	SceneID   uuid.UUID
 	Status    Status
 	TurnCount int
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	// TotalInputTokens/TotalOutputTokens مجموعِ مصرفِ توکنِ همه‌ی فراخوانی‌های
+	// converse() این گفتگو است (برای گزارشِ هزینه، بدون نیاز به SUM روی turns).
+	TotalInputTokens  int
+	TotalOutputTokens int
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // NewConversation یک گفتگوی تازه و فعال می‌سازد.

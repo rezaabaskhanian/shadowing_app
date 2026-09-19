@@ -2,8 +2,6 @@ package adminhandler
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -38,17 +36,12 @@ func (h Handler) GenerateAudio(c echo.Context) error {
 		return c.JSON(http.StatusBadGateway, echo.Map{"message": err.Error()})
 	}
 
-	if err := os.MkdirAll(h.uploadDir, 0o755); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در آماده‌سازی محل ذخیره‌سازی"})
-	}
-
 	filename := uuid.NewString() + ".mp3"
-	dstPath := filepath.Join(h.uploadDir, filename)
-	if err := os.WriteFile(dstPath, audio, 0o644); err != nil {
+	url, err := h.store.Save(c.Request().Context(), filename, audio, "audio/mpeg")
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در ذخیره فایل صوتی"})
 	}
 
-	url := strings.TrimRight(h.publicPath, "/") + "/" + filename
 	return c.JSON(http.StatusCreated, map[string]string{
 		"url":      url,
 		"filename": filename,

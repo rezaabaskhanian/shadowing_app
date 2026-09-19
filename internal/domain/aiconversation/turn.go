@@ -21,6 +21,10 @@ type Turn struct {
 	// Turn توسط NewTurn مستقیم ست می‌شوند، نه بخشی از constructor.
 	GrammarCorrection  string
 	GrammarExplanation string
+	// InputTokens/OutputTokens فقط برای Role=RoleAssistant پر می‌شوند — مصرفِ
+	// واقعیِ همان فراخوانیِ converse() که این نوبت را تولید کرده است.
+	InputTokens  int
+	OutputTokens int
 }
 
 // NewTurn یک نوبتِ تازه می‌سازد.

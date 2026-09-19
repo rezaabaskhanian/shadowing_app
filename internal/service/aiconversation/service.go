@@ -5,6 +5,7 @@ import (
 
 	"shadowing-backend/internal/domain/aiconversation"
 	scene "shadowing-backend/internal/domain/learning/scene"
+	"shadowing-backend/internal/pkg/filestore"
 	aiservice "shadowing-backend/internal/service/ai"
 	"shadowing-backend/internal/service/speecheval"
 	ttsservice "shadowing-backend/internal/service/tts"
@@ -15,7 +16,7 @@ import (
 type ConversationRepository interface {
 	Create(ctx context.Context, c *aiconversation.Conversation) error
 	GetByID(ctx context.Context, id uuid.UUID) (*aiconversation.Conversation, error)
-	UpdateProgress(ctx context.Context, id uuid.UUID, turnCount int, status aiconversation.Status) error
+	UpdateProgress(ctx context.Context, id uuid.UUID, turnCount int, status aiconversation.Status, turnInputTokens, turnOutputTokens int) error
 }
 
 type TurnRepository interface {
@@ -36,8 +37,7 @@ type Service struct {
 	ai            aiservice.Service
 	tts           ttsservice.Service
 	transcriber   speecheval.Transcriber
-	uploadDir     string
-	publicPath    string
+	store         filestore.Store
 }
 
 func New(
@@ -47,7 +47,7 @@ func New(
 	ai aiservice.Service,
 	tts ttsservice.Service,
 	transcriber speecheval.Transcriber,
-	uploadDir, publicPath string,
+	store filestore.Store,
 ) *Service {
 	return &Service{
 		conversations: conversations,
@@ -56,7 +56,6 @@ func New(
 		ai:            ai,
 		tts:           tts,
 		transcriber:   transcriber,
-		uploadDir:     uploadDir,
-		publicPath:    publicPath,
+		store:         store,
 	}
 }

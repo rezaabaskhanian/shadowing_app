@@ -84,6 +84,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 
 	assistantText := defaultWrapUpText
 	shouldEnd := true
+	var usage aiservice.TokenUsage
 	if s.ai.Enabled() {
 		aiHistory := make([]aiservice.ConversationTurn, 0, len(history)+1)
 		for _, t := range history {
@@ -93,7 +94,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 
 		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, aiHistory, turnNumber,
 			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil {
-			assistantText, shouldEnd = result.Reply, result.ShouldEnd
+			assistantText, shouldEnd, usage = result.Reply, result.ShouldEnd, result.Usage
 		} else {
 			slog.Warn("aiconversation: converse failed, using fallback reply", "err", aiErr)
 		}
@@ -109,6 +110,8 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+	assistantTurn.InputTokens = usage.InputTokens
+	assistantTurn.OutputTokens = usage.OutputTokens
 	if err := s.turns.Insert(ctx, assistantTurn); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -117,7 +120,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	if isEnded {
 		status = aiconversation.StatusCompleted
 	}
-	if err := s.conversations.UpdateProgress(ctx, conv.ID, turnNumber, status); err != nil {
+	if err := s.conversations.UpdateProgress(ctx, conv.ID, turnNumber, status, usage.InputTokens, usage.OutputTokens); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
 

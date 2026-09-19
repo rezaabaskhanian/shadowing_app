@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { getDeviceLanguage } from '../utils/deviceLanguage';
 
 export type Language = 'en' | 'fa';
 
@@ -102,6 +101,10 @@ export const translations: Translations = {
   // Progress Screen
   greatJobTitle: { en: 'Great Job!', fa: 'عالی بود!' },
   greatJobSub: { en: 'You did amazing on today\'s practice.', fa: 'عملکرد فوق‌العاده‌ای در تمرین امروز داشتید.' },
+  goodJobTitle: { en: 'Good job!', fa: 'خوب بود!' },
+  goodJobSub: { en: 'A solid practice — keep going.', fa: 'تمرین خوبی بود؛ با تکرار بهتر هم می‌شه.' },
+  needsPracticeTitle: { en: 'Keep practicing', fa: 'نیاز به تمرین بیشتر' },
+  needsPracticeSub: { en: 'Try this session again to improve.', fa: 'همین تمرین رو دوباره امتحان کن تا جا بیفته.' },
   overallScore: { en: 'Overall Score', fa: 'نمره کل' },
   pronunciation: { en: 'Clarity', fa: 'وضوح' },
   vocabulary: { en: 'Vocabulary', fa: 'دایره واژگان' },
@@ -372,6 +375,13 @@ export const translations: Translations = {
   aiConversationTurnProgress: { en: 'Turn {current} of {total}', fa: 'نوبت {current} از {total}' },
   aiConversationLoadError: { en: 'Could not start the conversation', fa: 'شروع گفتگو ممکن نشد' },
   grammarTipLabel: { en: 'Better:', fa: 'بهتره اینطوری بگی:' },
+
+  // ورودیِ کشو برای گفتگو با اپ — از میان دروسِ تمام‌شده به‌صورت رندوم انتخاب می‌شود
+  drawerConversationTitle: { en: 'Chat with the app', fa: 'گفت‌وگو با اپلیکیشن' },
+  drawerConversationNoCompletedLessons: {
+    en: 'Finish a lesson first, then come back for a conversation about it',
+    fa: 'اول باید حداقل یک درس را کامل کنی، بعد می‌تونی درباره‌ش گفت‌وگو کنی',
+  },
 
   // Free Speech — یک بار توضیحِ آزاد بعد از تمام‌شدنِ یک صحنه (بدون پاسخِ AI)
   startFreeSpeech: { en: 'Describe what happened', fa: 'توضیح بده چی شد' },
@@ -656,6 +666,8 @@ export const translations: Translations = {
   },
   toastDemoMenuLabel: { en: 'Toast Preview', fa: 'پیش‌نمایش پیام‌ها' },
   toastDemoMenuSub: { en: 'Dev-only: see every toast style', fa: 'فقط برای توسعه: دیدن همه‌ی استایل‌های پیام' },
+  realtimePoCMenuLabel: { en: 'Realtime Voice PoC', fa: 'آزمایش مکالمه‌ی زنده' },
+  realtimePoCMenuSub: { en: 'Dev-only: Gemini Live architecture test', fa: 'فقط برای توسعه: تست معماری Gemini Live' },
 
   // ---- Placement Test (Quick Check) ----
   placementIntroTitle: { en: 'Speaking Placement Test', fa: 'تعیین سطح گفتاری' },
@@ -675,6 +687,7 @@ export const translations: Translations = {
     en: "At the end, you'll see your speaking level",
     fa: 'در پایان، سطح گفتاری‌ت را می‌بینی',
   },
+  placementIntroTimeEstimate: { en: '~2-3 minutes', fa: '~۲ تا ۳ دقیقه' },
   placementStartBtn: { en: 'Start', fa: 'شروع' },
   placementSkipBtn: { en: 'Skip for now', fa: 'فعلاً رد کن' },
 
@@ -748,13 +761,10 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // دیفالت از رویِ locale خودِ دستگاه است، نه همیشه یک زبانِ ثابت — مخاطب
-  // اصلی LingoFlow کاربر ایرانی است (بخش ۱۹ سند محصول)، پس گوشیِ فارسی باید
-  // همان اول فارسی ببیند، ولی این نباید هر نصب (مثلاً ریویوی استور) را هم
-  // به‌زور فارسی کند. همان getDeviceLanguage که سرویس نوتیفیکیشن از قبل
-  // استفاده می‌کند، اینجا هم دوباره استفاده می‌شود. کاربر همچنان می‌تواند از
-  // تنظیمات دستی سوییچ کند.
-  const [language, setLanguage] = useState<Language>(() => getDeviceLanguage());
+  // دیفالت همیشه فارسی است — مخاطب اصلی LingoFlow کاربر ایرانی است (بخش ۱۹
+  // سند محصول)، پس صرف‌نظر از locale دستگاه، اپ با فارسی باز می‌شود. کاربر
+  // همچنان می‌تواند از تنظیمات دستی به انگلیسی سوییچ کند.
+  const [language, setLanguage] = useState<Language>('fa');
 
   // t باید پایدار باشد: در سراسر اپ داخل dependency array هوک‌ها می‌نشیند، پس
   // اگر هر رندر تابع تازه‌ای باشد، آن هوک‌ها هم بی‌دلیل دوباره اجرا می‌شوند.

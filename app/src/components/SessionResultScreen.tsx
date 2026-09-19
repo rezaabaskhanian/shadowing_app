@@ -1,29 +1,25 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ArrowRight, Lightbulb, RotateCcw } from 'lucide-react-native';
+import { ArrowRight, RotateCcw } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { ProgressRing } from './ProgressRing';
 import { useLanguage } from '../data/i18n';
-import type { WordEntry } from '../data/scenarios';
+import type { EvaluationResult } from '../api/shadowing';
+import { ScoredDialogueText } from '../screens/SceneScreen/shadowing/ScoredDialogueText';
 
-type WordLevel = 'excellent' | 'good' | 'practice';
-
-const LEVEL_COLOR: Record<WordLevel, { bg: string; text: string; dot: string }> = {
-  excellent: { bg: COLORS.tertiaryLight, text: COLORS.tertiary, dot: COLORS.tertiary },
-  good: { bg: COLORS.warningLight, text: COLORS.warningDeep, dot: COLORS.warning },
-  practice: { bg: 'rgba(186, 26, 26, 0.10)', text: COLORS.error, dot: COLORS.error },
+/** رنگِ حلقه/تیترِ نتیجه بر اساس بازه‌ی نمره‌ی واقعی — نه یک متنِ ثابتِ
+ * «عالی بود» برای هر نمره‌ای، حتی وقتی نمره ۴۱ از ۱۰۰ است. */
+const scoreTier = (score: number): { color: string; titleKey: string; subKey: string } => {
+  if (score >= 80) return { color: COLORS.success, titleKey: 'greatJobTitle', subKey: 'greatJobSub' };
+  if (score >= 50) return { color: COLORS.warning, titleKey: 'goodJobTitle', subKey: 'goodJobSub' };
+  return { color: COLORS.error, titleKey: 'needsPracticeTitle', subKey: 'needsPracticeSub' };
 };
 
-function tokenizeWithLevels(sentence: string, practiceWords: WordEntry[]): { text: string; level: WordLevel }[] {
-  const practiceSet = new Set(practiceWords.map((w) => w.word.toLowerCase()));
-  const tokens = sentence.split(' ').filter(Boolean);
-  return tokens.map((token, idx) => {
-    const clean = token.replace(/[^a-zA-Z']/g, '').toLowerCase();
-    if (practiceSet.has(clean)) return { text: token, level: 'practice' as WordLevel };
-    if (idx === tokens.length - 1) return { text: token, level: 'good' as WordLevel };
-    return { text: token, level: 'excellent' as WordLevel };
-  });
+export interface SessionResultLine {
+  dialogue: string;
+  translation: string;
+  evaluation: EvaluationResult;
 }
 
 interface SessionResultScreenProps {
@@ -31,9 +27,10 @@ interface SessionResultScreenProps {
   pronunciation: number;
   fluency: number;
   rhythm: number;
-  englishText: string;
-  translation: string;
-  words?: WordEntry[];
+  /** هر جمله‌ای که واقعاً ضبط و نمره‌دهی شده — تحلیلِ کلمه‌به‌کلمه‌ی هرکدام
+   * مستقیماً از EvaluationResultِ همان جمله می‌آید (خروجیِ واقعیِ
+   * /v1/shadowing/evaluate روی صدای خودِ کاربر)، نه یک لیستِ واژگانِ ثابت. */
+  lines: SessionResultLine[];
   onPracticeAgain: () => void;
   onFinishLesson: () => void;
 }
@@ -43,23 +40,21 @@ export function SessionResultScreen({
   pronunciation,
   fluency,
   rhythm,
-  englishText,
-  translation,
-  words = [],
+  lines,
   onPracticeAgain,
   onFinishLesson,
 }: SessionResultScreenProps) {
   const { t } = useLanguage();
-  const tokens = tokenizeWithLevels(englishText, words);
+  const tier = scoreTier(score);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{t('greatJobTitle')}</Text>
-        <Text style={styles.sub}>{t('greatJobSub')}</Text>
+        <Text style={styles.title}>{t(tier.titleKey)}</Text>
+        <Text style={styles.sub}>{t(tier.subKey)}</Text>
 
         <View style={styles.ringWrapper}>
-          <ProgressRing percent={score} size={160} strokeWidth={12} color={COLORS.tertiary}>
+          <ProgressRing percent={score} size={160} strokeWidth={12} color={tier.color}>
             <Text style={styles.ringScore}>{score}</Text>
             <Text style={styles.ringOutOf}>/ 100</Text>
           </ProgressRing>
@@ -80,45 +75,42 @@ export function SessionResultScreen({
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('sentenceAnalysis')}</Text>
-          <View style={styles.tokensWrap}>
-            {tokens.map((tok, idx) => (
-              <View
-                key={idx}
-                style={[styles.tokenChip, { backgroundColor: LEVEL_COLOR[tok.level].bg }]}
-              >
-                <Text style={[styles.tokenText, { color: LEVEL_COLOR[tok.level].text }]}>{tok.text}</Text>
-              </View>
-            ))}
+        <Text style={styles.cardTitle}>{t('sentenceAnalysis')}</Text>
+        {lines.map(({ dialogue, translation, evaluation }, idx) => (
+          <View key={idx} style={styles.card}>
+            {evaluation.words?.length ? (
+              <ScoredDialogueText words={evaluation.words} />
+            ) : (
+              <Text style={styles.plainSentence}>{dialogue}</Text>
+            )}
+            <Text style={styles.translation}>{translation}</Text>
+            {!!evaluation.transcript && (
+              <Text style={styles.transcriptText}>
+                {t('weHeard')} «{evaluation.transcript}»
+              </Text>
+            )}
+            {evaluation.is_estimated && (
+              <Text style={styles.estimatedNote}>{t('scoreEstimatedNote')}</Text>
+            )}
           </View>
-          <Text style={styles.translation}>{translation}</Text>
+        ))}
 
+        {!!lines.length && (
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: LEVEL_COLOR.practice.dot }]} />
+              <View style={[styles.legendDot, { backgroundColor: COLORS.error }]} />
               <Text style={styles.legendText}>{t('wordNeedsPractice')}</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: LEVEL_COLOR.good.dot }]} />
+              <View style={[styles.legendDot, { backgroundColor: COLORS.warning }]} />
               <Text style={styles.legendText}>{t('wordGood')}</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: LEVEL_COLOR.excellent.dot }]} />
+              <View style={[styles.legendDot, { backgroundColor: COLORS.tertiary }]} />
               <Text style={styles.legendText}>{t('wordExcellent')}</Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.insightCard}>
-          <View style={styles.insightIconCircle}>
-            <Lightbulb size={18} color={COLORS.white} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.insightTitle}>{t('aiCoachInsight')}</Text>
-            <Text style={styles.insightBody}>{t('aiCoachInsightBody')}</Text>
-          </View>
-        </View>
+        )}
 
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.secondaryBtn} onPress={onPracticeAgain}>
@@ -213,26 +205,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 14,
   },
-  tokensWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  tokenChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  tokenText: {
+  plainSentence: {
+    color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
+    marginBottom: 8,
   },
   translation: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
-    marginBottom: 12,
+    marginTop: 8,
+  },
+  transcriptText: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+  estimatedNote: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    marginTop: 6,
   },
   legendRow: {
     flexDirection: 'row',
@@ -256,37 +252,10 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
   },
-  insightCard: {
-    flexDirection: 'row',
-    gap: 12,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 28,
-  },
-  insightIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  insightTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  insightBody: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 13,
-    lineHeight: 19,
-  },
   actionsRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 8,
   },
   secondaryBtn: {
     flex: 1,

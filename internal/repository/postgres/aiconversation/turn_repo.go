@@ -19,14 +19,15 @@ func NewTurnRepository(db *pgxpool.Pool) *TurnRepository {
 	return &TurnRepository{db: db}
 }
 
-const turnColumns = `id, conversation_id, role, text, audio_url, order_index, created_at, grammar_correction, grammar_explanation`
+const turnColumns = `id, conversation_id, role, text, audio_url, order_index, created_at, grammar_correction, grammar_explanation, input_tokens, output_tokens`
 
 func scanTurn(row pgx.Row) (*aiconversation.Turn, error) {
 	var t aiconversation.Turn
 	var audioURL, grammarCorrection, grammarExplanation *string
+	var inputTokens, outputTokens *int
 	if err := row.Scan(
 		&t.ID, &t.ConversationID, &t.Role, &t.Text, &audioURL, &t.OrderIndex, &t.CreatedAt,
-		&grammarCorrection, &grammarExplanation,
+		&grammarCorrection, &grammarExplanation, &inputTokens, &outputTokens,
 	); err != nil {
 		return nil, err
 	}
@@ -39,6 +40,12 @@ func scanTurn(row pgx.Row) (*aiconversation.Turn, error) {
 	if grammarExplanation != nil {
 		t.GrammarExplanation = *grammarExplanation
 	}
+	if inputTokens != nil {
+		t.InputTokens = *inputTokens
+	}
+	if outputTokens != nil {
+		t.OutputTokens = *outputTokens
+	}
 	return &t, nil
 }
 
@@ -46,12 +53,13 @@ func scanTurn(row pgx.Row) (*aiconversation.Turn, error) {
 func (r *TurnRepository) Insert(ctx context.Context, t *aiconversation.Turn) error {
 	const op = "postgresaiconversation.TurnRepository.Insert"
 
-	query := `INSERT INTO ai_conversation_turns (id, conversation_id, role, text, audio_url, order_index, created_at, grammar_correction, grammar_explanation)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	query := `INSERT INTO ai_conversation_turns (id, conversation_id, role, text, audio_url, order_index, created_at, grammar_correction, grammar_explanation, input_tokens, output_tokens)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := r.db.Exec(ctx, query,
 		t.ID, t.ConversationID, t.Role, t.Text, nullable(t.AudioURL), t.OrderIndex, t.CreatedAt,
 		nullable(t.GrammarCorrection), nullable(t.GrammarExplanation),
+		nullableInt(t.InputTokens), nullableInt(t.OutputTokens),
 	)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to insert conversation turn")
@@ -86,4 +94,11 @@ func nullable(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func nullableInt(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
 }

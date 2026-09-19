@@ -196,7 +196,7 @@ export function playbackReducer(state: PlaybackState, action: PlaybackAction): P
         target =
           rememberedLine !== undefined && rememberedLine < action.items.length
             ? rememberedLine
-            : state.activeIndex;
+            : 0;
       }
       // مقایسه فقط روی جمله‌ای معنی دارد که ضبط داشته باشد؛ اگر جمله‌ی
       // به‌خاطرمانده دیگر ضبط ندارد، روی جمله‌ی فعلی می‌مانیم.

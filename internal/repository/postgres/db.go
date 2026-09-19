@@ -14,6 +14,11 @@ type Config struct {
 	Port     int    `koanf:"port"`
 	Host     string `koanf:"host"`
 	DBName   string `koanf:"db_name"`
+	// MaxConns سقفِ تعداد اتصالِ هم‌زمانِ pool است. اگر صفر باشد، pgxpool
+	// پیش‌فرضِ خودش (max(4, تعداد CPU)) را استفاده می‌کند که روی یک VPS
+	// کم‌رم/کم‌هسته می‌تواند خیلی زود صف ایجاد کند وقتی چند درخواستِ گفتگوی
+	// AI هم‌زمان به دیتابیس می‌خورند.
+	MaxConns int `koanf:"max_conns"`
 }
 
 type DB struct {
@@ -31,6 +36,9 @@ func New(cfg Config) *DB {
 		cfg.Port,
 		cfg.DBName,
 	)
+	if cfg.MaxConns > 0 {
+		connStr += fmt.Sprintf("&pool_max_conns=%d", cfg.MaxConns)
+	}
 
 	db, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {

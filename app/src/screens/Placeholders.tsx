@@ -731,6 +731,23 @@ export const ProfileScreen = () => {
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
 
+      {/* فقط برای توسعه: PoC معماریِ Realtime Voice (Gemini Live) — نگاه
+          کنید به PRODUCTION_CHECKLIST.md. مثل ردیفِ بالا عمداً کم‌رنگ است. */}
+      <TouchableOpacity
+        style={styles.pointsCard}
+        onPress={() => navigation.navigate('RealtimePoC')}
+        activeOpacity={0.85}
+      >
+        <View style={styles.pointsIconWrap}>
+          <Mic color={COLORS.muted} size={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pointsValue}>{t('realtimePoCMenuLabel')}</Text>
+          <Text style={styles.pointsSub}>{t('realtimePoCMenuSub')}</Text>
+        </View>
+        <ChevronRight color={COLORS.muted} size={18} />
+      </TouchableOpacity>
+
       {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
       <View style={[styles.settingCard, { marginTop: 16 }]}>
         <View style={styles.sectionHeaderRow}>

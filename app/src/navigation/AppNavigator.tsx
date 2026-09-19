@@ -43,6 +43,7 @@ import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { AIConversationScreen } from '../screens/AIConversation';
 import { FreeSpeechScreen } from '../screens/FreeSpeech';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
+import { RealtimePoCScreen } from '../screens/RealtimePoC';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
@@ -65,6 +66,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'FreeSpeech',
   'Paywall',
   'ToastDemo',
+  'RealtimePoC',
 ];
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
@@ -298,6 +300,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="ToastDemo"
         component={ToastDemoScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="RealtimePoC"
+        component={RealtimePoCScreen}
         options={{
           tabBarButton: () => null,
         }}

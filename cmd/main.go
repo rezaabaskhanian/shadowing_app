@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"shadowing-backend/internal/pkg/filestore"
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
@@ -130,6 +131,7 @@ func main() {
 			Port:     getEnvInt("DB_PORT", 5435),
 			Host:     getEnv("DB_HOST", "localhost"),
 			DBName:   getEnv("DB_NAME", "shadowing-backend_db"),
+			MaxConns: getEnvInt("DB_MAX_CONNS", 10),
 		},
 		Auth: authservice.Config{
 			SignKey:               getEnv("JWT_SIGN_KEY", "jwt_token"),
@@ -254,7 +256,14 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// همان مسیر آپلودی که httpserver با آن سرو می‌کند (internal/delivery/httpserver/server.go).
 	const uploadDir = "uploads"
-	learnningSvc := learningservice.New(learnningRepo, getEnv("WHISPER_URL", ""), uploadDir)
+	const uploadURLPath = "/uploads"
+	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی است — دیسکِ محلی مگر
+	// OBJECT_STORAGE_* تنظیم شده باشد (نگاه کنید به filestore.New).
+	store, err := filestore.New(uploadDir, uploadURLPath)
+	if err != nil {
+		fmt.Println("warning: object storage init failed:", err)
+	}
+	learnningSvc := learningservice.New(learnningRepo, getEnv("WHISPER_URL", ""), store)
 
 	sessionRepo := postgressession.New(MyPostgresgresRepo.DB)
 	recordingRepo := postgresrecording.New(MyPostgresgresRepo.DB)
@@ -289,6 +298,10 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	if err := settingsSvc.LoadAll(context.Background()); err != nil {
 		fmt.Println("warning: failed to load settings from db:", err)
 	}
+	// وقتی چند instance از بک‌اند پشتِ لودبالانسر اجرا می‌شوند، تغییرِ تنظیمات
+	// از پنل ادمین روی یک instance باید به بقیه هم برسد — این polling دوره‌ای
+	// همان کار را می‌کند (نگاه کنید به settingsservice.Service.StartAutoRefresh).
+	go settingsSvc.StartAutoRefresh(context.Background(), 0)
 
 	notificationRepo := postgresnotification.New(MyPostgresgresRepo.DB)
 	pushSvc := pushservice.New(settingsSvc)
@@ -341,13 +354,12 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه: همان ElevenLabs (ttsservice) که
 	// پنل ادمین برای صدای دیالوگ‌ها استفاده می‌کند، اینجا برای صدای پاسخ AI
 	// هم به کار می‌رود؛ هیچ زیرساخت TTS جدیدی لازم نبود.
-	const uploadURLPath = "/uploads"
 	conversationRepo := postgresaiconversation.NewConversationRepository(MyPostgresgresRepo.DB)
 	turnRepo := postgresaiconversation.NewTurnRepository(MyPostgresgresRepo.DB)
 	aiConversationSvc := aiconversationservice.New(
 		conversationRepo, turnRepo, learnningRepo,
 		aiservice.New(settingsSvc), ttsservice.New(settingsSvc), evaluator,
-		uploadDir, uploadURLPath,
+		store,
 	)
 
 	// Free Speech: یک بار توضیحِ آزاد بعد از تمام‌شدنِ یک صحنه، بدون AI-reply

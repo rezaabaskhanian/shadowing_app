@@ -26,9 +26,27 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ onDone }) 
   const [index, setIndex] = React.useState(0);
 
   const slides = [
-    { Icon: Eye, title: t('onboardingSlide1Title'), sub: t('onboardingSlide1Sub') },
-    { Icon: Mic, title: t('onboardingSlide2Title'), sub: t('onboardingSlide2Sub') },
-    { Icon: Sparkles, title: t('onboardingSlide3Title'), sub: t('onboardingSlide3Sub') },
+    {
+      Icon: Eye,
+      title: t('onboardingSlide1Title'),
+      sub: t('onboardingSlide1Sub'),
+      bg: COLORS.primaryLight,
+      iconColor: COLORS.primary,
+    },
+    {
+      Icon: Mic,
+      title: t('onboardingSlide2Title'),
+      sub: t('onboardingSlide2Sub'),
+      bg: COLORS.infoLight,
+      iconColor: COLORS.info,
+    },
+    {
+      Icon: Sparkles,
+      title: t('onboardingSlide3Title'),
+      sub: t('onboardingSlide3Sub'),
+      bg: COLORS.tertiaryLight,
+      iconColor: COLORS.tertiary,
+    },
   ];
   const isLast = index === slides.length - 1;
 
@@ -47,7 +65,7 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ onDone }) 
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: slides[index].bg }]}>
       <TouchableOpacity
         style={[styles.skipBtn, { top: insets.top + SPACING.s }]}
         onPress={onDone}
@@ -66,8 +84,8 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ onDone }) 
       >
         {slides.map((slide, i) => (
           <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <View style={styles.iconCircle}>
-              <slide.Icon size={40} color={COLORS.primary} />
+            <View style={[styles.iconCircle, { backgroundColor: COLORS.surface }]}>
+              <slide.Icon size={40} color={slide.iconColor} />
             </View>
             <Text style={styles.title}>{slide.title}</Text>
             <Text style={styles.sub}>{slide.sub}</Text>

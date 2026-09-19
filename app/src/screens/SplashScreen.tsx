@@ -1,16 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { MessageCircle } from 'lucide-react-native';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect, Circle } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
 const appLogoMark = require('../assets/brand/app-logo-mark.png');
 
-// پس‌زمینه‌ی تیره + گرادیان بنفش/فیروزه‌ای مطابق لوگوی جدید اپ؛ فقط همین
-// صفحه از این پالت استفاده می‌کند، نه کل اپ (که همچنان تم روشن دارد).
-const BG_TOP = '#0c0c32';
-const BG_BOTTOM = '#3d1763';
+// پس‌زمینه‌ی این صفحه هم‌رنگ تم روشن اصلی اپ است؛ فقط رنگ‌های بنفش/فیروزه‌ای
+// موج و دکمه‌ی صدا برای هماهنگی با لوگوی جدید نگه داشته شده‌اند.
 const WAVE_FROM = '#b355e2';
 const WAVE_TO = '#63c9ea';
 
@@ -71,16 +69,6 @@ export const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-        <Defs>
-          <SvgLinearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={BG_TOP} />
-            <Stop offset="100%" stopColor={BG_BOTTOM} />
-          </SvgLinearGradient>
-        </Defs>
-        <Rect x={0} y={0} width="100%" height="100%" fill="url(#bgGrad)" />
-      </Svg>
-
       <View style={styles.statusSpacer} />
 
       <View style={styles.heroCopy}>
@@ -130,7 +118,7 @@ export const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_TOP,
+    backgroundColor: COLORS.background,
     paddingHorizontal: 30,
     paddingTop: 52,
     paddingBottom: 54,
@@ -143,13 +131,13 @@ const styles = StyleSheet.create({
     marginTop: 72,
   },
   title: {
-    color: COLORS.white,
+    color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 56,
     textAlign: 'center',
   },
   subtitle: {
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 24,
     lineHeight: 31,
@@ -212,7 +200,7 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
   },
   loadingText: {
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 20,
@@ -220,7 +208,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 5,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.borderLight,
     overflow: 'hidden',
   },
   progressFill: {

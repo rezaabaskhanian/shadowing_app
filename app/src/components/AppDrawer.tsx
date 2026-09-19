@@ -22,6 +22,7 @@ import {
   Lightbulb,
   LogOut,
   Mail,
+  MessageCircle,
   Mic,
   Target,
   TrendingUp,
@@ -33,6 +34,8 @@ import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { useNotifications } from '../data/NotificationContext';
+import { useScenes } from '../data/ScenesContext';
+import { useToast } from '../data/ToastContext';
 import { getMyPoints } from '../api/submissions';
 import type { LearningGoal } from '../api/notifications';
 
@@ -58,6 +61,8 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
   const isFocused = useIsFocused();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
+  const { scenes } = useScenes();
+  const toast = useToast();
   const {
     streakReminderEnabled,
     setStreakReminderEnabled,
@@ -99,6 +104,22 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
   // مودال مخفی میشه و با برگشت به این صفحه دوباره باز میشه.
   const go = (screen: string, params?: object) => {
     navigation.navigate(screen, params);
+  };
+
+  // موضوعِ گفتگو انتخابِ خودِ کاربر یا AI نیست — همیشه یکی از درس‌های
+  // «کامل‌شده» است که به‌صورت رندوم انتخاب می‌شود، تا محتوای تمرین‌شده مرور شود.
+  const handleOpenConversation = () => {
+    const completed = scenes.filter((s) => s.isCompleted);
+    if (completed.length === 0) {
+      // دراور یک RN Modal است و روی اندروید در یک پنجره‌ی جدای بومی رندر
+      // می‌شود، بالاتر از کل درخت JS — پس توست (که Modal نیست) اگر دراور باز
+      // بماند، زیرش پنهان می‌شود. باید اول دراور بسته شود، بعد توست نشان داده شود.
+      onClose();
+      toast.warning(t('drawerConversationNoCompletedLessons'));
+      return;
+    }
+    const picked = completed[Math.floor(Math.random() * completed.length)];
+    go('AIConversation', { scenarioId: picked.id });
   };
 
   return (
@@ -175,6 +196,17 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
               <Target color={COLORS.tertiary} size={18} />
             </View>
             <Text style={styles.rowText}>{t('habitRealSituations')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={handleOpenConversation}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <MessageCircle color={COLORS.primary} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('drawerConversationTitle')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

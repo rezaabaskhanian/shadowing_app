@@ -28,5 +28,11 @@ Rules:
 
 // CheckAnswerRelevance پاسخ آزاد کاربر را با ارائه‌دهنده‌ی فعال بررسی می‌کند.
 func (s Service) CheckAnswerRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
-	return s.activeProvider().checkRelevance(ctx, question, transcript)
+	var result RelevanceResult
+	err := withLimit(ctx, func() error {
+		var err error
+		result, err = s.activeProvider().checkRelevance(ctx, question, transcript)
+		return err
+	})
+	return result, err
 }

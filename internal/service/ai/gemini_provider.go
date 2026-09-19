@@ -202,6 +202,12 @@ func (p *geminiProvider) converse(ctx context.Context, sceneTitle, sceneDescript
 		return ConversationResult{}, richerror.New(op).WithErr(err).
 			WithMessage("پاسخ مدل (Gemini) قابل پردازش نبود")
 	}
+	if resp.UsageMetadata != nil {
+		result.Usage = TokenUsage{
+			InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
+			OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+		}
+	}
 	return result, nil
 }
 
