@@ -18,6 +18,7 @@ type StartConversationResponse struct {
 	SceneTitle     string  `json:"scene_title"`
 	OpeningTurn    TurnDTO `json:"opening_turn"`
 	MaxUserTurns   int     `json:"max_user_turns"`
+	MaxHints       int     `json:"max_hints"`
 }
 
 // ============================================
@@ -34,4 +35,37 @@ type SendTurnResponse struct {
 	TurnNumber             int    `json:"turn_number"`
 	MaxUserTurns           int    `json:"max_user_turns"`
 	IsEnded                bool   `json:"is_ended"`
+}
+
+// ============================================
+// Suggest — پیشنهاد جواب به آخرین پیامِ AI
+// ============================================
+type SuggestRequest struct {
+	ConversationID string `json:"conversation_id"`
+}
+
+type SuggestionDTO struct {
+	Text          string `json:"text"`
+	TranslationFA string `json:"translation_fa"`
+	AudioURL      string `json:"audio_url,omitempty"`
+}
+
+type SuggestResponse struct {
+	HintID      string          `json:"hint_id"`
+	Suggestions []SuggestionDTO `json:"suggestions"`
+	HintsUsed   int             `json:"hints_used"`
+	MaxHints    int             `json:"max_hints"`
+}
+
+// ============================================
+// SuggestAudio — صدای یک جمله‌ی پیشنهادی (ساخته‌شدنِ تنبل، فقط با درخواستِ پخش)
+// ============================================
+type SuggestAudioRequest struct {
+	HintID string `json:"hint_id"`
+	Index  int    `json:"index"`
+}
+
+type SuggestAudioResponse struct {
+	// AudioURL وقتی TTS تنظیم نیست یا شکست بخورد خالی می‌ماند (درخواست خطا نمی‌دهد).
+	AudioURL string `json:"audio_url,omitempty"`
 }

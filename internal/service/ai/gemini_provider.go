@@ -211,6 +211,49 @@ func (p *geminiProvider) converse(ctx context.Context, sceneTitle, sceneDescript
 	return result, nil
 }
 
+func (p *geminiProvider) suggestReplies(ctx context.Context, sceneTitle, sceneDescription, sceneCategory, learnerLevel string, history []ConversationTurn) (SuggestResult, error) {
+	const op = "aiservice.geminiProvider.suggestReplies"
+
+	key := p.apiKey()
+	if key == "" {
+		return SuggestResult{}, richerror.New(op).WithMessage("کلید GEMINI_API_KEY تنظیم نشده است")
+	}
+
+	client, err := p.clientFor(ctx, key)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در ساخت کلاینت Gemini: %v", err))
+	}
+
+	resp, err := client.Models.GenerateContent(
+		ctx,
+		p.model(),
+		genai.Text(formatSuggestTranscript(history)),
+		&genai.GenerateContentConfig{
+			SystemInstruction: genai.NewContentFromText(suggestSystemPrompt(sceneTitle, sceneDescription, sceneCategory, learnerLevel), genai.RoleUser),
+			ResponseMIMEType:  "application/json",
+		},
+	)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
+	}
+
+	jsonStr := extractJSON(resp.Text())
+	var result SuggestResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (Gemini) قابل پردازش نبود")
+	}
+	if resp.UsageMetadata != nil {
+		result.Usage = TokenUsage{
+			InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
+			OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+		}
+	}
+	return result, nil
+}
+
 func (p *geminiProvider) checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
 	const op = "aiservice.geminiProvider.checkRelevance"
 

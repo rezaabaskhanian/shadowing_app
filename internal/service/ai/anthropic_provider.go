@@ -226,6 +226,54 @@ func (p *anthropicProvider) converse(ctx context.Context, sceneTitle, sceneDescr
 	return result, nil
 }
 
+func (p *anthropicProvider) suggestReplies(ctx context.Context, sceneTitle, sceneDescription, sceneCategory, learnerLevel string, history []ConversationTurn) (SuggestResult, error) {
+	const op = "aiservice.anthropicProvider.suggestReplies"
+
+	key := p.apiKey()
+	if key == "" {
+		return SuggestResult{}, richerror.New(op).WithMessage("کلید ANTHROPIC_API_KEY تنظیم نشده است")
+	}
+
+	client, err := p.clientFor(key)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+	}
+	resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     p.model(),
+		MaxTokens: 500,
+		System: []anthropic.TextBlockParam{{
+			Text: suggestSystemPrompt(sceneTitle, sceneDescription, sceneCategory, learnerLevel),
+		}},
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(formatSuggestTranscript(history))),
+		},
+	})
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Claude): %v", err))
+	}
+
+	var raw strings.Builder
+	for _, block := range resp.Content {
+		if b, ok := block.AsAny().(anthropic.TextBlock); ok {
+			raw.WriteString(b.Text)
+		}
+	}
+
+	jsonStr := extractJSON(raw.String())
+	var result SuggestResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (Claude) قابل پردازش نبود")
+	}
+	result.Usage = TokenUsage{
+		InputTokens:  int(resp.Usage.InputTokens),
+		OutputTokens: int(resp.Usage.OutputTokens),
+	}
+	return result, nil
+}
+
 func (p *anthropicProvider) checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
 	const op = "aiservice.anthropicProvider.checkRelevance"
 

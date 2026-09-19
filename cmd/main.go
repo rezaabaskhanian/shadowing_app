@@ -356,8 +356,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// هم به کار می‌رود؛ هیچ زیرساخت TTS جدیدی لازم نبود.
 	conversationRepo := postgresaiconversation.NewConversationRepository(MyPostgresgresRepo.DB)
 	turnRepo := postgresaiconversation.NewTurnRepository(MyPostgresgresRepo.DB)
+	hintRepo := postgresaiconversation.NewHintRepository(MyPostgresgresRepo.DB)
 	aiConversationSvc := aiconversationservice.New(
-		conversationRepo, turnRepo, learnningRepo,
+		conversationRepo, turnRepo, hintRepo, assessmentProfileRepo, learnningRepo,
 		aiservice.New(settingsSvc), ttsservice.New(settingsSvc), evaluator,
 		store,
 	)

@@ -289,6 +289,79 @@ func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescri
 	return result, nil
 }
 
+func (p *deepseekProvider) suggestReplies(ctx context.Context, sceneTitle, sceneDescription, sceneCategory, learnerLevel string, history []ConversationTurn) (SuggestResult, error) {
+	const op = "aiservice.deepseekProvider.suggestReplies"
+
+	key := p.apiKey()
+	if key == "" {
+		return SuggestResult{}, richerror.New(op).WithMessage("کلید DEEPSEEK_API_KEY تنظیم نشده است")
+	}
+
+	reqBody := deepseekChatRequest{
+		Model: p.model(),
+		Messages: []deepseekChatMessage{
+			{Role: "system", Content: suggestSystemPrompt(sceneTitle, sceneDescription, sceneCategory, learnerLevel)},
+			{Role: "user", Content: formatSuggestTranscript(history)},
+		},
+		ResponseFormat: map[string]string{"type": "json_object"},
+	}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست DeepSeek")
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, deepseekChatCompletionsURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست DeepSeek")
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+key)
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (DeepSeek): %v", err))
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن پاسخ DeepSeek")
+	}
+
+	var chatResp deepseekChatResponse
+	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		msg := fmt.Sprintf("%d", resp.StatusCode)
+		if chatResp.Error != nil && chatResp.Error.Message != "" {
+			msg = chatResp.Error.Message
+		}
+		return SuggestResult{}, richerror.New(op).
+			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (DeepSeek، کد %d): %s", resp.StatusCode, msg))
+	}
+
+	if len(chatResp.Choices) == 0 {
+		return SuggestResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
+	}
+
+	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	var result SuggestResult
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return SuggestResult{}, richerror.New(op).WithErr(err).
+			WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
+	}
+	if chatResp.Usage != nil {
+		result.Usage = TokenUsage{
+			InputTokens:  chatResp.Usage.PromptTokens,
+			OutputTokens: chatResp.Usage.CompletionTokens,
+		}
+	}
+	return result, nil
+}
+
 func (p *deepseekProvider) checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error) {
 	const op = "aiservice.deepseekProvider.checkRelevance"
 

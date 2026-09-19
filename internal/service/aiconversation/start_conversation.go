@@ -76,5 +76,6 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 			AudioURL: audioURL,
 		},
 		MaxUserTurns: aiconversation.MaxUserTurns,
+		MaxHints:     aiconversation.MaxHints,
 	}, nil
 }

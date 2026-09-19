@@ -13,6 +13,7 @@ type provider interface {
 	checkRelevance(ctx context.Context, question, transcript string) (RelevanceResult, error)
 	checkGrammar(ctx context.Context, transcript string) (GrammarResult, error)
 	converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error)
+	suggestReplies(ctx context.Context, sceneTitle, sceneDescription, sceneCategory, learnerLevel string, history []ConversationTurn) (SuggestResult, error)
 	enabled() bool
 }
 
