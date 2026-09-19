@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"shadowing-backend/internal/domain/aiconversation"
 	"shadowing-backend/internal/pkg/richerror"
@@ -47,7 +48,9 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		return nil, richerror.New(op).WithMessage("conversation already ended").WithKind(richerror.KindInvalid)
 	}
 
+	turnStart := time.Now()
 	transcript, err := s.transcriber.TranscribeOnly(ctx, localAudioPath)
+	transcribeDur := time.Since(turnStart)
 	if err != nil || strings.TrimSpace(transcript) == "" {
 		return nil, richerror.New(op).WithErr(err).
 			WithMessage("didn't catch that, please try again").WithKind(richerror.KindInvalid)
@@ -59,7 +62,10 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	}
 
 	var grammarCorrection, grammarExplanation string
-	if grammar, grammarErr := s.ai.CheckGrammar(ctx, transcript); grammarErr == nil {
+	grammarStart := time.Now()
+	grammar, grammarErr := s.ai.CheckGrammar(ctx, transcript)
+	grammarDur := time.Since(grammarStart)
+	if grammarErr == nil {
 		grammarCorrection, grammarExplanation = grammar.Corrected, grammar.Explanation
 	} else {
 		slog.Warn("aiconversation: grammar check failed", "err", grammarErr)
@@ -85,6 +91,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	assistantText := defaultWrapUpText
 	shouldEnd := true
 	var usage aiservice.TokenUsage
+	converseStart := time.Now()
 	if s.ai.Enabled() {
 		aiHistory := make([]aiservice.ConversationTurn, 0, len(history)+1)
 		for _, t := range history {
@@ -107,7 +114,11 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	// معتبر شمرده می‌شود، مطابقِ همان قاعده‌ای که در پرامپت هم گفته شده.
 	isEnded := (shouldEnd && turnNumber >= aiconversation.WrapUpFromTurn) || turnNumber >= aiconversation.MaxUserTurns
 
+	converseDur := time.Since(converseStart)
+
+	synthStart := time.Now()
 	audioURL := s.synthesize(ctx, assistantText)
+	synthDur := time.Since(synthStart)
 
 	assistantTurn, err := aiconversation.NewTurn(conv.ID, aiconversation.RoleAssistant, assistantText, audioURL, len(history)+1)
 	if err != nil {
@@ -126,6 +137,15 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	if err := s.conversations.UpdateProgress(ctx, conv.ID, turnNumber, status, usage.InputTokens, usage.OutputTokens); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+
+	// لاگِ زمان‌بندیِ هر مرحله‌ی یک نوبت، تا کندی حدسی نباشد.
+	slog.Info("aiconversation: turn timing",
+		"transcribe_ms", transcribeDur.Milliseconds(),
+		"grammar_ms", grammarDur.Milliseconds(),
+		"converse_ms", converseDur.Milliseconds(),
+		"tts_ms", synthDur.Milliseconds(),
+		"total_ms", time.Since(turnStart).Milliseconds(),
+	)
 
 	return &dto.SendTurnResponse{
 		UserTranscript:         transcript,

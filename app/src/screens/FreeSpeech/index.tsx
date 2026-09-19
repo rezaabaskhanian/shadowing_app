@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CircleCheck, CircleX, Mic, Square, TriangleAlert } from 'lucide-react-native';
@@ -10,9 +10,46 @@ import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
-import { analyzeFreeSpeech, type AnalyzeFreeSpeechResult } from '../../api/freespeech';
+import { transcribeFreeSpeech, getFreeSpeechFeedback, type FreeSpeechFeedback } from '../../api/freespeech';
+import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 
-type Phase = 'idle' | 'recording' | 'analyzing' | 'result' | 'error';
+type Phase = 'idle' | 'recording' | 'transcribing' | 'result' | 'error';
+// بازخوردِ ربط/گرامر بعد از نمایشِ متن، جدا لود می‌شود.
+type FeedbackState = 'loading' | 'done' | 'error';
+
+/** سقفِ طولِ ضبط: صدای بلندتر یعنی آپلود و رونویسیِ کندتر. */
+const MAX_RECORD_SECONDS = 20;
+/** نوارِ پیشرفتِ «در حال تحلیل» تا این مدت (میلی‌ثانیه) به ~۹۰٪ می‌رسد و همان‌جا می‌ماند تا جواب برسد. */
+const ANALYZING_BAR_MS = 9000;
+
+/**
+ * پیامِ انتظار + نوارِ پیشرفتِ تقریبی. تحلیل واقعاً ۵ تا ۱۰ ثانیه طول می‌کشد؛
+ * به‌جای اسپینرِ بی‌توضیح، به کاربر می‌گوییم چه خبر است و چقدر صبر کند.
+ */
+const AnalyzingBlock: React.FC<{ message: string }> = ({ message }) => {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 0.9,
+      duration: ANALYZING_BAR_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  const width = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <View style={styles.centerBlock}>
+      <ActivityIndicator size="large" color={COLORS.primary} />
+      <Text style={styles.analyzingText}>{message}</Text>
+      <View style={styles.analyzingTrack}>
+        <Animated.View style={[styles.analyzingFill, { width }]} />
+      </View>
+    </View>
+  );
+};
 type ActionCommand = 'none' | 'start_record' | 'stop_record';
 
 /** آیکن/رنگِ بازخورد ربط‌داشتن پاسخ آزاد با موضوع — عیناً هم‌الگوی
@@ -45,7 +82,11 @@ export const FreeSpeechScreen: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [micError, setMicError] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalyzeFreeSpeechResult | null>(null);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FreeSpeechFeedback | null>(null);
+  const [feedbackState, setFeedbackState] = useState<FeedbackState>('loading');
+  // توقفِ ضبط (دستی یا خودکار) درخواست شده ولی وضعیتِ «stopped» هنوز نرسیده.
+  const stopRequestedRef = useRef(false);
   const [actionCommand, setActionCommand] = useState<ActionCommand>('none');
   const [actionNonce, setActionNonce] = useState(0);
 
@@ -66,12 +107,33 @@ export const FreeSpeechScreen: React.FC = () => {
   }, [t]);
 
   const handleStopRecord = useCallback(() => {
+    stopRequestedRef.current = true;
     bumpAndSet('stop_record');
   }, []);
+
+  // در ثانیه‌ی ۲۰ ضبط خودکار بسته می‌شود (مگر کاربر همان لحظه خودش بسته باشد).
+  const elapsedSeconds = useRecordingLimit(phase === 'recording', MAX_RECORD_SECONDS, () => {
+    if (!stopRequestedRef.current) handleStopRecord();
+  });
+
+  const loadFeedback = useCallback(
+    (text: string) => {
+      if (!scenarioId) return;
+      setFeedbackState('loading');
+      getFreeSpeechFeedback(scenarioId, text)
+        .then((fb) => {
+          setFeedback(fb);
+          setFeedbackState('done');
+        })
+        .catch(() => setFeedbackState('error'));
+    },
+    [scenarioId]
+  );
 
   const handleRecordingStatus = useCallback(
     (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
       if (status === 'recording') {
+        stopRequestedRef.current = false;
         setPhase('recording');
         return;
       }
@@ -83,18 +145,22 @@ export const FreeSpeechScreen: React.FC = () => {
       }
       if (status !== 'stopped' || !filePath || !scenarioId) return;
       setActionCommand('none');
-      setPhase('analyzing');
-      analyzeFreeSpeech(scenarioId, filePath, mimeType)
-        .then((res) => {
-          setResult(res);
+      setPhase('transcribing');
+      // مرحله‌ی اول: فقط رونویسی. متن که رسید همان لحظه نشان داده می‌شود و
+      // بازخوردِ ربط/گرامر جدا، بعدش می‌آید.
+      transcribeFreeSpeech(filePath, mimeType)
+        .then((text) => {
+          setTranscript(text);
+          setFeedback(null);
           setPhase('result');
+          loadFeedback(text);
         })
         .catch((err) => {
           setRetryError(err instanceof Error ? err.message : t('freeSpeechRetryHint'));
           setPhase('error');
         });
     },
-    [scenarioId, t]
+    [scenarioId, t, loadFeedback]
   );
 
   const handleDone = useCallback(() => {
@@ -102,7 +168,8 @@ export const FreeSpeechScreen: React.FC = () => {
   }, [navigation]);
 
   const handleTryAgain = useCallback(() => {
-    setResult(null);
+    setTranscript(null);
+    setFeedback(null);
     setRetryError(null);
     setPhase('idle');
   }, []);
@@ -114,6 +181,7 @@ export const FreeSpeechScreen: React.FC = () => {
         shouldPlay={false}
         actionCommand={actionCommand}
         actionNonce={actionNonce}
+        recordingProfile="speech"
         onRecordingStatusUpdate={handleRecordingStatus}
       />
 
@@ -140,11 +208,7 @@ export const FreeSpeechScreen: React.FC = () => {
           </>
         )}
 
-        {phase === 'analyzing' && (
-          <View style={styles.centerBlock}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          </View>
-        )}
+        {phase === 'transcribing' && <AnalyzingBlock message={t('freeSpeechAnalyzing')} />}
 
         {phase === 'error' && (
           <View style={styles.centerBlock}>
@@ -156,32 +220,52 @@ export const FreeSpeechScreen: React.FC = () => {
           </View>
         )}
 
-        {phase === 'result' && result && (
+        {phase === 'result' && transcript !== null && (
           <View style={styles.resultCard}>
             <Text style={styles.transcriptLabel}>{t('freeSpeechYourAnswer')}</Text>
-            <Text style={styles.transcriptText}>{result.transcript}</Text>
+            <Text style={styles.transcriptText}>{transcript}</Text>
 
-            {(() => {
-              const { Icon, color, labelKey } = relevanceMeta(result.relevance_answered);
-              return (
-                <View style={styles.relevanceRow}>
-                  <Icon size={18} color={color} />
-                  <Text style={[styles.relevanceLabel, { color }]}>{t(labelKey)}</Text>
-                </View>
-              );
-            })()}
-            {!!result.relevance_feedback && (
-              <Text style={styles.relevanceFeedback}>{result.relevance_feedback}</Text>
+            {feedbackState === 'loading' && (
+              <View style={styles.feedbackLoadingRow}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.feedbackLoadingText}>{t('freeSpeechFeedbackLoading')}</Text>
+              </View>
             )}
 
-            {!!result.grammar_correction && (
-              <View style={styles.grammarTip}>
-                <Text style={styles.grammarTipLabel}>{t('grammarTipLabel')}</Text>
-                <Text style={styles.grammarTipText}>{result.grammar_correction}</Text>
-                {!!result.grammar_explanation && (
-                  <Text style={styles.grammarTipExplanation}>{result.grammar_explanation}</Text>
-                )}
+            {feedbackState === 'error' && (
+              <View style={styles.feedbackLoadingRow}>
+                <Text style={styles.feedbackErrorText}>{t('freeSpeechFeedbackError')}</Text>
+                <TouchableOpacity onPress={() => loadFeedback(transcript)} activeOpacity={0.8}>
+                  <Text style={styles.feedbackRetryText}>{t('freeSpeechFeedbackRetry')}</Text>
+                </TouchableOpacity>
               </View>
+            )}
+
+            {feedbackState === 'done' && feedback && (
+              <>
+                {(() => {
+                  const { Icon, color, labelKey } = relevanceMeta(feedback.relevance_answered);
+                  return (
+                    <View style={styles.relevanceRow}>
+                      <Icon size={18} color={color} />
+                      <Text style={[styles.relevanceLabel, { color }]}>{t(labelKey)}</Text>
+                    </View>
+                  );
+                })()}
+                {!!feedback.relevance_feedback && (
+                  <Text style={styles.relevanceFeedback}>{feedback.relevance_feedback}</Text>
+                )}
+
+                {!!feedback.grammar_correction && (
+                  <View style={styles.grammarTip}>
+                    <Text style={styles.grammarTipLabel}>{t('grammarTipLabel')}</Text>
+                    <Text style={styles.grammarTipText}>{feedback.grammar_correction}</Text>
+                    {!!feedback.grammar_explanation && (
+                      <Text style={styles.grammarTipExplanation}>{feedback.grammar_explanation}</Text>
+                    )}
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
@@ -193,7 +277,7 @@ export const FreeSpeechScreen: React.FC = () => {
         <TouchableOpacity style={styles.confirmBtn} onPress={handleDone} activeOpacity={0.85}>
           <Text style={styles.confirmBtnText}>{t('backToHome')}</Text>
         </TouchableOpacity>
-      ) : phase !== 'analyzing' && phase !== 'error' ? (
+      ) : phase !== 'transcribing' && phase !== 'error' ? (
         <View style={styles.recordArea}>
           <TouchableOpacity
             style={[styles.recordBtn, phase === 'recording' && styles.recordBtnActive]}
@@ -209,6 +293,17 @@ export const FreeSpeechScreen: React.FC = () => {
           <Text style={styles.recordHint}>
             {phase === 'recording' ? t('placementStopRecordBtn') : t('freeSpeechRecordHint')}
           </Text>
+          {phase === 'recording' ? (
+            <Text style={styles.recordTimer}>
+              {t('recordTimer')
+                .replace('{elapsed}', String(elapsedSeconds))
+                .replace('{max}', String(MAX_RECORD_SECONDS))}
+            </Text>
+          ) : (
+            <Text style={styles.recordLimitHint}>
+              {t('recordMaxDurationHint').replace('{max}', String(MAX_RECORD_SECONDS))}
+            </Text>
+          )}
         </View>
       ) : null}
     </View>
@@ -358,6 +453,53 @@ const styles = StyleSheet.create({
   },
   recordBtnActive: {
     backgroundColor: COLORS.error,
+  },
+  recordTimer: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.error,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  recordLimitHint: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.muted,
+  },
+  analyzingText: {
+    ...TEXT_STYLES.bodyMd,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: SPACING.m,
+  },
+  analyzingTrack: {
+    alignSelf: 'stretch',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.surfaceHigh,
+    overflow: 'hidden',
+    marginTop: SPACING.xs,
+  },
+  analyzingFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+  },
+  feedbackLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    marginTop: SPACING.xs,
+  },
+  feedbackLoadingText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+  },
+  feedbackErrorText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.error,
+  },
+  feedbackRetryText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
   },
   recordHint: {
     ...TEXT_STYLES.labelMd,

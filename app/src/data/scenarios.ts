@@ -80,6 +80,13 @@ export interface DialogueItem {
 // دسته‌بندی صحنه اکنون متن آزادیست که ادمین در پنل تعیین می‌کند (مثلاً «shop»)
 export type ScenarioCategory = string;
 
+/** نکته‌ی گرامریِ اختیاریِ یک صحنه: موضوع، توضیح فارسی و ۲ تا ۴ مثال از خودِ صحنه. */
+export interface GrammarNote {
+  topic: string;
+  explanation: string;
+  examples: { text: string; translation: string }[];
+}
+
 export interface Scenario {
   id: string;
   title: string;
@@ -103,6 +110,8 @@ export interface Scenario {
   order?: number;
   // جدا از isLocked (اشتراک): یعنی صحنه‌ی قبلیِ همین مسیر هنوز کامل نشده.
   isSequenceLocked?: boolean;
+  // فقط برای صحنه‌هایی که ادمین نکته‌ی گرامری برایشان ساخته (در صفحه‌ی معرفی نشان داده می‌شود).
+  grammarNote?: GrammarNote;
 }
 
 export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[] {

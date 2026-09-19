@@ -19,6 +19,7 @@ import type {
   DialogueInput,
   Difficulty,
   DisplayType,
+  GrammarExampleInput,
   HotspotInput,
   SceneResp,
   SceneSubmission,
@@ -119,6 +120,11 @@ export default function SceneCreator({
   const [saving, setSaving] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
+  // نکته‌ی گرامریِ اختیاری: موضوع را ادمین تایپ می‌کند؛ توضیح فارسی و مثال‌ها را AI
+  // پر می‌کند (یا ادمین دستی)، و همه‌چیز قابل ویرایش است.
+  const [grammarTopic, setGrammarTopic] = useState("");
+  const [grammarExplanation, setGrammarExplanation] = useState("");
+  const [grammarExamples, setGrammarExamples] = useState<GrammarExampleInput[]>([]);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // صداهای در دسترس ElevenLabs (برای انتخاب مرد/زن هنگام تولید صدای هر دیالوگ)
@@ -150,6 +156,9 @@ export default function SceneCreator({
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
     setIsLocked(!!editScene.is_locked);
     setCategory(editScene.category || "");
+    setGrammarTopic(editScene.grammar_topic || "");
+    setGrammarExplanation(editScene.grammar_explanation || "");
+    setGrammarExamples(editScene.grammar_examples || []);
     setImageUrl(editScene.backgroundImageURL || null);
     const hs = hotspotsFromScene(editScene);
     setHotspots(hs);
@@ -221,7 +230,7 @@ export default function SceneCreator({
     }
     setGenerating(true);
     try {
-      const g = await generateScene(aiPrompt.trim(), difficulty);
+      const g = await generateScene(aiPrompt.trim(), difficulty, grammarTopic.trim());
       setTitle(g.title || "");
       setDescription(g.description || "");
       if (g.difficulty) setDifficulty(g.difficulty);
@@ -244,8 +253,27 @@ export default function SceneCreator({
       }));
       setHotspots(newHotspots);
       setSelected(newHotspots.length > 0 ? 0 : null);
+
+      // نکته‌ی گرامری: فقط وقتی موضوع داده شده؛ مثال‌ها را سرور از جمله‌های واقعیِ
+      // همین دیالوگ‌ها ساخته، پس عیناً در فرم می‌آیند (و ادمین می‌تواند ویرایششان کند).
+      let grammarMsg = "";
+      if (grammarTopic.trim()) {
+        const note = g.grammar_note;
+        if (note && (note.explanation_fa || (note.examples || []).length > 0)) {
+          setGrammarExplanation(note.explanation_fa || "");
+          setGrammarExamples(
+            (note.examples || []).map((e) => ({
+              text: e.text || "",
+              translation: e.translation || "",
+            }))
+          );
+        } else {
+          grammarMsg = " (نکته‌ی گرامری ساخته نشد؛ دستی پرش کن)";
+        }
+      }
       notify(
-        "محتوا تولید شد ✅ حالا تصویر را آپلود کن و جای نقاط را با کلیک تنظیم کن",
+        "محتوا تولید شد ✅ حالا تصویر را آپلود کن و جای نقاط را با کلیک تنظیم کن" +
+          grammarMsg,
         "ok"
       );
     } catch (err: any) {
@@ -479,6 +507,12 @@ export default function SceneCreator({
         hotspots,
         is_locked: isLocked,
         category: category.trim(),
+        grammar_topic: grammarTopic.trim(),
+        grammar_explanation: grammarExplanation.trim(),
+        grammar_examples: grammarExamples
+          .filter((e) => e.text.trim())
+          .slice(0, 4)
+          .map((e) => ({ text: e.text.trim(), translation: e.translation.trim() })),
       };
       if (fromSubmission) {
         const res = await approveSceneSubmission(fromSubmission.id, payload);
@@ -515,6 +549,9 @@ export default function SceneCreator({
     setDifficulty("beginner");
     setIsLocked(false);
     setCategory("");
+    setGrammarTopic("");
+    setGrammarExplanation("");
+    setGrammarExamples([]);
     setImageUrl(null);
     setHotspots([]);
     setSelected(null);
@@ -615,6 +652,71 @@ export default function SceneCreator({
             {generating ? "در حال تولید..." : "✨ تولید"}
           </button>
         </div>
+      </div>
+
+      {/* نکته‌ی گرامری (اختیاری) */}
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>📘 نکته‌ی گرامری (اختیاری)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          موضوعی را که می‌خواهی در این صحنه درباره‌اش صحبت شود بنویس. با دکمه‌ی
+          «تولید» در بالا، AI دیالوگ‌ها را طوری می‌سازد که این نکته توشان به کار
+          برود، یک توضیح کوتاه فارسی می‌نویسد و ۲ تا ۴ جمله‌ی خودِ صحنه را
+          به‌عنوان مثال می‌آورد. همه‌چیز بعدش قابل ویرایش است. خالی بگذاری، صحنه
+          بدون نکته‌ی گرامری ساخته می‌شود.
+        </p>
+        <label>موضوع گرامری</label>
+        <input
+          value={grammarTopic}
+          onChange={(e) => setGrammarTopic(e.target.value)}
+          placeholder="مثلاً: Present Simple برای عادت‌ها، یا How much is / are"
+          disabled={generating}
+        />
+        <label>توضیح (فارسی)</label>
+        <textarea
+          value={grammarExplanation}
+          onChange={(e) => setGrammarExplanation(e.target.value)}
+          placeholder="۲ تا ۴ جمله‌ی ساده درباره‌ی اینکه این نکته چیست و کِی استفاده می‌شود..."
+        />
+        <label>مثال‌ها (۲ تا ۴ جمله از دیالوگ‌های همین صحنه)</label>
+        {grammarExamples.map((ex, i) => (
+          <div key={i} className="row" style={{ alignItems: "center", marginBottom: 6 }}>
+            <input
+              value={ex.text}
+              onChange={(e) =>
+                setGrammarExamples((prev) =>
+                  prev.map((p, pi) => (pi === i ? { ...p, text: e.target.value } : p))
+                )
+              }
+              placeholder="English sentence"
+              dir="ltr"
+            />
+            <input
+              value={ex.translation}
+              onChange={(e) =>
+                setGrammarExamples((prev) =>
+                  prev.map((p, pi) => (pi === i ? { ...p, translation: e.target.value } : p))
+                )
+              }
+              placeholder="ترجمه‌ی فارسی"
+            />
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ flex: "0 0 auto" }}
+              onClick={() => setGrammarExamples((prev) => prev.filter((_, pi) => pi !== i))}
+            >
+              حذف
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          disabled={grammarExamples.length >= 4}
+          onClick={() => setGrammarExamples((prev) => [...prev, { text: "", translation: "" }])}
+        >
+          + افزودن مثال
+        </button>
       </div>
 
       {/* اطلاعات پایه صحنه */}

@@ -2,6 +2,7 @@ package freespeechservice
 
 import (
 	"context"
+	"errors"
 
 	scene "shadowing-backend/internal/domain/learning/scene"
 	aiservice "shadowing-backend/internal/service/ai"
@@ -20,6 +21,8 @@ type SceneRepository interface {
 type LogRepository interface {
 	Insert(ctx context.Context, userID, sceneID uuid.UUID, transcript, relevanceAnswered, relevanceFeedback, grammarCorrection, grammarExplanation string) error
 }
+
+var errEmptyTranscript = errors.New("empty transcript")
 
 type Service struct {
 	scenes      SceneRepository

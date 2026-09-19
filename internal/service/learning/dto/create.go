@@ -8,6 +8,10 @@ type CreateSceneRequest struct {
 	Hotspots           []Hotspot `json:"hotspots"`
 	IsLocked           bool      `json:"is_locked"`
 	Category           string    `json:"category"`
+	// نکته‌ی گرامریِ اختیاری (موضوع، توضیح فارسی، ۲ تا ۴ مثال).
+	GrammarTopic       string           `json:"grammar_topic"`
+	GrammarExplanation string           `json:"grammar_explanation"`
+	GrammarExamples    []GrammarExample `json:"grammar_examples"`
 	// Order ترتیب این صحنه در مسیر آموزشی است (عدد کوچک‌تر = زودتر در مسیر).
 	// در ساخت صحنه‌ی جدید اختیاری است (پیش‌فرض ۰)؛ ادمین از لیست صحنه‌ها
 	// می‌تواند بعداً مرتب‌سازی کند.

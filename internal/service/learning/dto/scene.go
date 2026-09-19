@@ -1,5 +1,11 @@
 package dto
 
+// GrammarExample یک جمله‌ی مثالِ نکته‌ی گرامری (انگلیسی + ترجمه‌ی فارسی).
+type GrammarExample struct {
+	Text        string `json:"text"`
+	Translation string `json:"translation"`
+}
+
 type Scene struct {
 	ID                 string    `json:"id"` // SceneID as string
 	Title              string    `json:"title"`
@@ -10,6 +16,10 @@ type Scene struct {
 	Hotspots           []Hotspot `json:"hotspots"`
 	Order              int       `json:"order"`
 	Category           string    `json:"category"`
+	// نکته‌ی گرامریِ اختیاری صحنه؛ فقط وقتی پر است در JSON می‌آید.
+	GrammarTopic       string           `json:"grammar_topic,omitempty"`
+	GrammarExplanation string           `json:"grammar_explanation,omitempty"`
+	GrammarExamples    []GrammarExample `json:"grammar_examples,omitempty"`
 	// IsLocked مقدار خام تنظیم‌شده توسط ادمین است. روت‌های ادمین همین مقدار
 	// خام را برمی‌گردانند؛ روت‌های عمومی/موبایل (learninghandler) این فیلد
 	// را بر اساس وضعیت اشتراک/نقش کاربر درخواست‌دهنده بازنویسی می‌کنند.

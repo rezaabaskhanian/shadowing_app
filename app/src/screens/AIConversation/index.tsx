@@ -10,6 +10,7 @@ import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
+import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { absUrl } from '../../api/config';
 import {
   startConversation,
@@ -31,6 +32,9 @@ interface HintState {
   hintId: string;
   suggestions: ConversationSuggestion[];
 }
+
+/** سقفِ طولِ هر نوبتِ ضبط؛ صدای بلندتر یعنی آپلود و رونویسیِ کندتر. */
+const MAX_RECORD_SECONDS = 20;
 
 type LoadPhase = 'loading' | 'ready' | 'load_error';
 type RecordPhase = 'idle' | 'recording' | 'sending';
@@ -86,6 +90,8 @@ export const AIConversationScreen: React.FC = () => {
 
   const scrollRef = useRef<ScrollView>(null);
   const recordStartedAtRef = useRef<number>(0);
+  // توقفِ ضبط (دستی یا خودکار) درخواست شده ولی وضعیتِ «stopped» هنوز نرسیده.
+  const stopRequestedRef = useRef(false);
 
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('loading');
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -197,12 +203,19 @@ export const AIConversationScreen: React.FC = () => {
   }, [t]);
 
   const handleStopRecord = useCallback(() => {
+    stopRequestedRef.current = true;
     bumpAndSet('stop_record');
   }, []);
+
+  // در ثانیه‌ی ۲۰ ضبط خودکار بسته و نوبت ارسال می‌شود.
+  const elapsedSeconds = useRecordingLimit(recordPhase === 'recording', MAX_RECORD_SECONDS, () => {
+    if (!stopRequestedRef.current) handleStopRecord();
+  });
 
   const handleRecordingStatus = useCallback(
     (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
       if (status === 'recording') {
+        stopRequestedRef.current = false;
         recordStartedAtRef.current = Date.now();
         setRecordPhase('recording');
         return;
@@ -291,6 +304,7 @@ export const AIConversationScreen: React.FC = () => {
         shouldPlay={false}
         actionCommand={actionCommand}
         actionNonce={actionNonce}
+        recordingProfile="speech"
         onRecordingStatusUpdate={handleRecordingStatus}
       />
 
@@ -408,6 +422,19 @@ export const AIConversationScreen: React.FC = () => {
               ? t('aiConversationSending')
               : t('aiConversationRecordHint')}
           </Text>
+          {recordPhase === 'recording' ? (
+            <Text style={styles.recordTimer}>
+              {t('recordTimer')
+                .replace('{elapsed}', String(elapsedSeconds))
+                .replace('{max}', String(MAX_RECORD_SECONDS))}
+            </Text>
+          ) : (
+            recordPhase === 'idle' && (
+              <Text style={styles.recordLimitHint}>
+                {t('recordMaxDurationHint').replace('{max}', String(MAX_RECORD_SECONDS))}
+              </Text>
+            )
+          )}
         </View>
       )}
     </View>
@@ -615,6 +642,15 @@ const styles = StyleSheet.create({
   },
   recordBtnActive: {
     backgroundColor: COLORS.error,
+  },
+  recordTimer: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.error,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  recordLimitHint: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.muted,
   },
   recordHint: {
     ...TEXT_STYLES.labelMd,

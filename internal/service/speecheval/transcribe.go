@@ -2,10 +2,17 @@ package speecheval
 
 import (
 	"context"
+	"log/slog"
 	"os"
+	"time"
 
 	"shadowing-backend/internal/pkg/audio"
 )
+
+// maxTranscribeSeconds سقفِ سختِ طولِ صدایی است که برای رونویسیِ خام به Whisper
+// می‌رسد. اپ خودش ضبط را روی ۲۰ ثانیه می‌بندد؛ این ۲ ثانیه‌ی اضافه فقط حاشیه‌ی
+// تأخیرِ توقفِ ضبط است، تا صدای یک کاربرِ عادی هیچ‌وقت وسطِ جمله بریده نشود.
+const maxTranscribeSeconds = 22
 
 // errTranscriptionUnavailable برای HybridEvaluator: بدون کلاینت whisper، هیچ
 // رونویسی واقعی ممکن نیست — بر خلاف Evaluate که تخمین برمی‌گرداند، اینجا
@@ -32,16 +39,28 @@ func (e *WhisperEvaluator) TranscribeOnly(ctx context.Context, audioPath string)
 		return "", errNoAudio
 	}
 
-	wavPath, err := audio.ToWAV16kMono(ctx, audioPath)
+	convertStart := time.Now()
+	wavPath, err := audio.ToWAV16kMonoMax(ctx, audioPath, maxTranscribeSeconds)
 	if err != nil {
 		return "", err
 	}
 	defer os.Remove(wavPath)
+	convertDur := time.Since(convertStart)
 
-	tr, err := e.client.Transcribe(ctx, wavPath, "")
+	whisperStart := time.Now()
+	tr, err := e.client.TranscribeText(ctx, wavPath)
 	if err != nil {
 		return "", err
 	}
+
+	// لاگِ زمان‌بندی: برای اینکه معلوم شود کندیِ «توضیح آزاد»/«گفتگو با AI» از
+	// ffmpeg است یا Whisper، نه حدس.
+	slog.Info("speecheval: transcribe timing",
+		"convert_ms", convertDur.Milliseconds(),
+		"whisper_ms", time.Since(whisperStart).Milliseconds(),
+		"audio_seconds", tr.Duration,
+		"chars", len(tr.Text),
+	)
 	return tr.Text, nil
 }
 

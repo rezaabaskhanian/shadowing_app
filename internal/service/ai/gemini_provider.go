@@ -117,6 +117,25 @@ func (p *geminiProvider) generateScene(ctx context.Context, prompt, difficulty s
 	return scene, nil
 }
 
+// generateFast یک فراخوانیِ JSONِ کوتاه (گرامر، ربط، پیشنهاد، پاسخِ گفتگو) را
+// بدونِ «thinking» اجرا می‌کند: مدل‌های flash به‌طور پیش‌فرض قبل از جواب چند
+// ثانیه فکر می‌کنند که برای این کارهای ساده فقط تأخیر است. اگر مدلِ انتخاب‌شده
+// خاموش‌کردنِ thinking را نپذیرد (خطایی که به thinking اشاره کند)، یک بار بدون آن
+// تنظیم دوباره تلاش می‌کند، تا هیچ قابلیتی به‌خاطرِ این بهینه‌سازی نشکند.
+func (p *geminiProvider) generateFast(ctx context.Context, client *genai.Client, contents []*genai.Content, systemPrompt string) (*genai.GenerateContentResponse, error) {
+	cfg := &genai.GenerateContentConfig{
+		SystemInstruction: genai.NewContentFromText(systemPrompt, genai.RoleUser),
+		ResponseMIMEType:  "application/json",
+		ThinkingConfig:    &genai.ThinkingConfig{ThinkingBudget: genai.Ptr[int32](0)},
+	}
+	resp, err := client.Models.GenerateContent(ctx, p.model(), contents, cfg)
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "thinking") {
+		cfg.ThinkingConfig = nil
+		return client.Models.GenerateContent(ctx, p.model(), contents, cfg)
+	}
+	return resp, err
+}
+
 func (p *geminiProvider) checkGrammar(ctx context.Context, transcript string) (GrammarResult, error) {
 	const op = "aiservice.geminiProvider.checkGrammar"
 
@@ -131,15 +150,7 @@ func (p *geminiProvider) checkGrammar(ctx context.Context, transcript string) (G
 			WithMessage(fmt.Sprintf("خطا در ساخت کلاینت Gemini: %v", err))
 	}
 
-	resp, err := client.Models.GenerateContent(
-		ctx,
-		p.model(),
-		genai.Text(transcript),
-		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(grammarSystemPrompt, genai.RoleUser),
-			ResponseMIMEType:  "application/json",
-		},
-	)
+	resp, err := p.generateFast(ctx, client, genai.Text(transcript), grammarSystemPrompt)
 	if err != nil {
 		return GrammarResult{}, richerror.New(op).WithErr(err).
 			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
@@ -182,15 +193,7 @@ func (p *geminiProvider) converse(ctx context.Context, sceneTitle, sceneDescript
 		contents = append(contents, genai.NewContentFromText("(Begin the conversation in character.)", genai.RoleUser))
 	}
 
-	resp, err := client.Models.GenerateContent(
-		ctx,
-		p.model(),
-		contents,
-		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(systemPrompt, genai.RoleUser),
-			ResponseMIMEType:  "application/json",
-		},
-	)
+	resp, err := p.generateFast(ctx, client, contents, systemPrompt)
 	if err != nil {
 		return ConversationResult{}, richerror.New(op).WithErr(err).
 			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
@@ -225,15 +228,7 @@ func (p *geminiProvider) suggestReplies(ctx context.Context, sceneTitle, sceneDe
 			WithMessage(fmt.Sprintf("خطا در ساخت کلاینت Gemini: %v", err))
 	}
 
-	resp, err := client.Models.GenerateContent(
-		ctx,
-		p.model(),
-		genai.Text(formatSuggestTranscript(history)),
-		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(suggestSystemPrompt(sceneTitle, sceneDescription, sceneCategory, learnerLevel), genai.RoleUser),
-			ResponseMIMEType:  "application/json",
-		},
-	)
+	resp, err := p.generateFast(ctx, client, genai.Text(formatSuggestTranscript(history)), suggestSystemPrompt(sceneTitle, sceneDescription, sceneCategory, learnerLevel))
 	if err != nil {
 		return SuggestResult{}, richerror.New(op).WithErr(err).
 			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))
@@ -270,15 +265,7 @@ func (p *geminiProvider) checkRelevance(ctx context.Context, question, transcrip
 
 	userText := fmt.Sprintf("Question: %s\nTranscript: %s", strings.TrimSpace(question), strings.TrimSpace(transcript))
 
-	resp, err := client.Models.GenerateContent(
-		ctx,
-		p.model(),
-		genai.Text(userText),
-		&genai.GenerateContentConfig{
-			SystemInstruction: genai.NewContentFromText(relevanceSystemPrompt, genai.RoleUser),
-			ResponseMIMEType:  "application/json",
-		},
-	)
+	resp, err := p.generateFast(ctx, client, genai.Text(userText), relevanceSystemPrompt)
 	if err != nil {
 		return RelevanceResult{}, richerror.New(op).WithErr(err).
 			WithMessage(fmt.Sprintf("خطا در فراخوانی مدل هوش مصنوعی (Gemini): %v", err))

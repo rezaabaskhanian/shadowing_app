@@ -63,6 +63,10 @@ func (s Service) GetScene(ctx context.Context, ID string) (dto.Scene, error) {
 		Order:      scene.Order,
 		Category:   scene.Category,
 
+		GrammarTopic:       scene.GrammarTopic,
+		GrammarExplanation: scene.GrammarExplanation,
+		GrammarExamples:    toGrammarExampleDTOs(scene.GrammarExamples),
+
 		CreatedAt: scene.CreatedAt.Format(time.RFC3339),
 
 		UpdatedAt: scene.UpdatedAt.Format(time.RFC3339),

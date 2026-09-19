@@ -63,6 +63,13 @@ interface AudioPlayerProps {
    */
   loadedRecordingPath?: string | null;
   /**
+   * پروفایلِ ضبط. `speech` برای صدایی است که فقط به رونویسیِ سرور می‌رود (توضیح
+   * آزاد، گفتگو با AI): تک‌کاناله ۱۶ کیلوهرتز با بیت‌ریتِ کم — همان چیزی که سرور
+   * به هر حال به آن تبدیل می‌کند، پس دقتی از دست نمی‌رود ولی فایل چند برابر
+   * کوچک‌تر و آپلود سریع‌تر است. پیش‌فرض همان تنظیماتِ قبلی است (نمره‌دهی تلفظ).
+   */
+  recordingProfile?: 'default' | 'speech';
+  /**
    * با هر بار تغییر این عدد، دستور فعلی دوباره اجرا می‌شود. برای وقتی لازم
    * است همان صدا دوباره از اول پخش شود (مثلاً شروع دوباره‌ی دور تکرار) بدون
    * اینکه uri یا actionCommand عوض شوند.
@@ -84,6 +91,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   actionCommand = 'none',
   actionNonce = 0,
   loadedRecordingPath = null,
+  recordingProfile = 'default',
 }) => {
   // ============================================================
   // صدای مرجع — TrackPlayer
@@ -252,7 +260,22 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         // را تولید می‌کنند.
         const path = `${RNFS.DocumentDirectoryPath}/tmp_recording_${Date.now()}.m4a`;
         try {
-          await Sound.startRecorder(path, undefined, false);
+          if (recordingProfile === 'speech') {
+            try {
+              await Sound.startRecorder(
+                path,
+                { AudioChannels: 1, AudioSamplingRate: 16000, AudioEncodingBitRate: 32000 },
+                false
+              );
+            } catch (profileErr) {
+              // بعضی دستگاه‌ها این ترکیبِ نرخ/بیت‌ریت را قبول نمی‌کنند؛ به تنظیماتِ
+              // پیش‌فرض برمی‌گردیم تا ضبط هرگز به‌خاطرِ بهینه‌سازی از کار نیفتد.
+              console.warn('[AudioPlayer] speech profile failed, using default:', profileErr);
+              await Sound.startRecorder(path, undefined, false);
+            }
+          } else {
+            await Sound.startRecorder(path, undefined, false);
+          }
           if (!cancelled) onRecordingStatusUpdate?.('recording');
         } catch (err) {
           console.warn('[AudioPlayer] startRecorder failed:', err);

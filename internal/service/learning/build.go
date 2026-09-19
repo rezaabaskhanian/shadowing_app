@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/richerror"
@@ -189,4 +190,36 @@ func (s Service) processWordTimingsAsync(hotspots []scene.Hotspot) {
 			}
 		}
 	}
+}
+
+// buildGrammarNote نکته‌ی گرامریِ اختیاریِ ورودی را پاک‌سازی می‌کند: فاصله‌های
+// اضافه را می‌گیرد، مثال‌های بدون متن را حذف و تعدادشان را به
+// scene.MaxGrammarExamples محدود می‌کند. همه‌چیز می‌تواند خالی باشد.
+func buildGrammarNote(req dto.CreateSceneRequest) (topic, explanation string, examples []scene.GrammarExample) {
+	topic = strings.TrimSpace(req.GrammarTopic)
+	explanation = strings.TrimSpace(req.GrammarExplanation)
+	for _, e := range req.GrammarExamples {
+		text := strings.TrimSpace(e.Text)
+		if text == "" {
+			continue
+		}
+		examples = append(examples, scene.GrammarExample{Text: text, Translation: strings.TrimSpace(e.Translation)})
+		if len(examples) == scene.MaxGrammarExamples {
+			break
+		}
+	}
+	return topic, explanation, examples
+}
+
+// toGrammarExampleDTOs مثال‌های گرامری دامنه را به DTO تبدیل می‌کند؛ بدون مثال
+// nil برمی‌گرداند تا فیلد در JSON نیاید.
+func toGrammarExampleDTOs(examples []scene.GrammarExample) []dto.GrammarExample {
+	if len(examples) == 0 {
+		return nil
+	}
+	out := make([]dto.GrammarExample, 0, len(examples))
+	for _, e := range examples {
+		out = append(out, dto.GrammarExample{Text: e.Text, Translation: e.Translation})
+	}
+	return out
 }

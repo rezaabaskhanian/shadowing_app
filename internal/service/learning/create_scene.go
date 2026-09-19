@@ -54,6 +54,7 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithKind(richerror.KindForbidden)
 	}
 	newScene.Order = req.Order
+	newScene.GrammarTopic, newScene.GrammarExplanation, newScene.GrammarExamples = buildGrammarNote(req)
 
 	// ========== 4️⃣ اضافه کردن هات‌اسپات‌ها با دیالوگ‌ها ==========
 	hotspots, err := s.buildHotspots(ctx, op, req.Hotspots)
@@ -127,6 +128,9 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 		Order:              s.Order,
 		IsLocked:           s.IsLocked,
 		Category:           s.Category,
+		GrammarTopic:       s.GrammarTopic,
+		GrammarExplanation: s.GrammarExplanation,
+		GrammarExamples:    toGrammarExampleDTOs(s.GrammarExamples),
 		CreatedAt:          s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:          s.UpdatedAt.Format(time.RFC3339),
 	}

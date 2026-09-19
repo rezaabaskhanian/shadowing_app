@@ -41,3 +41,40 @@ export async function analyzeFreeSpeech(
   const res = await authFetch('/v1/free-speech/analyze', { method: 'POST', body: form });
   return (await jsonOrThrow(res)) as AnalyzeFreeSpeechResult;
 }
+
+export interface FreeSpeechFeedback {
+  relevance_answered: string;
+  relevance_feedback: string;
+  grammar_correction?: string;
+  grammar_explanation?: string;
+}
+
+/**
+ * مرحله‌ی اولِ دومرحله‌ای: فقط رونویسیِ صدا. متن زود برمی‌گردد و صفحه همان لحظه
+ * نشانش می‌دهد؛ بازخورد جدا از getFreeSpeechFeedback می‌آید.
+ */
+export async function transcribeFreeSpeech(filePath: string, mimeType?: string): Promise<string> {
+  const form = new FormData();
+  const type = mimeType || 'audio/m4a';
+  const uri = filePath.startsWith('file://') ? filePath : `file://${filePath}`;
+
+  form.append('audio', {
+    uri,
+    name: `attempt.${extensionForMime(type)}`,
+    type,
+  } as any);
+
+  const res = await authFetch('/v1/free-speech/transcribe', { method: 'POST', body: form });
+  const data = (await jsonOrThrow(res)) as { transcript: string };
+  return data.transcript;
+}
+
+/** مرحله‌ی دوم: بازخوردِ ربط + گرامر برای متنِ رونویسی‌شده. */
+export async function getFreeSpeechFeedback(sceneId: string, transcript: string): Promise<FreeSpeechFeedback> {
+  const res = await authFetch('/v1/free-speech/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scene_id: sceneId, transcript }),
+  });
+  return (await jsonOrThrow(res)) as FreeSpeechFeedback;
+}

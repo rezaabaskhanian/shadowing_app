@@ -53,6 +53,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	}
 
 	// ========== 5️⃣ مونتاژ صحنه‌ی به‌روزشده ==========
+	grammarTopic, grammarExplanation, grammarExamples := buildGrammarNote(req)
 	updated := scene.Scene{
 		ID:                 existing.ID,
 		Title:              req.Title,
@@ -64,6 +65,9 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 		Order:              existing.Order,
 		IsLocked:           req.IsLocked,
 		Category:           req.Category,
+		GrammarTopic:       grammarTopic,
+		GrammarExplanation: grammarExplanation,
+		GrammarExamples:    grammarExamples,
 		CreatedAt:          existing.CreatedAt,
 		UpdatedAt:          existing.UpdatedAt,
 	}

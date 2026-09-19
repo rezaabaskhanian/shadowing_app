@@ -9,6 +9,9 @@ import (
 type generateSceneRequest struct {
 	Prompt     string `json:"prompt"`
 	Difficulty string `json:"difficulty"`
+	// GrammarTopic موضوعِ گرامریِ اختیاری که ادمین تایپ کرده (مثلاً «Present
+	// Simple»)؛ خالی یعنی صحنه‌ی بدون نکته‌ی گرامری.
+	GrammarTopic string `json:"grammar_topic"`
 }
 
 // GenerateScene با یک پرامپت ساده، محتوای یک صحنه (دیالوگ‌ها + ترجمه + واژه‌ها) را
@@ -29,7 +32,7 @@ func (h Handler) GenerateScene(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "پرامپت خیلی کوتاه است"})
 	}
 
-	scene, err := h.aiSvc.GenerateScene(c.Request().Context(), req.Prompt, req.Difficulty)
+	scene, err := h.aiSvc.GenerateScene(c.Request().Context(), req.Prompt, req.Difficulty, req.GrammarTopic)
 	if err != nil {
 		return c.JSON(http.StatusBadGateway, echo.Map{"message": err.Error()})
 	}

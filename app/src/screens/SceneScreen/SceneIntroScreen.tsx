@@ -8,13 +8,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ChevronRight, Lightbulb, MessageCircle, Play, Share2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Play, Share2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY } from '../../components/SceneListCard';
-import type { DialogueItem, Scenario } from '../../data/scenarios';
+import type { DialogueItem, Scenario, WordEntry } from '../../data/scenarios';
+
+/** چند واژه‌ی هر هات‌اسپات قبل از «+N تا دیگه» نشان داده می‌شود. */
+const WORDS_PREVIEW_COUNT = 6;
 
 interface SceneIntroScreenProps {
   scenario: Scenario | null;
@@ -53,6 +56,27 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   const minutesCount = parseInt(scenario?.time || '0', 10) || 0;
   const previewDialogues = showAllDialogues ? dialogueItems : dialogueItems.slice(0, 2);
   const moreSentencesCount = Math.max(0, sentencesTotal - previewDialogues.length);
+
+  // واژه‌های انتخاب‌شده‌ی هر هات‌اسپات (یکتا، به ترتیب دیالوگ‌ها)؛ هات‌اسپاتِ بدون واژه نشان داده نمی‌شود.
+  const hotspotWordGroups = (scenario?.hotspots || [])
+    .map((h) => {
+      const seen = new Set<string>();
+      const words: WordEntry[] = [];
+      for (const d of h.conversation?.dialogues || []) {
+        for (const w of d.words || []) {
+          const key = (w.word || '').trim().toLowerCase();
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          words.push(w);
+        }
+      }
+      return { id: h.id, name: h.conversation?.title || '', words };
+    })
+    .filter((g) => g.words.length > 0);
+
+  const grammarNote = scenario?.grammarNote;
+  const [grammarOpen, setGrammarOpen] = React.useState(true);
+  const [expandedWordGroups, setExpandedWordGroups] = React.useState<Record<string, boolean>>({});
 
   const handleShare = () => {
     Share.share({ message: scenario?.title || 'Shadow' }).catch(() => {});
@@ -108,6 +132,103 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
             <Text style={styles.statLabel}>{t('minutesCount')}</Text>
           </View>
         </View>
+
+        {/* Grammar Note (optional, per scene) */}
+        {!!grammarNote && (
+          <View style={styles.infoCard}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.infoCardHeader}
+              onPress={() => setGrammarOpen((v) => !v)}
+            >
+              <View style={styles.infoIconCircle}>
+                <BookOpen size={16} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoCardTitle}>{t('sceneGrammarTitle')}</Text>
+                {!!grammarNote.topic && <Text style={styles.grammarTopic}>{grammarNote.topic}</Text>}
+              </View>
+              {grammarOpen ? (
+                <ChevronUp size={18} color={COLORS.textSecondary} />
+              ) : (
+                <ChevronDown size={18} color={COLORS.textSecondary} />
+              )}
+            </TouchableOpacity>
+
+            {grammarOpen && (
+              <View style={styles.infoCardBody}>
+                {!!grammarNote.explanation && (
+                  <Text style={styles.grammarExplanation}>{grammarNote.explanation}</Text>
+                )}
+                {grammarNote.examples.length > 0 && (
+                  <>
+                    <Text style={styles.grammarExamplesLabel}>{t('sceneGrammarExamples')}</Text>
+                    {grammarNote.examples.map((ex, i) => (
+                      <View key={i} style={styles.grammarExample}>
+                        <Text style={styles.grammarExampleText}>{ex.text}</Text>
+                        {!!ex.translation && (
+                          <Text style={styles.grammarExampleTranslation}>{ex.translation}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Words per hotspot */}
+        {hotspotWordGroups.length > 0 && (
+          <View style={styles.infoCard}>
+            <View style={styles.infoCardHeader}>
+              <View style={styles.infoIconCircle}>
+                <MessageCircle size={16} color={COLORS.primary} />
+              </View>
+              <Text style={styles.infoCardTitle}>{t('sceneWordsTitle')}</Text>
+            </View>
+
+            <View style={styles.infoCardBody}>
+              {hotspotWordGroups.map((group) => {
+                const expanded = !!expandedWordGroups[group.id];
+                const visible = expanded ? group.words : group.words.slice(0, WORDS_PREVIEW_COUNT);
+                const hiddenCount = group.words.length - visible.length;
+                return (
+                  <View key={group.id} style={styles.wordGroup}>
+                    {!!group.name && (
+                      <View style={styles.wordGroupHeader}>
+                        <MapPin size={13} color={COLORS.textSecondary} />
+                        <Text style={styles.wordGroupName}>{group.name}</Text>
+                      </View>
+                    )}
+                    <View style={styles.wordChips}>
+                      {visible.map((w) => (
+                        <View key={w.word} style={styles.wordChip}>
+                          <Text style={styles.wordChipWord}>{w.word}</Text>
+                          {!!w.meaning && <Text style={styles.wordChipMeaning}>{w.meaning}</Text>}
+                        </View>
+                      ))}
+                    </View>
+                    {(hiddenCount > 0 || expanded) && group.words.length > WORDS_PREVIEW_COUNT && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          setExpandedWordGroups((prev) => ({ ...prev, [group.id]: !expanded }))
+                        }
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Text style={styles.wordsToggle}>
+                          {expanded
+                            ? t('sceneWordsLess')
+                            : t('sceneWordsMore').replace('{count}', String(hiddenCount))}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* 4-Step Method Tip Banner */}
         <View style={styles.tipBanner}>
@@ -165,6 +286,111 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  infoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    marginBottom: 16,
+  },
+  infoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  infoIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoCardTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+    color: COLORS.text,
+  },
+  infoCardBody: {
+    marginTop: 12,
+    gap: 10,
+  },
+  grammarTopic: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    color: COLORS.primary,
+    marginTop: 1,
+  },
+  grammarExplanation: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 14,
+    lineHeight: 22,
+    color: COLORS.textSecondary,
+  },
+  grammarExamplesLabel: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+    color: COLORS.muted,
+    marginTop: 2,
+  },
+  grammarExample: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  grammarExampleText: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  grammarExampleTranslation: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  wordGroup: {
+    gap: 8,
+  },
+  wordGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  wordGroupName: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  wordChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  wordChip: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  wordChipWord: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  wordChipMeaning: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  wordsToggle: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

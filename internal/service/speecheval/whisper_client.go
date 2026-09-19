@@ -73,6 +73,17 @@ func (c *WhisperClient) Healthy(ctx context.Context) bool {
 // Transcribe فایل صوتی را به سرویس می‌فرستد و متن + زمان‌بندی کلمه‌ها را
 // می‌گیرد. targetText فقط به‌عنوان راهنمای واژگان به مدل داده می‌شود.
 func (c *WhisperClient) Transcribe(ctx context.Context, audioPath, targetText string) (*TranscriptionResult, error) {
+	return c.transcribe(ctx, audioPath, targetText, false)
+}
+
+// TranscribeText فقط متن را می‌خواهد (بدون زمان‌بندی/احتمالِ کلمه‌ها) و با
+// دیکدِ سریع (beam_size=1) — برای رونویسیِ خامِ توضیح آزاد و گفتگو با AI که
+// نمره‌ی تلفظ ندارند. Words در نتیجه خالی است.
+func (c *WhisperClient) TranscribeText(ctx context.Context, audioPath string) (*TranscriptionResult, error) {
+	return c.transcribe(ctx, audioPath, "", true)
+}
+
+func (c *WhisperClient) transcribe(ctx context.Context, audioPath, targetText string, textOnly bool) (*TranscriptionResult, error) {
 	file, err := os.Open(audioPath)
 	if err != nil {
 		return nil, fmt.Errorf("open audio: %w", err)
@@ -94,6 +105,14 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath, targetText st
 	}
 	if err := writer.WriteField("language", "en"); err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
+	}
+	if textOnly {
+		if err := writer.WriteField("word_timestamps", "false"); err != nil {
+			return nil, fmt.Errorf("build request: %w", err)
+		}
+		if err := writer.WriteField("beam_size", "1"); err != nil {
+			return nil, fmt.Errorf("build request: %w", err)
+		}
 	}
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("build request: %w", err)

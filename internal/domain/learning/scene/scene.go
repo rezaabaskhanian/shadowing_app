@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+// GrammarExample یک جمله‌ی مثال برای نکته‌ی گرامری صحنه است (خودِ جمله‌ی انگلیسی
+// همراه با ترجمه‌ی فارسی). مثال‌ها از دیالوگ‌های همین صحنه گرفته می‌شوند.
+type GrammarExample struct {
+	Text        string `json:"text"`
+	Translation string `json:"translation"`
+}
+
+// MaxGrammarExamples سقفِ تعداد مثال‌های نکته‌ی گرامری هر صحنه.
+const MaxGrammarExamples = 4
+
 type Scene struct {
 	ID                 SceneID
 	Title              string
@@ -16,6 +26,11 @@ type Scene struct {
 	Order              int
 	IsLocked           bool
 	Category           string
+	// نکته‌ی گرامریِ اختیاری: موضوعی که ادمین داده، توضیح فارسیِ کوتاه و ۲ تا ۴ مثال.
+	// همه‌ی فیلدها می‌توانند خالی باشند (صحنه‌ی بدون نکته‌ی گرامری).
+	GrammarTopic       string
+	GrammarExplanation string
+	GrammarExamples    []GrammarExample
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

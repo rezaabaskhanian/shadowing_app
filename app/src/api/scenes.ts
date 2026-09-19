@@ -72,6 +72,10 @@ interface BackendScene {
   progress?: number;
   is_completed?: boolean;
   sequence_locked?: boolean;
+  // نکته‌ی گرامریِ اختیاری (فقط در پاسخ تک‌صحنه، نه در لیست)
+  grammar_topic?: string;
+  grammar_explanation?: string;
+  grammar_examples?: { text: string; translation: string }[] | null;
 }
 
 function difficultyToLevel(d?: string): string {
@@ -145,7 +149,18 @@ function mapScene(s: BackendScene): Scenario {
     isCompleted: !!s.is_completed,
     order: s.order,
     isSequenceLocked: !!s.sequence_locked,
+    grammarNote: mapGrammarNote(s),
   };
+}
+
+// نکته‌ی گرامری فقط وقتی ساخته می‌شود که ادمین چیزی (توضیح یا مثال) پر کرده باشد.
+function mapGrammarNote(s: BackendScene): Scenario['grammarNote'] {
+  const explanation = (s.grammar_explanation || '').trim();
+  const examples = (s.grammar_examples || [])
+    .filter((e) => (e.text || '').trim())
+    .map((e) => ({ text: e.text.trim(), translation: (e.translation || '').trim() }));
+  if (!explanation && examples.length === 0) return undefined;
+  return { topic: (s.grammar_topic || '').trim(), explanation, examples };
 }
 
 // لیست صحنه‌ها (بدون هات‌اسپات - سبک)

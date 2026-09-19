@@ -366,6 +366,11 @@ export const translations: Translations = {
 
   // AI Conversation — گفتگوی آزاد صوتی بعد از تمام‌شدنِ یک صحنه
   startAiConversation: { en: 'Practice free conversation', fa: 'گفتگوی آزاد با هوش مصنوعی' },
+  sceneGrammarTitle: { en: 'Grammar point', fa: 'نکته‌ی گرامری' },
+  sceneGrammarExamples: { en: 'Examples from this scene', fa: 'مثال‌هایی از همین صحنه' },
+  sceneWordsTitle: { en: 'Words in this scene', fa: 'واژه‌های این صحنه' },
+  sceneWordsMore: { en: '+{count} more', fa: '+{count} تا دیگه' },
+  sceneWordsLess: { en: 'Show less', fa: 'کمتر' },
   aiConversationTitle: { en: 'AI Conversation', fa: 'گفتگو با هوش مصنوعی' },
   aiConversationRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
   aiConversationSending: { en: 'Sending...', fa: 'در حال ارسال...' },
@@ -397,6 +402,21 @@ export const translations: Translations = {
     fa: 'با کلمات خودت توضیح بده توی این موقعیت چی اتفاق افتاد.',
   },
   freeSpeechRecordHint: { en: 'Tap to speak', fa: 'برای صحبت‌کردن لمس کن' },
+  freeSpeechAnalyzing: {
+    en: "We're analyzing your speech. This usually takes 5–10 seconds — please wait.",
+    fa: 'در حال تحلیل صدات هستیم. معمولاً ۵ تا ۱۰ ثانیه طول می‌کشه، لطفاً صبر کن.',
+  },
+  freeSpeechFeedbackLoading: {
+    en: 'Checking your answer and grammar…',
+    fa: 'در حال بررسی جواب و گرامرت…',
+  },
+  freeSpeechFeedbackError: {
+    en: 'Could not get feedback right now.',
+    fa: 'الان بازخورد گرفته نشد.',
+  },
+  freeSpeechFeedbackRetry: { en: 'Try again', fa: 'دوباره امتحان کن' },
+  recordMaxDurationHint: { en: 'Up to {max} seconds', fa: 'حداکثر {max} ثانیه' },
+  recordTimer: { en: '{elapsed} / {max} s', fa: '{elapsed} از {max} ثانیه' },
   freeSpeechRecapLabel: { en: 'What happened in the scene', fa: 'یادآوری: توی این صحنه چی گذشت' },
   freeSpeechYourAnswer: { en: 'What you said', fa: 'چیزی که گفتی' },
   freeSpeechTryAgain: { en: 'Try again', fa: 'دوباره امتحان کن' },

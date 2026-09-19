@@ -10,3 +10,22 @@ type AnalyzeResponse struct {
 	GrammarCorrection  string `json:"grammar_correction,omitempty"`
 	GrammarExplanation string `json:"grammar_explanation,omitempty"`
 }
+
+// TranscribeResponse فقط متنِ رونویسی‌شده را برمی‌گرداند (مرحله‌ی اولِ دومرحله‌ای).
+type TranscribeResponse struct {
+	Transcript string `json:"transcript"`
+}
+
+// FeedbackRequest متنِ رونویسی‌شده را برای بازخورد می‌فرستد (مرحله‌ی دوم).
+type FeedbackRequest struct {
+	SceneID    string `json:"scene_id"`
+	Transcript string `json:"transcript"`
+}
+
+// FeedbackResponse بازخوردِ ربط + تصحیحِ گرامری برای یک متنِ رونویسی‌شده است.
+type FeedbackResponse struct {
+	RelevanceAnswered  string `json:"relevance_answered"`
+	RelevanceFeedback  string `json:"relevance_feedback"`
+	GrammarCorrection  string `json:"grammar_correction,omitempty"`
+	GrammarExplanation string `json:"grammar_explanation,omitempty"`
+}

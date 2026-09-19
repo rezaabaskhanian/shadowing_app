@@ -46,6 +46,13 @@ async def transcribe(
     # (اسم مکان/برند) لازم شد، جای امنی برای اضافه کردنش باشد.
     target_text: str = Form(""),
     language: str = Form("en"),
+    # فقط نمره‌دهی تلفظ (Compare) به زمان‌بندی و احتمالِ هر کلمه نیاز دارد. برای
+    # رونویسیِ خام (توضیح آزاد، گفتگو با AI) خاموشش می‌کنیم تا سریع‌تر شود.
+    word_timestamps: bool = Form(True),
+    # beam_size=1 یعنی دیکدِ حریصانه (greedy): روی CPU چند برابر سریع‌تر از ۵
+    # است، با افتِ جزئی دقت. مقدارِ پیش‌فرض همان ۵ قبلی است تا مسیر نمره‌دهی
+    # تلفظ دست‌نخورده بماند.
+    beam_size: int = Form(5),
 ):
     data = await audio.read()
     if not data:
@@ -60,9 +67,9 @@ async def transcribe(
         segments, info = model.transcribe(
             tmp_path,
             language=language or None,
-            word_timestamps=True,
+            word_timestamps=word_timestamps,
             vad_filter=True,
-            beam_size=5,
+            beam_size=max(1, min(beam_size, 10)),
         )
 
         words = []

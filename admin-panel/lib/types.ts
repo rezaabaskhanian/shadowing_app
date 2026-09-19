@@ -29,6 +29,12 @@ export interface HotspotInput {
   dialogues: DialogueInput[];
 }
 
+// یک جمله‌ی مثالِ نکته‌ی گرامری (انگلیسی + ترجمه‌ی فارسی)
+export interface GrammarExampleInput {
+  text: string;
+  translation: string;
+}
+
 export interface CreateScenePayload {
   title: string;
   description: string;
@@ -37,6 +43,10 @@ export interface CreateScenePayload {
   hotspots: HotspotInput[];
   is_locked: boolean;
   category: string;
+  // نکته‌ی گرامریِ اختیاری: موضوع، توضیح فارسی و ۲ تا ۴ مثال
+  grammar_topic?: string;
+  grammar_explanation?: string;
+  grammar_examples?: GrammarExampleInput[];
 }
 
 // خروجی تولید صحنه با هوش مصنوعی (بدون تصویر/صدا)
@@ -62,6 +72,11 @@ export interface GeneratedScene {
   difficulty: Difficulty;
   image_prompt: string;
   hotspots: GeneratedHotspot[];
+  // فقط وقتی موضوع گرامری داده شده باشد؛ مثال‌ها جمله‌های واقعیِ همین دیالوگ‌ها هستند.
+  grammar_note?: {
+    explanation_fa: string;
+    examples: { hotspot_order: number; dialogue_order: number; text?: string; translation?: string }[];
+  };
 }
 
 // پاسخ‌ها (از بک‌اند)
@@ -97,6 +112,9 @@ export interface SceneResp {
   order: number;
   is_locked: boolean;
   category: string;
+  grammar_topic?: string;
+  grammar_explanation?: string;
+  grammar_examples?: GrammarExampleInput[];
   hotspots: HotspotResp[] | null;
   created_at: string;
   updated_at: string;

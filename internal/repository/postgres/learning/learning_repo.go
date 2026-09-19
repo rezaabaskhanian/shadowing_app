@@ -27,8 +27,9 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 	// ========== 2️⃣ درج Scene ==========
 	query := `INSERT INTO scenes (
 		id, title, description, background_image_url,
-		difficulty, status, "order", is_locked, category, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())`
+		difficulty, status, "order", is_locked, category,
+		grammar_topic, grammar_explanation, grammar_examples, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
 
 	_, err = tx.Exec(ctx, query,
 		s.ID,
@@ -40,6 +41,9 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		s.Order,
 		s.IsLocked,
 		s.Category,
+		nullableText(s.GrammarTopic),
+		nullableText(s.GrammarExplanation),
+		grammarExamplesJSON(s.GrammarExamples),
 	)
 	if err != nil {
 		return richerror.New(op).
@@ -213,13 +217,16 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	// 1️⃣ Get Scene
 	sceneQuery := `SELECT
 		id, title, description, background_image_url,
-		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at
+		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at,
+		COALESCE(grammar_topic, ''), COALESCE(grammar_explanation, ''), grammar_examples
 	FROM scenes WHERE id = $1`
 
 	var s scene.Scene
+	var grammarExamplesRaw []byte
 	err := r.conn.QueryRow(ctx, sceneQuery, id).Scan(
 		&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
 		&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.Category, &s.CreatedAt, &s.UpdatedAt,
+		&s.GrammarTopic, &s.GrammarExplanation, &grammarExamplesRaw,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -228,6 +235,10 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 				WithKind(richerror.KindNotFound)
 		}
 		return scene.Scene{}, richerror.New(op).WithErr(err)
+	}
+
+	if len(grammarExamplesRaw) > 0 {
+		_ = json.Unmarshal(grammarExamplesRaw, &s.GrammarExamples)
 	}
 
 	// 2️⃣ Get Hotspots
@@ -350,12 +361,17 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 		"order" = $6,
 		is_locked = $7,
 		category = $8,
+		grammar_topic = $9,
+		grammar_explanation = $10,
+		grammar_examples = $11,
 		updated_at = NOW()
-	WHERE id = $9`
+	WHERE id = $12`
 
 	result, err := tx.Exec(ctx, query,
 		scene.Title, scene.Description, scene.BackgroundImageURL,
-		scene.Difficulty, scene.Status, scene.Order, scene.IsLocked, scene.Category, scene.ID,
+		scene.Difficulty, scene.Status, scene.Order, scene.IsLocked, scene.Category,
+		nullableText(scene.GrammarTopic), nullableText(scene.GrammarExplanation), grammarExamplesJSON(scene.GrammarExamples),
+		scene.ID,
 	)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to update scene")
@@ -550,4 +566,25 @@ func (r DB) GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, 
 	}
 
 	return d, nil
+}
+
+// nullableText رشته‌ی خالی را به NULL تبدیل می‌کند (ستون‌های اختیاریِ نکته‌ی گرامری).
+func nullableText(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
+}
+
+// grammarExamplesJSON مثال‌های گرامری را برای ستون JSONB آماده می‌کند؛ بدون
+// مثال، آرایه‌ی خالی (ستون NOT NULL است).
+func grammarExamplesJSON(examples []scene.GrammarExample) []byte {
+	if len(examples) == 0 {
+		return []byte("[]")
+	}
+	b, err := json.Marshal(examples)
+	if err != nil {
+		return []byte("[]")
+	}
+	return b
 }

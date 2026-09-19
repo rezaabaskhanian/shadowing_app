@@ -202,12 +202,13 @@ export async function createScene(payload: CreateScenePayload) {
 // تولید محتوای صحنه با هوش مصنوعی (فقط برای پرکردن فرم؛ چیزی ذخیره نمی‌کند)
 export async function generateScene(
   prompt: string,
-  difficulty: Difficulty
+  difficulty: Difficulty,
+  grammarTopic?: string
 ): Promise<GeneratedScene> {
   const res = await authFetch("/v1/admin/generate-scene", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, difficulty }),
+    body: JSON.stringify({ prompt, difficulty, grammar_topic: grammarTopic || "" }),
   });
   return jsonOrThrow(res) as Promise<GeneratedScene>;
 }

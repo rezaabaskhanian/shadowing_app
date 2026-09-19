@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -30,6 +31,14 @@ func Available() bool {
 // خروجی در یک فایل موقت نوشته می‌شود و مسیرش برگردانده می‌شود؛ پاک کردنش با
 // فراخواننده است.
 func ToWAV16kMono(ctx context.Context, srcPath string) (string, error) {
+	return ToWAV16kMonoMax(ctx, srcPath, 0)
+}
+
+// ToWAV16kMonoMax مثل ToWAV16kMono است ولی اگر maxSeconds بزرگ‌تر از صفر باشد،
+// فقط maxSeconds ثانیه‌ی اولِ صدا را نگه می‌دارد (`ffmpeg -t`). برای مسیرهای
+// رونویسیِ آزاد است تا هیچ‌وقت صدای بلند (مثلاً از یک اپِ قدیمی که سقفِ
+// ضبط ندارد) به Whisper نرسد؛ زمانِ Whisper با طولِ صدا بالا می‌رود.
+func ToWAV16kMonoMax(ctx context.Context, srcPath string, maxSeconds float64) (string, error) {
 	if !Available() {
 		return "", fmt.Errorf("ffmpeg not found in PATH")
 	}
@@ -48,16 +57,21 @@ func ToWAV16kMono(ctx context.Context, srcPath string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, convertTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "ffmpeg",
+	args := []string{
 		"-nostdin",
 		"-y",
 		"-i", srcPath,
 		"-ac", "1", // تک‌کاناله
 		"-ar", "16000", // ۱۶ کیلوهرتز
 		"-c:a", "pcm_s16le", // PCM ۱۶ بیتی
-		"-f", "wav",
-		dstPath,
-	)
+	}
+	if maxSeconds > 0 {
+		// گزینه‌ی خروجی (بعد از -i): مدتِ فایلِ خروجی را محدود می‌کند.
+		args = append(args, "-t", strconv.FormatFloat(maxSeconds, 'f', -1, 64))
+	}
+	args = append(args, "-f", "wav", dstPath)
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
 	// خروجی خطای ffmpeg را نگه می‌داریم چون بدون آن دیباگ کردن فایل خرابِ
 	// آمده از وب‌ویو تقریباً غیرممکن است.
