@@ -1,6 +1,7 @@
 package learninghandler
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -21,7 +22,13 @@ func (h Handler) GetSceneQuiz(c echo.Context) error {
 
 	questions, err := h.learningSvc.GenerateSceneQuiz(c.Request().Context(), sceneID)
 	if err != nil {
-		slog.Warn("quiz: failed to generate scene quiz", "scene_id", sceneID, "err", err)
+		// RichError.Error() فقط پیام را برمی‌گرداند و خطای اصلی (مثلاً خطای SQL) در
+		// زنجیره‌ی Unwrap است؛ برای لاگ باید تا ریشه پایین رفت.
+		root := err
+		for errors.Unwrap(root) != nil {
+			root = errors.Unwrap(root)
+		}
+		slog.Warn("quiz: failed to generate scene quiz", "scene_id", sceneID, "cause", root.Error())
 		return errorhandling.ErrorHandling(err, c)
 	}
 	if len(questions) == 0 {

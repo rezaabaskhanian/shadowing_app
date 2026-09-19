@@ -461,13 +461,19 @@ func (r DB) UpdateDialogueWordTimings(ctx context.Context, dialogueID string, ti
 func (r DB) RandomDialogueTexts(ctx context.Context, excludeSceneID string, difficulty string, limit int) ([]string, error) {
 	const op = "postgres.RandomDialogueTexts"
 
-	query := `SELECT DISTINCT d.original_text
-		FROM dialogues d
-		JOIN hotspots h ON h.id = d.hotspot_id
-		JOIN scenes s ON s.id = h.scene_id
-		WHERE h.scene_id != $1
-			AND d.original_text != ''
-			AND ($2 = '' OR s.difficulty = $2)
+	// DISTINCT و ORDER BY random() نباید در یک SELECT باشند: PostgreSQL می‌گوید
+	// «for SELECT DISTINCT, ORDER BY expressions must appear in select list» و
+	// کوئری با خطا برمی‌گردد (این باعث می‌شد کوئیز همیشه ۵۰۰ بدهد). پس اول
+	// یکتا می‌کنیم، بعد در SELECT بیرونی تصادفی مرتب می‌کنیم.
+	query := `SELECT original_text FROM (
+			SELECT DISTINCT d.original_text
+			FROM dialogues d
+			JOIN hotspots h ON h.id = d.hotspot_id
+			JOIN scenes s ON s.id = h.scene_id
+			WHERE h.scene_id != $1
+				AND d.original_text != ''
+				AND ($2 = '' OR s.difficulty = $2)
+		) t
 		ORDER BY random()
 		LIMIT $3`
 
