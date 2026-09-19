@@ -3,7 +3,6 @@ package postgresaiconversation
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 
 	"shadowing-backend/internal/domain/aiconversation"
 	"shadowing-backend/internal/pkg/richerror"
@@ -105,22 +104,4 @@ func (r *HintRepository) CountByConversation(ctx context.Context, conversationID
 		return 0, richerror.New(op).WithErr(err)
 	}
 	return n, nil
-}
-
-// SetSuggestionAudio - آدرسِ صدای یک جمله‌ی پیشنهادی را (با index) در همان
-// ردیف ذخیره می‌کند تا پخشِ دوباره‌ی همان جمله هزینه‌ی TTS نداشته باشد.
-func (r *HintRepository) SetSuggestionAudio(ctx context.Context, id uuid.UUID, index int, audioURL string) error {
-	const op = "postgresaiconversation.HintRepository.SetSuggestionAudio"
-
-	query := `UPDATE ai_conversation_hints
-	SET suggestions = jsonb_set(suggestions, ARRAY[$2::text, 'audio_url'], to_jsonb($3::text))
-	WHERE id = $1`
-	result, err := r.db.Exec(ctx, query, id, strconv.Itoa(index), audioURL)
-	if err != nil {
-		return richerror.New(op).WithErr(err).WithMessage("failed to save suggestion audio")
-	}
-	if result.RowsAffected() == 0 {
-		return richerror.New(op).WithMessage("hint not found").WithKind(richerror.KindNotFound)
-	}
-	return nil
 }

@@ -34,28 +34,3 @@ func (h *Handler) Suggest(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, response)
 }
-
-// SuggestAudio - صدای یک جمله‌ی پیشنهادی (فقط با درخواستِ پخش ساخته می‌شود)
-func (h *Handler) SuggestAudio(c echo.Context) error {
-	userClaims, err := claims.GetClaims(c)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{
-			"error":   "unauthorized",
-			"message": "احراز هویت نامعتبر است",
-		})
-	}
-
-	var req dto.SuggestAudioRequest
-	if err := c.Bind(&req); err != nil || req.HintID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error":   "hint_id_required",
-			"message": "hint_id ارسال نشده است",
-		})
-	}
-
-	response, err := h.svc.SuggestAudio(c.Request().Context(), userClaims.UserID, req.HintID, req.Index)
-	if err != nil {
-		return errorhandling.ErrorHandling(err, c)
-	}
-	return c.JSON(http.StatusOK, response)
-}

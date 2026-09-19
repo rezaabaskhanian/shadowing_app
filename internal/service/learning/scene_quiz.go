@@ -66,6 +66,15 @@ func (s Service) GenerateSceneQuiz(ctx context.Context, sceneID string) ([]dto.Q
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+	// اگر هم‌سطح‌ها کم بودند (مثلاً فقط چند صحنه در این سطح هست)، از هر سطحی
+	// تکمیل می‌کنیم تا سوال‌ها گزینه‌ی کافی داشته باشند.
+	if len(pool) < len(candidates)*(maxQuizOptions-1) {
+		more, err := s.repo.RandomDialogueTexts(ctx, sceneID, "", maxQuizQuestions*8)
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		pool = append(pool, more...)
+	}
 
 	questions := make([]dto.QuizQuestion, 0, len(candidates))
 	poolCursor := 0
@@ -81,6 +90,11 @@ func (s Service) GenerateSceneQuiz(ctx context.Context, sceneID string) ([]dto.Q
 			}
 			seen[text] = true
 			options = append(options, text)
+		}
+
+		// سوالی که فقط یک گزینه (خودِ جواب درست) دارد سوال نیست؛ حذف می‌شود.
+		if len(options) < 2 {
+			continue
 		}
 
 		rand.Shuffle(len(options), func(i, j int) { options[i], options[j] = options[j], options[i] })

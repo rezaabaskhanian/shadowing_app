@@ -19,6 +19,8 @@ export const QuizScreen = () => {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  // با هر بار «تلاش دوباره» یک واحد زیاد می‌شود تا افکتِ دریافتِ کوئیز دوباره اجرا شود.
+  const [reloadKey, setReloadKey] = useState(0);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
@@ -28,6 +30,8 @@ export const QuizScreen = () => {
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
+    setLoadError(false);
     fetchSceneQuiz(scenarioId)
       .then((q) => {
         if (alive) setQuestions(q);
@@ -41,7 +45,7 @@ export const QuizScreen = () => {
     return () => {
       alive = false;
     };
-  }, [scenarioId]);
+  }, [scenarioId, reloadKey]);
 
   const current = questions[step];
   const isLast = step === questions.length - 1;
@@ -89,7 +93,20 @@ export const QuizScreen = () => {
           <ArrowLeft color={COLORS.text} size={22} />
         </TouchableOpacity>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>{t('quizUnavailable')}</Text>
+          {loadError ? (
+            <>
+              <Text style={styles.emptyText}>{t('quizLoadError')}</Text>
+              <TouchableOpacity
+                style={styles.doneBtn}
+                activeOpacity={0.85}
+                onPress={() => setReloadKey((k) => k + 1)}
+              >
+                <Text style={styles.doneBtnText}>{t('quizRetry')}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>{t('quizUnavailable')}</Text>
+          )}
         </View>
       </View>
     );

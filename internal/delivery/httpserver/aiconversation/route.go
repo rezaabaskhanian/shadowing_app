@@ -13,6 +13,5 @@ func (h Handler) SetAIConversationRoutes(e *echo.Echo) {
 	group.POST("/start", h.Start, middlware.Auth(h.authSvc, h.authConfig))
 	group.POST("/turn", h.SendTurn, middlware.Auth(h.authSvc, h.authConfig))
 	group.POST("/suggest", h.Suggest, middlware.Auth(h.authSvc, h.authConfig))
-	group.POST("/suggest/audio", h.SuggestAudio, middlware.Auth(h.authSvc, h.authConfig))
 
 }

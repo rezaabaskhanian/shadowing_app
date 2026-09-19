@@ -643,6 +643,11 @@ export const translations: Translations = {
     en: 'No quiz available for this scene yet.',
     fa: 'هنوز کوئیزی برای این صحنه در دسترس نیست.',
   },
+  quizLoadError: {
+    en: 'Could not load the quiz. Check your connection and try again.',
+    fa: 'بارگذاری کوئیز ممکن نشد. اینترنتت رو چک کن و دوباره امتحان کن.',
+  },
+  quizRetry: { en: 'Try again', fa: 'تلاش دوباره' },
   quizDone: { en: 'Done', fa: 'باشه' },
 
   // ---- Contact Us ----

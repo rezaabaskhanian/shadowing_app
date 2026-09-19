@@ -20,7 +20,7 @@ const maxSuggestionsPerHint = 2
 // Suggest برای آخرین پیامِ AI در گفتگو، دو جوابِ پیشنهادی (انگلیسی + ترجمه‌ی
 // فارسی) برمی‌گرداند. برای هر نوبتِ AI فقط یک بار LLM صدا زده می‌شود و از سقفِ
 // MaxHints هم فقط یک بار کم می‌کند — زدنِ دوباره‌ی دکمه روی همان نوبت همان
-// نتیجه‌ی ذخیره‌شده را برمی‌گرداند. صدا اینجا ساخته نمی‌شود (SuggestAudio).
+// نتیجه‌ی ذخیره‌شده را برمی‌گرداند.
 func (s *Service) Suggest(ctx context.Context, userIDStr, conversationIDStr string) (*dto.SuggestResponse, error) {
 	const op = "aiconversation.Suggest"
 
@@ -136,7 +136,7 @@ func (s *Service) suggestResponse(ctx context.Context, conversationID uuid.UUID,
 	}
 	items := make([]dto.SuggestionDTO, 0, len(hint.Suggestions))
 	for _, sg := range hint.Suggestions {
-		items = append(items, dto.SuggestionDTO{Text: sg.Text, TranslationFA: sg.TranslationFA, AudioURL: sg.AudioURL})
+		items = append(items, dto.SuggestionDTO{Text: sg.Text, TranslationFA: sg.TranslationFA})
 	}
 	return &dto.SuggestResponse{
 		HintID:      hint.ID.String(),
@@ -144,48 +144,4 @@ func (s *Service) suggestResponse(ctx context.Context, conversationID uuid.UUID,
 		HintsUsed:   used,
 		MaxHints:    aiconversation.MaxHints,
 	}, nil
-}
-
-// SuggestAudio صدای یکی از جمله‌های پیشنهادی را برمی‌گرداند. صدا فقط وقتی
-// ساخته می‌شود که کاربر دکمه‌ی پخش را بزند (هزینه‌ی ElevenLabs)، و برای پخش‌های
-// بعدیِ همان جمله از آدرسِ ذخیره‌شده استفاده می‌شود. مثل synthesize، اگر TTS
-// تنظیم نباشد یا شکست بخورد، آدرسِ خالی برمی‌گردد نه خطا.
-func (s *Service) SuggestAudio(ctx context.Context, userIDStr, hintIDStr string, index int) (*dto.SuggestAudioResponse, error) {
-	const op = "aiconversation.SuggestAudio"
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("invalid user ID").WithKind(richerror.KindInvalid)
-	}
-	hintID, err := uuid.Parse(hintIDStr)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("invalid hint ID").WithKind(richerror.KindInvalid)
-	}
-
-	hint, err := s.hints.GetByID(ctx, hintID)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err)
-	}
-	conv, err := s.conversations.GetByID(ctx, hint.ConversationID)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err)
-	}
-	if conv.UserID != userID {
-		return nil, richerror.New(op).WithMessage("not your conversation").WithKind(richerror.KindForbidden)
-	}
-	if index < 0 || index >= len(hint.Suggestions) {
-		return nil, richerror.New(op).WithMessage("suggestion index out of range").WithKind(richerror.KindInvalid)
-	}
-
-	if url := hint.Suggestions[index].AudioURL; url != "" {
-		return &dto.SuggestAudioResponse{AudioURL: url}, nil
-	}
-
-	url := s.synthesize(ctx, hint.Suggestions[index].Text)
-	if url != "" {
-		if err := s.hints.SetSuggestionAudio(ctx, hint.ID, index, url); err != nil {
-			slog.Warn("aiconversation: failed to cache suggestion audio", "err", err)
-		}
-	}
-	return &dto.SuggestAudioResponse{AudioURL: url}, nil
 }

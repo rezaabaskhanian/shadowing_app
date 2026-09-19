@@ -454,7 +454,10 @@ func (r DB) UpdateDialogueWordTimings(ctx context.Context, dialogueID string, ti
 
 // RandomDialogueTexts یک استخر متن انگلیسیِ تصادفی از دیالوگ‌های صحنه‌های
 // دیگر (هم‌سطح، در صورت داشتن difficulty) برمی‌گرداند — برای گزینه‌های غلطِ
-// کوئیز درک شنیداری، بدون نیاز به محتوای دستیِ جداگانه.
+// کوئیز درک شنیداری، بدون نیاز به محتوای دستیِ جداگانه. وضعیتِ صحنه‌ی مبدأ
+// (draft/published) عمداً فیلتر نمی‌شود: این جمله‌ها فقط گزینه‌ی غلط‌اند و
+// اگر همه‌ی صحنه‌ها هنوز draft باشند، با فیلتر استخر خالی می‌شد و هر سوال فقط
+// یک گزینه (همان جواب درست) می‌داشت.
 func (r DB) RandomDialogueTexts(ctx context.Context, excludeSceneID string, difficulty string, limit int) ([]string, error) {
 	const op = "postgres.RandomDialogueTexts"
 
@@ -463,7 +466,6 @@ func (r DB) RandomDialogueTexts(ctx context.Context, excludeSceneID string, diff
 		JOIN hotspots h ON h.id = d.hotspot_id
 		JOIN scenes s ON s.id = h.scene_id
 		WHERE h.scene_id != $1
-			AND s.status = 'published'
 			AND d.original_text != ''
 			AND ($2 = '' OR s.difficulty = $2)
 		ORDER BY random()

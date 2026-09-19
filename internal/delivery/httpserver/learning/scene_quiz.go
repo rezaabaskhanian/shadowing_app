@@ -1,6 +1,7 @@
 package learninghandler
 
 import (
+	"log/slog"
 	"net/http"
 
 	"shadowing-backend/internal/pkg/claims"
@@ -20,7 +21,11 @@ func (h Handler) GetSceneQuiz(c echo.Context) error {
 
 	questions, err := h.learningSvc.GenerateSceneQuiz(c.Request().Context(), sceneID)
 	if err != nil {
+		slog.Warn("quiz: failed to generate scene quiz", "scene_id", sceneID, "err", err)
 		return errorhandling.ErrorHandling(err, c)
+	}
+	if len(questions) == 0 {
+		slog.Warn("quiz: no questions could be built", "scene_id", sceneID)
 	}
 
 	return c.JSON(http.StatusOK, questions)

@@ -32,7 +32,6 @@ type HintRepository interface {
 	GetByTurn(ctx context.Context, conversationID uuid.UUID, turnIndex int) (*aiconversation.Hint, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*aiconversation.Hint, error)
 	CountByConversation(ctx context.Context, conversationID uuid.UUID) (int, error)
-	SetSuggestionAudio(ctx context.Context, id uuid.UUID, index int, audioURL string) error
 }
 
 // ProfileRepository - فقط برای خواندنِ سطحِ کاربر، تا پیشنهادها با توانِ او

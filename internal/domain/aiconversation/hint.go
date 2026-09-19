@@ -11,8 +11,6 @@ import (
 type Suggestion struct {
 	Text          string `json:"text"`
 	TranslationFA string `json:"translation_fa"`
-	// AudioURL فقط بعد از اولین درخواستِ پخشِ همین جمله پر می‌شود.
-	AudioURL string `json:"audio_url,omitempty"`
 }
 
 // Hint - پیشنهادهای یک نوبتِ AI. TurnIndex همان OrderIndex نوبتِ assistant
