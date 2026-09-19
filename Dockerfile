@@ -4,9 +4,17 @@
     FROM golang:1.25-alpine AS builder
 
     ENV GO111MODULE=on
-    
+
+    # proxy.golang.org/sum.golang.org برای IP سرور (ایران) اغلب 403 می‌دهند —
+    # همان بلاکِ جغرافیایی که Gemini/Anthropic/ElevenLabs هم دارند، ولی چون
+    # این مرحله‌ی build داخلِ Docker است، از xray (که فقط runtime بک‌اند را
+    # پوشش می‌دهد) رد نمی‌شود؛ به‌جایش از آینه‌ی goproxy.cn که از ایران در
+    # دسترس است استفاده می‌کنیم.
+    ENV GOPROXY=https://goproxy.cn,direct
+    ENV GOSUMDB=sum.golang.google.cn
+
     WORKDIR /app
-    
+
     COPY go.mod go.sum ./
     RUN go mod download
     

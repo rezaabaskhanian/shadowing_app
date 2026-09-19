@@ -101,8 +101,11 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	}
 
 	// سقفِ نوبت‌ها همیشه سمتِ سرور اعمال می‌شود، صرف‌نظر از اینکه مدل چه
-	// چیزی برگردانده — تا هزینه/طولِ گفتگو هیچ‌وقت دستِ مدل نباشد.
-	isEnded := shouldEnd || turnNumber >= aiconversation.MaxUserTurns
+	// چیزی برگردانده — تا هزینه/طولِ گفتگو هیچ‌وقت دستِ مدل نباشد. قبلاً اینجا
+	// `shouldEnd || ...` بود که یعنی مدل می‌توانست هر نوبتی (حتی نوبتِ ۲) را
+	// پایانِ گفتگو اعلام کند؛ الان shouldEnd فقط از WrapUpFromTurn به بعد
+	// معتبر شمرده می‌شود، مطابقِ همان قاعده‌ای که در پرامپت هم گفته شده.
+	isEnded := (shouldEnd && turnNumber >= aiconversation.WrapUpFromTurn) || turnNumber >= aiconversation.MaxUserTurns
 
 	audioURL := s.synthesize(ctx, assistantText)
 

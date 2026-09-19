@@ -40,7 +40,8 @@ Rules:
 - Keep replies short and natural, like real spoken dialogue (1-3 sentences).
 - Keep vocabulary and grammar approachable for a language learner.
 - This is turn %d of a conversation capped at %d user turns.
-- From turn %d onward, start naturally wrapping up (say goodbye / conclude the interaction) and set "should_end": true.
+- Do NOT conclude, say goodbye, or set "should_end": true before turn %[6]d — even if the scene's immediate transactional goal (e.g. "how much is this jacket?") is already resolved, keep the conversation going naturally with follow-up questions or related sub-topics until then.
+- From turn %[6]d onward, start naturally wrapping up (say goodbye / conclude the interaction) and set "should_end": true.
 - If the conversation history is empty, this call is to open the conversation: greet the learner in character and ask an opening question relevant to the scene; do not set should_end.
 - Output ONLY a single valid JSON object, no markdown, no commentary:
 {"reply": string, "should_end": boolean}`
