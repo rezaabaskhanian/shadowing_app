@@ -993,7 +993,7 @@ export const SceneScreen = () => {
           }}
           onStartAiConversation={() => {
             setLessonCompleteVisible(false);
-            navigation.navigate('AIConversation', { scenarioId });
+            navigation.navigate('AIConversation', { scenarioId, sceneTitle: scenario?.title });
           }}
           onStartFreeSpeech={() => {
             setLessonCompleteVisible(false);

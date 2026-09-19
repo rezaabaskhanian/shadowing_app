@@ -1,0 +1,9 @@
+<resources>
+    <!-- اندروید ۱۲+ خودش یک اسپلش سیستمی قبل از پنجره‌ی اپ نشان می‌دهد؛ همان رنگ و لوگو را بدهیم
+         تا با launch_background یکی باشد و پرشی دیده نشود. -->
+    <style name="LaunchTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+    </style>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <!-- هم‌رنگ COLORS.background در app/src/theme/colors.ts و پس‌زمینه‌ی SplashScreen جاوااسکریپت،
+         تا از لحظه‌ی باز شدن اپ تا اولین رندر RN هیچ پرشِ رنگی دیده نشود. -->
+    <color name="splash_background">#f9f9ff</color>
+</resources>

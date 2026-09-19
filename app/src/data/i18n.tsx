@@ -373,13 +373,13 @@ export const translations: Translations = {
   aiConversationEndedTitle: { en: 'Conversation complete! 🎉', fa: 'گفتگو تمام شد! 🎉' },
   aiConversationEndedMessage: { en: 'Great job practicing!', fa: 'آفرین، تمرین خوبی بود!' },
   aiConversationTurnProgress: { en: 'Turn {current} of {total}', fa: 'نوبت {current} از {total}' },
+  aiConversationPreparing: { en: 'Getting your conversation ready…', fa: 'در حال آماده‌سازی گفتگو…' },
   aiConversationLoadError: { en: 'Could not start the conversation', fa: 'شروع گفتگو ممکن نشد' },
   grammarTipLabel: { en: 'Better:', fa: 'بهتره اینطوری بگی:' },
   aiConversationHintBtn: { en: 'Suggest a reply', fa: 'پیشنهاد جواب' },
   aiConversationHintsLeft: { en: '{count} left', fa: '{count} تا مونده' },
   aiConversationHintTitle: { en: 'You could say:', fa: 'می‌تونی بگی:' },
   aiConversationHintError: { en: 'Could not get a suggestion — try again', fa: 'پیشنهاد گرفته نشد — دوباره امتحان کن' },
-  aiConversationHintAudioError: { en: 'Audio is not available right now', fa: 'الان صدا در دسترس نیست' },
   aiConversationHintClose: { en: 'Close', fa: 'بستن' },
 
   // ورودیِ کشو برای گفتگو با اپ — از میان دروسِ تمام‌شده به‌صورت رندوم انتخاب می‌شود

@@ -6,4 +6,10 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
+    <!-- تمِ اکتیویتیِ اصلی: پنجره تا اولین رندر RN لوگو روی رنگ برند نشان می‌دهد، نه سفید.
+         همه‌ی صفحه‌های اپ پس‌زمینه‌ی مات خودشان را دارند، پس این پس‌زمینه بعد از رندر دیده نمی‌شود. -->
+    <style name="LaunchTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+
 </resources>

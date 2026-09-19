@@ -119,7 +119,7 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
       return;
     }
     const picked = completed[Math.floor(Math.random() * completed.length)];
-    go('AIConversation', { scenarioId: picked.id });
+    go('AIConversation', { scenarioId: picked.id, sceneTitle: picked.title });
   };
 
   return (

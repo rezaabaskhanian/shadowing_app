@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Lightbulb, Mic, PartyPopper, Square, Volume2, X } from 'lucide-react-native';
+import { CircleX, Lightbulb, Mic, PartyPopper, Square, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -15,7 +15,6 @@ import {
   startConversation,
   sendConversationTurn,
   getConversationSuggestions,
-  getSuggestionAudio,
   type ConversationRole,
   type ConversationSuggestion,
 } from '../../api/conversation';
@@ -37,6 +36,34 @@ type LoadPhase = 'loading' | 'ready' | 'load_error';
 type RecordPhase = 'idle' | 'recording' | 'sending';
 type ActionCommand = 'none' | 'start_record' | 'stop_record' | 'play_original';
 
+/** سه نقطه‌ی متحرک: نشان می‌دهد شخصیتِ AI دارد جواب می‌سازد (به‌جای اسپینرِ خشک). */
+const TypingDots: React.FC = () => {
+  const dots = useRef([0, 1, 2].map(() => new Animated.Value(0.3))).current;
+
+  useEffect(() => {
+    const loops = dots.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 160),
+          Animated.timing(v, { toValue: 1, duration: 360, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.3, duration: 360, useNativeDriver: true }),
+          Animated.delay((2 - i) * 160),
+        ])
+      )
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [dots]);
+
+  return (
+    <View style={styles.typingDots}>
+      {dots.map((v, i) => (
+        <Animated.View key={i} style={[styles.typingDot, { opacity: v }]} />
+      ))}
+    </View>
+  );
+};
+
 /**
  * گفتگوی آزادِ صوتی با AI، بعد از تمام‌شدنِ همه‌ی دیالوگ‌های یک صحنه —
  * ورودی از دکمه‌ی چهارمِ Alert تکمیل درس در SceneScreen (scenarioId به‌عنوان
@@ -44,9 +71,9 @@ type ActionCommand = 'none' | 'start_record' | 'stop_record' | 'play_original';
  * صدای AI (اگر ElevenLabs تنظیم شده باشد) پخش می‌شود. حداکثر ۶ تا ۸ نوبت.
  *
  * دکمه‌ی «پیشنهاد جواب»: وقتی کاربر نمی‌داند به آخرین پیامِ AI چه بگوید،
- * ۲ جمله‌ی انگلیسی + ترجمه‌ی فارسی می‌گیرد و می‌تواند صدای هر کدام را
- * بشنود و تکرار کند (سقفِ تعدادش سمتِ سرور اعمال می‌شود). پیشنهاد فقط برای
- * نوبتِ فعلی معتبر است و با رسیدنِ پاسخِ بعدیِ AI پاک می‌شود.
+ * ۲ جمله‌ی انگلیسی + ترجمه‌ی فارسی (فقط متن، بدون صدا) می‌گیرد و خودش
+ * می‌گوید (سقفِ تعدادش سمتِ سرور اعمال می‌شود). پیشنهاد فقط برای نوبتِ فعلی
+ * معتبر است و با رسیدنِ پاسخِ بعدیِ AI پاک می‌شود.
  */
 export const AIConversationScreen: React.FC = () => {
   const { t } = useLanguage();
@@ -54,16 +81,15 @@ export const AIConversationScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const scenarioId: string | undefined = route.params?.scenarioId;
+  // اگر مبدأ عنوانِ صحنه را داده باشد، همان لحظه‌ی باز شدن نشان داده می‌شود و منتظرِ پاسخ سرور نمی‌ماند.
+  const initialSceneTitle: string = route.params?.sceneTitle ?? '';
 
   const scrollRef = useRef<ScrollView>(null);
   const recordStartedAtRef = useRef<number>(0);
-  // شناسه‌ی پیشنهادِ فعلی؛ تا اگر صدای یک جمله بعد از رفتن به نوبتِ بعد
-  // رسید، وسط ضبط/پاسخِ جدید پخش نشود.
-  const activeHintIdRef = useRef<string | null>(null);
 
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('loading');
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [sceneTitle, setSceneTitle] = useState('');
+  const [sceneTitle, setSceneTitle] = useState(initialSceneTitle);
   const [messages, setMessages] = useState<Message[]>([]);
   const [turnNumber, setTurnNumber] = useState(0);
   const [maxUserTurns, setMaxUserTurns] = useState(8);
@@ -74,7 +100,6 @@ export const AIConversationScreen: React.FC = () => {
   const [hintOpen, setHintOpen] = useState(false);
   const [hintLoading, setHintLoading] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
-  const [audioLoadingIndex, setAudioLoadingIndex] = useState<number | null>(null);
 
   const [recordPhase, setRecordPhase] = useState<RecordPhase>('idle');
   const [micError, setMicError] = useState<string | null>(null);
@@ -147,7 +172,6 @@ export const AIConversationScreen: React.FC = () => {
         setTurnNumber(result.turn_number);
         setIsEnded(result.is_ended);
         // پیشنهادِ قبلی برای پیامِ قبلیِ AI بود؛ برای نوبتِ جدید باید دوباره بخواهد.
-        activeHintIdRef.current = null;
         setHint(null);
         setHintOpen(false);
         setHintError(null);
@@ -208,7 +232,6 @@ export const AIConversationScreen: React.FC = () => {
     setHintLoading(true);
     try {
       const res = await getConversationSuggestions(conversationId);
-      activeHintIdRef.current = res.hint_id;
       setHint({ hintId: res.hint_id, suggestions: res.suggestions });
       setHintsUsed(res.hints_used);
       setMaxHints(res.max_hints);
@@ -220,50 +243,31 @@ export const AIConversationScreen: React.FC = () => {
     }
   }, [conversationId, hint, hintLoading, t]);
 
-  const handlePlaySuggestion = useCallback(
-    async (index: number) => {
-      if (!hint) return;
-      const suggestion = hint.suggestions[index];
-      if (suggestion.audio_url) {
-        playAudio(suggestion.audio_url);
-        return;
-      }
-      const hintId = hint.hintId;
-      setHintError(null);
-      setAudioLoadingIndex(index);
-      try {
-        const url = await getSuggestionAudio(hintId, index);
-        if (activeHintIdRef.current !== hintId) return;
-        if (!url) {
-          setHintError(t('aiConversationHintAudioError'));
-          return;
-        }
-        setHint((prev) =>
-          prev && prev.hintId === hintId
-            ? {
-                ...prev,
-                suggestions: prev.suggestions.map((sg, i) => (i === index ? { ...sg, audio_url: url } : sg)),
-              }
-            : prev
-        );
-        playAudio(url);
-      } catch {
-        if (activeHintIdRef.current === hintId) setHintError(t('aiConversationHintAudioError'));
-      } finally {
-        setAudioLoadingIndex(null);
-      }
-    },
-    [hint, playAudio, t]
-  );
-
   const handleDone = useCallback(() => {
     navigation.navigate('Home');
   }, [navigation]);
 
+  // شروعِ گفتگو (LLM + ساختِ صدا) چند ثانیه طول می‌کشد؛ به‌جای صفحه‌ی خالی با
+  // اسپینر، همان چیدمانِ گفتگو با حبابِ «در حال نوشتن» و میکروفونِ غیرفعال دیده می‌شود.
   if (loadPhase === 'loading') {
     return (
-      <View style={styles.centerScreen}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.container, { paddingTop: insets.top + SPACING.s, paddingBottom: insets.bottom + SPACING.l }]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{t('aiConversationTitle')}</Text>
+          {!!sceneTitle && <Text style={styles.headerSub}>{sceneTitle}</Text>}
+        </View>
+        <View style={styles.messageList}>
+          <View style={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading]}>
+            <TypingDots />
+          </View>
+          <Text style={styles.preparingText}>{t('aiConversationPreparing')}</Text>
+        </View>
+        <View style={styles.recordArea}>
+          <View style={[styles.recordBtn, styles.recordBtnDisabled]}>
+            <Mic size={28} color={COLORS.white} />
+          </View>
+          <Text style={styles.recordHint}>{t('aiConversationRecordHint')}</Text>
+        </View>
       </View>
     );
   }
@@ -325,7 +329,7 @@ export const AIConversationScreen: React.FC = () => {
         ))}
         {recordPhase === 'sending' && (
           <View style={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading]}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <TypingDots />
           </View>
         )}
         {hint && hintOpen && recordPhase !== 'sending' && (
@@ -342,22 +346,8 @@ export const AIConversationScreen: React.FC = () => {
             </View>
             {hint.suggestions.map((sg, i) => (
               <View key={i} style={[styles.hintItem, i > 0 && styles.hintItemDivider]}>
-                <View style={styles.hintItemTexts}>
-                  <Text style={styles.hintItemText}>{sg.text}</Text>
-                  {!!sg.translation_fa && <Text style={styles.hintItemTranslation}>{sg.translation_fa}</Text>}
-                </View>
-                <TouchableOpacity
-                  style={styles.hintPlayBtn}
-                  onPress={() => handlePlaySuggestion(i)}
-                  disabled={recordPhase !== 'idle' || audioLoadingIndex !== null}
-                  activeOpacity={0.8}
-                >
-                  {audioLoadingIndex === i ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                  ) : (
-                    <Volume2 size={18} color={COLORS.primary} />
-                  )}
-                </TouchableOpacity>
+                <Text style={styles.hintItemText}>{sg.text}</Text>
+                {!!sg.translation_fa && <Text style={styles.hintItemTranslation}>{sg.translation_fa}</Text>}
               </View>
             ))}
           </View>
@@ -577,17 +567,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   hintItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
     paddingVertical: SPACING.s,
   },
   hintItemDivider: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-  },
-  hintItemTexts: {
-    flex: 1,
   },
   hintItemText: {
     ...TEXT_STYLES.bodyMd,
@@ -599,14 +583,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  hintPlayBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   recordBtn: {
     width: 72,
     height: 72,
@@ -615,6 +591,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.level2,
+  },
+  recordBtnDisabled: {
+    opacity: 0.4,
+  },
+  preparingText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+    marginLeft: SPACING.xs,
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
   recordBtnActive: {
     backgroundColor: COLORS.error,

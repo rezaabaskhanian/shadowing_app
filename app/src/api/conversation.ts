@@ -79,8 +79,6 @@ export async function sendConversationTurn(
 export interface ConversationSuggestion {
   text: string;
   translation_fa: string;
-  /** فقط بعد از اولین پخشِ همین جمله پر می‌شود (صدا تنبل ساخته می‌شود). */
-  audio_url?: string;
 }
 
 export interface SuggestResult {
@@ -102,18 +100,4 @@ export async function getConversationSuggestions(conversationId: string): Promis
     body: JSON.stringify({ conversation_id: conversationId }),
   });
   return (await jsonOrThrow(res)) as SuggestResult;
-}
-
-/**
- * صدای یکی از جمله‌های پیشنهادی. اگر سرور صدایی نداشته باشد (TTS تنظیم نیست
- * یا شکست خورده) audio_url خالی برمی‌گردد.
- */
-export async function getSuggestionAudio(hintId: string, index: number): Promise<string | undefined> {
-  const res = await authFetch('/v1/ai-conversation/suggest/audio', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hint_id: hintId, index }),
-  });
-  const data = (await jsonOrThrow(res)) as { audio_url?: string };
-  return data.audio_url || undefined;
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- پنجره‌ی اکتیویتی تا وقتی باندل جاوااسکریپت لود و اولین فریم RN رندر شود همین را نشان می‌دهد؛
+     قبلاً پیش‌فرض تم (سفید) بود و کاربر چند ثانیه صفحه‌ی سفید می‌دید. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item
+        android:width="200dp"
+        android:height="200dp"
+        android:gravity="center">
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/splash_logo" />
+    </item>
+</layer-list>
