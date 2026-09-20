@@ -75,6 +75,14 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/subscriptions/grant", h.GrantSubscription)
 	g.GET("/subscriptions/revenue-stats", h.RevenueStats)
 
+	// هزینه‌ی دلاریِ واقعیِ مصرفِ AI (بر اساس توکنِ واقعی × قیمتِ AI_TOKEN_PRICING)
+	g.GET("/ai-usage-report", h.AIUsageReport)
+
+	// طرح‌های تاپ‌آپِ توکن (خریدِ مصرفی، جدا از اشتراک)
+	g.GET("/token-topup-plans", h.ListTokenTopupPlans)
+	g.POST("/token-topup-plans", h.CreateTokenTopupPlan)
+	g.DELETE("/token-topup-plans/:id", h.DeleteTokenTopupPlan)
+
 	// لیست کاربرها + خلاصه‌ی فعالیتشون
 	g.GET("/users", h.ListUsers)
 	// تغییر نقش کاربر (ارتقا به ادمین یا برگرداندن به کاربر عادی)

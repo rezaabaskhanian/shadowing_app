@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"shadowing-backend/internal/pkg/richerror"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	"shadowing-backend/internal/service/freespeech/dto"
 
 	"github.com/google/uuid"
@@ -67,7 +68,12 @@ func (s *Service) Feedback(ctx context.Context, userIDStr, sceneIDStr, transcrip
 		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
 	}
 
+	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
+		return nil, err
+	}
+
 	fb := s.buildFeedback(ctx, promptFor(sc.Title), transcript)
+	s.access.RecordUsage(ctx, userIDStr, 2*aiaccessservice.EstimatedFlatCallInputTokens, 2*aiaccessservice.EstimatedFlatCallOutputTokens)
 
 	if err := s.log.Insert(ctx, userID, sceneID, transcript, fb.RelevanceAnswered, fb.RelevanceFeedback, fb.GrammarCorrection, fb.GrammarExplanation); err != nil {
 		slog.Warn("freespeech: failed to log attempt", "err", err)
@@ -98,6 +104,11 @@ func (s *Service) Analyze(ctx context.Context, userIDStr, sceneIDStr, localAudio
 		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
 	}
 
+	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
+		s.removeTemp(localAudioPath)
+		return nil, err
+	}
+
 	total := time.Now()
 	transcript, err := s.transcribeFile(ctx, localAudioPath)
 	if err != nil {
@@ -106,6 +117,7 @@ func (s *Service) Analyze(ctx context.Context, userIDStr, sceneIDStr, localAudio
 	}
 
 	fb := s.buildFeedback(ctx, promptFor(sc.Title), transcript)
+	s.access.RecordUsage(ctx, userIDStr, 2*aiaccessservice.EstimatedFlatCallInputTokens, 2*aiaccessservice.EstimatedFlatCallOutputTokens)
 	slog.Info("freespeech: analyze total", "total_ms", time.Since(total).Milliseconds())
 
 	if err := s.log.Insert(ctx, userID, sceneID, transcript, fb.RelevanceAnswered, fb.RelevanceFeedback, fb.GrammarCorrection, fb.GrammarExplanation); err != nil {

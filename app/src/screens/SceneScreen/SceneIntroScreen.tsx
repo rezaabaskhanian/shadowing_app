@@ -8,12 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Play, Share2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY } from '../../components/SceneListCard';
+import { AudioPlayer } from '../../components/AudioPlayer';
 import type { DialogueItem, Scenario, WordEntry } from '../../data/scenarios';
 
 /** چند واژه‌ی هر هات‌اسپات قبل از «+N تا دیگه» نشان داده می‌شود. */
@@ -78,12 +79,37 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   const [grammarOpen, setGrammarOpen] = React.useState(true);
   const [expandedWordGroups, setExpandedWordGroups] = React.useState<Record<string, boolean>>({});
 
+  // پخشِ صدای نکته‌ی گرامری (اگر ادمین از پنل ساخته باشد) — عیناً هم‌الگویِ
+  // playAudio در AIConversation: هر بار actionNonce عوض می‌شود تا AudioPlayer
+  // بداند دستورِ تازه‌ای (نه تکرارِ همان قبلی) صادر شده.
+  const [grammarAudioPlaying, setGrammarAudioPlaying] = React.useState(false);
+  const [grammarActionCommand, setGrammarActionCommand] = React.useState<'none' | 'play_original'>('none');
+  const [grammarActionNonce, setGrammarActionNonce] = React.useState(0);
+
+  const toggleGrammarAudio = () => {
+    if (!grammarNote?.audioUrl) return;
+    setGrammarActionCommand('play_original');
+    setGrammarActionNonce((n) => n + 1);
+    setGrammarAudioPlaying(true);
+  };
+
   const handleShare = () => {
     Share.share({ message: scenario?.title || 'Shadow' }).catch(() => {});
   };
 
   return (
     <View style={styles.container}>
+      <AudioPlayer
+        uri={grammarNote?.audioUrl || null}
+        shouldPlay={false}
+        actionCommand={grammarActionCommand}
+        actionNonce={grammarActionNonce}
+        onPlaybackStatusUpdate={(status) => {
+          if (status === 'finished' || status === 'error' || status === 'no_audio') {
+            setGrammarAudioPlaying(false);
+          }
+        }}
+      />
       <ScrollView contentContainerStyle={styles.introScroll} showsVerticalScrollIndicator={false}>
         {/* Cover Hero Banner */}
         <View style={[styles.introCoverWrapper, { height: screenHeight / 3 }]}>
@@ -158,7 +184,22 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
             {grammarOpen && (
               <View style={styles.infoCardBody}>
                 {!!grammarNote.explanation && (
-                  <Text style={styles.grammarExplanation}>{grammarNote.explanation}</Text>
+                  <View style={styles.grammarExplanationRow}>
+                    <Text style={styles.grammarExplanation}>{grammarNote.explanation}</Text>
+                    {!!grammarNote.audioUrl && (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.grammarAudioBtn}
+                        onPress={toggleGrammarAudio}
+                      >
+                        {grammarAudioPlaying ? (
+                          <Pause size={16} color={COLORS.primary} />
+                        ) : (
+                          <Volume2 size={16} color={COLORS.primary} />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
                 {grammarNote.examples.length > 0 && (
                   <>
@@ -322,11 +363,26 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: 1,
   },
+  grammarExplanationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   grammarExplanation: {
+    flex: 1,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     lineHeight: 22,
     color: COLORS.textSecondary,
+  },
+  grammarAudioBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
   grammarExamplesLabel: {
     fontFamily: FONT_FAMILY.semiBold,

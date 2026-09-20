@@ -3,6 +3,7 @@ package adminhandler
 import (
 	"shadowing-backend/internal/pkg/filestore"
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	feedbackservice "shadowing-backend/internal/service/feedback"
@@ -13,6 +14,7 @@ import (
 	settingsservice "shadowing-backend/internal/service/settings"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 	userservice "shadowing-backend/internal/service/user"
@@ -23,6 +25,8 @@ type Handler struct {
 	learningSvc        learningservice.Service
 	assessmentSvc      *assessmentservice.Service
 	aiSvc              aiservice.Service
+	aiAccessSvc        *aiaccessservice.Service
+	tokenTopupSvc      tokentopupservice.Service
 	ttsSvc             ttsservice.Service
 	proxySvc           proxyservice.Service
 	settingsSvc        *settingsservice.Service
@@ -46,6 +50,8 @@ func New(
 	learningSvc learningservice.Service,
 	assessmentSvc *assessmentservice.Service,
 	aiSvc aiservice.Service,
+	aiAccessSvc *aiaccessservice.Service,
+	tokenTopupSvc tokentopupservice.Service,
 	ttsSvc ttsservice.Service,
 	proxySvc proxyservice.Service,
 	settingsSvc *settingsservice.Service,
@@ -64,6 +70,8 @@ func New(
 		learningSvc:        learningSvc,
 		assessmentSvc:      assessmentSvc,
 		aiSvc:              aiSvc,
+		aiAccessSvc:        aiAccessSvc,
+		tokenTopupSvc:      tokenTopupSvc,
 		ttsSvc:             ttsSvc,
 		proxySvc:           proxySvc,
 		settingsSvc:        settingsSvc,

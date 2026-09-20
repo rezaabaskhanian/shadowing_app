@@ -8,6 +8,7 @@ import (
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/filestore"
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	"shadowing-backend/internal/service/speecheval"
 	ttsservice "shadowing-backend/internal/service/tts"
 
@@ -56,6 +57,7 @@ type Service struct {
 	tts           ttsservice.Service
 	transcriber   speecheval.Transcriber
 	store         filestore.Store
+	access        *aiaccessservice.Service
 }
 
 func New(
@@ -68,6 +70,7 @@ func New(
 	tts ttsservice.Service,
 	transcriber speecheval.Transcriber,
 	store filestore.Store,
+	access *aiaccessservice.Service,
 ) *Service {
 	return &Service{
 		conversations: conversations,
@@ -79,5 +82,6 @@ func New(
 		tts:           tts,
 		transcriber:   transcriber,
 		store:         store,
+		access:        access,
 	}
 }

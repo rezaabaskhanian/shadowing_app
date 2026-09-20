@@ -125,6 +125,8 @@ export default function SceneCreator({
   const [grammarTopic, setGrammarTopic] = useState("");
   const [grammarExplanation, setGrammarExplanation] = useState("");
   const [grammarExamples, setGrammarExamples] = useState<GrammarExampleInput[]>([]);
+  const [grammarAudioURL, setGrammarAudioURL] = useState("");
+  const [generatingGrammarAudio, setGeneratingGrammarAudio] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // صداهای در دسترس ElevenLabs (برای انتخاب مرد/زن هنگام تولید صدای هر دیالوگ)
@@ -159,6 +161,7 @@ export default function SceneCreator({
     setGrammarTopic(editScene.grammar_topic || "");
     setGrammarExplanation(editScene.grammar_explanation || "");
     setGrammarExamples(editScene.grammar_examples || []);
+    setGrammarAudioURL(editScene.grammar_audio_url || "");
     setImageUrl(editScene.backgroundImageURL || null);
     const hs = hotspotsFromScene(editScene);
     setHotspots(hs);
@@ -261,6 +264,8 @@ export default function SceneCreator({
         const note = g.grammar_note;
         if (note && (note.explanation_fa || (note.examples || []).length > 0)) {
           setGrammarExplanation(note.explanation_fa || "");
+          // توضیح تازه‌ست، پس صدای قبلی (اگر بود) دیگر با متن هم‌خوانی ندارد.
+          setGrammarAudioURL("");
           setGrammarExamples(
             (note.examples || []).map((e) => ({
               text: e.text || "",
@@ -477,6 +482,31 @@ export default function SceneCreator({
     }
   }
 
+  // ---------- تولید صدای نکته‌ی گرامری با هوش مصنوعی (ElevenLabs) ----------
+  // متنِ توضیح فارسی + مثال‌ها را پشتِ هم می‌خواند تا کاربری که حوصله‌ی خواندن
+  // ندارد، هم توضیح و هم مثال‌ها را بشنود؛ عیناً هم‌الگوی صدای دیالوگ‌ها.
+  async function handleGenerateGrammarAudio() {
+    const parts = [grammarExplanation.trim()];
+    for (const ex of grammarExamples) {
+      if (ex.text.trim()) parts.push(ex.text.trim());
+    }
+    const text = parts.filter(Boolean).join(". ");
+    if (!text) {
+      notify("اول توضیح یا حداقل یک مثال بنویس", "err");
+      return;
+    }
+    setGeneratingGrammarAudio(true);
+    try {
+      const url = await generateAudio(text, voiceChoice["grammar"], speedChoice["grammar"]);
+      setGrammarAudioURL(url);
+      notify("صدای نکته‌ی گرامری ساخته شد ✅", "ok");
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setGeneratingGrammarAudio(false);
+    }
+  }
+
   // ---------- ذخیره ----------
   function validate(): string | null {
     if (!title.trim()) return "عنوان صحنه الزامی است";
@@ -513,6 +543,7 @@ export default function SceneCreator({
           .filter((e) => e.text.trim())
           .slice(0, 4)
           .map((e) => ({ text: e.text.trim(), translation: e.translation.trim() })),
+        grammar_audio_url: grammarAudioURL,
       };
       if (fromSubmission) {
         const res = await approveSceneSubmission(fromSubmission.id, payload);
@@ -552,6 +583,7 @@ export default function SceneCreator({
     setGrammarTopic("");
     setGrammarExplanation("");
     setGrammarExamples([]);
+    setGrammarAudioURL("");
     setImageUrl(null);
     setHotspots([]);
     setSelected(null);
@@ -717,6 +749,49 @@ export default function SceneCreator({
         >
           + افزودن مثال
         </button>
+
+        <div style={{ marginTop: 16 }}>
+          <label>🔊 صدای نکته‌ی گرامری (اختیاری)</label>
+          <p style={{ marginTop: 0, opacity: 0.7, fontSize: 12 }}>
+            برای کاربری که حوصله‌ی خواندن ندارد — توضیح + مثال‌ها را با صدا می‌شنود، عیناً مثل صدای دیالوگ‌ها.
+          </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {voices.length > 0 && (
+              <select
+                value={voiceChoice["grammar"] ?? ""}
+                onChange={(e) => setVoiceChoice((s) => ({ ...s, grammar: e.target.value }))}
+                style={{ minWidth: 170 }}
+              >
+                <option value="">صدای پیش‌فرض</option>
+                {voices.map((v) => (
+                  <option key={v.voice_id} value={v.voice_id}>
+                    {v.gender === "male" ? "👨" : v.gender === "female" ? "👩" : "🎙"} {v.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <input
+              type="number"
+              min={0.7}
+              max={1.2}
+              step={0.05}
+              title="سرعت گفتار (۰.۷ تا ۱.۲ — پیش‌فرض ۱)"
+              placeholder="سرعت"
+              value={speedChoice["grammar"] ?? ""}
+              onChange={(e) => setSpeedChoice((s) => ({ ...s, grammar: Number(e.target.value) || 0 }))}
+              style={{ width: 80 }}
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={handleGenerateGrammarAudio}
+              disabled={generatingGrammarAudio}
+            >
+              {generatingGrammarAudio ? "در حال ساخت..." : "🔊 تولید با AI"}
+            </button>
+          </div>
+          {grammarAudioURL && <audio controls src={`${API_BASE}${grammarAudioURL}`} style={{ marginTop: 8 }} />}
+        </div>
       </div>
 
       {/* اطلاعات پایه صحنه */}

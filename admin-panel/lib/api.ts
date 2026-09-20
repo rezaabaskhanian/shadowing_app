@@ -1,5 +1,6 @@
 import type {
   AdminUsersResp,
+  AIUsageReport,
   AssessmentItem,
   AssessmentItemPayload,
   BroadcastItem,
@@ -19,6 +20,7 @@ import type {
   RevenueStats,
   SettingsResp,
   SubscriptionPlan,
+  TokenTopupPlan,
   TopicSuggestion,
 } from "./types";
 
@@ -441,8 +443,46 @@ export async function deleteSubscriptionPlan(id: string) {
   return jsonOrThrow(res);
 }
 
+// ---------- طرح‌های تاپ‌آپ توکن (خرید مصرفی) ----------
+export async function listTokenTopupPlans(): Promise<TokenTopupPlan[]> {
+  const res = await authFetch("/v1/admin/token-topup-plans", { method: "GET" });
+  const data = await jsonOrThrow(res);
+  return (data.plans || []) as TokenTopupPlan[];
+}
+
+export async function createTokenTopupPlan(
+  name: string,
+  tokens: number,
+  priceToman: number,
+  productId: string
+): Promise<TokenTopupPlan> {
+  const res = await authFetch("/v1/admin/token-topup-plans", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      tokens,
+      price_toman: priceToman,
+      product_id: productId,
+    }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function deleteTokenTopupPlan(id: string) {
+  const res = await authFetch(`/v1/admin/token-topup-plans/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
 export async function getRevenueStats(days = 30): Promise<RevenueStats> {
   const res = await authFetch(`/v1/admin/subscriptions/revenue-stats?days=${days}`, {
+    method: "GET",
+  });
+  return jsonOrThrow(res);
+}
+
+export async function getAIUsageReport(days = 30): Promise<AIUsageReport> {
+  const res = await authFetch(`/v1/admin/ai-usage-report?days=${days}`, {
     method: "GET",
   });
   return jsonOrThrow(res);

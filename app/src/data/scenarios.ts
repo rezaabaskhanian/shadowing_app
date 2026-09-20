@@ -85,6 +85,8 @@ export interface GrammarNote {
   topic: string;
   explanation: string;
   examples: { text: string; translation: string }[];
+  /** صدای توضیح (اگر ادمین از پنل ساخته باشد) — برای کاربری که حوصله‌ی خواندن ندارد. */
+  audioUrl?: string;
 }
 
 export interface Scenario {

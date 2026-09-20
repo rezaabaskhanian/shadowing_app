@@ -20,6 +20,7 @@ type Scene struct {
 	GrammarTopic       string           `json:"grammar_topic,omitempty"`
 	GrammarExplanation string           `json:"grammar_explanation,omitempty"`
 	GrammarExamples    []GrammarExample `json:"grammar_examples,omitempty"`
+	GrammarAudioURL    string           `json:"grammar_audio_url,omitempty"`
 	// IsLocked مقدار خام تنظیم‌شده توسط ادمین است. روت‌های ادمین همین مقدار
 	// خام را برمی‌گردانند؛ روت‌های عمومی/موبایل (learninghandler) این فیلد
 	// را بر اساس وضعیت اشتراک/نقش کاربر درخواست‌دهنده بازنویسی می‌کنند.

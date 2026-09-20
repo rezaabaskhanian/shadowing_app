@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import {
   createSubscriptionPlan,
+  createTokenTopupPlan,
   deleteSubscriptionPlan,
+  deleteTokenTopupPlan,
   getRevenueStats,
   grantSubscription,
   listSubscriptionPlans,
+  listTokenTopupPlans,
 } from "@/lib/api";
-import type { RevenueStats, SubscriptionPlan } from "@/lib/types";
+import type { RevenueStats, SubscriptionPlan, TokenTopupPlan } from "@/lib/types";
 
 const POINTS_PER_DISCOUNT_UNIT = 100;
 const DISCOUNT_TOMAN_PER_UNIT = 20000;
@@ -35,6 +38,15 @@ export default function SubscriptionPlansPanel({
   const [revenue, setRevenue] = useState<RevenueStats | null>(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
 
+  // ---------- طرح‌های تاپ‌آپ توکن (خرید مصرفی، جدا از اشتراک) ----------
+  const [topupPlans, setTopupPlans] = useState<TokenTopupPlan[]>([]);
+  const [topupLoading, setTopupLoading] = useState(true);
+  const [topupName, setTopupName] = useState("");
+  const [topupTokens, setTopupTokens] = useState("");
+  const [topupPriceToman, setTopupPriceToman] = useState("");
+  const [topupProductId, setTopupProductId] = useState("");
+  const [topupCreating, setTopupCreating] = useState(false);
+
   async function load() {
     setLoading(true);
     try {
@@ -59,11 +71,54 @@ export default function SubscriptionPlansPanel({
     }
   }
 
+  async function loadTopupPlans() {
+    setTopupLoading(true);
+    try {
+      setTopupPlans(await listTokenTopupPlans());
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setTopupLoading(false);
+    }
+  }
+
   useEffect(() => {
     load();
     loadRevenue();
+    loadTopupPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleCreateTopupPlan() {
+    if (!topupName.trim() || !topupTokens || !topupPriceToman) {
+      notify("نام، تعداد توکن و قیمت را وارد کن", "err");
+      return;
+    }
+    setTopupCreating(true);
+    try {
+      await createTokenTopupPlan(topupName.trim(), Number(topupTokens), Number(topupPriceToman), topupProductId.trim());
+      notify("طرح تاپ‌آپ ساخته شد ✅", "ok");
+      setTopupName("");
+      setTopupTokens("");
+      setTopupPriceToman("");
+      setTopupProductId("");
+      loadTopupPlans();
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setTopupCreating(false);
+    }
+  }
+
+  async function handleDeleteTopupPlan(id: string) {
+    try {
+      await deleteTokenTopupPlan(id);
+      notify("طرح تاپ‌آپ حذف شد", "ok");
+      loadTopupPlans();
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
 
   async function handleCreatePlan() {
     if (!name.trim() || !durationDays || !priceToman) {
@@ -212,6 +267,76 @@ export default function SubscriptionPlansPanel({
           />
           <button className="btn btn-sm" onClick={handleCreatePlan} disabled={creating}>
             {creating ? "..." : "+ افزودن طرح"}
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>🪙 طرح‌های تاپ‌آپ توکن (خرید مصرفی)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          برای کاربرِ مشترکی که به سقفِ روزانه‌اش رسیده و نمی‌خواهد تا فردا صبر کند — این توکن همان لحظه به اعتبارش
+          اضافه می‌شود، نه یک روزِ اشتراکِ جدید. برای قیمت‌گذاریِ درست، اول کارت «هزینه‌ی واقعی AI» (بالای تنظیمات) را ببین.
+        </p>
+
+        {topupLoading ? (
+          <p className="hint">در حال بارگذاری...</p>
+        ) : topupPlans.length === 0 ? (
+          <p className="hint">هنوز طرح تاپ‌آپی تعریف نشده.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {topupPlans.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  border: "1px solid var(--border, #333)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                <span>
+                  {p.name} — {p.tokens.toLocaleString()} توکن — {p.price_toman.toLocaleString()} تومان
+                  {p.product_id ? (
+                    <code style={{ marginInlineStart: 8, opacity: 0.7, fontSize: 12 }}>{p.product_id}</code>
+                  ) : (
+                    <span style={{ marginInlineStart: 8, opacity: 0.5, fontSize: 12 }}>(هنوز SKU ندارد، قابل‌خرید نیست)</span>
+                  )}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteTopupPlan(p.id)}>
+                  حذف
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input placeholder="نام طرح" value={topupName} onChange={(e) => setTopupName(e.target.value)} />
+          <input
+            placeholder="تعداد توکن"
+            type="number"
+            value={topupTokens}
+            onChange={(e) => setTopupTokens(e.target.value)}
+            style={{ width: 140 }}
+          />
+          <input
+            placeholder="قیمت (تومان)"
+            type="number"
+            value={topupPriceToman}
+            onChange={(e) => setTopupPriceToman(e.target.value)}
+            style={{ width: 140 }}
+          />
+          <input
+            placeholder="product_id (SKU کافه‌بازار — اختیاری)"
+            dir="ltr"
+            value={topupProductId}
+            onChange={(e) => setTopupProductId(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <button className="btn btn-sm" onClick={handleCreateTopupPlan} disabled={topupCreating}>
+            {topupCreating ? "..." : "+ افزودن طرح"}
           </button>
         </div>
       </div>

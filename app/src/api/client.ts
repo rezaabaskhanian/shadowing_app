@@ -110,11 +110,20 @@ export async function authFetch(path: string, opts: RequestInit = {}): Promise<R
  */
 export class AuthExpiredError extends Error {}
 
+/**
+ * ۴۰۳ی که سرور برای فیچرهای AI-heavy (AI Conversation، Free Speech) می‌دهد:
+ * یا اشتراکِ فعال نداری، یا سقفِ رایگانِ روزانه‌ات تمام شده. جدا از Error
+ * معمولی است تا کالر به‌جای toastِ خطا، صفحه‌ی خرید اشتراک/تاپ‌آپِ توکن را
+ * نشان بدهد (نگاه کنید به src/screens/TokenTopup).
+ */
+export class ForbiddenError extends Error {}
+
 export async function jsonOrThrow(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message = data.message || data.error || 'خطای ناشناخته';
     if (res.status === 401) throw new AuthExpiredError(message);
+    if (res.status === 403) throw new ForbiddenError(message);
     throw new Error(message);
   }
   return data;

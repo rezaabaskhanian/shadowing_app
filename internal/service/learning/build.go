@@ -195,9 +195,10 @@ func (s Service) processWordTimingsAsync(hotspots []scene.Hotspot) {
 // buildGrammarNote نکته‌ی گرامریِ اختیاریِ ورودی را پاک‌سازی می‌کند: فاصله‌های
 // اضافه را می‌گیرد، مثال‌های بدون متن را حذف و تعدادشان را به
 // scene.MaxGrammarExamples محدود می‌کند. همه‌چیز می‌تواند خالی باشد.
-func buildGrammarNote(req dto.CreateSceneRequest) (topic, explanation string, examples []scene.GrammarExample) {
+func buildGrammarNote(req dto.CreateSceneRequest) (topic, explanation string, examples []scene.GrammarExample, audioURL string) {
 	topic = strings.TrimSpace(req.GrammarTopic)
 	explanation = strings.TrimSpace(req.GrammarExplanation)
+	audioURL = strings.TrimSpace(req.GrammarAudioURL)
 	for _, e := range req.GrammarExamples {
 		text := strings.TrimSpace(e.Text)
 		if text == "" {
@@ -208,7 +209,7 @@ func buildGrammarNote(req dto.CreateSceneRequest) (topic, explanation string, ex
 			break
 		}
 	}
-	return topic, explanation, examples
+	return topic, explanation, examples, audioURL
 }
 
 // toGrammarExampleDTOs مثال‌های گرامری دامنه را به DTO تبدیل می‌کند؛ بدون مثال

@@ -10,6 +10,7 @@ import (
 	"shadowing-backend/internal/domain/aiconversation"
 	"shadowing-backend/internal/pkg/richerror"
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	"shadowing-backend/internal/service/aiconversation/dto"
 
 	"github.com/google/uuid"
@@ -46,6 +47,10 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		return nil, richerror.New(op).WithMessage("conversation already ended").WithKind(richerror.KindInvalid)
 	}
 
+	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
+		return nil, err
+	}
+
 	turnStart := time.Now()
 	transcript, err := s.transcriber.TranscribeOnly(ctx, localAudioPath)
 	transcribeDur := time.Since(turnStart)
@@ -65,6 +70,9 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 	grammarDur := time.Since(grammarStart)
 	if grammarErr == nil {
 		grammarCorrection, grammarExplanation = grammar.Corrected, grammar.Explanation
+		// CheckGrammar توکنِ واقعی برنمی‌گرداند؛ یک تخمینِ ثابتِ محافظه‌کارانه
+		// به مصرفِ روزانه اضافه می‌شود (نگاه کنید به aiaccessservice.EstimatedFlatCallTokens).
+		s.access.RecordUsage(ctx, userIDStr, aiaccessservice.EstimatedFlatCallInputTokens, aiaccessservice.EstimatedFlatCallOutputTokens)
 	} else {
 		slog.Warn("aiconversation: grammar check failed", "err", grammarErr)
 	}
@@ -99,6 +107,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, aiHistory, turnNumber,
 			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil && strings.TrimSpace(result.Reply) != "" {
 			assistantText, assistantTextFA, shouldEnd, usage = result.Reply, strings.TrimSpace(result.ReplyFA), result.ShouldEnd, result.Usage
+			s.access.RecordUsage(ctx, userIDStr, usage.InputTokens, usage.OutputTokens)
 		} else {
 			slog.Warn("aiconversation: converse failed or empty, using fallback reply", "err", aiErr)
 		}

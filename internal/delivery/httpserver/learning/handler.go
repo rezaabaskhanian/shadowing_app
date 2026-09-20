@@ -2,6 +2,7 @@ package learninghandler
 
 import (
 	"shadowing-backend/internal/pkg/filestore"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
 	feedbackservice "shadowing-backend/internal/service/feedback"
@@ -9,6 +10,7 @@ import (
 	progressservice "shadowing-backend/internal/service/progress"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 )
 
@@ -20,6 +22,8 @@ type Handler struct {
 	feedbackSvc        feedbackservice.Service
 	billingSvc         billingservice.Service
 	progressSvc        *progressservice.Service
+	aiAccessSvc        *aiaccessservice.Service
+	tokenTopupSvc      tokentopupservice.Service
 
 	authSvc authservice.Service
 
@@ -40,6 +44,8 @@ func New(
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	store filestore.Store,
+	aiAccessSvc *aiaccessservice.Service,
+	tokenTopupSvc tokentopupservice.Service,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -52,5 +58,7 @@ func New(
 		authSvc:            authSvc,
 		authConfig:         authConfig,
 		store:              store,
+		aiAccessSvc:        aiAccessSvc,
+		tokenTopupSvc:      tokenTopupSvc,
 	}
 }

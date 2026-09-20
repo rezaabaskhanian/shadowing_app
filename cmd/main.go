@@ -13,6 +13,7 @@ import (
 	"shadowing-backend/internal/repository/migrator"
 	"shadowing-backend/internal/repository/postgres"
 
+	postgresaiaccess "shadowing-backend/internal/repository/postgres/aiaccess"
 	postgresaiconversation "shadowing-backend/internal/repository/postgres/aiconversation"
 	postgresassessment "shadowing-backend/internal/repository/postgres/assessment"
 	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
@@ -33,6 +34,7 @@ import (
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
+	postgretokentopup "shadowing-backend/internal/repository/postgres/tokentopup"
 	posttopicsuggestion "shadowing-backend/internal/repository/postgres/topicsuggestion"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
 
@@ -41,6 +43,7 @@ import (
 	"context"
 
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
@@ -62,6 +65,7 @@ import (
 	"shadowing-backend/internal/service/speecheval"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 
@@ -153,11 +157,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc)
 
 	server.Server()
 
@@ -227,7 +231,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -320,6 +324,13 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	subscriptionRepo := postgressubscription.New(MyPostgresgresRepo.DB)
 	subscriptionSvc := subscriptionservice.New(subscriptionRepo)
 
+	// دسترسی به فیچرهای گران (AI Conversation، Free Speech): اشتراکِ فعال
+	// اجباری است + سقفِ محافظتیِ توکنِ روزانه‌ی مشترک برای همه (نگاه کنید به
+	// internal/service/aiaccess). قبل از این، این دو فیچر بدون هیچ محدودیتی
+	// در دسترسِ همه بودند.
+	aiUsageRepo := postgresaiaccess.New(MyPostgresgresRepo.DB)
+	aiAccessSvc := aiaccessservice.New(subscriptionSvc, aiUsageRepo, settingsSvc)
+
 	topicSuggestionRepo := posttopicsuggestion.New(MyPostgresgresRepo.DB)
 	topicSuggestionSvc := topicsuggestionservice.New(topicSuggestionRepo)
 
@@ -348,6 +359,12 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 		fmt.Println("cafebazaar billing: CAFEBAZAAR_* env not set, purchase verification disabled")
 	}
 
+	// خریدِ مصرفیِ توکن (تاپ‌آپ): همان کلاینتِ کافه‌بازاریِ بالا را دوباره
+	// استفاده می‌کند (endpointِ اعتبارسنجیِ خریدِ تک‌باره برای هر دو یکی است)،
+	// فقط گرنتش فرق دارد — به‌جای روزِ اشتراک، مستقیم اعتبار توکن اضافه می‌کند.
+	tokenTopupRepo := postgretokentopup.New(MyPostgresgresRepo.DB)
+	tokenTopupSvc := tokentopupservice.New(tokenTopupRepo, cafebazaarClient, aiAccessSvc)
+
 	assessmentItemRepo := postgresassessment.NewItemRepository(MyPostgresgresRepo.DB)
 	assessmentProfileRepo := postgresassessment.NewProfileRepository(MyPostgresgresRepo.DB)
 	assessmentLogRepo := postgresassessment.NewSubmissionLogRepository(MyPostgresgresRepo.DB)
@@ -367,16 +384,16 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	aiConversationSvc := aiconversationservice.New(
 		conversationRepo, turnRepo, hintRepo, assessmentProfileRepo, learnningRepo,
 		aiservice.New(settingsSvc), ttsservice.New(settingsSvc), evaluator,
-		store,
+		store, aiAccessSvc,
 	)
 
 	// Free Speech: یک بار توضیحِ آزاد بعد از تمام‌شدنِ یک صحنه، بدون AI-reply
 	// و بدون مکالمه‌ی چندنوبتی — همان سه‌تایی transcribe/relevance/grammar که
 	// در Assessment هم استفاده می‌شود، فقط از نقطه‌ی تمام‌شدنِ صحنه صدا زده می‌شود.
 	freeSpeechLogRepo := postgresfreespeech.New(MyPostgresgresRepo.DB)
-	freeSpeechSvc := freespeechservice.New(learnningRepo, freeSpeechLogRepo, aiservice.New(settingsSvc), evaluator)
+	freeSpeechSvc := freespeechservice.New(learnningRepo, freeSpeechLogRepo, aiservice.New(settingsSvc), evaluator, aiAccessSvc)
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc
 }

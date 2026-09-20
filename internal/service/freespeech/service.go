@@ -6,6 +6,7 @@ import (
 
 	scene "shadowing-backend/internal/domain/learning/scene"
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	"shadowing-backend/internal/service/speecheval"
 
 	"github.com/google/uuid"
@@ -29,8 +30,9 @@ type Service struct {
 	log         LogRepository
 	ai          aiservice.Service
 	transcriber speecheval.Transcriber
+	access      *aiaccessservice.Service
 }
 
-func New(scenes SceneRepository, log LogRepository, ai aiservice.Service, transcriber speecheval.Transcriber) *Service {
-	return &Service{scenes: scenes, log: log, ai: ai, transcriber: transcriber}
+func New(scenes SceneRepository, log LogRepository, ai aiservice.Service, transcriber speecheval.Transcriber, access *aiaccessservice.Service) *Service {
+	return &Service{scenes: scenes, log: log, ai: ai, transcriber: transcriber, access: access}
 }

@@ -66,6 +66,7 @@ func (s Service) GetScene(ctx context.Context, ID string) (dto.Scene, error) {
 		GrammarTopic:       scene.GrammarTopic,
 		GrammarExplanation: scene.GrammarExplanation,
 		GrammarExamples:    toGrammarExampleDTOs(scene.GrammarExamples),
+		GrammarAudioURL:    scene.GrammarAudioURL,
 
 		CreatedAt: scene.CreatedAt.Format(time.RFC3339),
 

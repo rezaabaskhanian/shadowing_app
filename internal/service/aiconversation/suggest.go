@@ -70,6 +70,9 @@ func (s *Service) Suggest(ctx context.Context, userIDStr, conversationIDStr stri
 	if !s.ai.Enabled() {
 		return nil, richerror.New(op).WithMessage("ai is not configured")
 	}
+	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
+		return nil, err
+	}
 
 	sc, err := s.scenes.GetByID(ctx, conv.SceneID.String())
 	if err != nil {
@@ -114,6 +117,7 @@ func (s *Service) Suggest(ctx context.Context, userIDStr, conversationIDStr stri
 	}
 	hint.InputTokens = result.Usage.InputTokens
 	hint.OutputTokens = result.Usage.OutputTokens
+	s.access.RecordUsage(ctx, userIDStr, result.Usage.InputTokens, result.Usage.OutputTokens)
 	if err := s.hints.Insert(ctx, hint); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}

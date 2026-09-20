@@ -33,4 +33,11 @@ func (h Handler) SetLearningRoutes(e *echo.Echo) {
 
 	// تأیید خرید کافه‌بازاری (Poolakey) و فعال‌سازی اشتراک یک‌ساله
 	learningGroup.POST("/subscription/verify-purchase", h.VerifyPurchase, middlware.Auth(h.authSvc, h.authConfig))
+
+	// مصرفِ امروزِ کاربر از فیچرهای AI-heavy (برای نوارِ مصرف/پیشنهادِ خرید توکن)
+	learningGroup.GET("/ai-usage", h.GetAIUsage, middlware.Auth(h.authSvc, h.authConfig))
+
+	// خریدِ مصرفیِ توکن (وقتی کاربر به سقفِ رایگانِ روزانه رسیده و نمی‌خواهد صبر کند)
+	learningGroup.GET("/token-topup-plans", h.TokenTopupPlans, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.POST("/token-topup/verify-purchase", h.VerifyTokenTopupPurchase, middlware.Auth(h.authSvc, h.authConfig))
 }

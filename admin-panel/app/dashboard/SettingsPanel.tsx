@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import {
   changePassword,
   connectProxy,
+  getAIUsageReport,
   getName,
   getProxyStatus,
   getSettings,
   updateSetting,
 } from "@/lib/api";
 import type { ProxyStatus } from "@/lib/api";
-import type { SettingsResp } from "@/lib/types";
+import type { AIUsageReport, SettingsResp } from "@/lib/types";
 
 const FIELDS: { key: string; label: string; hint?: string }[] = [
   { key: "ANTHROPIC_API_KEY", label: "کلید Anthropic (Claude)" },
@@ -29,6 +30,16 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
     key: "OPENROUTER_MODEL",
     label: "مدل OpenRouter",
     hint: "مثلاً google/gemini-3.8-flash یا anthropic/claude-... یا deepseek/deepseek-chat — با همین یک کلید بین آن‌ها سوییچ می‌کنی",
+  },
+  {
+    key: "AI_DAILY_TOKEN_LIMIT",
+    label: "سقف روزانه‌ی توکن هوش مصنوعی برای هر کاربر (AI Conversation / Free Speech)",
+    hint: "فقط برای کاربران با اشتراک فعال قابل استفاده‌اند. خالی بگذار برای پیش‌فرض (۱۰۰,۰۰۰ توکن در روز)",
+  },
+  {
+    key: "AI_TOKEN_PRICING",
+    label: "قیمت واقعی هر provider (برای گزارش هزینه‌ی پایین همین صفحه)",
+    hint: 'دلار به ازای هر ۱ میلیون توکن، مثلاً: {"gemini":{"input_per_1m":0.1,"output_per_1m":0.4}} — فقط providerِ فعلاً فعال مهم است؛ خالی بگذار برای تخمین پیش‌فرض',
   },
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
   { key: "ELEVENLABS_VOICE_ID", label: "شناسه صدای ElevenLabs", hint: "خالی بگذار برای صدای پیش‌فرض" },
@@ -65,6 +76,21 @@ export default function SettingsPanel({
   const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null);
   const [proxyLoading, setProxyLoading] = useState(false);
   const [proxyConnecting, setProxyConnecting] = useState(false);
+
+  // ---------- هزینه‌ی واقعیِ مصرف AI (توکن واقعی × قیمت تنظیم‌شده) ----------
+  const [aiUsage, setAiUsage] = useState<AIUsageReport | null>(null);
+  const [aiUsageLoading, setAiUsageLoading] = useState(true);
+
+  async function loadAIUsage() {
+    setAiUsageLoading(true);
+    try {
+      setAiUsage(await getAIUsageReport(30));
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setAiUsageLoading(false);
+    }
+  }
 
   async function loadProxyStatus() {
     setProxyLoading(true);
@@ -113,6 +139,7 @@ export default function SettingsPanel({
   useEffect(() => {
     load();
     loadProxyStatus();
+    loadAIUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -141,6 +168,7 @@ export default function SettingsPanel({
       notify("ذخیره شد ✅ همین الان فعال شد", "ok");
       setInputs((s) => ({ ...s, [key]: "" }));
       load();
+      if (key === "AI_TOKEN_PRICING") loadAIUsage();
     } catch (err: any) {
       notify(err.message, "err");
     } finally {
@@ -299,6 +327,54 @@ export default function SettingsPanel({
       </div>
 
       <div className="card">
+        <h2 style={{ marginTop: 0 }}>💰 هزینه‌ی واقعی AI (۳۰ روز اخیر)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          بر اساس توکنِ واقعیِ مصرف‌شده × قیمتی که در «قیمت واقعی هر provider» پایین همین صفحه تنظیم کرده‌ای.
+          برای قیمت‌گذاریِ درستِ اشتراک/تاپ‌آپ از همین عدد استفاده کن، نه حدس.
+        </p>
+        {aiUsageLoading || !aiUsage ? (
+          <p className="hint">در حال بارگذاری...</p>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>هزینه‌ی کل (همه‌ی زمان)</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>${aiUsage.total_cost_usd.toFixed(2)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>هزینه‌ی {aiUsage.period_days} روز اخیر</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>${aiUsage.period_cost_usd.toFixed(2)}</div>
+              </div>
+            </div>
+            {aiUsage.daily.length > 0 && (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ textAlign: "right", opacity: 0.7 }}>
+                      <th style={{ padding: "4px 8px" }}>تاریخ</th>
+                      <th style={{ padding: "4px 8px" }}>توکن ورودی</th>
+                      <th style={{ padding: "4px 8px" }}>توکن خروجی</th>
+                      <th style={{ padding: "4px 8px" }}>هزینه ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiUsage.daily.map((d, i) => (
+                      <tr key={d.date} style={{ borderTop: "1px solid var(--border, #333)" }}>
+                        <td style={{ padding: "4px 8px" }}>{d.date}</td>
+                        <td style={{ padding: "4px 8px" }}>{d.input_tokens.toLocaleString()}</td>
+                        <td style={{ padding: "4px 8px" }}>{d.output_tokens.toLocaleString()}</td>
+                        <td style={{ padding: "4px 8px" }}>${aiUsage.daily_cost_usd[i]?.toFixed(3)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="card">
         <h2 style={{ marginTop: 0 }}>🔑 کلیدهای API</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           هر وقت اعتبار یکی از کلیدها تمام شد، کلید جدید را همین‌جا جایگزین کن —
@@ -323,7 +399,7 @@ export default function SettingsPanel({
                   ))}
               </label>
               <div style={{ display: "flex", gap: 8 }}>
-                {f.key === "FCM_SERVICE_ACCOUNT_JSON" ? (
+                {f.key === "FCM_SERVICE_ACCOUNT_JSON" || f.key === "AI_TOKEN_PRICING" ? (
                   <textarea
                     dir="ltr"
                     rows={4}

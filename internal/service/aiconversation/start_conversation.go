@@ -33,6 +33,10 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
 	}
 
+	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
+		return nil, err
+	}
+
 	openingText, openingTextFA := defaultOpeningText, defaultOpeningTextFA
 	var usage aiservice.TokenUsage
 	if s.ai.Enabled() {
@@ -43,6 +47,8 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 			slog.Warn("aiconversation: opening converse call failed, using fallback", "err", aiErr)
 		}
 	}
+
+	s.access.RecordUsage(ctx, userIDStr, usage.InputTokens, usage.OutputTokens)
 
 	audioURL := s.synthesize(ctx, openingText)
 

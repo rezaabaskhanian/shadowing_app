@@ -12,6 +12,9 @@ type CreateSceneRequest struct {
 	GrammarTopic       string           `json:"grammar_topic"`
 	GrammarExplanation string           `json:"grammar_explanation"`
 	GrammarExamples    []GrammarExample `json:"grammar_examples"`
+	// GrammarAudioURL صدای تولیدشده (ElevenLabs) برای GrammarExplanation است؛
+	// از پنل ادمین با همان generate-audio دیالوگ‌ها ساخته و اینجا فرستاده می‌شود.
+	GrammarAudioURL string `json:"grammar_audio_url"`
 	// Order ترتیب این صحنه در مسیر آموزشی است (عدد کوچک‌تر = زودتر در مسیر).
 	// در ساخت صحنه‌ی جدید اختیاری است (پیش‌فرض ۰)؛ ادمین از لیست صحنه‌ها
 	// می‌تواند بعداً مرتب‌سازی کند.

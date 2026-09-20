@@ -28,8 +28,8 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 	query := `INSERT INTO scenes (
 		id, title, description, background_image_url,
 		difficulty, status, "order", is_locked, category,
-		grammar_topic, grammar_explanation, grammar_examples, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
+		grammar_topic, grammar_explanation, grammar_examples, grammar_audio_url, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())`
 
 	_, err = tx.Exec(ctx, query,
 		s.ID,
@@ -44,6 +44,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		nullableText(s.GrammarTopic),
 		nullableText(s.GrammarExplanation),
 		grammarExamplesJSON(s.GrammarExamples),
+		nullableText(s.GrammarAudioURL),
 	)
 	if err != nil {
 		return richerror.New(op).
@@ -218,7 +219,7 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	sceneQuery := `SELECT
 		id, title, description, background_image_url,
 		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at,
-		COALESCE(grammar_topic, ''), COALESCE(grammar_explanation, ''), grammar_examples
+		COALESCE(grammar_topic, ''), COALESCE(grammar_explanation, ''), grammar_examples, COALESCE(grammar_audio_url, '')
 	FROM scenes WHERE id = $1`
 
 	var s scene.Scene
@@ -226,7 +227,7 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	err := r.conn.QueryRow(ctx, sceneQuery, id).Scan(
 		&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
 		&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.Category, &s.CreatedAt, &s.UpdatedAt,
-		&s.GrammarTopic, &s.GrammarExplanation, &grammarExamplesRaw,
+		&s.GrammarTopic, &s.GrammarExplanation, &grammarExamplesRaw, &s.GrammarAudioURL,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -364,13 +365,15 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 		grammar_topic = $9,
 		grammar_explanation = $10,
 		grammar_examples = $11,
+		grammar_audio_url = $12,
 		updated_at = NOW()
-	WHERE id = $12`
+	WHERE id = $13`
 
 	result, err := tx.Exec(ctx, query,
 		scene.Title, scene.Description, scene.BackgroundImageURL,
 		scene.Difficulty, scene.Status, scene.Order, scene.IsLocked, scene.Category,
 		nullableText(scene.GrammarTopic), nullableText(scene.GrammarExplanation), grammarExamplesJSON(scene.GrammarExamples),
+		nullableText(scene.GrammarAudioURL),
 		scene.ID,
 	)
 	if err != nil {

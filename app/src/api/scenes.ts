@@ -76,6 +76,7 @@ interface BackendScene {
   grammar_topic?: string;
   grammar_explanation?: string;
   grammar_examples?: { text: string; translation: string }[] | null;
+  grammar_audio_url?: string;
 }
 
 function difficultyToLevel(d?: string): string {
@@ -160,7 +161,12 @@ function mapGrammarNote(s: BackendScene): Scenario['grammarNote'] {
     .filter((e) => (e.text || '').trim())
     .map((e) => ({ text: e.text.trim(), translation: (e.translation || '').trim() }));
   if (!explanation && examples.length === 0) return undefined;
-  return { topic: (s.grammar_topic || '').trim(), explanation, examples };
+  return {
+    topic: (s.grammar_topic || '').trim(),
+    explanation,
+    examples,
+    audioUrl: s.grammar_audio_url ? absUrl(s.grammar_audio_url) : undefined,
+  };
 }
 
 // لیست صحنه‌ها (بدون هات‌اسپات - سبک)

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Languages, Lightbulb, Mic, PartyPopper, Square, X } from 'lucide-react-native';
+import { CircleX, Languages, Lightbulb, Lock, Mic, PartyPopper, Square, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -12,6 +12,8 @@ import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { absUrl } from '../../api/config';
+import { ForbiddenError } from '../../api/client';
+import { getAIUsageStatus } from '../../api/aiUsage';
 import {
   startConversation,
   sendConversationTurn,
@@ -38,7 +40,7 @@ interface HintState {
 /** سقفِ طولِ هر نوبتِ ضبط؛ صدای بلندتر یعنی آپلود و رونویسیِ کندتر. */
 const MAX_RECORD_SECONDS = 20;
 
-type LoadPhase = 'loading' | 'ready' | 'load_error';
+type LoadPhase = 'loading' | 'ready' | 'load_error' | 'forbidden';
 type RecordPhase = 'idle' | 'recording' | 'sending';
 type ActionCommand = 'none' | 'start_record' | 'stop_record' | 'play_original';
 
@@ -96,6 +98,9 @@ export const AIConversationScreen: React.FC = () => {
   const stopRequestedRef = useRef(false);
 
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('loading');
+  // فقط وقتی loadPhase === 'forbidden': کاربر اشتراک ندارد (پیشنهاد اشتراک) یا
+  // مشترک است ولی سقف روزانه‌اش تمام شده (پیشنهاد خرید توکن).
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sceneTitle, setSceneTitle] = useState(initialSceneTitle);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -154,8 +159,22 @@ export const AIConversationScreen: React.FC = () => {
         setLoadPhase('ready');
         playAudio(res.opening_turn.audio_url);
       })
-      .catch(() => {
-        if (active) setLoadPhase('load_error');
+      .catch(async (err) => {
+        if (!active) return;
+        if (err instanceof ForbiddenError) {
+          // پیامِ ۴۰۳ هم برای «بدون اشتراک» هم برای «سقفِ روزانه تمام‌شده» یکی
+          // است؛ برای تشخیصِ CTA درست (خریدِ اشتراک در برابرِ خریدِ توکن)
+          // مصرفِ امروز را جدا می‌پرسیم.
+          try {
+            const status = await getAIUsageStatus();
+            if (active) setHasActiveSubscription(status.has_active_subscription);
+          } catch {
+            // اگر همین درخواست هم شکست خورد، فرض محافظه‌کارانه: کاربر اشتراک ندارد.
+          }
+          if (active) setLoadPhase('forbidden');
+          return;
+        }
+        setLoadPhase('load_error');
       });
     return () => {
       active = false;
@@ -197,6 +216,18 @@ export const AIConversationScreen: React.FC = () => {
         setHintError(null);
         playAudio(result.assistant_audio_url);
       } catch (err) {
+        if (err instanceof ForbiddenError) {
+          // وسط گفتگو به سقف خورده (نه شروعِ گفتگو)؛ همان صفحه‌ی تمام‌صفحه‌ی
+          // پیشنهادِ خرید را نشان می‌دهیم، نه فقط یک retry hint که باز fail می‌شود.
+          try {
+            const status = await getAIUsageStatus();
+            setHasActiveSubscription(status.has_active_subscription);
+          } catch {
+            // فرض محافظه‌کارانه: کاربر اشتراک ندارد.
+          }
+          setLoadPhase('forbidden');
+          return;
+        }
         setRetryError(err instanceof Error ? err.message : t('aiConversationRetryHint'));
       } finally {
         setRecordPhase('idle');
@@ -295,6 +326,26 @@ export const AIConversationScreen: React.FC = () => {
           </View>
           <Text style={styles.recordHint}>{t('aiConversationRecordHint')}</Text>
         </View>
+      </View>
+    );
+  }
+
+  if (loadPhase === 'forbidden') {
+    return (
+      <View style={styles.centerScreen}>
+        <Lock size={40} color={COLORS.primary} />
+        <Text style={styles.centerText}>
+          {t(hasActiveSubscription ? 'aiConversationForbiddenQuota' : 'aiConversationForbiddenNoSub')}
+        </Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate(hasActiveSubscription ? 'TokenTopup' : 'Paywall')}
+        >
+          <Text style={styles.retryBtnText}>
+            {t(hasActiveSubscription ? 'aiConversationBuyTokensBtn' : 'aiConversationSubscribeBtn')}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }

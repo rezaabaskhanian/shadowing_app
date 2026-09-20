@@ -47,6 +47,7 @@ export interface CreateScenePayload {
   grammar_topic?: string;
   grammar_explanation?: string;
   grammar_examples?: GrammarExampleInput[];
+  grammar_audio_url?: string;
 }
 
 // خروجی تولید صحنه با هوش مصنوعی (بدون تصویر/صدا)
@@ -115,6 +116,7 @@ export interface SceneResp {
   grammar_topic?: string;
   grammar_explanation?: string;
   grammar_examples?: GrammarExampleInput[];
+  grammar_audio_url?: string;
   hotspots: HotspotResp[] | null;
   created_at: string;
   updated_at: string;
@@ -141,6 +143,7 @@ export interface SettingsResp {
   deepseek_model: string;
   openrouter_api_key: SettingItem;
   openrouter_model: string;
+  ai_daily_token_limit: string;
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
   groq_api_key: SettingItem;
@@ -209,6 +212,16 @@ export interface SubscriptionPlan {
   created_at: string;
 }
 
+// ---------- طرح‌های تاپ‌آپ توکن (خرید مصرفی) ----------
+export interface TokenTopupPlan {
+  id: string;
+  name: string;
+  tokens: number;
+  price_toman: number;
+  product_id: string;
+  created_at: string;
+}
+
 export interface DailyRevenue {
   date: string;
   revenue_toman: number;
@@ -221,6 +234,29 @@ export interface RevenueStats {
   period_revenue_toman: number;
   period_purchase_count: number;
   daily: DailyRevenue[];
+}
+
+// ---------- هزینه‌ی واقعیِ مصرف AI ----------
+export interface DailyAIUsage {
+  date: string;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface AIUsageReport {
+  total_cost_usd: number;
+  period_cost_usd: number;
+  period_days: number;
+  daily: DailyAIUsage[];
+  daily_cost_usd: number[];
+}
+
+export interface AIUsageStatus {
+  has_active_subscription: boolean;
+  used_tokens: number;
+  daily_limit: number;
+  remaining_tokens: number;
+  estimated_cost_usd: number;
 }
 
 // ---------- بخش‌های صفحه‌ی معرفی (landing, www.lingoflow.ir) ----------

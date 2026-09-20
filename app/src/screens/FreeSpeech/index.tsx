@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleCheck, CircleX, Mic, Square, TriangleAlert } from 'lucide-react-native';
+import { CircleCheck, CircleX, Lock, Mic, Square, TriangleAlert } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -11,11 +11,14 @@ import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
 import { transcribeFreeSpeech, getFreeSpeechFeedback, type FreeSpeechFeedback } from '../../api/freespeech';
+import { ForbiddenError } from '../../api/client';
+import { getAIUsageStatus } from '../../api/aiUsage';
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 
 type Phase = 'idle' | 'recording' | 'transcribing' | 'result' | 'error';
-// بازخوردِ ربط/گرامر بعد از نمایشِ متن، جدا لود می‌شود.
-type FeedbackState = 'loading' | 'done' | 'error';
+// بازخوردِ ربط/گرامر بعد از نمایشِ متن، جدا لود می‌شود. forbidden یعنی بدون
+// اشتراک یا سقفِ روزانه تمام‌شده (نگاه کنید به src/api/client.ForbiddenError).
+type FeedbackState = 'loading' | 'done' | 'error' | 'forbidden';
 
 /** سقفِ طولِ ضبط: صدای بلندتر یعنی آپلود و رونویسیِ کندتر. */
 const MAX_RECORD_SECONDS = 20;
@@ -85,6 +88,7 @@ export const FreeSpeechScreen: React.FC = () => {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FreeSpeechFeedback | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>('loading');
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(true);
   // توقفِ ضبط (دستی یا خودکار) درخواست شده ولی وضعیتِ «stopped» هنوز نرسیده.
   const stopRequestedRef = useRef(false);
   const [actionCommand, setActionCommand] = useState<ActionCommand>('none');
@@ -125,7 +129,19 @@ export const FreeSpeechScreen: React.FC = () => {
           setFeedback(fb);
           setFeedbackState('done');
         })
-        .catch(() => setFeedbackState('error'));
+        .catch(async (err) => {
+          if (err instanceof ForbiddenError) {
+            try {
+              const status = await getAIUsageStatus();
+              setHasActiveSubscription(status.has_active_subscription);
+            } catch {
+              // فرض محافظه‌کارانه: کاربر اشتراک ندارد.
+            }
+            setFeedbackState('forbidden');
+            return;
+          }
+          setFeedbackState('error');
+        });
     },
     [scenarioId]
   );
@@ -237,6 +253,23 @@ export const FreeSpeechScreen: React.FC = () => {
                 <Text style={styles.feedbackErrorText}>{t('freeSpeechFeedbackError')}</Text>
                 <TouchableOpacity onPress={() => loadFeedback(transcript)} activeOpacity={0.8}>
                   <Text style={styles.feedbackRetryText}>{t('freeSpeechFeedbackRetry')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {feedbackState === 'forbidden' && (
+              <View style={styles.feedbackLoadingRow}>
+                <Lock size={16} color={COLORS.textSecondary} />
+                <Text style={styles.feedbackErrorText}>
+                  {t(hasActiveSubscription ? 'freeSpeechForbiddenQuota' : 'freeSpeechForbiddenNoSub')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate(hasActiveSubscription ? 'TokenTopup' : 'Paywall')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.feedbackRetryText}>
+                    {t(hasActiveSubscription ? 'aiConversationBuyTokensBtn' : 'aiConversationSubscribeBtn')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}

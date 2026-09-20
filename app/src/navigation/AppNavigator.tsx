@@ -40,6 +40,7 @@ import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
 import { CurriculumMapScreen } from '../screens/CurriculumMap/CurriculumMapScreen';
 import { QuizScreen } from '../screens/Quiz/QuizScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
+import { TokenTopupScreen } from '../screens/TokenTopup/TokenTopupScreen';
 import { AIConversationScreen } from '../screens/AIConversation';
 import { FreeSpeechScreen } from '../screens/FreeSpeech';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
@@ -65,6 +66,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'AIConversation',
   'FreeSpeech',
   'Paywall',
+  'TokenTopup',
   'ToastDemo',
   'RealtimePoC',
 ];
@@ -293,6 +295,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="Paywall"
         component={PaywallScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="TokenTopup"
+        component={TokenTopupScreen}
         options={{
           tabBarButton: () => null,
         }}

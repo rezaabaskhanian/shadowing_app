@@ -31,8 +31,11 @@ type Scene struct {
 	GrammarTopic       string
 	GrammarExplanation string
 	GrammarExamples    []GrammarExample
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	// GrammarAudioURL صدای تولیدشده (ElevenLabs، عیناً هم‌الگوی صدای دیالوگ‌ها)
+	// برای GrammarExplanation است — برای کاربری که حوصله‌ی خواندن ندارد.
+	GrammarAudioURL string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func NewScene(title, description, bgImage string, difficulty DifficultyLevel, isLocked bool, category string) (Scene, error) {

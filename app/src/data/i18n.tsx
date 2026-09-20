@@ -382,6 +382,16 @@ export const translations: Translations = {
   aiConversationTurnProgress: { en: 'Turn {current} of {total}', fa: 'نوبت {current} از {total}' },
   aiConversationPreparing: { en: 'Getting your conversation ready…', fa: 'در حال آماده‌سازی گفتگو…' },
   aiConversationLoadError: { en: 'Could not start the conversation', fa: 'شروع گفتگو ممکن نشد' },
+  aiConversationForbiddenNoSub: {
+    en: 'This feature is only available with an active subscription',
+    fa: 'این قابلیت فقط برای کاربران با اشتراک فعال در دسترس است',
+  },
+  aiConversationForbiddenQuota: {
+    en: "You've reached today's free limit. Buy more tokens to keep going now, or try again tomorrow.",
+    fa: 'سقف رایگانِ امروزت تمام شده. برای ادامه‌ی همین حالا توکن بخر، یا فردا دوباره امتحان کن.',
+  },
+  aiConversationSubscribeBtn: { en: 'Subscribe', fa: 'خرید اشتراک' },
+  aiConversationBuyTokensBtn: { en: 'Buy tokens', fa: 'خرید توکن' },
   grammarTipLabel: { en: 'Better:', fa: 'بهتره اینطوری بگی:' },
   aiConversationHintBtn: { en: 'Suggest a reply', fa: 'پیشنهاد جواب' },
   aiConversationHintsLeft: { en: '{count} left', fa: '{count} تا مونده' },
@@ -417,6 +427,14 @@ export const translations: Translations = {
     fa: 'الان بازخورد گرفته نشد.',
   },
   freeSpeechFeedbackRetry: { en: 'Try again', fa: 'دوباره امتحان کن' },
+  freeSpeechForbiddenNoSub: {
+    en: 'This feature is only available with an active subscription',
+    fa: 'این قابلیت فقط برای کاربران با اشتراک فعال در دسترس است',
+  },
+  freeSpeechForbiddenQuota: {
+    en: "You've reached today's free limit. Buy more tokens to keep going now, or try again tomorrow.",
+    fa: 'سقف رایگانِ امروزت تمام شده. برای ادامه‌ی همین حالا توکن بخر، یا فردا دوباره امتحان کن.',
+  },
   recordMaxDurationHint: { en: 'Up to {max} seconds', fa: 'حداکثر {max} ثانیه' },
   recordTimer: { en: '{elapsed} / {max} s', fa: '{elapsed} از {max} ثانیه' },
   freeSpeechRecapLabel: { en: 'What happened in the scene', fa: 'یادآوری: توی این صحنه چی گذشت' },
@@ -649,6 +667,30 @@ export const translations: Translations = {
     en: 'You have {points} points — redeem them for {days} bonus days on this subscription.',
     fa: '{points} امتیاز داری — می‌تونی خرجش کنی برای {days} روز اضافه روی این اشتراک.',
   },
+
+  // ---------- تاپ‌آپ توکن ----------
+  tokenTopupTitle: { en: 'Buy more tokens', fa: 'خرید توکن بیشتر' },
+  tokenTopupSubtitle: {
+    en: "Once your free daily limit runs out, buy a token pack to keep using AI Conversation and Free Speech right now, instead of waiting until tomorrow.",
+    fa: 'وقتی سقفِ رایگانِ روزانه‌ات تمام شد، یه بسته‌ی توکن بخر تا همین حالا بتونی به گفتگو با AI و توضیح آزاد ادامه بدی، بدون اینکه منتظرِ فردا بمونی.',
+  },
+  tokenTopupUsageToday: { en: "Today's usage", fa: 'مصرف امروز' },
+  tokenTopupUsedOf: { en: '{used} of {limit} tokens', fa: '{used} از {limit} توکن' },
+  tokenTopupCreditBalance: { en: 'Purchased credit remaining', fa: 'اعتبارِ خریداری‌شده‌ی باقی‌مانده' },
+  tokenTopupBuyButton: { en: 'Buy', fa: 'خرید' },
+  tokenTopupProcessing: { en: 'Processing…', fa: 'در حال پردازش…' },
+  tokenTopupSuccessTitle: { en: 'Tokens added!', fa: 'توکن اضافه شد!' },
+  tokenTopupSuccessSub: { en: 'You can keep going right away.', fa: 'همین حالا می‌تونی ادامه بدی.' },
+  tokenTopupSuccessBtn: { en: "Great, let's go", fa: 'عالی، بریم' },
+  tokenTopupErrorGeneric: {
+    en: "Couldn't complete the purchase. Please try again.",
+    fa: 'خرید کامل نشد. دوباره امتحان کن.',
+  },
+  tokenTopupPlansLoadError: {
+    en: "Couldn't load token packs. Please try again.",
+    fa: 'بسته‌های توکن بارگذاری نشد. دوباره امتحان کن.',
+  },
+
   lockedBadge: { en: 'Locked', fa: 'قفل' },
   sequenceLockedMsg: {
     en: 'Finish the previous scene in the path to unlock this one',

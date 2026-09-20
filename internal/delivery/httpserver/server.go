@@ -25,6 +25,7 @@ import (
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	aiservice "shadowing-backend/internal/service/ai"
+	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
@@ -44,6 +45,7 @@ import (
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 
@@ -109,6 +111,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 	missionSvc *missionservice.Service,
 	aiConversationSvc *aiconversationservice.Service,
 	freeSpeechSvc *freespeechservice.Service,
+	aiAccessSvc *aiaccessservice.Service,
+	tokenTopupSvc tokentopupservice.Service,
 
 ) Service {
 
@@ -124,7 +128,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
-			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store,
+			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store, aiAccessSvc, tokenTopupSvc,
 		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
@@ -135,6 +139,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 			learningSvc,
 			assessmentSvc,
 			aiservice.New(settingsSvc),
+			aiAccessSvc,
+			tokenTopupSvc,
 			ttsservice.New(settingsSvc),
 			proxyservice.New(settingsSvc),
 			settingsSvc,

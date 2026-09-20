@@ -25,6 +25,8 @@ const (
 	KeyGroqAPIKey          = "GROQ_API_KEY"
 	KeyGroqSTTModel        = "GROQ_STT_MODEL"
 	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
+	KeyAIDailyTokenLimit   = "AI_DAILY_TOKEN_LIMIT"
+	KeyAITokenPricing      = "AI_TOKEN_PRICING"
 )
 
 // AllowedKeys برای اعتبارسنجی درخواست‌های به‌روزرسانی از پنل ادمین استفاده می‌شود.
@@ -44,6 +46,8 @@ var AllowedKeys = map[string]bool{
 	KeyGroqAPIKey:          true,
 	KeyGroqSTTModel:        true,
 	KeyFCMServiceAccount:   true,
+	KeyAIDailyTokenLimit:   true,
+	KeyAITokenPricing:      true,
 }
 
 type repository interface {
