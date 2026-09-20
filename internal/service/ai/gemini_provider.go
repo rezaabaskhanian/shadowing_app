@@ -3,7 +3,9 @@ package aiservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -122,16 +124,70 @@ func (p *geminiProvider) generateScene(ctx context.Context, prompt, difficulty s
 // ثانیه فکر می‌کنند که برای این کارهای ساده فقط تأخیر است. اگر مدلِ انتخاب‌شده
 // خاموش‌کردنِ thinking را نپذیرد (خطایی که به thinking اشاره کند)، یک بار بدون آن
 // تنظیم دوباره تلاش می‌کند، تا هیچ قابلیتی به‌خاطرِ این بهینه‌سازی نشکند.
+// defaultGeminiFallbackModel مدلِ جایگزین وقتی مدلِ اصلی شلوغ است (۵۰۳/۴۲۹). مدلِ
+// سبک‌تر ظرفیتِ جدایی دارد و معمولاً وقتی flash اصلی «high demand» می‌دهد جواب می‌دهد.
+// از پنل ادمین (GEMINI_FALLBACK_MODEL) قابل تغییر است.
+const defaultGeminiFallbackModel = "gemini-2.5-flash-lite"
+
+func (p *geminiProvider) fallbackModel() string {
+	if m := strings.TrimSpace(p.settings.Get(settingsservice.KeyGeminiFallbackModel)); m != "" {
+		return m
+	}
+	return defaultGeminiFallbackModel
+}
+
+// isTransientGeminiError خطاهایی را تشخیص می‌دهد که با یک مدل/دفعه‌ی دیگر ممکن است
+// درست شوند: شلوغیِ مدل (۵۰۳)، محدودیتِ نرخ (۴۲۹) و خطاهای سمتِ سرور. خطای کلید،
+// اسمِ مدل یا درخواست (۴۰۰/۴۰۳/۴۰۴) گذرا نیستند و دوباره تلاش نمی‌شوند.
+func isTransientGeminiError(err error) bool {
+	var ae genai.APIError
+	if errors.As(err, &ae) {
+		return ae.Code == 429 || ae.Code >= 500
+	}
+	var pe *genai.APIError
+	if errors.As(err, &pe) && pe != nil {
+		return pe.Code == 429 || pe.Code >= 500
+	}
+	return false
+}
+
+// generateFast یک فراخوانیِ JSONِ کوتاه (گرامر، ربط، پیشنهاد، پاسخِ گفتگو) را
+// بدونِ «thinking» اجرا می‌کند (تأخیرِ بی‌فایده برای کارهای ساده). اگر مدلِ اصلی
+// شلوغ بود (۵۰۳/۴۲۹)، فوراً یک بار با مدلِ جایگزین (GEMINI_FALLBACK_MODEL) تلاش
+// می‌کند تا کاربر «Sorry, I didn't catch that» نبیند؛ اگر آن هم شکست خورد، خطای
+// مدلِ اصلی برمی‌گردد (آموزنده‌تر است).
 func (p *geminiProvider) generateFast(ctx context.Context, client *genai.Client, contents []*genai.Content, systemPrompt string) (*genai.GenerateContentResponse, error) {
+	primary := p.model()
+	resp, err := p.generateFastModel(ctx, client, primary, contents, systemPrompt)
+	if err == nil || !isTransientGeminiError(err) {
+		return resp, err
+	}
+
+	fallback := p.fallbackModel()
+	if fallback == "" || fallback == primary {
+		return resp, err
+	}
+	slog.Warn("gemini: primary model unavailable, trying fallback model", "primary", primary, "fallback", fallback, "err", err)
+	resp2, err2 := p.generateFastModel(ctx, client, fallback, contents, systemPrompt)
+	if err2 != nil {
+		slog.Warn("gemini: fallback model failed too", "fallback", fallback, "err", err2)
+		return nil, err
+	}
+	return resp2, nil
+}
+
+// generateFastModel یک فراخوانیِ JSON با مدلِ مشخص؛ thinking را خاموش می‌کند و اگر مدل
+// خاموش‌کردنش را نپذیرد (خطایی که به thinking اشاره کند)، یک بار بدون آن تلاش می‌کند.
+func (p *geminiProvider) generateFastModel(ctx context.Context, client *genai.Client, model string, contents []*genai.Content, systemPrompt string) (*genai.GenerateContentResponse, error) {
 	cfg := &genai.GenerateContentConfig{
 		SystemInstruction: genai.NewContentFromText(systemPrompt, genai.RoleUser),
 		ResponseMIMEType:  "application/json",
 		ThinkingConfig:    &genai.ThinkingConfig{ThinkingBudget: genai.Ptr[int32](0)},
 	}
-	resp, err := client.Models.GenerateContent(ctx, p.model(), contents, cfg)
+	resp, err := client.Models.GenerateContent(ctx, model, contents, cfg)
 	if err != nil && strings.Contains(strings.ToLower(err.Error()), "thinking") {
 		cfg.ThinkingConfig = nil
-		return client.Models.GenerateContent(ctx, p.model(), contents, cfg)
+		return client.Models.GenerateContent(ctx, model, contents, cfg)
 	}
 	return resp, err
 }

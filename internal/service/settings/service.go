@@ -10,34 +10,36 @@ import (
 
 // کلیدهای شناخته‌شده‌ی تنظیمات قابل‌تغییر از پنل ادمین (بدون نیاز به ری‌استارت سرور).
 const (
-	KeyAIProvider        = "AI_PROVIDER"
-	KeyAnthropicAPIKey   = "ANTHROPIC_API_KEY"
-	KeyClaudeModel       = "CLAUDE_MODEL"
-	KeyGeminiAPIKey      = "GEMINI_API_KEY"
-	KeyGeminiModel       = "GEMINI_MODEL"
-	KeyDeepSeekAPIKey    = "DEEPSEEK_API_KEY"
-	KeyDeepSeekModel     = "DEEPSEEK_MODEL"
-	KeyElevenLabsAPIKey  = "ELEVENLABS_API_KEY"
-	KeyElevenLabsVoiceID = "ELEVENLABS_VOICE_ID"
-	KeyGroqAPIKey        = "GROQ_API_KEY"
-	KeyGroqSTTModel      = "GROQ_STT_MODEL"
-	KeyFCMServiceAccount = "FCM_SERVICE_ACCOUNT_JSON"
+	KeyAIProvider          = "AI_PROVIDER"
+	KeyAnthropicAPIKey     = "ANTHROPIC_API_KEY"
+	KeyClaudeModel         = "CLAUDE_MODEL"
+	KeyGeminiAPIKey        = "GEMINI_API_KEY"
+	KeyGeminiModel         = "GEMINI_MODEL"
+	KeyGeminiFallbackModel = "GEMINI_FALLBACK_MODEL"
+	KeyDeepSeekAPIKey      = "DEEPSEEK_API_KEY"
+	KeyDeepSeekModel       = "DEEPSEEK_MODEL"
+	KeyElevenLabsAPIKey    = "ELEVENLABS_API_KEY"
+	KeyElevenLabsVoiceID   = "ELEVENLABS_VOICE_ID"
+	KeyGroqAPIKey          = "GROQ_API_KEY"
+	KeyGroqSTTModel        = "GROQ_STT_MODEL"
+	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
 )
 
 // AllowedKeys برای اعتبارسنجی درخواست‌های به‌روزرسانی از پنل ادمین استفاده می‌شود.
 var AllowedKeys = map[string]bool{
-	KeyAIProvider:        true,
-	KeyAnthropicAPIKey:   true,
-	KeyClaudeModel:       true,
-	KeyGeminiAPIKey:      true,
-	KeyGeminiModel:       true,
-	KeyDeepSeekAPIKey:    true,
-	KeyDeepSeekModel:     true,
-	KeyElevenLabsAPIKey:  true,
-	KeyElevenLabsVoiceID: true,
-	KeyGroqAPIKey:        true,
-	KeyGroqSTTModel:      true,
-	KeyFCMServiceAccount: true,
+	KeyAIProvider:          true,
+	KeyAnthropicAPIKey:     true,
+	KeyClaudeModel:         true,
+	KeyGeminiAPIKey:        true,
+	KeyGeminiModel:         true,
+	KeyGeminiFallbackModel: true,
+	KeyDeepSeekAPIKey:      true,
+	KeyDeepSeekModel:       true,
+	KeyElevenLabsAPIKey:    true,
+	KeyElevenLabsVoiceID:   true,
+	KeyGroqAPIKey:          true,
+	KeyGroqSTTModel:        true,
+	KeyFCMServiceAccount:   true,
 }
 
 type repository interface {

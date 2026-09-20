@@ -17,6 +17,11 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
   { key: "CLAUDE_MODEL", label: "مدل Claude", hint: "مثلاً claude-sonnet-4-6 — خالی بگذار برای پیش‌فرض" },
   { key: "GEMINI_API_KEY", label: "کلید Gemini" },
   { key: "GEMINI_MODEL", label: "مدل Gemini", hint: "مثلاً gemini-flash-latest — خالی بگذار برای پیش‌فرض" },
+  {
+    key: "GEMINI_FALLBACK_MODEL",
+    label: "مدل جایگزین Gemini (وقتی مدل اصلی شلوغ است)",
+    hint: "مثلاً gemini-2.5-flash-lite — خالی بگذار برای پیش‌فرض",
+  },
   { key: "DEEPSEEK_API_KEY", label: "کلید DeepSeek" },
   { key: "DEEPSEEK_MODEL", label: "مدل DeepSeek", hint: "مثلاً deepseek-chat — خالی بگذار برای پیش‌فرض" },
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
