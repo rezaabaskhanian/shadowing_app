@@ -76,10 +76,21 @@ type deepseekChatRequest struct {
 	Thinking       *deepseekThinking     `json:"thinking,omitempty"`
 }
 
+// deepseekResponseMessage پیامِ برگشتی. عمداً از deepseekChatMessage جداست:
+// reasoning_content فقط در پاسخ می‌آید و پس‌فرستادنش در درخواست خطا می‌دهد.
+type deepseekResponseMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	// ReasoningContent گاهی حاوی کلِ جواب است در حالی که Content خالی می‌ماند
+	// (رفتارِ شناخته‌شده‌ی DeepSeek: finish_reason=stop، completion_tokens>0،
+	// ولی content=""). usableContent این حالت را جبران می‌کند.
+	ReasoningContent string `json:"reasoning_content"`
+}
+
 type deepseekChatResponse struct {
 	Choices []struct {
-		Message      deepseekChatMessage `json:"message"`
-		FinishReason string              `json:"finish_reason"`
+		Message      deepseekResponseMessage `json:"message"`
+		FinishReason string                  `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -155,7 +166,7 @@ func (p *deepseekProvider) generateScene(ctx context.Context, prompt, difficulty
 		return GeneratedScene{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	jsonStr := extractJSON(chatResp.usableContent())
 	var scene GeneratedScene
 	if err := json.Unmarshal([]byte(jsonStr), &scene); err != nil {
 		return GeneratedScene{}, richerror.New(op).WithErr(err).
@@ -228,7 +239,7 @@ func (p *deepseekProvider) checkGrammar(ctx context.Context, transcript string) 
 		return GrammarResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	jsonStr := extractJSON(chatResp.usableContent())
 	var result GrammarResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return GrammarResult{}, richerror.New(op).WithErr(err).
@@ -246,6 +257,19 @@ func (r deepseekChatResponse) completionTokens() int {
 		return 0
 	}
 	return r.Usage.CompletionTokens
+}
+
+// usableContent محتوای قابل‌استفاده‌ی اولین choice را می‌دهد. وقتی content خالی
+// است ولی مدل توکن تولید کرده، جواب معمولاً در reasoning_content نشسته؛ به‌جای
+// دورانداختنِ یک جوابِ سالم و نشان‌دادنِ متنِ جایگزین به کاربر، همان را برمی‌گرداند.
+func (r deepseekChatResponse) usableContent() string {
+	if len(r.Choices) == 0 {
+		return ""
+	}
+	if c := strings.TrimSpace(r.Choices[0].Message.Content); c != "" {
+		return r.Choices[0].Message.Content
+	}
+	return r.Choices[0].Message.ReasoningContent
 }
 
 // deepseekUnparsable خطای قابل‌تشخیص می‌سازد و بخشی از جوابِ خام را لاگ می‌کند؛
@@ -349,7 +373,7 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		return ConversationResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	content := chatResp.Choices[0].Message.Content
+	content := chatResp.usableContent()
 	var result ConversationResult
 	if err := json.Unmarshal([]byte(extractJSON(content)), &result); err != nil {
 		// گاهی مدل JSON نمی‌دهد و مستقیم جمله‌ی جواب را می‌نویسد؛ همان را جواب می‌گیریم
@@ -432,7 +456,7 @@ func (p *deepseekProvider) suggestReplies(ctx context.Context, sceneTitle, scene
 		return SuggestResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	jsonStr := extractJSON(chatResp.usableContent())
 	var result SuggestResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return SuggestResult{}, richerror.New(op).WithErr(err).
@@ -509,7 +533,7 @@ func (p *deepseekProvider) checkRelevance(ctx context.Context, question, transcr
 		return RelevanceResult{}, richerror.New(op).WithMessage("پاسخ مدل (DeepSeek) خالی بود")
 	}
 
-	jsonStr := extractJSON(chatResp.Choices[0].Message.Content)
+	jsonStr := extractJSON(chatResp.usableContent())
 	var result RelevanceResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return RelevanceResult{}, richerror.New(op).WithErr(err).
