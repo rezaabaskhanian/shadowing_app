@@ -18,6 +18,8 @@ const (
 	KeyGeminiFallbackModel = "GEMINI_FALLBACK_MODEL"
 	KeyDeepSeekAPIKey      = "DEEPSEEK_API_KEY"
 	KeyDeepSeekModel       = "DEEPSEEK_MODEL"
+	KeyOpenRouterAPIKey    = "OPENROUTER_API_KEY"
+	KeyOpenRouterModel     = "OPENROUTER_MODEL"
 	KeyElevenLabsAPIKey    = "ELEVENLABS_API_KEY"
 	KeyElevenLabsVoiceID   = "ELEVENLABS_VOICE_ID"
 	KeyGroqAPIKey          = "GROQ_API_KEY"
@@ -35,6 +37,8 @@ var AllowedKeys = map[string]bool{
 	KeyGeminiFallbackModel: true,
 	KeyDeepSeekAPIKey:      true,
 	KeyDeepSeekModel:       true,
+	KeyOpenRouterAPIKey:    true,
+	KeyOpenRouterModel:     true,
 	KeyElevenLabsAPIKey:    true,
 	KeyElevenLabsVoiceID:   true,
 	KeyGroqAPIKey:          true,

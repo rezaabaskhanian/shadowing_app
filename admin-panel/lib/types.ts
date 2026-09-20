@@ -139,6 +139,8 @@ export interface SettingsResp {
   gemini_model: string;
   deepseek_api_key: SettingItem;
   deepseek_model: string;
+  openrouter_api_key: SettingItem;
+  openrouter_model: string;
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
   groq_api_key: SettingItem;

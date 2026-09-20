@@ -24,6 +24,12 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
   },
   { key: "DEEPSEEK_API_KEY", label: "کلید DeepSeek" },
   { key: "DEEPSEEK_MODEL", label: "مدل DeepSeek", hint: "مثلاً deepseek-chat — خالی بگذار برای پیش‌فرض" },
+  { key: "OPENROUTER_API_KEY", label: "کلید OpenRouter" },
+  {
+    key: "OPENROUTER_MODEL",
+    label: "مدل OpenRouter",
+    hint: "مثلاً google/gemini-3.8-flash یا anthropic/claude-... یا deepseek/deepseek-chat — با همین یک کلید بین آن‌ها سوییچ می‌کنی",
+  },
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
   { key: "ELEVENLABS_VOICE_ID", label: "شناسه صدای ElevenLabs", hint: "خالی بگذار برای صدای پیش‌فرض" },
   {
@@ -45,7 +51,7 @@ export default function SettingsPanel({
   notify: (msg: string, type?: "ok" | "err") => void;
 }) {
   const [settings, setSettings] = useState<SettingsResp | null>(null);
-  const [provider, setProvider] = useState<"anthropic" | "gemini" | "deepseek">("anthropic");
+  const [provider, setProvider] = useState<"anthropic" | "gemini" | "deepseek" | "openrouter">("anthropic");
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,7 +102,7 @@ export default function SettingsPanel({
     try {
       const s = await getSettings();
       setSettings(s);
-      setProvider((s.ai_provider as "anthropic" | "gemini" | "deepseek") || "anthropic");
+      setProvider((s.ai_provider as "anthropic" | "gemini" | "deepseek" | "openrouter") || "anthropic");
     } catch (err: any) {
       notify(err.message, "err");
     } finally {
@@ -110,7 +116,7 @@ export default function SettingsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function saveProvider(next: "anthropic" | "gemini" | "deepseek") {
+  async function saveProvider(next: "anthropic" | "gemini" | "deepseek" | "openrouter") {
     setProvider(next);
     setSaving("AI_PROVIDER");
     try {
@@ -148,6 +154,7 @@ export default function SettingsPanel({
       ANTHROPIC_API_KEY: settings.anthropic_api_key,
       GEMINI_API_KEY: settings.gemini_api_key,
       DEEPSEEK_API_KEY: settings.deepseek_api_key,
+      OPENROUTER_API_KEY: settings.openrouter_api_key,
       ELEVENLABS_API_KEY: settings.elevenlabs_api_key,
       ELEVENLABS_VOICE_ID: settings.elevenlabs_voice_id,
       GROQ_API_KEY: settings.groq_api_key,
@@ -280,6 +287,13 @@ export default function SettingsPanel({
             disabled={saving === "AI_PROVIDER"}
           >
             DeepSeek
+          </button>
+          <button
+            className={`btn ${provider === "openrouter" ? "" : "btn-ghost"}`}
+            onClick={() => saveProvider("openrouter")}
+            disabled={saving === "AI_PROVIDER"}
+          >
+            OpenRouter
           </button>
         </div>
       </div>

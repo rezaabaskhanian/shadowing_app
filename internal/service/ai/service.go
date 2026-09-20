@@ -22,18 +22,20 @@ type provider interface {
 // anthropic (پیش‌فرض)، gemini یا deepseek. چون هر provider کلید/مدل را در لحظه‌ی هر
 // درخواست از settings می‌خواند، تغییر از پنل ادمین بدون ری‌استارت سرور اعمال می‌شود.
 type Service struct {
-	settings  *settingsservice.Service
-	anthropic *anthropicProvider
-	gemini    *geminiProvider
-	deepseek  *deepseekProvider
+	settings   *settingsservice.Service
+	anthropic  *anthropicProvider
+	gemini     *geminiProvider
+	deepseek   *deepseekProvider
+	openrouter *openRouterProvider
 }
 
 func New(settings *settingsservice.Service) Service {
 	return Service{
-		settings:  settings,
-		anthropic: newAnthropicProvider(settings),
-		gemini:    newGeminiProvider(settings),
-		deepseek:  newDeepSeekProvider(settings),
+		settings:   settings,
+		anthropic:  newAnthropicProvider(settings),
+		gemini:     newGeminiProvider(settings),
+		deepseek:   newDeepSeekProvider(settings),
+		openrouter: newOpenRouterProvider(settings),
 	}
 }
 
@@ -43,6 +45,8 @@ func (s Service) activeProvider() provider {
 		return s.gemini
 	case "deepseek":
 		return s.deepseek
+	case "openrouter":
+		return s.openrouter
 	default:
 		return s.anthropic
 	}
