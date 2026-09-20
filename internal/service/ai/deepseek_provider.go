@@ -17,6 +17,13 @@ import (
 
 const deepseekChatCompletionsURL = "https://api.deepseek.com/chat/completions"
 
+// deepseekDefaultMaxTokens بودجه‌ی توکنِ خروجی هر درخواست را صریح تعیین می‌کند.
+// بدون این فیلد، API از پیش‌فرض خودش استفاده می‌کند که برای مدل‌های reasoning
+// (مثل deepseek-flash) کافی نیست: بخشی از بودجه صرف «فکرکردنِ پنهان»
+// (reasoning_content) می‌شود و اگر جا تمام شود، content نهایی خالی برمی‌گردد
+// (خطای «unexpected end of JSON input» با status=200 که در لاگ می‌دیدیم).
+const deepseekDefaultMaxTokens = 2048
+
 // deepseekProvider تولید محتوای صحنه با کمک مدل DeepSeek را انجام می‌دهد.
 // چون DeepSeek یک API سازگار با OpenAI (chat completions) دارد، بدون SDK
 // جداگانه و فقط با net/http فراخوانی می‌شود. کلید و مدل مثل بقیه‌ی
@@ -55,11 +62,13 @@ type deepseekChatRequest struct {
 	Messages       []deepseekChatMessage `json:"messages"`
 	ResponseFormat map[string]string     `json:"response_format,omitempty"`
 	Stream         bool                  `json:"stream"`
+	MaxTokens      int                   `json:"max_tokens,omitempty"`
 }
 
 type deepseekChatResponse struct {
 	Choices []struct {
-		Message deepseekChatMessage `json:"message"`
+		Message      deepseekChatMessage `json:"message"`
+		FinishReason string              `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -90,6 +99,7 @@ func (p *deepseekProvider) generateScene(ctx context.Context, prompt, difficulty
 			{Role: "user", Content: userText},
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
+		MaxTokens:      deepseekDefaultMaxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -161,6 +171,7 @@ func (p *deepseekProvider) checkGrammar(ctx context.Context, transcript string) 
 			{Role: "user", Content: transcript},
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
+		MaxTokens:      deepseekDefaultMaxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -219,12 +230,12 @@ var errDeepseekUnparsable = errors.New("deepseek: unparsable response")
 
 // deepseekUnparsable خطای قابل‌تشخیص می‌سازد و بخشی از جوابِ خام را لاگ می‌کند؛
 // قبلاً فقط «قابل پردازش نبود» می‌آمد و معلوم نبود DeepSeek چه برگردانده.
-func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, cause error) error {
+func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, finishReason string, cause error) error {
 	snippet := strings.TrimSpace(raw)
 	if len(snippet) > 300 {
 		snippet = snippet[:300]
 	}
-	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "cause", cause)
+	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "finish_reason", finishReason, "cause", cause)
 	return richerror.New(op).
 		WithErr(fmt.Errorf("%w (%s): %v", errDeepseekUnparsable, stage, cause)).
 		WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
@@ -262,6 +273,7 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		Model:          p.model(),
 		Messages:       messages,
 		ResponseFormat: map[string]string{"type": "json_object"},
+		MaxTokens:      deepseekDefaultMaxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -289,7 +301,7 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 
 	var chatResp deepseekChatResponse
 	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
-		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), err)
+		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), "", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -313,11 +325,11 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		if t := strings.TrimSpace(content); t != "" && !strings.Contains(t, "{") {
 			result = ConversationResult{Reply: t}
 		} else {
-			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, err)
+			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, chatResp.Choices[0].FinishReason, err)
 		}
 	}
 	if strings.TrimSpace(result.Reply) == "" {
-		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, errors.New("empty reply"))
+		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, chatResp.Choices[0].FinishReason, errors.New("empty reply"))
 	}
 	if chatResp.Usage != nil {
 		result.Usage = TokenUsage{
@@ -343,6 +355,7 @@ func (p *deepseekProvider) suggestReplies(ctx context.Context, sceneTitle, scene
 			{Role: "user", Content: formatSuggestTranscript(history)},
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
+		MaxTokens:      deepseekDefaultMaxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -418,6 +431,7 @@ func (p *deepseekProvider) checkRelevance(ctx context.Context, question, transcr
 			{Role: "user", Content: userText},
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
+		MaxTokens:      deepseekDefaultMaxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
