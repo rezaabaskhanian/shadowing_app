@@ -57,12 +57,24 @@ type deepseekChatMessage struct {
 	Content string `json:"content"`
 }
 
+// deepseekThinking حالتِ «فکرکردنِ پنهان» را کنترل می‌کند. برای فراخوانی‌های
+// ساختاریافته‌ی سریع (گرامر، ربط، پیشنهاد، پاسخِ گفتگو) خاموش نگه داشته می‌شود:
+// روشن‌بودنش هم توکنِ content نهایی را (وقتی از max_tokens رد بشود) خالی
+// می‌کند و هم تأخیر را چند برابر می‌کند تا جایی که کلاینتِ موبایل زودتر از
+// جوابِ سرور context را cancel می‌کند (همان چیزی که در لاگ می‌دیدیم).
+type deepseekThinking struct {
+	Type string `json:"type"`
+}
+
+var deepseekThinkingDisabled = &deepseekThinking{Type: "disabled"}
+
 type deepseekChatRequest struct {
 	Model          string                `json:"model"`
 	Messages       []deepseekChatMessage `json:"messages"`
 	ResponseFormat map[string]string     `json:"response_format,omitempty"`
 	Stream         bool                  `json:"stream"`
 	MaxTokens      int                   `json:"max_tokens,omitempty"`
+	Thinking       *deepseekThinking     `json:"thinking,omitempty"`
 }
 
 type deepseekChatResponse struct {
@@ -100,6 +112,7 @@ func (p *deepseekProvider) generateScene(ctx context.Context, prompt, difficulty
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
 		MaxTokens:      deepseekDefaultMaxTokens,
+		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -172,6 +185,7 @@ func (p *deepseekProvider) checkGrammar(ctx context.Context, transcript string) 
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
 		MaxTokens:      deepseekDefaultMaxTokens,
+		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -274,6 +288,7 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		Messages:       messages,
 		ResponseFormat: map[string]string{"type": "json_object"},
 		MaxTokens:      deepseekDefaultMaxTokens,
+		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -356,6 +371,7 @@ func (p *deepseekProvider) suggestReplies(ctx context.Context, sceneTitle, scene
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
 		MaxTokens:      deepseekDefaultMaxTokens,
+		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -432,6 +448,7 @@ func (p *deepseekProvider) checkRelevance(ctx context.Context, question, transcr
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
 		MaxTokens:      deepseekDefaultMaxTokens,
+		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
