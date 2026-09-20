@@ -272,19 +272,38 @@ func (r deepseekChatResponse) usableContent() string {
 	return r.Choices[0].Message.ReasoningContent
 }
 
-// deepseekUnparsable خطای قابل‌تشخیص می‌سازد و بخشی از جوابِ خام را لاگ می‌کند؛
-// قبلاً فقط «قابل پردازش نبود» می‌آمد و معلوم نبود DeepSeek چه برگردانده.
-// completionTokens برای تشخیصِ علتِ «content خالی» لاگ می‌شود: اگر مدل توکن
-// تولید کرده ولی content خالی است، خروجی جای دیگری رفته (رفتارِ شناخته‌شده‌ی
-// JSON modeِ DeepSeek)؛ اگر صفر باشد، مدل اصلاً چیزی تولید نکرده است.
-func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, finishReason string, completionTokens int, cause error) error {
-	snippet := strings.TrimSpace(raw)
-	if len(snippet) > 300 {
-		snippet = snippet[:300]
+// deepseekFailure دادهٔ تشخیصیِ یک پاسخِ غیرقابل‌استفاده. body بدنه‌ی خامِ HTTP
+// است: وقتی content و reasoning_content هر دو خالی‌اند ولی completionTokens>0،
+// تنها چیزی که نشان می‌دهد مدل خروجی را کجا گذاشته، همین بدنه‌ی خام است.
+type deepseekFailure struct {
+	op               richerror.Op
+	stage            string
+	status           int
+	content          string
+	body             string
+	finishReason     string
+	completionTokens int
+	cause            error
+}
+
+func deepseekSnippet(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if len(s) > max {
+		return s[:max]
 	}
-	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "finish_reason", finishReason, "completion_tokens", completionTokens, "cause", cause)
-	return richerror.New(op).
-		WithErr(fmt.Errorf("%w (%s): %v", errDeepseekUnparsable, stage, cause)).
+	return s
+}
+
+// deepseekUnparsable خطای قابل‌تشخیص می‌سازد و جزئیاتِ پاسخ را لاگ می‌کند؛
+// قبلاً فقط «قابل پردازش نبود» می‌آمد و معلوم نبود DeepSeek چه برگردانده.
+func deepseekUnparsable(f deepseekFailure) error {
+	slog.Warn("deepseek: unparsable response",
+		"op", string(f.op), "stage", f.stage, "status", f.status,
+		"raw", deepseekSnippet(f.content, 300),
+		"body", deepseekSnippet(f.body, 1200),
+		"finish_reason", f.finishReason, "completion_tokens", f.completionTokens, "cause", f.cause)
+	return richerror.New(f.op).
+		WithErr(fmt.Errorf("%w (%s): %v", errDeepseekUnparsable, f.stage, f.cause)).
 		WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
 }
 
@@ -357,7 +376,9 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 
 	var chatResp deepseekChatResponse
 	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
-		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), "", 0, err)
+		return ConversationResult{}, deepseekUnparsable(deepseekFailure{
+			op: op, stage: "body", status: resp.StatusCode, body: string(respBytes), cause: err,
+		})
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -381,11 +402,17 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		if t := strings.TrimSpace(content); t != "" && !strings.Contains(t, "{") {
 			result = ConversationResult{Reply: t}
 		} else {
-			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, chatResp.Choices[0].FinishReason, chatResp.completionTokens(), err)
+			return ConversationResult{}, deepseekUnparsable(deepseekFailure{
+				op: op, stage: "content", status: resp.StatusCode, content: content, body: string(respBytes),
+				finishReason: chatResp.Choices[0].FinishReason, completionTokens: chatResp.completionTokens(), cause: err,
+			})
 		}
 	}
 	if strings.TrimSpace(result.Reply) == "" {
-		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, chatResp.Choices[0].FinishReason, chatResp.completionTokens(), errors.New("empty reply"))
+		return ConversationResult{}, deepseekUnparsable(deepseekFailure{
+			op: op, stage: "empty_reply", status: resp.StatusCode, content: content, body: string(respBytes),
+			finishReason: chatResp.Choices[0].FinishReason, completionTokens: chatResp.completionTokens(), cause: errors.New("empty reply"),
+		})
 	}
 	if chatResp.Usage != nil {
 		result.Usage = TokenUsage{
