@@ -17,11 +17,10 @@ import (
 
 const deepseekChatCompletionsURL = "https://api.deepseek.com/chat/completions"
 
-// deepseekDefaultMaxTokens بودجه‌ی توکنِ خروجی هر درخواست را صریح تعیین می‌کند.
-// بدون این فیلد، API از پیش‌فرض خودش استفاده می‌کند که برای مدل‌های reasoning
-// (مثل deepseek-flash) کافی نیست: بخشی از بودجه صرف «فکرکردنِ پنهان»
-// (reasoning_content) می‌شود و اگر جا تمام شود، content نهایی خالی برمی‌گردد
-// (خطای «unexpected end of JSON input» با status=200 که در لاگ می‌دیدیم).
+// deepseekDefaultMaxTokens بودجه‌ی توکنِ خروجی هر درخواست را صریح تعیین می‌کند
+// (به‌جای تکیه بر پیش‌فرضِ خودِ API). thinking برای همه‌ی فراخوانی‌ها خاموش است
+// (به deepseekThinkingDisabled نگاه کن)، پس این بودجه فقط صرفِ content واقعی
+// می‌شود، نه reasoning پنهان.
 const deepseekDefaultMaxTokens = 2048
 
 // deepseekProvider تولید محتوای صحنه با کمک مدل DeepSeek را انجام می‌دهد.
@@ -242,32 +241,47 @@ func (p *deepseekProvider) checkGrammar(ctx context.Context, transcript string) 
 // علامت می‌زند تا converse فقط برای همین حالت دوباره تلاش کند، نه برای هر خطایی.
 var errDeepseekUnparsable = errors.New("deepseek: unparsable response")
 
+func (r deepseekChatResponse) completionTokens() int {
+	if r.Usage == nil {
+		return 0
+	}
+	return r.Usage.CompletionTokens
+}
+
 // deepseekUnparsable خطای قابل‌تشخیص می‌سازد و بخشی از جوابِ خام را لاگ می‌کند؛
 // قبلاً فقط «قابل پردازش نبود» می‌آمد و معلوم نبود DeepSeek چه برگردانده.
-func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, finishReason string, cause error) error {
+// completionTokens برای تشخیصِ علتِ «content خالی» لاگ می‌شود: اگر مدل توکن
+// تولید کرده ولی content خالی است، خروجی جای دیگری رفته (رفتارِ شناخته‌شده‌ی
+// JSON modeِ DeepSeek)؛ اگر صفر باشد، مدل اصلاً چیزی تولید نکرده است.
+func deepseekUnparsable(op richerror.Op, stage string, status int, raw string, finishReason string, completionTokens int, cause error) error {
 	snippet := strings.TrimSpace(raw)
 	if len(snippet) > 300 {
 		snippet = snippet[:300]
 	}
-	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "finish_reason", finishReason, "cause", cause)
+	slog.Warn("deepseek: unparsable response", "op", string(op), "stage", stage, "status", status, "raw", snippet, "finish_reason", finishReason, "completion_tokens", completionTokens, "cause", cause)
 	return richerror.New(op).
 		WithErr(fmt.Errorf("%w (%s): %v", errDeepseekUnparsable, stage, cause)).
 		WithMessage("پاسخ مدل (DeepSeek) قابل پردازش نبود")
 }
 
-// converse یک بار دوباره تلاش می‌کند اگر جواب DeepSeek خالی/غیرقابل‌استفاده بود —
-// حالتِ JSON آن گاهی محتوای خالی برمی‌گرداند و تلاش دوم معمولاً جواب می‌دهد.
+// deepseekEmptyRetryInstruction به تلاشِ دومِ converse اضافه می‌شود. تکرارِ عینِ
+// همان درخواست بی‌فایده بود (در لاگ، هر دو تلاش دقیقاً یک‌جور خالی برمی‌گشتند)،
+// چون «محتوای خالی» در JSON modeِ DeepSeek رفتاری است که خودشان پذیرفته‌اند و
+// با همان ورودی تکرار می‌شود؛ پس تلاش دوم باید ورودیِ متفاوتی داشته باشد.
+const deepseekEmptyRetryInstruction = "\n\nIMPORTANT: your previous response had an empty content field. You MUST return a single non-empty JSON object matching the schema above. Never return an empty string."
+
+// converse یک بار دوباره تلاش می‌کند اگر جواب DeepSeek خالی/غیرقابل‌استفاده بود.
 // خطاهای دیگر (شبکه، کلید، سهمیه) دوباره تلاش نمی‌شوند.
 func (p *deepseekProvider) converse(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
-	result, err := p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+	result, err := p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn, false)
 	if err != nil && errors.Is(err, errDeepseekUnparsable) {
 		slog.Warn("deepseek: retrying converse once after unusable response")
-		return p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn)
+		return p.converseOnce(ctx, sceneTitle, sceneDescription, sceneCategory, history, turnNumber, maxTurns, wrapUpFromTurn, true)
 	}
 	return result, err
 }
 
-func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int) (ConversationResult, error) {
+func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDescription, sceneCategory string, history []ConversationTurn, turnNumber, maxTurns, wrapUpFromTurn int, afterEmpty bool) (ConversationResult, error) {
 	const op = "aiservice.deepseekProvider.converse"
 
 	key := p.apiKey()
@@ -276,6 +290,9 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 	}
 
 	systemPrompt := fmt.Sprintf(conversationSystemPromptTemplate, sceneTitle, sceneDescription, sceneCategory, turnNumber, maxTurns, wrapUpFromTurn)
+	if afterEmpty {
+		systemPrompt += deepseekEmptyRetryInstruction
+	}
 
 	messages := make([]deepseekChatMessage, 0, len(history)+1)
 	messages = append(messages, deepseekChatMessage{Role: "system", Content: systemPrompt})
@@ -316,7 +333,7 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 
 	var chatResp deepseekChatResponse
 	if err := json.Unmarshal(respBytes, &chatResp); err != nil {
-		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), "", err)
+		return ConversationResult{}, deepseekUnparsable(op, "body", resp.StatusCode, string(respBytes), "", 0, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -340,11 +357,11 @@ func (p *deepseekProvider) converseOnce(ctx context.Context, sceneTitle, sceneDe
 		if t := strings.TrimSpace(content); t != "" && !strings.Contains(t, "{") {
 			result = ConversationResult{Reply: t}
 		} else {
-			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, chatResp.Choices[0].FinishReason, err)
+			return ConversationResult{}, deepseekUnparsable(op, "content", resp.StatusCode, content, chatResp.Choices[0].FinishReason, chatResp.completionTokens(), err)
 		}
 	}
 	if strings.TrimSpace(result.Reply) == "" {
-		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, chatResp.Choices[0].FinishReason, errors.New("empty reply"))
+		return ConversationResult{}, deepseekUnparsable(op, "empty_reply", resp.StatusCode, content, chatResp.Choices[0].FinishReason, chatResp.completionTokens(), errors.New("empty reply"))
 	}
 	if chatResp.Usage != nil {
 		result.Usage = TokenUsage{
