@@ -54,6 +54,12 @@ type GeneratedScene struct {
 	GrammarNote *GeneratedGrammarNote `json:"grammar_note,omitempty"`
 }
 
+// sceneMaxTokens سقفِ توکنِ خروجی برای تولیدِ یک صحنه‌ی کامل است (مثل Claude).
+// یک صحنه ۲-۳ هات‌اسپات × ۴-۸ دیالوگ با ترجمه‌ی فارسی و واژه‌هاست و به‌راحتی از
+// سقفِ عمومیِ ۲۰۴۸ (deepseekDefaultMaxTokens) رد می‌شود؛ با آن سقف JSON وسطش
+// بریده می‌شد و «پاسخ مدل قابل پردازش نبود» می‌آمد.
+const sceneMaxTokens = 8000
+
 // maxGrammarExamples سقفِ تعداد مثال‌ها (هم‌راستا با scene.MaxGrammarExamples؛
 // پکیج ai به دامین وابسته نیست).
 const maxGrammarExamples = 4

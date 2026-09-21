@@ -71,6 +71,12 @@ func openRouterUnparsable(op richerror.Op, stage string, status int, content, bo
 // خطاهای HTTP/وضعیت اینجا مدیریت می‌شوند؛ تفسیرِ content (JSON/متنِ خالی) به‌عهده‌ی
 // هر متد است، چون هر کدام قرارداد پاسخِ متفاوتی دارند.
 func (p *openRouterProvider) call(ctx context.Context, op richerror.Op, systemPrompt string, messages []deepseekChatMessage) (deepseekChatResponse, []byte, error) {
+	return p.callWithMaxTokens(ctx, op, systemPrompt, messages, deepseekDefaultMaxTokens)
+}
+
+// callWithMaxTokens مثل call است ولی سقفِ توکنِ خروجی را صریح می‌گیرد؛ برای
+// خروجی‌های بلند (تولید صحنه) که با سقفِ عمومیِ ۲۰۴۸ بریده می‌شدند.
+func (p *openRouterProvider) callWithMaxTokens(ctx context.Context, op richerror.Op, systemPrompt string, messages []deepseekChatMessage, maxTokens int) (deepseekChatResponse, []byte, error) {
 	key := p.apiKey()
 	if key == "" {
 		return deepseekChatResponse{}, nil, richerror.New(op).WithMessage("کلید OPENROUTER_API_KEY تنظیم نشده است")
@@ -84,7 +90,7 @@ func (p *openRouterProvider) call(ctx context.Context, op richerror.Op, systemPr
 		Model:          p.model(),
 		Messages:       all,
 		ResponseFormat: map[string]string{"type": "json_object"},
-		MaxTokens:      deepseekDefaultMaxTokens,
+		MaxTokens:      maxTokens,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -138,14 +144,28 @@ func (p *openRouterProvider) generateScene(ctx context.Context, prompt, difficul
 		userText += fmt.Sprintf("\nDifficulty: %s", difficulty)
 	}
 
-	chatResp, _, err := p.call(ctx, op, sceneSystemPrompt, []deepseekChatMessage{{Role: "user", Content: userText}})
+	chatResp, _, err := p.callWithMaxTokens(ctx, op, sceneSystemPrompt, []deepseekChatMessage{{Role: "user", Content: userText}}, sceneMaxTokens)
 	if err != nil {
 		return GeneratedScene{}, err
 	}
 
+	content := chatResp.usableContent()
 	var scene GeneratedScene
-	if err := json.Unmarshal([]byte(extractJSON(chatResp.usableContent())), &scene); err != nil {
-		return GeneratedScene{}, richerror.New(op).WithErr(err).WithMessage("پاسخ مدل (OpenRouter) قابل پردازش نبود")
+	if err := json.Unmarshal([]byte(extractJSON(content)), &scene); err != nil {
+		finish, tokens := "", 0
+		if len(chatResp.Choices) > 0 {
+			finish = chatResp.Choices[0].FinishReason
+		}
+		if chatResp.Usage != nil {
+			tokens = chatResp.Usage.CompletionTokens
+		}
+		// لاگ با finish_reason و ابتدای پاسخ، تا دفعه‌ی بعد علت روشن باشد.
+		parseErr := openRouterUnparsable(op, "scene-json", http.StatusOK, content, "", finish, tokens, err)
+		if finish == "length" {
+			return GeneratedScene{}, richerror.New(op).WithErr(parseErr).
+				WithMessage("پاسخ مدل (OpenRouter) نیمه‌کاره ماند و به سقف توکن خروجی رسید؛ دوباره امتحان کن یا مدلی با خروجی بلندتر انتخاب کن")
+		}
+		return GeneratedScene{}, parseErr
 	}
 	if difficulty != "" {
 		scene.Difficulty = difficulty

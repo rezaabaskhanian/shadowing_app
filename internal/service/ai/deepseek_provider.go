@@ -121,7 +121,7 @@ func (p *deepseekProvider) generateScene(ctx context.Context, prompt, difficulty
 			{Role: "user", Content: userText},
 		},
 		ResponseFormat: map[string]string{"type": "json_object"},
-		MaxTokens:      deepseekDefaultMaxTokens,
+		MaxTokens:      sceneMaxTokens,
 		Thinking:       deepseekThinkingDisabled,
 	}
 	bodyBytes, err := json.Marshal(reqBody)
