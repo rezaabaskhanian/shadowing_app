@@ -204,6 +204,7 @@ func (s Service) Server() {
 			echo.GET,
 			echo.POST,
 			echo.PUT,
+			echo.PATCH, // بدون این preflightِ PATCH (مثل تغییر ترتیب صحنه) رد می‌شود → «Failed to fetch»
 			echo.DELETE,
 			echo.OPTIONS,
 		},
