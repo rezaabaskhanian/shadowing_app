@@ -127,6 +127,7 @@ export default function SceneCreator({
   const [grammarExamples, setGrammarExamples] = useState<GrammarExampleInput[]>([]);
   const [grammarAudioURL, setGrammarAudioURL] = useState("");
   const [generatingGrammarAudio, setGeneratingGrammarAudio] = useState(false);
+  const [uploadingGrammarAudio, setUploadingGrammarAudio] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // صداهای در دسترس ElevenLabs (برای انتخاب مرد/زن هنگام تولید صدای هر دیالوگ)
@@ -482,6 +483,24 @@ export default function SceneCreator({
     }
   }
 
+  // ---------- آپلود دستیِ صدای نکته‌ی گرامری از روی سیستم ----------
+  async function handleGrammarAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    setUploadingGrammarAudio(true);
+    try {
+      const url = await uploadAudio(file);
+      setGrammarAudioURL(url);
+      notify("صدای نکته‌ی گرامری آپلود شد ✅", "ok");
+    } catch (err: any) {
+      notify(err.message, "err");
+    } finally {
+      setUploadingGrammarAudio(false);
+      input.value = ""; // تا انتخابِ دوباره‌ی همان فایل هم onChange بزند
+    }
+  }
+
   // ---------- تولید صدای نکته‌ی گرامری با هوش مصنوعی (ElevenLabs) ----------
   // متنِ توضیح فارسی + مثال‌ها را پشتِ هم می‌خواند تا کاربری که حوصله‌ی خواندن
   // ندارد، هم توضیح و هم مثال‌ها را بشنود؛ عیناً هم‌الگوی صدای دیالوگ‌ها.
@@ -755,6 +774,17 @@ export default function SceneCreator({
           <p style={{ marginTop: 0, opacity: 0.7, fontSize: 12 }}>
             برای کاربری که حوصله‌ی خواندن ندارد — توضیح + مثال‌ها را با صدا می‌شنود، عیناً مثل صدای دیالوگ‌ها.
           </p>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ fontSize: 12, opacity: 0.8 }}>آپلود فایل صوتی از سیستم</label>
+            <input
+              type="file"
+              accept="audio/*"
+              disabled={uploadingGrammarAudio}
+              onChange={handleGrammarAudioUpload}
+            />
+            {uploadingGrammarAudio && <p className="hint">در حال آپلود...</p>}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>یا با هوش مصنوعی بساز:</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {voices.length > 0 && (
               <select
@@ -790,7 +820,21 @@ export default function SceneCreator({
               {generatingGrammarAudio ? "در حال ساخت..." : "🔊 تولید با AI"}
             </button>
           </div>
-          {grammarAudioURL && <audio controls src={`${API_BASE}${grammarAudioURL}`} style={{ marginTop: 8 }} />}
+          {grammarAudioURL && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+              <audio controls src={`${API_BASE}${grammarAudioURL}`} />
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => {
+                  setGrammarAudioURL("");
+                  notify("صدا حذف شد — با ذخیره‌ی صحنه اعمال می‌شود", "ok");
+                }}
+              >
+                🗑 حذف صدا
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
