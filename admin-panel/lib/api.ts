@@ -485,7 +485,14 @@ export async function getAIUsageReport(days = 30): Promise<AIUsageReport> {
   const res = await authFetch(`/v1/admin/ai-usage-report?days=${days}`, {
     method: "GET",
   });
-  return jsonOrThrow(res);
+  const data = await jsonOrThrow(res);
+  return {
+    total_cost_usd: data.total_cost_usd ?? 0,
+    period_cost_usd: data.period_cost_usd ?? 0,
+    period_days: data.period_days ?? days,
+    daily: data.daily || [],
+    daily_cost_usd: data.daily_cost_usd || [],
+  };
 }
 
 // ---------- بخش‌های صفحه‌ی معرفی (landing) ----------

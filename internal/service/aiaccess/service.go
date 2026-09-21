@@ -231,6 +231,11 @@ func (s *Service) Report(ctx context.Context, days int) (UsageReport, error) {
 		return UsageReport{}, richerror.New(op).WithErr(err)
 	}
 
+	// اسلایسِ nil در JSON می‌شود null و فرانت روی .length می‌ترکد؛ همیشه [] بده.
+	if stats.Daily == nil {
+		stats.Daily = []postgresaiaccess.DailyUsage{}
+	}
+
 	report := UsageReport{
 		TotalCostUSD:  s.costUSD(stats.TotalInputTokens, stats.TotalOutputTokens),
 		PeriodCostUSD: s.costUSD(stats.PeriodInputTokens, stats.PeriodOutputTokens),
