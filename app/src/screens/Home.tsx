@@ -419,9 +419,17 @@ export const HomeScreen = () => {
                 <View style={styles.storyScrim} />
 
                 <View style={styles.storyContent}>
-                  <Text style={styles.storyCategory}>
-                    {(featuredScenario.category || '').toString().toUpperCase()}
-                  </Text>
+                  {featuredScenario.category ? (
+                    // زدن روی دسته → تب صحنه‌ها با همین دسته فیلتر می‌شود
+                    <TouchableOpacity
+                      hitSlop={8}
+                      onPress={() => navigation.navigate('Scenes', { category: featuredScenario.category })}
+                    >
+                      <Text style={styles.storyCategory}>
+                        {featuredScenario.category.toString().toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                   <Text style={styles.storyTitle}>{featuredScenario.title}</Text>
 
                   {missionScene && todaysMission && (

@@ -73,28 +73,47 @@ export default function SceneList({
     }
   }
 
-  // جابه‌جایی یک صحنه در مسیر آموزشی: با همسایه‌اش (بر اساس order فعلی)
-  // مقدار order را عوض می‌کند. لیست بر اساس order مرتب نمایش داده می‌شود،
-  // پس این دقیقاً یعنی جابه‌جایی جایگاه در مسیر.
-  async function moveScene(sorted: SceneResp[], index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= sorted.length) return;
-    const a = sorted[index];
-    const b = sorted[target];
+  // ترتیب نمایش = ترتیبی که اپ می‌بیند (بک‌اند بر اساس order و بعد جدیدترین)
+  const sorted = [...scenes].sort(
+    (a, b) =>
+      a.order - b.order ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const visible = sorted.filter((s) =>
+    !categoryFilter
+      ? true
+      : categoryFilter === "__none__"
+      ? !s.category
+      : s.category === categoryFilter
+  );
+  const needsNumbering =
+    sorted.length > 1 && sorted.every((s) => s.order === sorted[0].order);
+
+  // جابه‌جایی یک صحنه در مسیر آموزشی: جایش را با «همسایه‌ی قابل‌مشاهده» عوض
+  // می‌کند (با فیلتر دسته‌بندی هم درست کار می‌کند) و بعد کل لیست را از ۱ تا n
+  // دوباره شماره‌گذاری می‌کند. فقط عوض‌کردنِ دو عدد order کافی نیست: اگر چند
+  // صحنه order یکسان داشته باشند (مثلاً همه ۰)، جابه‌جایی هیچ اثری نداشت.
+  async function moveScene(index: number, dir: -1 | 1) {
+    const moving = visible[index];
+    const neighbor = visible[index + dir];
+    if (!moving || !neighbor) return;
+
+    const next = [...sorted];
+    const from = next.findIndex((x) => x.id === moving.id);
+    const to = next.findIndex((x) => x.id === neighbor.id);
+    next.splice(from, 1);
+    next.splice(to, 0, moving);
+
+    const changed = next
+      .map((sc, i) => ({ sc, order: i + 1 }))
+      .filter(({ sc, order }) => sc.order !== order);
     try {
-      await Promise.all([
-        updateSceneOrder(a.id, b.order),
-        updateSceneOrder(b.id, a.order),
-      ]);
+      await Promise.all(changed.map(({ sc, order }) => updateSceneOrder(sc.id, order)));
       load();
     } catch (err: any) {
       notify(err.message, "err");
     }
   }
-
-  const sorted = [...scenes].sort((a, b) => a.order - b.order);
-  const needsNumbering =
-    sorted.length > 1 && sorted.every((s) => s.order === sorted[0].order);
 
   async function autoNumber() {
     if (!confirm("ترتیب فعلی مسیر بر اساس تاریخ ساخت شماره‌گذاری شود؟"))
@@ -154,16 +173,7 @@ export default function SceneList({
         <div className="empty">هنوز صحنه‌ای ثبت نشده است.</div>
       ) : (
         <div className="scene-grid">
-          {sorted
-            .filter((s) =>
-              !categoryFilter
-                ? true
-                : categoryFilter === "__none__"
-                ? !s.category
-                : s.category === categoryFilter
-            )
-            .map((s) => {
-              const idx = sorted.findIndex((x) => x.id === s.id);
+          {visible.map((s, idx) => {
               return (
             <div
               className="scene-item"
@@ -196,15 +206,15 @@ export default function SceneList({
                 <button
                   className="btn btn-ghost btn-sm"
                   disabled={idx <= 0}
-                  onClick={() => moveScene(sorted, idx, -1)}
+                  onClick={() => moveScene(idx, -1)}
                   title="بالاتر در مسیر"
                 >
                   ▲
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
-                  disabled={idx < 0 || idx >= sorted.length - 1}
-                  onClick={() => moveScene(sorted, idx, 1)}
+                  disabled={idx >= visible.length - 1}
+                  onClick={() => moveScene(idx, 1)}
                   title="پایین‌تر در مسیر"
                 >
                   ▼

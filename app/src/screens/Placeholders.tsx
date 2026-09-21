@@ -9,13 +9,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, TrendingUp, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { SceneListCardSkeleton } from '../components/SceneListCardSkeleton';
 import { StreakInfoModal } from '../components/StreakInfoModal';
 import { XpInfoModal } from '../components/XpInfoModal';
-import { useScenes } from '../data/ScenesContext';
+import { sceneKeys, useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import type { ScenarioCategory } from '../data/scenarios';
 import { COLORS, hexToRgba } from '../theme/colors';
@@ -41,8 +42,14 @@ export { HomeScreen } from './Home';
 type CategoryFilter = ScenarioCategory | 'all';
 type LevelFilter = string | 'all';
 
+// دسته‌بندی را ادمین دستی تایپ می‌کند؛ «Shop» و «shop » باید یک دسته حساب شوند،
+// وگرنه دو چیپ جدا می‌شد و زدن روی یکی نصف صحنه‌ها را نشان می‌داد.
+const categoryKey = (c?: string) => (c || '').trim().toLowerCase();
+
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const queryClient = useQueryClient();
   const { scenes, loading } = useScenes();
   const { t } = useLanguage();
   const toast = useToast();
@@ -50,15 +57,39 @@ export const ScenesScreen = () => {
   const [activeLevel, setActiveLevel] = React.useState<LevelFilter>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // هر بار که این تب باز می‌شود، لیستی که کهنه (بیش از staleTime) شده دوباره
+  // گرفته می‌شود؛ وگرنه دسته‌بندی/ترتیبی که ادمین تازه عوض کرده تا بستن اپ
+  // دیده نمی‌شد.
+  useFocusEffect(
+    React.useCallback(() => {
+      queryClient.refetchQueries({ queryKey: sceneKeys.list, stale: true });
+    }, [queryClient])
+  );
+
+  // رسیدن از جای دیگر اپ (مثلاً زدن روی دسته‌ی کارت خانه) با دسته‌ی از پیش
+  // انتخاب‌شده.
+  const paramCategory: string | undefined = route.params?.category;
+  React.useEffect(() => {
+    if (paramCategory) {
+      setActiveCategory(categoryKey(paramCategory));
+      setActiveLevel('all');
+      setSearchQuery('');
+      // پارامتر مصرف شد؛ پاکش می‌کنیم تا زدن دوباره‌ی همان دسته هم اثر کند.
+      navigation.setParams({ category: undefined });
+    }
+  }, [paramCategory, navigation]);
+
   // دسته‌بندی‌ها دیگر ثابت نیستند؛ از روی دسته‌بندی واقعی صحنه‌ها (که ادمین در
-  // پنل تعیین می‌کند) ساخته می‌شوند.
+  // پنل تعیین می‌کند) ساخته می‌شوند. شناسه‌ی چیپ همان categoryKey است.
   const categories: { id: CategoryFilter; label: string }[] = React.useMemo(() => {
-    const distinct = Array.from(
-      new Set(scenes.map((s) => s.category).filter((c): c is string => !!c))
-    );
+    const byKey = new Map<string, string>();
+    for (const s of scenes) {
+      const key = categoryKey(s.category);
+      if (key && !byKey.has(key)) byKey.set(key, (s.category || '').trim());
+    }
     return [
       { id: 'all', label: t('all') },
-      ...distinct.map((c) => ({ id: c, label: c })),
+      ...Array.from(byKey, ([id, label]) => ({ id, label })),
     ];
   }, [scenes, t]);
 
@@ -74,7 +105,7 @@ export const ScenesScreen = () => {
   }, [scenes, t]);
 
   const filteredScenes = scenes.filter((scenario) => {
-    if (activeCategory !== 'all' && scenario.category !== activeCategory) return false;
+    if (activeCategory !== 'all' && categoryKey(scenario.category) !== activeCategory) return false;
     if (activeLevel !== 'all' && scenario.level !== activeLevel) return false;
     const q = searchQuery.trim().toLowerCase();
     if (q && !scenario.title.toLowerCase().includes(q) && !(scenario.description || '').toLowerCase().includes(q)) {

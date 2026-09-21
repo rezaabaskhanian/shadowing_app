@@ -63,12 +63,6 @@ export default function LoginPage() {
         </button>
 
         {error && <div className="error-msg">{error}</div>}
-
-        <div className="hint-box">
-          کاربر ادمین پیش‌فرض (از seed دیتابیس):
-          <br />
-          شماره: <b dir="ltr">09000000000</b> — رمز: <b dir="ltr">admin123</b>
-        </div>
       </form>
     </div>
   );
