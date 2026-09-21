@@ -25,6 +25,7 @@ import type {
   SceneSubmission,
   Speaker,
   TopicSuggestion,
+  PhraseInput,
   WordInput,
 } from "@/lib/types";
 
@@ -60,6 +61,7 @@ function newDialogue(order: number): DialogueInput {
     partial_hint: "",
     wait_duration: 5,
     words: [],
+    phrases: [],
   };
 }
 
@@ -80,6 +82,7 @@ function hotspotsFromScene(scene: SceneResp): HotspotInput[] {
       partial_hint: d.partial_hint || "",
       wait_duration: d.wait_duration || 5,
       words: d.words || [],
+      phrases: d.phrases || [],
     })),
   }));
 }
@@ -193,6 +196,7 @@ export default function SceneCreator({
       partial_hint: "",
       wait_duration: 5,
       words: [],
+      phrases: [],
     }));
     setHotspots(
       dialogues.length > 0
@@ -253,6 +257,7 @@ export default function SceneCreator({
           partial_hint: "",
           wait_duration: d.wait_duration || 5,
           words: d.words || [],
+          phrases: [],
         })),
       }));
       setHotspots(newHotspots);
@@ -437,6 +442,32 @@ export default function SceneCreator({
       k === wi ? { ...w, ...patch } : w
     );
     updateDialogue(hi, di, { words });
+  }
+  // ---------- اصطلاح/عبارت‌های دیالوگ (idiom / phrase) ----------
+  function addPhrase(hi: number, di: number) {
+    updateDialogue(hi, di, {
+      phrases: [
+        ...(hotspots[hi]?.dialogues[di]?.phrases ?? []),
+        { phrase: "", meaning: "" },
+      ],
+    });
+  }
+  function updatePhrase(
+    hi: number,
+    di: number,
+    pi: number,
+    patch: Partial<PhraseInput>
+  ) {
+    const phrases = (hotspots[hi]?.dialogues[di]?.phrases ?? []).map((p, k) =>
+      k === pi ? { ...p, ...patch } : p
+    );
+    updateDialogue(hi, di, { phrases });
+  }
+  function removePhrase(hi: number, di: number, pi: number) {
+    const phrases = (hotspots[hi]?.dialogues[di]?.phrases ?? []).filter(
+      (_, k) => k !== pi
+    );
+    updateDialogue(hi, di, { phrases });
   }
   function removeWord(hi: number, di: number, wi: number) {
     const words = (hotspots[hi]?.dialogues[di]?.words ?? []).filter(
@@ -1263,6 +1294,51 @@ export default function SceneCreator({
                       onClick={() => addWord(selected, di)}
                     >
                       + افزودن واژه
+                    </button>
+                  </div>
+
+                  {/* اصطلاح/عبارت دیالوگ (idiom / phrase) — اختیاری؛ خالی = در اپ نشان داده نمی‌شود */}
+                  <div style={{ marginTop: 12 }}>
+                    <label>💬 اصطلاح / عبارت (Idiom / Phrase) — اختیاری</label>
+                    <p style={{ marginTop: 0, opacity: 0.7, fontSize: 12 }}>
+                      اگر این جمله اصطلاح یا عبارت خاصی دارد اضافه کن؛ اگر نه، خالی بگذار و در اپ چیزی نمایش داده نمی‌شود.
+                    </p>
+                    {(d.phrases ?? []).map((p, pi) => (
+                      <div
+                        key={pi}
+                        style={{ display: "flex", gap: 6, marginTop: 6 }}
+                      >
+                        <input
+                          dir="ltr"
+                          placeholder="e.g. break the ice"
+                          value={p.phrase}
+                          onChange={(e) =>
+                            updatePhrase(selected, di, pi, { phrase: e.target.value })
+                          }
+                        />
+                        <input
+                          placeholder="معنی فارسی"
+                          value={p.meaning}
+                          onChange={(e) =>
+                            updatePhrase(selected, di, pi, { meaning: e.target.value })
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => removePhrase(selected, di, pi)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ marginTop: 6 }}
+                      onClick={() => addPhrase(selected, di)}
+                    >
+                      + افزودن اصطلاح / عبارت
                     </button>
                   </div>
                 </div>

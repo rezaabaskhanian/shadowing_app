@@ -121,6 +121,15 @@ func (s Service) buildHotspots(ctx context.Context, op richerror.Op, reqHotspots
 				dialog.Words = words
 			}
 
+			// اصطلاح/عبارت اختیاری است؛ ردیفِ بدون متن (فرم نیمه‌پر) دور ریخته می‌شود.
+			for _, p := range dReq.Phrases {
+				phrase := strings.TrimSpace(p.Phrase)
+				if phrase == "" {
+					continue
+				}
+				dialog.Phrases = append(dialog.Phrases, scene.DialoguePhrase{Phrase: phrase, Meaning: strings.TrimSpace(p.Meaning)})
+			}
+
 			hotspot.AddDialogue(dialog)
 		}
 

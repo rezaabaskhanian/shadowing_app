@@ -9,6 +9,12 @@ export interface WordEntry {
   meaning: string;
 }
 
+/** اصطلاح یا عبارت (idiom / phrase) یک جمله همراه با معنی؛ اختیاری و ادمین می‌گذارد. */
+export interface PhraseEntry {
+  phrase: string;
+  meaning: string;
+}
+
 /** زمان‌بندی یک کلمه در صدای مرجع (ثانیه)، برای هایلایت هم‌زمان با پخش. */
 export interface WordTimingEntry {
   word: string;
@@ -25,6 +31,7 @@ export interface Dialogue {
   audio_url: string;
   duration: number;
   words?: WordEntry[];
+  phrases?: PhraseEntry[];
   wordTimings?: WordTimingEntry[];
   // آیا کاربر این دیالوگ را قبلاً ضبط/نمره‌دهی کرده (از بک‌اند).
   is_completed?: boolean;
@@ -69,6 +76,7 @@ export interface DialogueItem {
   translation: string;
   audioUrl: string;
   words?: WordEntry[];
+  phrases?: PhraseEntry[];
   wordTimings?: WordTimingEntry[];
   // آیا کاربر این دیالوگ را قبلاً ضبط/نمره‌دهی کرده (از بک‌اند)؛ برای
   // اینکه با برگشتن به صحنه، جمله‌های قبلاً ضبط‌شده دوباره خالی نمایش
@@ -132,6 +140,7 @@ export function expandScenarioToDialogueItems(scenario: Scenario): DialogueItem[
           translation: d.persian_text,
           audioUrl: formatAudioUrl(d.audio_url),
           words: d.words,
+          phrases: d.phrases,
           wordTimings: d.wordTimings,
           is_completed: d.is_completed,
           score: d.score,

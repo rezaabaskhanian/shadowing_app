@@ -8,6 +8,7 @@ import type { DialogueItem } from '../../../data/scenarios';
 import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
 import { DialogueSentenceContent } from './DialogueSentenceContent';
 import { DialogueVocabChips } from './DialogueVocabChips';
+import { DialoguePhrases } from './DialoguePhrases';
 
 /**
  * جعبه‌ی متن جمله: خودِ جمله (مخفی یا هایلایت‌شده — فقط وقتی textDisplayMode
@@ -105,6 +106,11 @@ export const DialogueSentenceBox: React.FC<{
         accentLightColor={accentLightColor}
         t={t}
       />
+    )}
+
+    {/* اصطلاح/عبارت‌های همین جمله — فقط اگر ادمین چیزی گذاشته باشد؛ خالی = هیچ نمایشی */}
+    {activeStepIndex !== 2 && (
+      <DialoguePhrases phrases={currentDialogue.phrases} accentColor={accentColor} t={t} />
     )}
 
     {activeStepIndex === 1 && (

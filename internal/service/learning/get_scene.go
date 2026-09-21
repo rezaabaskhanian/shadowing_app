@@ -33,6 +33,7 @@ func (s Service) GetScene(ctx context.Context, ID string) (dto.Scene, error) {
 				PartialHint:  d.PartialHint,
 				WaitDuration: d.WaitDuration,
 				Words:        toWordDTOs(d.Words),
+				Phrases:      toPhraseDTOs(d.Phrases),
 				WordTimings:  toWordTimingDTOs(d.WordTimings),
 			}
 			// NewDialogue = append(NewDialogue, NewDialogue...)

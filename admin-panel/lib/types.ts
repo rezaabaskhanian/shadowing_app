@@ -8,6 +8,12 @@ export interface WordInput {
   meaning: string;
 }
 
+// یک اصطلاح یا عبارت (idiom / phrase) دیالوگ همراه با معنی
+export interface PhraseInput {
+  phrase: string;
+  meaning: string;
+}
+
 // ورودی‌ها (برای ساخت صحنه)
 export interface DialogueInput {
   order: number;
@@ -19,6 +25,7 @@ export interface DialogueInput {
   partial_hint: string;
   wait_duration: number;
   words: WordInput[];
+  phrases: PhraseInput[];
 }
 
 export interface HotspotInput {
@@ -92,6 +99,7 @@ export interface DialogueResp {
   partial_hint: string;
   wait_duration: number;
   words?: WordInput[];
+  phrases?: PhraseInput[];
 }
 
 export interface HotspotResp {

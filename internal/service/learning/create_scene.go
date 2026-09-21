@@ -103,6 +103,7 @@ func toSceneDTO(s scene.Scene) dto.Scene {
 				PartialHint:  d.PartialHint,
 				WaitDuration: d.WaitDuration,
 				Words:        toWordDTOs(d.Words),
+				Phrases:      toPhraseDTOs(d.Phrases),
 				WordTimings:  toWordTimingDTOs(d.WordTimings),
 			}
 		}
@@ -142,6 +143,16 @@ func toWordDTOs(ws []scene.DialogueWord) []dto.Word {
 	out := make([]dto.Word, 0, len(ws))
 	for _, w := range ws {
 		out = append(out, dto.Word{Word: w.Word, Meaning: w.Meaning})
+	}
+	return out
+}
+
+// toPhraseDTOs اصطلاح/عبارت‌های دامنه را به DTO تبدیل می‌کند؛ همیشه آرایه
+// (نه null) برمی‌گرداند تا اپ بدون بررسی null فقط روی length تصمیم بگیرد.
+func toPhraseDTOs(ps []scene.DialoguePhrase) []dto.Phrase {
+	out := make([]dto.Phrase, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, dto.Phrase{Phrase: p.Phrase, Meaning: p.Meaning})
 	}
 	return out
 }

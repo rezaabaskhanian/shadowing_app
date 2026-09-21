@@ -82,6 +82,12 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 					wordsJSON = b
 				}
 			}
+			phrasesJSON := []byte("[]")
+			if len(d.Phrases) > 0 {
+				if b, mErr := json.Marshal(d.Phrases); mErr == nil {
+					phrasesJSON = b
+				}
+			}
 			var wordTimingsJSON []byte
 			if len(d.WordTimings) > 0 {
 				if b, mErr := json.Marshal(d.WordTimings); mErr == nil {
@@ -91,8 +97,8 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, words, word_timings, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
+				audio_url, display_type, partial_hint, wait_duration, words, word_timings, phrases, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID,
@@ -107,6 +113,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 				d.WaitDuration,
 				wordsJSON,
 				wordTimingsJSON,
+				phrasesJSON,
 			)
 			if err != nil {
 				return richerror.New(op).
@@ -268,7 +275,7 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 		dialogueQuery := `SELECT
 			id, hotspot_id, "order", speaker, original_text, COALESCE(translation, ''),
 			COALESCE(audio_url, ''), display_type, COALESCE(partial_hint, ''), wait_duration,
-			COALESCE(words, '[]'::jsonb), word_timings, created_at
+			COALESCE(words, '[]'::jsonb), word_timings, COALESCE(phrases, '[]'::jsonb), created_at
 		FROM dialogues WHERE hotspot_id = $1 ORDER BY "order"`
 
 		dRows, err := r.conn.Query(ctx, dialogueQuery, h.ID)
@@ -282,16 +289,20 @@ func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 			var d scene.Dialogue
 			var wordsJSON []byte
 			var wordTimingsJSON []byte
+			var phrasesJSON []byte
 			err := dRows.Scan(
 				&d.ID, &d.HotspotID, &d.Order, &d.Speaker, &d.OriginalText,
 				&d.Translation, &d.AudioURL, &d.DisplayType,
-				&d.PartialHint, &d.WaitDuration, &wordsJSON, &wordTimingsJSON, &d.CreatedAt,
+				&d.PartialHint, &d.WaitDuration, &wordsJSON, &wordTimingsJSON, &phrasesJSON, &d.CreatedAt,
 			)
 			if err != nil {
 				return scene.Scene{}, richerror.New(op).WithErr(err)
 			}
 			if len(wordsJSON) > 0 {
 				_ = json.Unmarshal(wordsJSON, &d.Words)
+			}
+			if len(phrasesJSON) > 0 {
+				_ = json.Unmarshal(phrasesJSON, &d.Phrases)
 			}
 			if len(wordTimingsJSON) > 0 {
 				_ = json.Unmarshal(wordTimingsJSON, &d.WordTimings)
@@ -420,6 +431,12 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 					wordsJSON = b
 				}
 			}
+			phrasesJSON := []byte("[]")
+			if len(d.Phrases) > 0 {
+				if b, mErr := json.Marshal(d.Phrases); mErr == nil {
+					phrasesJSON = b
+				}
+			}
 			var wordTimingsJSON []byte
 			if len(d.WordTimings) > 0 {
 				if b, mErr := json.Marshal(d.WordTimings); mErr == nil {
@@ -429,13 +446,13 @@ func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 
 			dialogueQuery := `INSERT INTO dialogues (
 				id, hotspot_id, "order", speaker, original_text, translation,
-				audio_url, display_type, partial_hint, wait_duration, words, word_timings, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())`
+				audio_url, display_type, partial_hint, wait_duration, words, word_timings, phrases, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())`
 
 			_, err = tx.Exec(ctx, dialogueQuery,
 				d.ID, h.ID, d.Order, d.Speaker, d.OriginalText,
 				d.Translation, d.AudioURL, d.DisplayType,
-				d.PartialHint, d.WaitDuration, wordsJSON, wordTimingsJSON,
+				d.PartialHint, d.WaitDuration, wordsJSON, wordTimingsJSON, phrasesJSON,
 			)
 			if err != nil {
 				return richerror.New(op).WithErr(err).WithMessage("failed to insert dialogue")

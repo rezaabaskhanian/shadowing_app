@@ -368,6 +368,7 @@ export const translations: Translations = {
   startAiConversation: { en: 'Practice free conversation', fa: 'گفتگوی آزاد با هوش مصنوعی' },
   sceneGrammarTitle: { en: 'Grammar point', fa: 'نکته‌ی گرامری' },
   sceneGrammarExamples: { en: 'Examples from this scene', fa: 'مثال‌هایی از همین صحنه' },
+  dialoguePhrasesTitle: { en: 'Idioms & phrases', fa: 'اصطلاح‌ها و عبارت‌ها' },
   sceneWordsTitle: { en: 'Words in this scene', fa: 'واژه‌های این صحنه' },
   sceneWordsMore: { en: '+{count} more', fa: '+{count} تا دیگه' },
   sceneWordsLess: { en: 'Show less', fa: 'کمتر' },

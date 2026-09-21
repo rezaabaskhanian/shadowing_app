@@ -11,6 +11,12 @@ type DialogueWord struct {
 	Meaning string `json:"meaning"`
 }
 
+// DialoguePhrase یک اصطلاح یا عبارت (idiom / phrase) دیالوگ همراه با معنی آن است.
+type DialoguePhrase struct {
+	Phrase  string `json:"phrase"`
+	Meaning string `json:"meaning"`
+}
+
 // WordTiming زمان‌بندی یک کلمه در صدای مرجع است (از whisper-service)، برای
 // هایلایت کلمه‌به‌کلمه هم‌زمان با پخش.
 type WordTiming struct {
@@ -28,10 +34,11 @@ type Dialogue struct {
 	Translation  string // ترجمه فارسی
 	AudioURL     string // آدرس فایل صوتی
 	DisplayType  DisplayType
-	PartialHint  string         // برای حالت partial
-	WaitDuration int            // مدت انتظار برای پاسخ (ثانیه)
-	Words        []DialogueWord // واژه‌های مهم این دیالوگ با معنی
-	WordTimings  []WordTiming   // زمان‌بندی کلمه‌به‌کلمه‌ی صدای مرجع؛ اگر تشخیص گفتار در دسترس نبوده خالی است
+	PartialHint  string           // برای حالت partial
+	WaitDuration int              // مدت انتظار برای پاسخ (ثانیه)
+	Words        []DialogueWord   // واژه‌های مهم این دیالوگ با معنی
+	Phrases      []DialoguePhrase // اصطلاح/عبارت‌های اختیاریِ این دیالوگ؛ خالی = نمایش داده نمی‌شود
+	WordTimings  []WordTiming     // زمان‌بندی کلمه‌به‌کلمه‌ی صدای مرجع؛ اگر تشخیص گفتار در دسترس نبوده خالی است
 	CreatedAt    time.Time
 }
 

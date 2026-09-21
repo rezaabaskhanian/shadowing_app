@@ -28,6 +28,10 @@ interface BackendWord {
   word: string;
   meaning: string;
 }
+interface BackendPhrase {
+  phrase: string;
+  meaning: string;
+}
 interface BackendWordTiming {
   word: string;
   start: number;
@@ -44,6 +48,7 @@ interface BackendDialogue {
   partial_hint: string;
   wait_duration: number;
   words: BackendWord[] | null;
+  phrases?: BackendPhrase[] | null;
   word_timings?: BackendWordTiming[] | null;
   // آیا کاربر همین دیالوگ را قبلاً (در بازدید قبلی از صحنه) ضبط/نمره‌دهی
   // کرده — از scene_dialogue_progress سمت بک‌اند.
@@ -111,6 +116,10 @@ function mapScene(s: BackendScene): Scenario {
       audio_url: absUrl(d.audio_url),
       duration: d.wait_duration || 3,
       words: (d.words || []).map((w) => ({ word: w.word, meaning: w.meaning })),
+      // اصطلاح/عبارت اختیاری است؛ ردیف بدون متن حذف می‌شود تا کارت خالی نشان داده نشود.
+      phrases: (d.phrases || [])
+        .filter((p) => (p.phrase || '').trim())
+        .map((p) => ({ phrase: p.phrase.trim(), meaning: (p.meaning || '').trim() })),
       wordTimings: (d.word_timings || []).map((w) => ({ word: w.word, start: w.start, end: w.end })),
       is_completed: d.is_completed,
       score: d.score,

@@ -5,6 +5,12 @@ type Word struct {
 	Meaning string `json:"meaning"`
 }
 
+// Phrase یک اصطلاح یا عبارت (idiom / phrase) دیالوگ با معنی آن.
+type Phrase struct {
+	Phrase  string `json:"phrase"`
+	Meaning string `json:"meaning"`
+}
+
 // WordTiming زمان‌بندی یک کلمه در صدای مرجع است (از whisper-service)، برای
 // هایلایت کلمه‌به‌کلمه هم‌زمان با پخش در اپ.
 type WordTiming struct {
@@ -24,6 +30,7 @@ type Dialogue struct {
 	PartialHint  string       `json:"partial_hint"`
 	WaitDuration int          `json:"wait_duration"`
 	Words        []Word       `json:"words"`
+	Phrases      []Phrase     `json:"phrases"`
 	WordTimings  []WordTiming `json:"word_timings,omitempty"`
 
 	// IsCompleted/Score هم مثل Scene.Progress توسط handler پر می‌شوند —
