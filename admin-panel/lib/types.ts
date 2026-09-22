@@ -154,6 +154,7 @@ export interface SettingsResp {
   ai_daily_token_limit: string;
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
+  elevenlabs_model_id: string;
   groq_api_key: SettingItem;
   groq_stt_model: string;
   fcm_service_account_json: SettingItem;

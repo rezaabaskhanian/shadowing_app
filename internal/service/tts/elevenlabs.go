@@ -17,6 +17,11 @@ import (
 // حساب در دسترس است؛ اگر ELEVENLABS_VOICE_ID تنظیم نشده باشد از همین استفاده می‌شود.
 const defaultVoiceID = "21m00Tcm4TlvDq8ikWAM"
 
+// defaultModelID مدل پیش‌فرض ElevenLabs است (کیفیت بالاتر، گران‌تر — ۱ کردیت
+// به ازای هر کاراکتر). اگر ELEVENLABS_MODEL_ID از پنل تنظیم شود (مثلاً
+// eleven_flash_v2_5 برای هزینه‌ی کمتر)، همان جایگزین می‌شود.
+const defaultModelID = "eleven_multilingual_v2"
+
 // بازه‌ی مجاز سرعت گفتار طبق مستندات ElevenLabs (voice_settings.speed).
 const (
 	defaultSpeed = 1.0
@@ -58,6 +63,14 @@ func (s Service) voiceID() string {
 	return v
 }
 
+func (s Service) modelID() string {
+	v := s.settings.Get(settingsservice.KeyElevenLabsModelID)
+	if v == "" {
+		return defaultModelID
+	}
+	return v
+}
+
 // Enabled مشخص می‌کند آیا کلید API تنظیم شده است یا نه.
 func (s Service) Enabled() bool {
 	return s.apiKey() != ""
@@ -89,7 +102,7 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string, speed
 
 	payload, err := json.Marshal(map[string]any{
 		"text":     text,
-		"model_id": "eleven_multilingual_v2",
+		"model_id": s.modelID(),
 		"voice_settings": map[string]float64{
 			"stability":        0.5,
 			"similarity_boost": 0.75,

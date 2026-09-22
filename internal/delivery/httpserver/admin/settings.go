@@ -38,6 +38,7 @@ type settingsResponse struct {
 	AIDailyTokenLimit string      `json:"ai_daily_token_limit"`
 	ElevenLabs        settingItem `json:"elevenlabs_api_key"`
 	VoiceID           settingItem `json:"elevenlabs_voice_id"`
+	ElevenLabsModel   string      `json:"elevenlabs_model_id"`
 	Groq              settingItem `json:"groq_api_key"`
 	GroqSTTModel      string      `json:"groq_stt_model"`
 	FCMKey            settingItem `json:"fcm_service_account_json"`
@@ -70,6 +71,7 @@ func (h Handler) GetSettings(c echo.Context) error {
 		AIDailyTokenLimit: s.Get(settingsservice.KeyAIDailyTokenLimit),
 		ElevenLabs:        get(settingsservice.KeyElevenLabsAPIKey),
 		VoiceID:           get(settingsservice.KeyElevenLabsVoiceID),
+		ElevenLabsModel:   s.Get(settingsservice.KeyElevenLabsModelID),
 		Groq:              get(settingsservice.KeyGroqAPIKey),
 		GroqSTTModel:      s.Get(settingsservice.KeyGroqSTTModel),
 		FCMKey:            get(settingsservice.KeyFCMServiceAccount),

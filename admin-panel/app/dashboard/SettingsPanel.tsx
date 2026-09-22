@@ -44,6 +44,11 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
   { key: "ELEVENLABS_API_KEY", label: "کلید ElevenLabs (تولید صدا)" },
   { key: "ELEVENLABS_VOICE_ID", label: "شناسه صدای ElevenLabs", hint: "خالی بگذار برای صدای پیش‌فرض" },
   {
+    key: "ELEVENLABS_MODEL_ID",
+    label: "مدل ElevenLabs",
+    hint: "مثلاً eleven_flash_v2_5 (ارزون‌تر، ~۵۰٪ هزینه‌ی کمتر) یا eleven_multilingual_v2 (پیش‌فرض، کیفیت بالاتر) — خالی بگذار برای پیش‌فرض",
+  },
+  {
     key: "GROQ_API_KEY",
     label: "کلید Groq (رونویسی سریع صدا برای توضیح آزاد و گفتگوی AI)",
     hint: "خالی = فقط Whisper خودِ سرور (کندتر). اگر Groq خطا بدهد، خودکار به Whisper سرور برمی‌گردد",
