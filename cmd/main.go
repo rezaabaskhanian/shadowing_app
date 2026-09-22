@@ -67,7 +67,6 @@ import (
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
-	ttsservice "shadowing-backend/internal/service/tts"
 
 	userservice "shadowing-backend/internal/service/user"
 
@@ -375,15 +374,15 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// تزریق می‌کند (internal/service/mission).
 	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo, leitnerRepo, grammarRepo, notificationRepo)
 
-	// گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه: همان ElevenLabs (ttsservice) که
-	// پنل ادمین برای صدای دیالوگ‌ها استفاده می‌کند، اینجا برای صدای پاسخ AI
-	// هم به کار می‌رود؛ هیچ زیرساخت TTS جدیدی لازم نبود.
+	// گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه: طبق تصمیمِ محصول، ElevenLabs فقط در
+	// پنل ادمین (صدای دیالوگ‌های صحنه) استفاده می‌شود؛ اینجا دیگر TTS تزریق
+	// نمی‌شود و پاسخ AI فقط به‌صورت متن برمی‌گردد.
 	conversationRepo := postgresaiconversation.NewConversationRepository(MyPostgresgresRepo.DB)
 	turnRepo := postgresaiconversation.NewTurnRepository(MyPostgresgresRepo.DB)
 	hintRepo := postgresaiconversation.NewHintRepository(MyPostgresgresRepo.DB)
 	aiConversationSvc := aiconversationservice.New(
 		conversationRepo, turnRepo, hintRepo, assessmentProfileRepo, learnningRepo,
-		aiservice.New(settingsSvc), ttsservice.New(settingsSvc), evaluator,
+		aiservice.New(settingsSvc), evaluator,
 		store, aiAccessSvc,
 	)
 

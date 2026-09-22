@@ -10,7 +10,6 @@ import (
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	"shadowing-backend/internal/service/speecheval"
-	ttsservice "shadowing-backend/internal/service/tts"
 
 	"github.com/google/uuid"
 )
@@ -54,7 +53,6 @@ type Service struct {
 	profiles      ProfileRepository
 	scenes        SceneRepository
 	ai            aiservice.Service
-	tts           ttsservice.Service
 	transcriber   speecheval.Transcriber
 	store         filestore.Store
 	access        *aiaccessservice.Service
@@ -67,7 +65,6 @@ func New(
 	profiles ProfileRepository,
 	scenes SceneRepository,
 	ai aiservice.Service,
-	tts ttsservice.Service,
 	transcriber speecheval.Transcriber,
 	store filestore.Store,
 	access *aiaccessservice.Service,
@@ -79,7 +76,6 @@ func New(
 		profiles:      profiles,
 		scenes:        scenes,
 		ai:            ai,
-		tts:           tts,
 		transcriber:   transcriber,
 		store:         store,
 		access:        access,
