@@ -76,33 +76,35 @@ export const SplashScreen = () => {
         <Text style={styles.subtitle}>Speak English{'\n'}Naturally</Text>
       </View>
 
-      <View style={styles.logoWrap}>
-        <Image source={appLogoMark} style={styles.logo} resizeMode="contain" />
-      </View>
-
-      <View style={styles.voiceArea}>
-        <View style={styles.wave}>
-          {waveBarColors.map((color, index) => (
-            <View
-              key={index}
-              style={[styles.waveBar, { height: 8 + ((index * 9) % 34), backgroundColor: color }]}
-            />
-          ))}
+      <View style={styles.middleArea}>
+        <View style={styles.logoWrap}>
+          <Image source={appLogoMark} style={styles.logo} resizeMode="contain" />
         </View>
-        <Animated.View style={[styles.voiceButtonWrap, { transform: [{ scale }] }]}>
-          <Svg width={92} height={92}>
-            <Defs>
-              <SvgLinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor={WAVE_FROM} />
-                <Stop offset="100%" stopColor={WAVE_TO} />
-              </SvgLinearGradient>
-            </Defs>
-            <Circle cx={46} cy={46} r={43} fill="url(#btnGrad)" stroke="rgba(255, 255, 255, 0.18)" strokeWidth={5} />
-          </Svg>
-          <View style={styles.voiceButtonIcon}>
-            <MessageCircle color={COLORS.white} size={30} fill={COLORS.white} />
+
+        <View style={styles.voiceArea}>
+          <View style={styles.wave}>
+            {waveBarColors.map((color, index) => (
+              <View
+                key={index}
+                style={[styles.waveBar, { height: 8 + ((index * 9) % 34), backgroundColor: color }]}
+              />
+            ))}
           </View>
-        </Animated.View>
+          <Animated.View style={[styles.voiceButtonWrap, { transform: [{ scale }] }]}>
+            <Svg width={92} height={92}>
+              <Defs>
+                <SvgLinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor={WAVE_FROM} />
+                  <Stop offset="100%" stopColor={WAVE_TO} />
+                </SvgLinearGradient>
+              </Defs>
+              <Circle cx={46} cy={46} r={43} fill="url(#btnGrad)" stroke="rgba(255, 255, 255, 0.18)" strokeWidth={5} />
+            </Svg>
+            <View style={styles.voiceButtonIcon}>
+              <MessageCircle color={COLORS.white} size={30} fill={COLORS.white} />
+            </View>
+          </Animated.View>
+        </View>
       </View>
 
       <View style={styles.footer}>
@@ -144,20 +146,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  // قبلاً logoWrap و voiceArea با marginTop ثابت و position:absolute از پایین
+  // چیده می‌شدند؛ روی صفحه‌های کوتاه‌تر محتوای heroCopy+logo به اندازه‌ی کافی
+  // بلند می‌شد که با voiceAreaِ ثابت‌شده از پایین برخورد کند (روی هم می‌افتادند).
+  // حالا هر دو داخل یک middleArea با flex:1 در فضای باقی‌مانده بین heroCopy و
+  // footer وسط‌چین می‌شوند — مستقل از ارتفاع صفحه، هیچ‌وقت روی هم نمی‌افتند.
+  middleArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 28,
   },
   logo: {
     width: 220,
     height: 220,
   },
   voiceArea: {
-    position: 'absolute',
-    left: 30,
-    right: 30,
-    bottom: 150,
+    marginTop: 36,
+    width: '100%',
     height: 92,
     alignItems: 'center',
     justifyContent: 'center',
