@@ -10,6 +10,21 @@ import {
 } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
 
+// فیلترهای لیست در مرورگر نگه داشته می‌شوند تا با رفتن به بخش دیگری از پنل
+// (یا فرم ویرایش) و برگشتن، دوباره به «همه» برنگردند.
+const FILTERS_KEY = "shadowing_admin_scene_filters";
+
+function loadFilters(): { difficulty: string; category: string } {
+  try {
+    const raw = localStorage.getItem(FILTERS_KEY);
+    if (raw) {
+      const f = JSON.parse(raw);
+      return { difficulty: f.difficulty || "", category: f.category || "" };
+    }
+  } catch {}
+  return { difficulty: "", category: "" };
+}
+
 const DIFFICULTY_LABELS: Record<string, string> = {
   beginner: "آسان",
   intermediate: "متوسط",
@@ -42,6 +57,35 @@ export default function SceneList({
       setLoading(false);
     }
   }
+
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  useEffect(() => {
+    const f = loadFilters();
+    setDifficultyFilter(f.difficulty);
+    setCategoryFilter(f.category);
+    setFiltersLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    try {
+      localStorage.setItem(
+        FILTERS_KEY,
+        JSON.stringify({ difficulty: difficultyFilter, category: categoryFilter })
+      );
+    } catch {}
+  }, [filtersLoaded, difficultyFilter, categoryFilter]);
+
+  // دسته‌بندیِ ذخیره‌شده‌ای که دیگر هیچ صحنه‌ای ندارد، فیلتر را خالی نگه ندارد.
+  useEffect(() => {
+    if (
+      !loading &&
+      categoryFilter &&
+      categoryFilter !== "__none__" &&
+      !scenes.some((s) => s.category === categoryFilter)
+    ) {
+      setCategoryFilter("");
+    }
+  }, [loading, scenes, categoryFilter]);
 
   useEffect(() => {
     load();
