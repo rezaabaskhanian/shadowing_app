@@ -64,6 +64,14 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	for _, h := range hotspots {
 		newScene.AddHotspot(h)
 	}
+	if req.IsPublished {
+		if err := newScene.Publish(); err != nil {
+			return dto.Scene{}, richerror.New(op).
+				WithErr(err).
+				WithMessage("خطا در انتشار سناریو").
+				WithKind(richerror.KindForbidden)
+		}
+	}
 
 	// ========== 5️⃣ ذخیره در دیتابیس ==========
 	err = s.repo.Create(ctx, newScene)

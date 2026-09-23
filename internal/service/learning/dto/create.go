@@ -7,7 +7,10 @@ type CreateSceneRequest struct {
 	Difficulty         string    `json:"difficulty" validate:"required,oneof=beginner intermediate advanced"`
 	Hotspots           []Hotspot `json:"hotspots"`
 	IsLocked           bool      `json:"is_locked"`
-	Category           string    `json:"category"`
+	// IsPublished تعیین می‌کند صحنه در اپ نمایش داده شود (published) یا فقط
+	// پیش‌نویس بماند (draft) و فقط ادمین آن را ببیند.
+	IsPublished bool   `json:"is_published"`
+	Category    string `json:"category"`
 	// نکته‌ی گرامریِ اختیاری (موضوع، توضیح فارسی، ۲ تا ۴ مثال).
 	GrammarTopic       string           `json:"grammar_topic"`
 	GrammarExplanation string           `json:"grammar_explanation"`

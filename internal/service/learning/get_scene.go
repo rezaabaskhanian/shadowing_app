@@ -62,6 +62,7 @@ func (s Service) GetScene(ctx context.Context, ID string) (dto.Scene, error) {
 		Status:     string(scene.Status),
 		Hotspots:   hotspotDTOs,
 		Order:      scene.Order,
+		IsLocked:   scene.IsLocked,
 		Category:   scene.Category,
 
 		GrammarTopic:       scene.GrammarTopic,

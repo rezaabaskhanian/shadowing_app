@@ -9,7 +9,8 @@ import (
 )
 
 // UpdateScene یک صحنه‌ی موجود را با اطلاعات جدید (شامل هات‌اسپات‌ها و دیالوگ‌ها) به‌روزرسانی می‌کند.
-// وضعیت (status)، ترتیب (order) و زمان ساخت از رکورد فعلی حفظ می‌شوند؛ IsLocked از درخواست گرفته می‌شود (ادمین می‌تواند تغییرش دهد).
+// ترتیب (order) و زمان ساخت از رکورد فعلی حفظ می‌شوند؛ IsLocked و وضعیت انتشار
+// (IsPublished) از درخواست گرفته می‌شوند (ادمین می‌تواند تغییرشان دهد).
 func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateSceneRequest) (dto.Scene, error) {
 	const op = "learningservice.UpdateScene"
 
@@ -60,7 +61,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 		Description:        req.Description,
 		BackgroundImageURL: req.BackgroundImageURL,
 		Difficulty:         difficultyLevel,
-		Status:             existing.Status,
+		Status:             statusFromRequest(req.IsPublished, existing.Status),
 		Hotspots:           hotspots,
 		Order:              existing.Order,
 		IsLocked:           req.IsLocked,
@@ -87,4 +88,16 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	go s.processWordTimingsAsync(updated.Hotspots)
 
 	return toSceneDTO(updated), nil
+}
+
+// statusFromRequest وضعیت جدید صحنه را از تیک «انتشار» پنل ادمین می‌سازد:
+// تیک‌خورده = published؛ برداشتن تیک = draft (صحنه‌ی آرشیوشده آرشیو می‌ماند).
+func statusFromRequest(isPublished bool, current scene.SceneStatus) scene.SceneStatus {
+	if isPublished {
+		return scene.StatusPublished
+	}
+	if current == scene.StatusPublished {
+		return scene.StatusDraft
+	}
+	return current
 }

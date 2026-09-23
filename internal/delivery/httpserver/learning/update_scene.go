@@ -27,6 +27,7 @@ func (h Handler) UpdateScene(c echo.Context) error {
 		Difficulty:         req.Difficulty,
 		Hotspots:           req.Hotspots,
 		IsLocked:           req.IsLocked,
+		IsPublished:        req.Status == "published",
 		Category:           req.Category,
 	}
 

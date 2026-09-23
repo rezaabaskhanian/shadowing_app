@@ -126,6 +126,17 @@ func (h Handler) ListScene(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 
+	// صحنه‌های منتشرنشده (پیش‌نویس/آرشیو) فقط برای ادمین نمایش داده می‌شوند.
+	if !isAdminCaller(c) {
+		published := scenes[:0]
+		for _, s := range scenes {
+			if s.Status == "published" {
+				published = append(published, s)
+			}
+		}
+		scenes = published
+	}
+
 	freeSamples := freeSampleSceneIDs(scenes)
 	for i := range scenes {
 		if freeSamples[scenes[i].ID] {

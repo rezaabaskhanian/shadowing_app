@@ -49,6 +49,7 @@ export interface CreateScenePayload {
   difficulty: Difficulty;
   hotspots: HotspotInput[];
   is_locked: boolean;
+  is_published: boolean;
   category: string;
   // نکته‌ی گرامریِ اختیاری: موضوع، توضیح فارسی و ۲ تا ۴ مثال
   grammar_topic?: string;

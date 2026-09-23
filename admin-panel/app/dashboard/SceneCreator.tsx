@@ -114,6 +114,8 @@ export default function SceneCreator({
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("beginner");
   const [isLocked, setIsLocked] = useState(false);
+  // پیش‌فرض منتشرشده، تا رفتار قبلی (نمایش فوری صحنه‌ی جدید در اپ) حفظ شود.
+  const [isPublished, setIsPublished] = useState(true);
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export default function SceneCreator({
     setDescription(editScene.description || "");
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
     setIsLocked(!!editScene.is_locked);
+    setIsPublished(editScene.status === "published");
     setCategory(editScene.category || "");
     setGrammarTopic(editScene.grammar_topic || "");
     setGrammarExplanation(editScene.grammar_explanation || "");
@@ -184,6 +187,7 @@ export default function SceneCreator({
     setDescription(fromSubmission.situation_text || "");
     setDifficulty("beginner");
     setIsLocked(false);
+    setIsPublished(true);
     setCategory("");
     setImageUrl(fromSubmission.image_url || null);
     const dialogues: DialogueInput[] = (fromSubmission.dialogues || []).map((d, di) => ({
@@ -219,6 +223,7 @@ export default function SceneCreator({
     setDescription("");
     setDifficulty("beginner");
     setIsLocked(false);
+    setIsPublished(true);
     setCategory("");
     setImageUrl(null);
     setHotspots([]);
@@ -586,6 +591,7 @@ export default function SceneCreator({
         difficulty,
         hotspots,
         is_locked: isLocked,
+        is_published: isPublished,
         category: category.trim(),
         grammar_topic: grammarTopic.trim(),
         grammar_explanation: grammarExplanation.trim(),
@@ -629,6 +635,7 @@ export default function SceneCreator({
     setDescription("");
     setDifficulty("beginner");
     setIsLocked(false);
+    setIsPublished(true);
     setCategory("");
     setGrammarTopic("");
     setGrammarExplanation("");
@@ -913,6 +920,15 @@ export default function SceneCreator({
             style={{ width: "auto" }}
           />
           این صحنه قفل باشد (فقط با اشتراک فعال باز می‌شود)
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            style={{ width: "auto" }}
+          />
+          انتشار (بدون تیک، صحنه پیش‌نویس می‌ماند و در اپ نمایش داده نمی‌شود)
         </label>
         <label>توضیحات</label>
         <textarea

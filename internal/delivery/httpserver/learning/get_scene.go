@@ -18,6 +18,13 @@ func (h Handler) GetScene(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 
+	// صحنه‌ی منتشرنشده برای کاربر عادی وجود ندارد.
+	if scene.Status != "published" && !isAdminCaller(c) {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "صحنه پیدا نشد",
+		})
+	}
+
 	// لیستِ کل صحنه‌ها را یک‌بار می‌گیریم و برای هر دو بررسی (نمونه‌ی رایگانِ
 	// هر سطح + قفل ترتیبی) از همین استفاده می‌کنیم.
 	allScenes, listErr := h.learningSvc.ListScene(c.Request().Context())

@@ -10,6 +10,12 @@ import {
 } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
 
+const DIFFICULTY_LABELS: Record<string, string> = {
+  beginner: "آسان",
+  intermediate: "متوسط",
+  advanced: "سخت",
+};
+
 export default function SceneList({
   notify,
   reloadKey,
@@ -23,6 +29,7 @@ export default function SceneList({
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<SceneResp | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -79,13 +86,25 @@ export default function SceneList({
       a.order - b.order ||
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
-  const visible = sorted.filter((s) =>
-    !categoryFilter
-      ? true
-      : categoryFilter === "__none__"
-      ? !s.category
-      : s.category === categoryFilter
+  const visible = sorted.filter(
+    (s) =>
+      (!difficultyFilter || s.difficulty === difficultyFilter) &&
+      (!categoryFilter
+        ? true
+        : categoryFilter === "__none__"
+        ? !s.category
+        : s.category === categoryFilter)
   );
+
+  // شماره‌ی هر صحنه‌ی منتشرشده در مسیرِ سطح خودش (همان زنجیره‌ای که اپ برای
+  // باز شدن ترتیبی صحنه‌ها استفاده می‌کند؛ پیش‌نویس/آرشیو در آن شرکت نمی‌کنند).
+  const levelPosition = new Map<string, number>();
+  const levelCount: Record<string, number> = {};
+  for (const s of sorted) {
+    if (s.status !== "published") continue;
+    levelCount[s.difficulty] = (levelCount[s.difficulty] || 0) + 1;
+    levelPosition.set(s.id, levelCount[s.difficulty]);
+  }
   // همان منطق freeSampleSceneIDs در بک‌اند: اولین صحنه‌ی منتشرشده‌ی هر سطح
   // دشواری برای کاربر همیشه رایگان است، حتی اگر دستی قفل شده باشد.
   const freeSampleIds = new Set<string>();
@@ -158,6 +177,18 @@ export default function SceneList({
         <h2 style={{ margin: 0 }}>صحنه‌های ثبت‌شده</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(e.target.value)}
+            style={{ width: 140 }}
+          >
+            <option value="">همه سطح‌ها</option>
+            {Object.entries(DIFFICULTY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{ width: 180 }}
@@ -209,8 +240,23 @@ export default function SceneList({
               />
               <div className="meta">
                 <h3>{s.title || "-"}</h3>
-                <span>{s.status}</span>
-                <span className="hint">🔢 ترتیب مسیر: {s.order}</span>
+                <span
+                  style={{
+                    color: s.status === "published" ? "#10b981" : "#f59e0b",
+                    fontWeight: 600,
+                  }}
+                >
+                  {s.status === "published"
+                    ? "✅ منتشرشده"
+                    : "📝 پیش‌نویس (در اپ نمایش داده نمی‌شود)"}
+                </span>
+                <span className="hint" style={{ fontWeight: 600 }}>
+                  📶 {DIFFICULTY_LABELS[s.difficulty] || s.difficulty}
+                  {levelPosition.has(s.id)
+                    ? ` — صحنه‌ی ${levelPosition.get(s.id)} از ${levelCount[s.difficulty]}`
+                    : " — منتشر نشده (در مسیر نیست)"}
+                </span>
+                <span className="hint">🔢 ترتیب کلی مسیر: {s.order}</span>
                 <span
                   className="hint"
                   style={{ color: lockBadge(s).color, fontWeight: 600 }}
