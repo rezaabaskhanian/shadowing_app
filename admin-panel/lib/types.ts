@@ -50,6 +50,7 @@ export interface CreateScenePayload {
   hotspots: HotspotInput[];
   is_locked: boolean;
   is_published: boolean;
+  order?: number;
   category: string;
   // نکته‌ی گرامریِ اختیاری: موضوع، توضیح فارسی و ۲ تا ۴ مثال
   grammar_topic?: string;

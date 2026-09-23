@@ -116,6 +116,8 @@ export default function SceneCreator({
   const [isLocked, setIsLocked] = useState(false);
   // پیش‌فرض منتشرشده، تا رفتار قبلی (نمایش فوری صحنه‌ی جدید در اپ) حفظ شود.
   const [isPublished, setIsPublished] = useState(true);
+  // ترتیب دستی در مسیر آموزشی؛ خالی = بک‌اند خودش تعیین می‌کند (آخر مسیر).
+  const [order, setOrder] = useState("");
   const [category, setCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -164,6 +166,7 @@ export default function SceneCreator({
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
     setIsLocked(!!editScene.is_locked);
     setIsPublished(editScene.status === "published");
+    setOrder(editScene.order > 0 ? String(editScene.order) : "");
     setCategory(editScene.category || "");
     setGrammarTopic(editScene.grammar_topic || "");
     setGrammarExplanation(editScene.grammar_explanation || "");
@@ -188,6 +191,7 @@ export default function SceneCreator({
     setDifficulty("beginner");
     setIsLocked(false);
     setIsPublished(true);
+    setOrder("");
     setCategory("");
     setImageUrl(fromSubmission.image_url || null);
     const dialogues: DialogueInput[] = (fromSubmission.dialogues || []).map((d, di) => ({
@@ -224,6 +228,7 @@ export default function SceneCreator({
     setDifficulty("beginner");
     setIsLocked(false);
     setIsPublished(true);
+    setOrder("");
     setCategory("");
     setImageUrl(null);
     setHotspots([]);
@@ -592,6 +597,7 @@ export default function SceneCreator({
         hotspots,
         is_locked: isLocked,
         is_published: isPublished,
+        order: Number(order) > 0 ? Math.floor(Number(order)) : 0,
         category: category.trim(),
         grammar_topic: grammarTopic.trim(),
         grammar_explanation: grammarExplanation.trim(),
@@ -636,6 +642,7 @@ export default function SceneCreator({
     setDifficulty("beginner");
     setIsLocked(false);
     setIsPublished(true);
+    setOrder("");
     setCategory("");
     setGrammarTopic("");
     setGrammarExplanation("");
@@ -900,6 +907,17 @@ export default function SceneCreator({
             </select>
           </div>
         </div>
+        <label>ترتیب در مسیر (اختیاری)</label>
+        <input
+          type="number"
+          min={1}
+          value={order}
+          onChange={(e) => setOrder(e.target.value)}
+          placeholder="خالی = آخر مسیر"
+        />
+        <p className="hint" style={{ margin: "4px 0 0" }}>
+          با وارد کردن عدد، صحنه در همان جایگاه قرار می‌گیرد و صحنه‌های بعدی یکی عقب می‌روند.
+        </p>
         <label>دسته‌بندی</label>
         <input
           value={category}

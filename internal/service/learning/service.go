@@ -24,6 +24,9 @@ type Repository interface {
 	// می‌کند — برای مرتب‌سازی سریع از لیست ادمین، بدون نیاز به ارسال کل
 	// هات‌اسپات‌ها/دیالوگ‌ها.
 	UpdateOrder(ctx context.Context, id string, order int) error
+	// ShiftOrdersFrom ترتیب همه‌ی صحنه‌های با order >= from (به‌جز exceptID)
+	// را یکی جلو می‌برد تا برای درج یک صحنه در همان جایگاه جا باز شود.
+	ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error
 	// RandomDialogueTexts استخر متن انگلیسیِ دیالوگ‌های صحنه‌های دیگر را
 	// برای گزینه‌های غلطِ کوئیز درک شنیداری برمی‌گرداند.
 	RandomDialogueTexts(ctx context.Context, excludeSceneID string, difficulty string, limit int) ([]string, error)

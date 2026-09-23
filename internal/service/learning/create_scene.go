@@ -54,6 +54,22 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithKind(richerror.KindForbidden)
 	}
 	newScene.Order = req.Order
+	// بدون ترتیب مشخص، صحنه‌ی جدید به آخر مسیر آموزشی می‌رود — نه اول آن؛
+	// وگرنه قفل ترتیبی پیشرفت کاربران فعلی را می‌بست و نمونه‌ی رایگان هر سطح
+	// جابه‌جا می‌شد. با ترتیب دستی، صحنه در همان جایگاه درج و بقیه یکی عقب می‌روند.
+	if newScene.Order <= 0 {
+		existing, err := s.repo.GetAll(ctx)
+		if err != nil {
+			return dto.Scene{}, richerror.New(op).WithErr(err)
+		}
+		maxOrder := 0
+		for _, sc := range existing {
+			if sc.Order > maxOrder {
+				maxOrder = sc.Order
+			}
+		}
+		newScene.Order = maxOrder + 1
+	}
 	newScene.GrammarTopic, newScene.GrammarExplanation, newScene.GrammarExamples, newScene.GrammarAudioURL = buildGrammarNote(req)
 
 	// ========== 4️⃣ اضافه کردن هات‌اسپات‌ها با دیالوگ‌ها ==========
@@ -74,6 +90,11 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	}
 
 	// ========== 5️⃣ ذخیره در دیتابیس ==========
+	if req.Order > 0 {
+		if err := s.repo.ShiftOrdersFrom(ctx, newScene.Order, string(newScene.ID)); err != nil {
+			return dto.Scene{}, richerror.New(op).WithErr(err)
+		}
+	}
 	err = s.repo.Create(ctx, newScene)
 	if err != nil {
 		return dto.Scene{}, richerror.New(op).

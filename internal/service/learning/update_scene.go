@@ -9,8 +9,8 @@ import (
 )
 
 // UpdateScene یک صحنه‌ی موجود را با اطلاعات جدید (شامل هات‌اسپات‌ها و دیالوگ‌ها) به‌روزرسانی می‌کند.
-// ترتیب (order) و زمان ساخت از رکورد فعلی حفظ می‌شوند؛ IsLocked و وضعیت انتشار
-// (IsPublished) از درخواست گرفته می‌شوند (ادمین می‌تواند تغییرشان دهد).
+// زمان ساخت از رکورد فعلی حفظ می‌شود؛ IsLocked، وضعیت انتشار (IsPublished) و
+// ترتیب دستی (Order، اگر داده شده باشد) از درخواست گرفته می‌شوند.
 func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateSceneRequest) (dto.Scene, error) {
 	const op = "learningservice.UpdateScene"
 
@@ -54,6 +54,16 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	}
 
 	// ========== 5️⃣ مونتاژ صحنه‌ی به‌روزشده ==========
+	// ترتیب دستیِ جدید = درج در همان جایگاه (بقیه یکی عقب می‌روند)؛
+	// خالی/بدون تغییر = حفظ ترتیب فعلی.
+	order := existing.Order
+	if req.Order > 0 && req.Order != existing.Order {
+		if err := s.repo.ShiftOrdersFrom(ctx, req.Order, string(existing.ID)); err != nil {
+			return dto.Scene{}, richerror.New(op).WithErr(err)
+		}
+		order = req.Order
+	}
+
 	grammarTopic, grammarExplanation, grammarExamples, grammarAudioURL := buildGrammarNote(req)
 	updated := scene.Scene{
 		ID:                 existing.ID,
@@ -63,7 +73,7 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 		Difficulty:         difficultyLevel,
 		Status:             statusFromRequest(req.IsPublished, existing.Status),
 		Hotspots:           hotspots,
-		Order:              existing.Order,
+		Order:              order,
 		IsLocked:           req.IsLocked,
 		Category:           req.Category,
 		GrammarTopic:       grammarTopic,

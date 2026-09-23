@@ -548,6 +548,19 @@ func (r DB) UpdateOrder(ctx context.Context, id string, order int) error {
 	return nil
 }
 
+// ShiftOrdersFrom implements [learningservice.Repository].
+func (r DB) ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error {
+	const op = "postgres.ShiftSceneOrdersFrom"
+
+	query := `UPDATE scenes SET "order" = "order" + 1, updated_at = now()
+	WHERE "order" >= $1 AND id::text <> $2`
+	if _, err := r.conn.Exec(ctx, query, from, exceptID); err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to shift scene orders")
+	}
+
+	return nil
+}
+
 // GetDialogueByID یک دیالوگ را مستقیم با شناسه‌اش می‌خواند.
 //
 // سرویس shadowing به این نیاز دارد تا متن واقعی هر مرحله را از دیتابیس
