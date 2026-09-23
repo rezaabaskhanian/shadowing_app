@@ -7,13 +7,10 @@ type AddDailyProgressRequest struct {
 	UserID     string  `json:"user_id"`
 	DialogueID string  `json:"dialogue_id"`
 	Score      float64 `json:"score"` // نمره تمرین (0-100)
-	XP         int     `json:"xp"`    // امتیاز کسب‌شده
 }
 
 type AddDailyProgressResponse struct {
 	Streak          int      `json:"streak"`           // استریک فعلی
-	TotalXP         int      `json:"total_xp"`         // کل امتیازها
-	Level           int      `json:"level"`            // سطح کاربر
 	NewAchievements []string `json:"new_achievements"` // دستاوردهای جدید
 	Message         string   `json:"message"`          // پیام تشویقی
 }

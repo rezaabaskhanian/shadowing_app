@@ -95,6 +95,9 @@ export const DialogueSentenceBox: React.FC<{
         <Text style={[styles.revealBtnText, { color: accentColor }]}>{textRevealed ? t('hideText') : t('showText')}</Text>
       </TouchableOpacity>
     )}
+    {activeStepIndex === 2 && !textRevealed && (
+      <Text style={styles.noXpHint}>{t('showTextNoXpHint')}</Text>
+    )}
 
     {/* لغت‌های همین جمله؛ با زدن روی هرکدام به جعبه‌ی لایتنر می‌رود.
         در مرحله‌ی ضبط نمایش داده نمی‌شود تا حواس کاربر از حفظ‌گویی پرت نشود. */}
@@ -175,6 +178,13 @@ const styles = StyleSheet.create({
   revealBtnText: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
+  },
+  noXpHint: {
+    marginTop: 4,
+    alignSelf: 'center',
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 10,
   },
   shadowBannerPill: {
     flexDirection: 'row',

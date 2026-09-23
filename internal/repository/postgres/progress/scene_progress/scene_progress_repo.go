@@ -148,21 +148,31 @@ func (r *SceneProgressRepository) Update(ctx context.Context, p *sceneprogress.S
 
 // ============================================
 // RecordDialogueCompletion - ثبت idempotent تکمیل یک دیالوگ (کلید یکتا
-// user_id+dialogue_id، پس تکرار تمرین همان دیالوگ دوباره شمارش نمی‌شود)
+// user_id+dialogue_id، پس تکرار تمرین همان دیالوگ دوباره شمارش نمی‌شود).
+// awardXP یعنی XP این دیالوگ باید همین حالا داده شود: اولین تکمیلِ بدون کمک
+// (textRevealed=false) — نه تکرار، نه ضبطی که متنش در مرحله‌ی ضبط نمایش داده شده.
 // ============================================
-func (r *SceneProgressRepository) RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64) error {
+func (r *SceneProgressRepository) RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64, textRevealed bool) (awardXP bool, err error) {
 	const op = "postgres.SceneProgressRepository.RecordDialogueCompletion"
 
-	query := `INSERT INTO scene_dialogue_progress (user_id, scene_id, dialogue_id, score, completed_at)
-        VALUES ($1, $2, $3, $4, now())
+	// CTE مقدار قبلی xp_awarded را (پیش از این INSERT/UPDATE) می‌خواند؛ XP
+	// فقط وقتی داده می‌شود که قبلاً false/بدون‌رکورد بوده و حالا true شده.
+	query := `WITH prev AS (
+            SELECT xp_awarded FROM scene_dialogue_progress
+            WHERE user_id = $1 AND dialogue_id = $3
+        )
+        INSERT INTO scene_dialogue_progress (user_id, scene_id, dialogue_id, score, completed_at, xp_awarded)
+        VALUES ($1, $2, $3, $4, now(), NOT $5)
         ON CONFLICT (user_id, dialogue_id) DO UPDATE SET
             score = GREATEST(scene_dialogue_progress.score, excluded.score),
-            completed_at = now()`
+            completed_at = now(),
+            xp_awarded = scene_dialogue_progress.xp_awarded OR excluded.xp_awarded
+        RETURNING xp_awarded AND NOT COALESCE((SELECT xp_awarded FROM prev), false)`
 
-	if _, err := r.db.Exec(ctx, query, userID, sceneID, dialogueID, score); err != nil {
-		return richerror.New(op).WithErr(err).WithMessage("failed to record dialogue completion")
+	if err := r.db.QueryRow(ctx, query, userID, sceneID, dialogueID, score, textRevealed).Scan(&awardXP); err != nil {
+		return false, richerror.New(op).WithErr(err).WithMessage("failed to record dialogue completion")
 	}
-	return nil
+	return awardXP, nil
 }
 
 // ============================================

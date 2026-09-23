@@ -22,7 +22,6 @@ type QuizSubmitRequest struct {
 }
 
 type QuizResult struct {
-	Correct   int `json:"correct"`
-	Total     int `json:"total"`
-	XPAwarded int `json:"xp_awarded"`
+	Correct int `json:"correct"`
+	Total   int `json:"total"`
 }

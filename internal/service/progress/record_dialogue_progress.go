@@ -11,11 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// قوانین XP: XP فقط برای تمرین صحبت (ضبط دیالوگ‌ها) داده می‌شود — نه کوئیز،
+// نه نمره‌ی تلفظ (تا زبان‌آموز مبتدی به‌خاطر نمره‌ی پایین جایزه‌ی کمتری نگیرد).
+// دیالوگی که کاربر در مرحله‌ی ضبط متنش را نمایش داده («نشان بده») XP نمی‌گیرد؛
+// ضبطِ بعدیِ همان دیالوگ بدون کمک هنوز XP می‌گیرد (یک‌بار).
+// پاداش تمام‌کردن صحنه به نمایش متن بستگی ندارد.
+const (
+	XPPerDialogue        = 5
+	XPPerSceneCompletion = 50
+)
+
 // RecordDialogueProgress یک دیالوگ کامل‌شده را برای یک کاربر/صحنه ثبت
 // می‌کند. idempotent است: تکرار همان دیالوگ (مثلاً تمرین دوباره‌ی یک جلسه)
 // دوباره شمارش نمی‌شود چون شمارش از روی لجر یکتای scene_dialogue_progress
 // محاسبه می‌شود، نه یک شمارنده‌ی خام.
-func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, dialogueID string, score float64) (*dto.UpdateSceneProgressResponse, error) {
+func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, dialogueID string, score float64, textRevealed bool) (*dto.UpdateSceneProgressResponse, error) {
 	const op = "progress.RecordDialogueProgress"
 
 	uid, err := uuid.Parse(userID)
@@ -31,7 +41,8 @@ func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, d
 		return nil, richerror.New(op).WithErr(err).WithMessage("invalid dialogue ID")
 	}
 
-	if err := s.sceneProRepo.RecordDialogueCompletion(ctx, uid, sid, did, score); err != nil {
+	awardDialogueXP, err := s.sceneProRepo.RecordDialogueCompletion(ctx, uid, sid, did, score, textRevealed)
+	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
 
@@ -40,15 +51,10 @@ func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, d
 	// است (چند بار در یک روز فرقی نمی‌کند)، پس امن است این را روی هر دیالوگ
 	// کامل‌شده صدا بزنیم. خطای این بخش نباید ثبت پیشرفت صحنه را که کاربر همین
 	// حالا انجام داد خراب کند، فقط لاگ می‌شود.
-	dailyXP := 10
-	if score >= 50 {
-		dailyXP = 20
-	}
 	if _, err := s.AddDailyProgress(ctx, dto.AddDailyProgressRequest{
 		UserID:     userID,
 		DialogueID: dialogueID,
 		Score:      score,
-		XP:         dailyXP,
 	}); err != nil {
 		slog.Warn("progress: failed to record daily streak", "err", err)
 	}
@@ -74,10 +80,17 @@ func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, d
 		return nil, richerror.New(op).WithErr(err)
 	}
 
+	// XP فقط به تمرین واقعی صحبت داده می‌شود و به نمره بستگی ندارد:
+	// هر دیالوگ یک‌بار (اولین ضبط بدون کمک) XPPerDialogue، و تمام‌کردن صحنه یک‌بار XPPerSceneCompletion.
+	gainedXP := 0
+	if awardDialogueXP {
+		gainedXP = XPPerDialogue
+	}
+
 	if existing == nil || notFound {
-		xp := 0
+		xp := gainedXP
 		if isCompleted {
-			xp = 50
+			xp += XPPerSceneCompletion
 		}
 		newProgress, err := sceneprogress.NewSceneProgress(uid, sid, total)
 		if err != nil {
@@ -104,8 +117,9 @@ func (s *Service) RecordDialogueProgress(ctx context.Context, userID, sceneID, d
 	existing.CompletedDialogues = completed
 	existing.Score = avgScore
 	existing.IsCompleted = isCompleted
+	existing.XP += gainedXP
 	if isCompleted && !wasCompleted {
-		existing.XP += 50
+		existing.XP += XPPerSceneCompletion
 	}
 
 	if err := s.sceneProRepo.Update(ctx, existing); err != nil {

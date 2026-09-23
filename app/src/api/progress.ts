@@ -99,6 +99,8 @@ export async function recordDialogueProgress(params: {
   sceneId: string;
   dialogueId: string;
   score: number;
+  /** متن این جمله در مرحله‌ی ضبط نمایش داده شده؛ در این صورت XP جمله داده نمی‌شود. */
+  textRevealed?: boolean;
 }): Promise<SceneProgressUpdate> {
   const res = await authFetch('/v1/progress/dialogue', {
     method: 'POST',
@@ -107,6 +109,7 @@ export async function recordDialogueProgress(params: {
       scene_id: params.sceneId,
       dialogue_id: params.dialogueId,
       score: params.score,
+      text_revealed: !!params.textRevealed,
     }),
   });
   return (await jsonOrThrow(res)) as SceneProgressUpdate;

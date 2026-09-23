@@ -108,8 +108,8 @@ const FAQ_ITEMS: FaqItem[] = [
       fa: 'XP و سطح (Level) چیه؟',
     },
     answer: {
-      en: 'XP is experience earned by finishing scenes (all its dialogue lines). Your total XP places you on a rank ladder — Beginner, Diligent, Practiced, Skilled, Expert, Master — separate from how hard a scene is.',
-      fa: 'XP امتیاز تجربه‌ست که با کامل‌کردن یک صحنه (همه‌ی خط‌های دیالوگش) به دست می‌آید. مجموع XP تو، سطحت رو روی یه نردبان رتبه‌بندی مشخص می‌کنه — تازه‌کار، کوشا، ورزیده، ماهر، خبره، استاد — که ربطی به سختی خودِ صحنه نداره.',
+      en: 'XP is experience earned only by speaking practice: 5 XP for each dialogue line you record (and get scored) for the first time without showing its text, plus 50 XP when you fully complete a scene. If you tap "Show me the text" during the recording step, that line gives no XP — record it again later without the text and you\'ll get it. Quizzes and your pronunciation score don\'t affect XP, so a low score never costs you XP. Your total XP places you on a rank ladder — Beginner, Diligent, Practiced, Skilled, Expert, Master — separate from how hard a scene is.',
+      fa: 'XP فقط با تمرین صحبت‌کردن به دست میاد: برای هر جمله‌ای که بار اول بدون نمایش متن ضبط کنی (و نمره بگیره) ۵ XP، و با تمام‌کردن کامل یک صحنه ۵۰ XP. اگه توی مرحله‌ی ضبط «متن را نشانم بده» رو بزنی، اون جمله XP نمی‌ده — بعداً بدون دیدن متن دوباره ضبطش کنی، XPش رو می‌گیری. کوییز و نمره‌ی تلفظ روی XP اثری ندارن، پس نمره‌ی پایین هیچ‌وقت XP ازت کم نمی‌کنه. مجموع XP تو، سطحت رو روی یه نردبان رتبه‌بندی مشخص می‌کنه — تازه‌کار، کوشا، ورزیده، ماهر، خبره، استاد — که ربطی به سختی خودِ صحنه نداره.',
     },
   },
   {

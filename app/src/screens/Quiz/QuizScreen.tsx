@@ -71,7 +71,7 @@ export const QuizScreen = () => {
         const r = await submitSceneQuiz(scenarioId, payload);
         setResult(r);
       } catch {
-        setResult({ correct: 0, total: payload.length, xp_awarded: 0 });
+        setResult({ correct: 0, total: payload.length });
       } finally {
         setSubmitting(false);
       }
@@ -122,9 +122,6 @@ export const QuizScreen = () => {
           </View>
           <Text style={styles.resultScore}>{result.correct}/{result.total}</Text>
           <Text style={styles.resultPct}>{pct}%</Text>
-          {result.xp_awarded > 0 && (
-            <Text style={styles.resultXP}>+{result.xp_awarded} XP</Text>
-          )}
           <TouchableOpacity
             style={styles.doneBtn}
             activeOpacity={0.85}
@@ -310,12 +307,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.medium,
     fontSize: 15,
     marginTop: 4,
-  },
-  resultXP: {
-    color: COLORS.secondary,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-    marginTop: 12,
   },
   doneBtn: {
     marginTop: 32,

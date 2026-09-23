@@ -232,6 +232,10 @@ export const SceneScreen = () => {
   // کاربر «نمایش متن» را بزند، دیگر برای همه‌ی جمله‌های این صحنه آشکار
   // می‌ماند — لازم نیست هر جمله را دوباره جدا آشکار کند.
   const [textRevealed, setTextRevealed] = useState(false);
+  // اندیس جمله‌هایی که متنشان در مرحله‌ی ضبط نمایش داده شده؛ این جمله‌ها XP
+  // نمی‌گیرند (به text_revealed در recordDialogueProgress نگاه کنید). ref است
+  // نه state، چون فقط موقع ثبت پیشرفت خوانده می‌شود و نباید رندر بزند.
+  const revealedLinesRef = useRef<Set<number>>(new Set());
   // false فقط بعد از یک شکست واقعی در native module (مثلاً مجوز میکروفن رد
   // شده) می‌شود؛ تا آن لحظه فرض می‌کنیم ضبط ممکن است.
   const [canRecord, setCanRecord] = useState(true);
@@ -661,6 +665,7 @@ export const SceneScreen = () => {
               sceneId: String(sceneId),
               dialogueId: dialogue.dialogueId,
               score: result.overall_score,
+              textRevealed: revealedLinesRef.current.has(lineIndex),
             });
           }
         })
@@ -813,6 +818,14 @@ export const SceneScreen = () => {
     setTextRevealed((prev) => !prev);
   }, []);
 
+  // متن آشکار برای بقیه‌ی جمله‌ها هم آشکار می‌ماند، پس هر جمله‌ای که در مرحله‌ی
+  // ضبط با متن آشکار دیده شود علامت می‌خورد — نه فقط جمله‌ای که دکمه رویش زده شد.
+  useEffect(() => {
+    if (activeStepIndex === 2 && textRevealed) {
+      revealedLinesRef.current.add(activeIndex);
+    }
+  }, [activeStepIndex, textRevealed, activeIndex]);
+
   /**
    * با عوض شدن صحنه، هرچه به «اندیس جمله» کلید خورده باید پاک شود.
    *
@@ -825,6 +838,7 @@ export const SceneScreen = () => {
     setRecordings({});
     setEvaluations({});
     setTextRevealed(false);
+    revealedLinesRef.current = new Set();
     setEvalStates({});
     setEvalErrors({});
     setSaveState('idle');

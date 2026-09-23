@@ -30,7 +30,7 @@ export const XpInfoModal: React.FC<XpInfoModalProps> = ({ visible, onClose, tota
           </View>
 
           <Text style={styles.xpValue}>
-            {language === 'fa' ? `${totalXP} امتیاز` : `${totalXP} XP`}
+            {`${totalXP} XP`}
           </Text>
 
           <Text style={styles.body}>{t('xpExplain')}</Text>

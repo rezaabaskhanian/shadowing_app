@@ -14,7 +14,6 @@ export interface QuizAnswer {
 export interface QuizResult {
   correct: number;
   total: number;
-  xp_awarded: number;
 }
 
 // کوئیز درک شنیداریِ یک صحنه — کاملاً از روی دیالوگ‌های واقعی همان صحنه

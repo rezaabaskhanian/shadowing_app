@@ -54,7 +54,7 @@ type SceneProgressRepository interface {
 	GetByUser(ctx context.Context, userID string) ([]domainSceneProgress.SceneProgress, error)
 	Update(ctx context.Context, progress *domainSceneProgress.SceneProgress) error
 	GetCompletedScenes(ctx context.Context, userID string) ([]domainSceneProgress.SceneProgress, error)
-	RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64) error
+	RecordDialogueCompletion(ctx context.Context, userID, sceneID, dialogueID uuid.UUID, score float64, textRevealed bool) (awardXP bool, err error)
 	CountCompletedDialogues(ctx context.Context, userID, sceneID uuid.UUID) (int, float64, error)
 	CountTotalDialogues(ctx context.Context, sceneID uuid.UUID) (int, error)
 	GetDialogueProgress(ctx context.Context, userID, sceneID uuid.UUID) ([]domainSceneProgress.DialogueProgress, error)

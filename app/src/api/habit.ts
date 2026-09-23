@@ -36,7 +36,6 @@ export interface HabitMissionResult {
   accuracy: number;
   duration_seconds: number;
   streak: number;
-  total_xp: number;
   new_achievements: string[];
   message: string;
   speech_evaluated: boolean;

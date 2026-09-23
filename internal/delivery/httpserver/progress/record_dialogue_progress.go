@@ -13,6 +13,9 @@ type recordDialogueProgressRequest struct {
 	SceneID    string  `json:"scene_id"`
 	DialogueID string  `json:"dialogue_id"`
 	Score      float64 `json:"score"`
+	// TextRevealed یعنی کاربر در مرحله‌ی ضبط متن این دیالوگ را نمایش داده
+	// («نشان بده»)؛ در این صورت این ضبط XP دیالوگ نمی‌گیرد.
+	TextRevealed bool `json:"text_revealed"`
 }
 
 // RecordDialogueProgress یک جمله‌ی کامل‌شده (ضبط + نمره‌ی مقایسه) را ثبت
@@ -39,7 +42,7 @@ func (h *Handler) RecordDialogueProgress(c echo.Context) error {
 	// شناسه‌ی کاربر عمداً از توکن خوانده می‌شود نه از بدنه‌ی درخواست، تا کسی
 	// نتواند پیشرفت را به اسم کاربر دیگری ثبت کند.
 	resp, err := h.progressSvc.RecordDialogueProgress(
-		c.Request().Context(), userClaims.UserID, req.SceneID, req.DialogueID, req.Score,
+		c.Request().Context(), userClaims.UserID, req.SceneID, req.DialogueID, req.Score, req.TextRevealed,
 	)
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)

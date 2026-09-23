@@ -43,12 +43,6 @@ func (h *Handler) AddDailyProgress(c echo.Context) error {
 			"message": "شناسه دیالوگ الزامی است",
 		})
 	}
-	if req.XP <= 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error":   "invalid_xp",
-			"message": "امتیاز باید بیشتر از صفر باشد",
-		})
-	}
 
 	// فراخوانی سرویس
 	response, err := h.progressSvc.AddDailyProgress(c.Request().Context(), req)

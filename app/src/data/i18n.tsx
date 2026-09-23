@@ -132,11 +132,12 @@ export const translations: Translations = {
   close: { en: 'Close', fa: 'بستن' },
   statsStreakLabel: { en: 'Day streak', fa: 'روز متوالی' },
   statsLevelLabel: { en: 'Level', fa: 'سطح' },
-  statsXPLabel: { en: 'XP', fa: 'امتیاز تجربه' },
+  statsXPLabel: { en: 'XP', fa: 'XP' },
   xpExplain: {
-    en: 'You get 50 XP for fully completing a scene, plus 5 XP for each correct answer in its quiz. Your total XP sets your level.',
-    fa: 'با تمام‌کردن کامل یک صحنه ۵۰ امتیاز می‌گیری، به‌علاوه ۵ امتیاز برای هر جواب درست توی کوییز همون صحنه. مجموع این امتیازها سطح تو را تعیین می‌کند.',
+    en: 'You get 5 XP for each dialogue line you record for the first time without showing its text, plus 50 XP for fully completing a scene. If you tap "Show me the text" while recording, that line gives no XP (record it again without the text later to earn it). Quizzes and your pronunciation score don\'t change XP. Your total XP sets your level.',
+    fa: 'برای هر جمله‌ای که بار اول بدون نمایش متن ضبطش کنی ۵ XP می‌گیری، و با تمام‌کردن کامل یک صحنه ۵۰ XP. اگه موقع ضبط «متن را نشانم بده» رو بزنی، اون جمله XP نمی‌ده (بعداً بدون دیدن متن دوباره ضبطش کنی، XPش رو می‌گیری). کوییز و نمره‌ی تلفظ روی XP اثری ندارن. مجموع XP سطح تو را تعیین می‌کند.',
   },
+
   streakReminderTitle: { en: 'Streak reminder', fa: 'یادآوری استریک' },
   streakReminderSub: {
     en: "If you haven't practiced today, we'll send you a reminder so your streak doesn't break.",
@@ -211,8 +212,8 @@ export const translations: Translations = {
   pointsEarned: { en: 'points earned', fa: 'امتیاز گرفتی' },
   myPoints: { en: 'My Points', fa: 'امتیازهای من' },
   myPointsSub: {
-    en: 'Every 100 points = 20,000 Toman off a subscription',
-    fa: 'هر ۱۰۰ امتیاز = ۲۰,۰۰۰ تومان تخفیف اشتراک',
+    en: 'Every 100 points = 3 extra days on a subscription purchase',
+    fa: 'هر ۱۰۰ امتیاز = ۳ روز اضافه روی خرید اشتراک',
   },
   viewMySubmissions: { en: 'My Suggestions', fa: 'پیشنهادهای من' },
   
@@ -332,6 +333,10 @@ export const translations: Translations = {
   },
   showText: { en: 'Show me the text', fa: 'متن را نشانم بده' },
   hideText: { en: 'Hide the text', fa: 'متن را مخفی کن' },
+  showTextNoXpHint: {
+    en: 'Showing the text means no XP for this line',
+    fa: 'با نمایش متن، این جمله XP نمی‌گیرد',
+  },
 
   // ---- لیست ضبط‌های صحنه ----
   myLinesTitle: { en: 'My recordings', fa: 'ضبط‌های من' },
@@ -579,8 +584,8 @@ export const translations: Translations = {
     fa: 'بعد متن مخفی می‌شود و باید حین ضبط، آن را از حفظ بگویی.',
   },
   habitHowItWorks3: {
-    en: "At the end, you'll see your accuracy and earn points.",
-    fa: 'در پایان، دقت گفتارت و امتیازی که گرفتی را می‌بینی.',
+    en: "At the end, you'll see your accuracy, and the mission counts toward your streak.",
+    fa: 'در پایان، دقت گفتارت را می‌بینی و این ماموریت در استریکت حساب می‌شود.',
   },
 
   habitStudyTitle: { en: 'Memorize this dialogue', fa: 'این دیالوگ را حفظ کن' },

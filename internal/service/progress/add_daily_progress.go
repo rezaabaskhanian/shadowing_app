@@ -45,15 +45,8 @@ func (s *Service) AddDailyProgress(ctx context.Context, req dto.AddDailyProgress
 		return nil, richerror.New(op).WithErr(err)
 	}
 
-	// 3️⃣ افزودن XP
-	totalXP := req.XP
-	// پاداش استریک
-	if userStreak.Current >= 7 {
-		totalXP += 10 // پاداش هفتگی
-	}
-	if userStreak.Current >= 30 {
-		totalXP += 50 // پاداش ماهانه
-	}
+	// XP اینجا داده نمی‌شود: XP فقط در RecordDialogueProgress (به‌ازای دیالوگ و
+	// صحنه) ذخیره می‌شود؛ پاداش استریک هم همان دستاوردهای ۷ و ۳۰ روزه است.
 
 	// 4️⃣ بررسی دستاوردهای جدید
 	var newAchievements []string
@@ -124,14 +117,8 @@ func (s *Service) AddDailyProgress(ctx context.Context, req dto.AddDailyProgress
 		message += fmt.Sprintf("\n🎉 دستاورد جدید: %s", newAchievements[0])
 	}
 
-	// 6️⃣ محاسبه سطح
-	// level, levelName, xpToNext := s.calculateLevel(totalXP)
-	level, _, _ := s.calculateLevel(totalXP)
-
 	return &dto.AddDailyProgressResponse{
 		Streak:          userStreak.Current,
-		TotalXP:         totalXP,
-		Level:           level,
 		NewAchievements: newAchievements,
 		Message:         message,
 	}, nil

@@ -231,21 +231,15 @@ func (s Service) SubmitSession(ctx context.Context, missionID, userID, audioPath
 		return dto.SubmitSessionResponse{}, richerror.New(op).WithErr(err)
 	}
 
-	xp := 10
-	if accuracy >= 50 {
-		xp = 20
-	}
 	progressResp, err := s.progressSvc.AddDailyProgress(ctx, progressdto.AddDailyProgressRequest{
 		UserID: userID,
 		Score:  accuracy,
-		XP:     xp,
 	})
-	streak, totalXP, newAchievements, message := 0, 0, []string{}, ""
+	streak, newAchievements, message := 0, []string{}, ""
 	if err != nil {
 		slog.Warn("habit session: failed to record daily progress", "err", err)
 	} else {
 		streak = progressResp.Streak
-		totalXP = progressResp.TotalXP
 		newAchievements = progressResp.NewAchievements
 		message = progressResp.Message
 	}
@@ -260,7 +254,6 @@ func (s Service) SubmitSession(ctx context.Context, missionID, userID, audioPath
 		Accuracy:         accuracy,
 		DurationSeconds:  durationSeconds,
 		Streak:           streak,
-		TotalXP:          totalXP,
 		NewAchievements:  newAchievements,
 		Message:          message,
 		SpeechEvaluated:  speechEvaluated,

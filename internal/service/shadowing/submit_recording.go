@@ -129,7 +129,7 @@ func (s Service) SubmitRecording(ctx context.Context, req dto.SubmitRecordingReq
 		// دیالوگِ کامل‌شده دوبار در استریک/دستاوردها حساب شود.
 		if s.progressSvc != nil {
 			if _, err := s.progressSvc.RecordDialogueProgress(
-				ctx, sess.UserID.String(), sess.SceneID.String(), sess.DialogueID.String(), evalResult.OverallScore,
+				ctx, sess.UserID.String(), sess.SceneID.String(), sess.DialogueID.String(), evalResult.OverallScore, false,
 			); err != nil {
 				slog.Warn("shadowing: failed to record scene progress", "err", err)
 			}

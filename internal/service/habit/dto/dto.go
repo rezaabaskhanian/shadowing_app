@@ -39,7 +39,6 @@ type SubmitSessionResponse struct {
 	Accuracy         float64  `json:"accuracy"`
 	DurationSeconds  int      `json:"duration_seconds"`
 	Streak           int      `json:"streak"`
-	TotalXP          int      `json:"total_xp"`
 	NewAchievements  []string `json:"new_achievements"`
 	Message          string   `json:"message"`
 	SpeechEvaluated  bool     `json:"speech_evaluated"`
