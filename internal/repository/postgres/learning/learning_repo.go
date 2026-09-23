@@ -191,7 +191,8 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 
 	query := `SELECT
 		id, title, description, background_image_url,
-		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at
+		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at,
+		COALESCE(grammar_topic, '')
 	FROM scenes ORDER BY "order", created_at DESC`
 
 	rows, err := r.conn.Query(ctx, query)
@@ -206,6 +207,7 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 		err := rows.Scan(
 			&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
 			&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.Category, &s.CreatedAt, &s.UpdatedAt,
+			&s.GrammarTopic,
 		)
 		if err != nil {
 			return nil, richerror.New(op).WithErr(err)

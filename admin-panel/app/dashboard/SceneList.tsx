@@ -45,6 +45,9 @@ export default function SceneList({
   const [detail, setDetail] = useState<SceneResp | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [reordering, setReordering] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   async function load() {
     setLoading(true);
@@ -177,24 +180,44 @@ export default function SceneList({
   // دوباره شماره‌گذاری می‌کند. فقط عوض‌کردنِ دو عدد order کافی نیست: اگر چند
   // صحنه order یکسان داشته باشند (مثلاً همه ۰)، جابه‌جایی هیچ اثری نداشت.
   async function moveScene(index: number, dir: -1 | 1) {
-    const moving = visible[index];
-    const neighbor = visible[index + dir];
-    if (!moving || !neighbor) return;
+    await reorderVisible(index, index + dir);
+  }
 
+  // صحنه‌ی شماره‌ی from (در لیستِ فیلترشده‌ی فعلی) را به جایگاه to می‌برد.
+  // صحنه‌های قابل‌مشاهده فقط بین «جایگاه‌های خودشان» در کل مسیر جابه‌جا
+  // می‌شوند، پس با فیلتر سطح/دسته‌بندی، صحنه‌های پنهان سر جایشان می‌مانند.
+  async function reorderVisible(from: number, to: number) {
+    if (from === to || !visible[from] || !visible[to] || reordering) return;
+
+    const newVisible = [...visible];
+    const [moving] = newVisible.splice(from, 1);
+    newVisible.splice(to, 0, moving);
+
+    const visibleIds = new Set(visible.map((v) => v.id));
     const next = [...sorted];
-    const from = next.findIndex((x) => x.id === moving.id);
-    const to = next.findIndex((x) => x.id === neighbor.id);
-    next.splice(from, 1);
-    next.splice(to, 0, moving);
+    let k = 0;
+    for (let i = 0; i < next.length; i++) {
+      if (visibleIds.has(next[i].id)) next[i] = newVisible[k++];
+    }
 
     const changed = next
       .map((sc, i) => ({ sc, order: i + 1 }))
       .filter(({ sc, order }) => sc.order !== order);
+    if (changed.length === 0) return;
+
+    // نمایش فوری ترتیب جدید، بعد ذخیره و گرفتن نسخه‌ی قطعی از سرور.
+    const newOrder = new Map(changed.map(({ sc, order }) => [sc.id, order]));
+    setScenes((prev) =>
+      prev.map((sc) => (newOrder.has(sc.id) ? { ...sc, order: newOrder.get(sc.id)! } : sc))
+    );
+    setReordering(true);
     try {
       await Promise.all(changed.map(({ sc, order }) => updateSceneOrder(sc.id, order)));
-      load();
     } catch (err: any) {
       notify(err.message, "err");
+    } finally {
+      setReordering(false);
+      load();
     }
   }
 
@@ -262,7 +285,91 @@ export default function SceneList({
         )}
       </div>
 
-      {loading ? (
+      {visible.length > 0 && (
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <h3 style={{ margin: 0 }}>ترتیب مسیر در اپ</h3>
+            <span className="hint">
+              {reordering ? "در حال ذخیره..." : "برای تغییر ترتیب، صحنه را بکش و رها کن"}
+            </span>
+          </div>
+          <ol
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              maxHeight: 480,
+              overflowY: "auto",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+            }}
+          >
+            {visible.map((s, idx) => (
+              <li
+                key={s.id}
+                draggable={!reordering}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragIndex(idx);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (overIndex !== idx) setOverIndex(idx);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null) reorderVisible(dragIndex, idx);
+                  setDragIndex(null);
+                  setOverIndex(null);
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setOverIndex(null);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 12px",
+                  borderBottom: "1px solid var(--border)",
+                  cursor: reordering ? "wait" : "grab",
+                  opacity: dragIndex === idx ? 0.4 : 1,
+                  background:
+                    overIndex === idx && dragIndex !== null && dragIndex !== idx
+                      ? "var(--primary-tint)"
+                      : "var(--surface)",
+                }}
+              >
+                <span style={{ color: "var(--text-2)", userSelect: "none" }}>⠿</span>
+                <span
+                  style={{ minWidth: 28, textAlign: "center", fontWeight: 700 }}
+                  title="شماره در مسیر سطح خودش"
+                >
+                  {levelPosition.get(s.id) ?? "—"}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {s.title || "-"}
+                  </div>
+                  <div className="hint" style={{ fontSize: 12 }}>
+                    {s.grammar_topic ? `📘 ${s.grammar_topic}` : "بدون نکته‌ی گرامری"}
+                  </div>
+                </div>
+                {!difficultyFilter && (
+                  <span className="hint" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                    {DIFFICULTY_LABELS[s.difficulty] || s.difficulty}
+                  </span>
+                )}
+                <span className="hint" style={{ fontSize: 12, whiteSpace: "nowrap" }} title="ترتیب کلی مسیر">
+                  #{s.order}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {loading && scenes.length === 0 ? (
         <div className="empty">در حال بارگذاری...</div>
       ) : scenes.length === 0 ? (
         <div className="empty">هنوز صحنه‌ای ثبت نشده است.</div>

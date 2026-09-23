@@ -63,6 +63,7 @@ func (s Service) ListScene(ctx context.Context) ([]dto.Scene, error) {
 			Order:              s.Order,
 			IsLocked:           s.IsLocked,
 			Category:           s.Category,
+			GrammarTopic:       s.GrammarTopic,
 
 			CreatedAt: s.CreatedAt.Format(time.RFC3339),
 			UpdatedAt: s.UpdatedAt.Format(time.RFC3339),
