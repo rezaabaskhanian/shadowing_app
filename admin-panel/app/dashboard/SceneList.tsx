@@ -86,6 +86,26 @@ export default function SceneList({
       ? !s.category
       : s.category === categoryFilter
   );
+  // همان منطق freeSampleSceneIDs در بک‌اند: اولین صحنه‌ی منتشرشده‌ی هر سطح
+  // دشواری برای کاربر همیشه رایگان است، حتی اگر دستی قفل شده باشد.
+  const freeSampleIds = new Set<string>();
+  const seenDifficulty = new Set<string>();
+  for (const s of sorted) {
+    if (s.status !== "published" || seenDifficulty.has(s.difficulty)) continue;
+    seenDifficulty.add(s.difficulty);
+    freeSampleIds.add(s.id);
+  }
+  function lockBadge(s: SceneResp) {
+    if (freeSampleIds.has(s.id)) {
+      return s.is_locked
+        ? { text: "🎁 نمونه‌ی رایگان (قفل دستی بی‌اثر است)", color: "#f59e0b" }
+        : { text: "🎁 نمونه‌ی رایگان", color: "#10b981" };
+    }
+    return s.is_locked
+      ? { text: "🔒 قفل (فقط با اشتراک)", color: "#ef4444" }
+      : { text: "🔓 باز", color: "#10b981" };
+  }
+
   const needsNumbering =
     sorted.length > 1 && sorted.every((s) => s.order === sorted[0].order);
 
@@ -191,6 +211,12 @@ export default function SceneList({
                 <h3>{s.title || "-"}</h3>
                 <span>{s.status}</span>
                 <span className="hint">🔢 ترتیب مسیر: {s.order}</span>
+                <span
+                  className="hint"
+                  style={{ color: lockBadge(s).color, fontWeight: 600 }}
+                >
+                  {lockBadge(s).text}
+                </span>
                 {s.category ? (
                   <span className="hint">🏷 {s.category}</span>
                 ) : (
