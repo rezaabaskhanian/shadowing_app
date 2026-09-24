@@ -74,21 +74,7 @@ interface BackendScene {
   grammar_audio_url?: string;
 }
 
-// سطح گفتاریِ تست تعیین سطح (CEFR) → سطح صحنه‌ها؛ همان نگاشت بک‌اند
-// (assessment.SceneDifficulty): بدون سطح یا A1/A2 مبتدی حساب می‌شود.
-export function speakingLevelToSceneLevel(cefr?: string): string {
-  switch (cefr) {
-    case 'B1':
-      return 'Intermediate';
-    case 'B2':
-    case 'C1':
-      return 'Advanced';
-    default:
-      return 'Beginner';
-  }
-}
-
-function difficultyToLevel(d?: string): string {
+export function difficultyToLevel(d?: string): string {
   switch ((d || '').trim()) {
     case 'beginner':
       return 'Beginner';

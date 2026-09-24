@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Coins,
   Compass,
+  GraduationCap,
   HelpCircle,
   Lightbulb,
   LogOut,
@@ -38,6 +39,7 @@ import { useScenes } from '../data/ScenesContext';
 import { useToast } from '../data/ToastContext';
 import { getMyPoints } from '../api/submissions';
 import type { LearningGoal } from '../api/notifications';
+import { setMyLevel, type MyLevel, type SceneLevel } from '../api/assessment';
 
 const DRAWER_WIDTH = Math.min(320, Dimensions.get('window').width * 0.82);
 
@@ -53,16 +55,54 @@ interface AppDrawerProps {
   onOpenPlacementTest?: () => void;
   /** سطح گفتاری فعلی کاربر (مثلاً "B1")؛ اگر هنوز تست نداده باشد undefined است. */
   speakingLevel?: string;
+  /** سطح مؤثر کاربر (دستی یا از تست) برای بخش «سطح من»؛ تا لود نشده null. */
+  myLevel?: MyLevel | null;
+  /** بعد از تغییر سطح صدا زده می‌شود تا خانه/لیست صحنه‌ها به‌روز شوند. */
+  onLevelChange?: (level: MyLevel) => void;
 }
 
+const SCENE_LEVELS: { id: SceneLevel; labelKey: string }[] = [
+  { id: 'beginner', labelKey: 'levelBeginner' },
+  { id: 'intermediate', labelKey: 'levelIntermediate' },
+  { id: 'advanced', labelKey: 'levelAdvanced' },
+];
+const SCENE_LEVEL_RANK: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+
 // کشوی کناری (راست) شامل خلاصه کاربر، عادت زبانی، راهنما و خروج از حساب.
-export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel }: AppDrawerProps) => {
+export const AppDrawer = ({
+  visible,
+  onClose,
+  onOpenPlacementTest,
+  speakingLevel,
+  myLevel,
+  onLevelChange,
+}: AppDrawerProps) => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { t } = useLanguage();
   const { user, logout } = useAuth();
   const { scenes } = useScenes();
   const toast = useToast();
+  const [savingLevel, setSavingLevel] = useState(false);
+
+  // انتخاب سطح بالاتر از نتیجه‌ی تست مجاز است (محدودیت سطح آموزشی است نه
+  // پولی)، فقط یک هشدار کوتاه می‌دهیم.
+  const changeLevel = async (level: SceneLevel | '') => {
+    if (!myLevel || level === myLevel.scene_level) return;
+    setSavingLevel(true);
+    try {
+      const updated = await setMyLevel(level);
+      onLevelChange?.(updated);
+      const baseline = updated.test_scene_level || 'beginner';
+      if (level && SCENE_LEVEL_RANK[level] > SCENE_LEVEL_RANK[baseline]) {
+        toast.warning(t('myLevelHarderWarning'));
+      }
+    } catch {
+      toast.error(t('myLevelSaveFailed'));
+    } finally {
+      setSavingLevel(false);
+    }
+  };
   const {
     streakReminderEnabled,
     setStreakReminderEnabled,
@@ -308,6 +348,58 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
 
           <View style={styles.dividerLine} />
 
+          {/* سطح من: کاربر می‌تواند نتیجه‌ی تست تعیین سطح را دستی عوض کند (تست
+              ممکن است اشتباه کند). سطح تعیین می‌کند کدام صحنه‌ها دیده شوند. */}
+          {myLevel && (
+            <View style={styles.goalRow}>
+              <View style={styles.streakReminderRow}>
+                <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                  <GraduationCap color={COLORS.primary} size={18} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowText}>{t('myLevelTitle')}</Text>
+                  <Text style={styles.streakReminderSub}>
+                    {myLevel.source === 'manual'
+                      ? t('myLevelSourceManual')
+                      : myLevel.source === 'test'
+                      ? t('myLevelSourceTest')
+                      : t('myLevelSourceDefault')}
+                    {myLevel.source === 'manual' && myLevel.test_scene_level
+                      ? ` · ${t('myLevelTestResult').replace(
+                          '{level}',
+                          t(SCENE_LEVELS.find((l) => l.id === myLevel.test_scene_level)!.labelKey)
+                        )}`
+                      : ''}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.goalPillGroup}>
+                {SCENE_LEVELS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.goalPill, myLevel.scene_level === opt.id && styles.goalPillActive]}
+                    activeOpacity={0.7}
+                    disabled={savingLevel}
+                    onPress={() => changeLevel(opt.id)}
+                  >
+                    <Text
+                      style={[styles.goalPillText, myLevel.scene_level === opt.id && styles.goalPillTextActive]}
+                    >
+                      {t(opt.labelKey)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {myLevel.source === 'manual' && myLevel.test_scene_level ? (
+                <TouchableOpacity disabled={savingLevel} onPress={() => changeLevel('')} hitSlop={8}>
+                  <Text style={styles.levelResetLink}>{t('myLevelResetToTest')}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
+
+          <View style={styles.dividerLine} />
+
           {/* هدف یادگیری اختیاری — فقط برای اولویت‌دهیِ نرم به انتخاب صحنه در
               Today's Mission، نه فیلتر. توگل نیست چون تک‌انتخابی از چند
               گزینه‌ی ثابت است، عیناً هم‌الگوی contentSource در تنظیمات نوتیف. */}
@@ -513,6 +605,11 @@ const styles = StyleSheet.create({
   },
   goalRow: {
     paddingVertical: 10,
+  },
+  levelResetLink: {
+    color: COLORS.primary,
+    fontSize: 13,
+    marginTop: 10,
   },
   goalPillGroup: {
     flexDirection: 'row',

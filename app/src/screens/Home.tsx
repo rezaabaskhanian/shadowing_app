@@ -33,12 +33,19 @@ import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
-import { getAssessmentTest, getSpeakingProfile, type AssessmentItem, type SpeakingProfile } from '../api/assessment';
+import {
+  getAssessmentTest,
+  getMyLevel,
+  getSpeakingProfile,
+  type AssessmentItem,
+  type MyLevel,
+  type SpeakingProfile,
+} from '../api/assessment';
 import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
-import { speakingLevelToSceneLevel } from '../api/scenes';
+import { difficultyToLevel } from '../api/scenes';
 import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
 
 // هدف روزانه‌ی تعداد جلسه‌های تمرین — یک مقدار طراحی‌شده‌ی ثابت (مثل «۱۰,۰۰۰
@@ -113,6 +120,20 @@ export const HomeScreen = () => {
 
   useFocusEffect(React.useCallback(() => refreshPlacementState(), [refreshPlacementState]));
 
+  // سطح مؤثر کاربر (انتخاب دستی در Drawer، وگرنه نتیجه‌ی تست) — همان سطحی
+  // که بک‌اند با آن صحنه‌ها را فیلتر می‌کند.
+  const [myLevel, setMyLevelState] = React.useState<MyLevel | null>(null);
+  const refreshMyLevel = React.useCallback(() => {
+    let active = true;
+    getMyLevel()
+      .then((l) => active && setMyLevelState(l))
+      .catch(() => active && setMyLevelState(null));
+    return () => {
+      active = false;
+    };
+  }, []);
+  useFocusEffect(refreshMyLevel);
+
   // ماموریتِ امروز: صحنه‌ی پیشنهادی بر اساسِ سطح/مهارتِ ضعیف‌تر کاربر.
   // مستقل از بقیه واکشی می‌شود و شکستش هیچ‌چیزِ دیگری را نمی‌شکند — کارتِ
   // «ادامه داستان»ِ قدیمی همیشه به‌عنوانِ fallback آماده است.
@@ -184,8 +205,11 @@ export const HomeScreen = () => {
   // بک‌اند از قبل فقط صحنه‌های مجاز برای سطح کاربر را برمی‌گرداند (به‌علاوه‌ی
   // دو پیش‌نمایشِ هر سطح بالاتر)؛ خانه از این هم فشرده‌تر است: فقط صحنه‌های
   // ناتمامِ دقیقاً همان سطح کاربر.
-  const myLevel = speakingLevelToSceneLevel(speakingProfile?.level);
-  const myUpcomingScenes = scenes.filter((s) => s.level === myLevel && !s.isCompleted);
+  // تا سطح لود نشده چیزی حدس نمی‌زنیم (وگرنه کاربر متوسط لحظه‌ای صحنه‌های
+  // مبتدی را می‌دید).
+  const myUpcomingScenes = myLevel
+    ? scenes.filter((s) => s.level === difficultyToLevel(myLevel.scene_level) && !s.isCompleted)
+    : [];
   const primaryScenario = myUpcomingScenes[0] || scenes[0] || null;
 
   // تصویر/عنوان/قفل‌بودن از روی صحنه‌ی از قبل بارگذاری‌شده گرفته می‌شود؛
@@ -275,6 +299,11 @@ export const HomeScreen = () => {
           onClose={() => setDrawerVisible(false)}
           onOpenPlacementTest={placementItems ? () => setPlacementModalVisible(true) : undefined}
           speakingLevel={speakingProfile?.level}
+          myLevel={myLevel}
+          onLevelChange={(level) => {
+            setMyLevelState(level);
+            reloadScenes();
+          }}
         />
         <StreakInfoModal
           visible={streakInfoVisible}
@@ -484,7 +513,7 @@ export const HomeScreen = () => {
         </View>
 
         <View style={styles.worldsList}>
-          {homePreviewScenes.length === 0 && scenes.length > 0 && (
+          {myLevel && homePreviewScenes.length === 0 && scenes.length > 0 && (
             <Text style={styles.allDoneText}>{t('homeLevelAllDone')}</Text>
           )}
           {homePreviewScenes.map((scenario, index) => (
@@ -522,6 +551,7 @@ export const HomeScreen = () => {
             // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
             // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).
             refreshPlacementState();
+            refreshMyLevel();
             reloadScenes();
           }}
         />

@@ -115,3 +115,28 @@ export async function getSpeakingProfile(): Promise<SpeakingProfile | null> {
   if (res.status === 404) return null;
   return (await jsonOrThrow(res)) as SpeakingProfile;
 }
+
+export type SceneLevel = 'beginner' | 'intermediate' | 'advanced';
+
+/** سطح مؤثر کاربر: انتخاب دستی، وگرنه نتیجه‌ی تست، وگرنه مبتدی. */
+export interface MyLevel {
+  scene_level: SceneLevel;
+  source: 'manual' | 'test' | 'default';
+  /** سطح حاصل از تست؛ خالی اگر تست نداده */
+  test_scene_level: SceneLevel | '';
+}
+
+export async function getMyLevel(): Promise<MyLevel> {
+  const res = await authFetch('/v1/assessment/level', { method: 'GET' });
+  return (await jsonOrThrow(res)) as MyLevel;
+}
+
+/** انتخاب دستی سطح؛ رشته‌ی خالی = برگشت به نتیجه‌ی تست. */
+export async function setMyLevel(sceneLevel: SceneLevel | ''): Promise<MyLevel> {
+  const res = await authFetch('/v1/assessment/level', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scene_level: sceneLevel }),
+  });
+  return (await jsonOrThrow(res)) as MyLevel;
+}
