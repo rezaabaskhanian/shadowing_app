@@ -61,6 +61,14 @@ func (s *Service) GetTodaysMission(ctx context.Context, userID string) (*dto.Tod
 	} else if re, ok := profileErr.(richerror.RichError); profileErr != nil && !(ok && re.Kind() == richerror.KindNotFound) {
 		slog.Warn("mission: failed to load speaking profile, defaulting to beginner", "err", profileErr)
 	}
+	// سطحی که کاربر دستی انتخاب کرده بر نتیجه‌ی تست اولویت دارد.
+	if manual, err := s.overrides.Get(ctx, uid); err != nil {
+		slog.Warn("mission: failed to load manual level, using test level", "err", err)
+	} else if manual != "" {
+		targetDifficulty = scene.DifficultyLevel(manual)
+		level = capitalize(manual)
+		isEstimated = false
+	}
 
 	// ماموریت فقط از صحنه‌هایی انتخاب می‌شود که کاربر با سطح خودش اجازه‌ی دیدنشان
 	// را دارد (همان قانون لیست صحنه‌ها)؛ قفل دستی بعد از این فیلتر حذف می‌شود

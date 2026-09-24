@@ -3,31 +3,29 @@ package learninghandler
 import (
 	"context"
 
-	"shadowing-backend/internal/domain/assessment"
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/claims"
-	assessmentdto "shadowing-backend/internal/service/assessment/dto"
 	"shadowing-backend/internal/service/learning/dto"
 
 	"github.com/labstack/echo/v4"
 )
 
 type speakingProfileGetter interface {
-	GetProfile(ctx context.Context, userID string) (*assessmentdto.GetProfileResponse, error)
+	EffectiveSceneLevel(ctx context.Context, userID string) (string, error)
 }
 
-// userDifficulty سطح کاربر (بر اساس تست تعیین سطح) را برمی‌گرداند؛ کاربری که
-// تست نداده یا لاگین نیست مبتدی حساب می‌شود.
+// userDifficulty سطح مؤثر کاربر (انتخاب دستی، وگرنه نتیجه‌ی تست تعیین سطح) را
+// برمی‌گرداند؛ کاربری که هیچ‌کدام را ندارد یا لاگین نیست مبتدی حساب می‌شود.
 func (h Handler) userDifficulty(c echo.Context) scene.DifficultyLevel {
 	userClaims, err := claims.GetClaims(c)
 	if err != nil || h.profileSvc == nil {
 		return scene.DifficultyBeginner
 	}
-	profile, err := h.profileSvc.GetProfile(c.Request().Context(), userClaims.UserID)
+	level, err := h.profileSvc.EffectiveSceneLevel(c.Request().Context(), userClaims.UserID)
 	if err != nil {
 		return scene.DifficultyBeginner
 	}
-	return scene.DifficultyLevel(assessment.SceneDifficulty(assessment.Level(profile.Level)))
+	return scene.DifficultyLevel(level)
 }
 
 func sceneDifficulty(s dto.Scene) scene.DifficultyLevel { return scene.DifficultyLevel(s.Difficulty) }

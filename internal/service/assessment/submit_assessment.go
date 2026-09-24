@@ -92,6 +92,7 @@ func (s *Service) SubmitAssessment(ctx context.Context, userIDStr string, submit
 	if err := s.profiles.Upsert(ctx, profile); err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
+	s.clearManualLevel(ctx, userID)
 
 	return &dto.SubmitAssessmentResponse{
 		Level:              string(profile.Level),

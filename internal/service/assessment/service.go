@@ -40,6 +40,7 @@ type Service struct {
 	log       SubmissionLogRepository
 	evaluator speecheval.EvaluatorTranscriber
 	ai        aiservice.Service
+	overrides LevelOverrideRepository
 }
 
 func New(
@@ -48,6 +49,7 @@ func New(
 	log SubmissionLogRepository,
 	evaluator speecheval.EvaluatorTranscriber,
 	ai aiservice.Service,
+	overrides LevelOverrideRepository,
 ) *Service {
 	return &Service{
 		items:     items,
@@ -55,5 +57,6 @@ func New(
 		log:       log,
 		evaluator: evaluator,
 		ai:        ai,
+		overrides: overrides,
 	}
 }

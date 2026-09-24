@@ -55,6 +55,12 @@ type GoalRepository interface {
 	GetLearningGoal(ctx context.Context, userID string) (string, error)
 }
 
+// LevelOverrideRepository سطحی که کاربر دستی انتخاب کرده (رشته‌ی خالی = ندارد)؛
+// بر نتیجه‌ی تست تعیین سطح اولویت دارد.
+type LevelOverrideRepository interface {
+	Get(ctx context.Context, userID uuid.UUID) (string, error)
+}
+
 type Service struct {
 	scenes        SceneRepository
 	sceneProgress SceneProgressRepository
@@ -63,6 +69,7 @@ type Service struct {
 	leitner       LeitnerRepository
 	grammar       GrammarRepository
 	goals         GoalRepository
+	overrides     LevelOverrideRepository
 }
 
 func New(
@@ -73,6 +80,7 @@ func New(
 	leitner LeitnerRepository,
 	grammar GrammarRepository,
 	goals GoalRepository,
+	overrides LevelOverrideRepository,
 ) *Service {
 	return &Service{
 		scenes:        scenes,
@@ -82,5 +90,6 @@ func New(
 		leitner:       leitner,
 		grammar:       grammar,
 		goals:         goals,
+		overrides:     overrides,
 	}
 }

@@ -109,3 +109,21 @@ type ItemAdminDTO struct {
 type ListItemsResponse struct {
 	Items []ItemAdminDTO `json:"items"`
 }
+
+// ============================================
+// Level (سطح مؤثر کاربر: دستی یا از تست)
+// ============================================
+
+type LevelResponse struct {
+	// SceneLevel سطح مؤثر: beginner / intermediate / advanced
+	SceneLevel string `json:"scene_level"`
+	// Source: manual (انتخاب دستی) / test (نتیجه‌ی تست) / default (هیچ‌کدام → مبتدی)
+	Source string `json:"source"`
+	// TestSceneLevel سطح حاصل از تست؛ خالی اگر تست نداده
+	TestSceneLevel string `json:"test_scene_level"`
+}
+
+type SetLevelRequest struct {
+	// رشته‌ی خالی = پاک‌کردن انتخاب دستی و برگشت به نتیجه‌ی تست
+	SceneLevel string `json:"scene_level"`
+}

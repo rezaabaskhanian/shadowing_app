@@ -367,12 +367,13 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	assessmentItemRepo := postgresassessment.NewItemRepository(MyPostgresgresRepo.DB)
 	assessmentProfileRepo := postgresassessment.NewProfileRepository(MyPostgresgresRepo.DB)
 	assessmentLogRepo := postgresassessment.NewSubmissionLogRepository(MyPostgresgresRepo.DB)
-	assessmentSvc := assessmentservice.New(assessmentItemRepo, assessmentProfileRepo, assessmentLogRepo, evaluator, aiservice.New(settingsSvc))
+	levelOverrideRepo := postgresassessment.NewLevelOverrideRepository(MyPostgresgresRepo.DB)
+	assessmentSvc := assessmentservice.New(assessmentItemRepo, assessmentProfileRepo, assessmentLogRepo, evaluator, aiservice.New(settingsSvc), levelOverrideRepo)
 
 	// «ماموریتِ امروز»: صحنه‌ی پیشنهادی بر اساسِ سطحِ گفتاری + مهارتِ ضعیف‌تر
 	// کاربر. هیچ ریپازیتوریِ جدیدی نمی‌سازد، همان نمونه‌های بالا را دوباره
 	// تزریق می‌کند (internal/service/mission).
-	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo, leitnerRepo, grammarRepo, notificationRepo)
+	missionSvc := missionservice.New(learnningRepo, sceneprogressRepo, assessmentProfileRepo, recordingRepo, leitnerRepo, grammarRepo, notificationRepo, levelOverrideRepo)
 
 	// گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه: طبق تصمیمِ محصول، ElevenLabs فقط در
 	// پنل ادمین (صدای دیالوگ‌های صحنه) استفاده می‌شود؛ اینجا دیگر TTS تزریق
