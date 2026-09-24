@@ -72,9 +72,12 @@ export const translations: Translations = {
   // Scenes Screen
   chooseScenarioTitle: { en: 'Choose Your Scenario', fa: 'سناریوی خود را انتخاب کنید' },
   chooseScenarioSub: { en: 'Practice natural conversations in real places.', fa: 'مکالمات طبیعی را در محیط‌های واقعی تمرین کنید.' },
-  categoryBusiness: { en: 'Business', fa: 'کاری' },
-  categoryTravel: { en: 'Travel', fa: 'سفر' },
-  categoryDaily: { en: 'Daily', fa: 'روزمره' },
+  categoryMigration: { en: '✈️ Migration', fa: '✈️ مهاجرت' },
+  categoryCareer: { en: '💼 Career', fa: '💼 کار و شغل' },
+  categoryEducation: { en: '🎓 Education', fa: '🎓 تحصیل' },
+  categoryDaily: { en: '🗣️ Daily Conversation', fa: '🗣️ مکالمه‌ی روزمره' },
+  categoryTravel: { en: '🌍 Travel', fa: '🌍 سفر' },
+  categorySocial: { en: '🎬 Entertainment & Social', fa: '🎬 سرگرمی و اجتماعی' },
   noScenariosMatch: { en: 'No scenarios match your filters.', fa: 'سناریویی با این فیلترها پیدا نشد.' },
   searchScenesPlaceholder: { en: 'Search scenarios…', fa: 'جست‌وجوی سناریوها…' },
 
@@ -159,6 +162,7 @@ export const translations: Translations = {
     fa: 'اختیاری — کمک می‌کنه Today’s Mission بیشتر سمت صحنه‌های مرتبط با هدفت بره.',
   },
   learningGoalNone: { en: 'None', fa: 'هیچ‌کدام' },
+  learningGoalMigration: { en: 'Migration', fa: 'مهاجرت' },
   learningGoalTravel: { en: 'Travel', fa: 'سفر' },
   learningGoalWork: { en: 'Work', fa: 'کار' },
   learningGoalDailyLife: { en: 'Daily Life', fa: 'زندگی روزمره' },
@@ -565,6 +569,10 @@ export const translations: Translations = {
     en: 'No mission today. Check back tomorrow!',
     fa: 'امروز ماموریتی نیست. فردا دوباره سر بزن!',
   },
+  habitDoneForToday: {
+    en: "You've done today's mission. A new one arrives tomorrow!",
+    fa: 'ماموریت امروز را انجام دادی. فردا یک ماموریت تازه منتظرت است!',
+  },
   habitDaysStreakSuffix: { en: 'day streak', fa: 'روز استریک' },
   habitMissionKicker: {
     en: "Today's Real Situation",
@@ -609,7 +617,6 @@ export const translations: Translations = {
   habitAccuracyLabel: { en: 'Accuracy', fa: 'دقت' },
   habitYouPracticed: { en: 'You practiced', fa: 'تمرین کردی' },
   habitDoneBtn: { en: 'Done', fa: 'پایان' },
-  habitPracticeAgainBtn: { en: 'Practice Again', fa: 'دوباره تمرین کن' },
 
   // ---- Topic Suggestion ----
   topicSuggestionTitle: { en: 'Suggest a Topic', fa: 'پیشنهاد موضوع' },
@@ -698,6 +705,10 @@ export const translations: Translations = {
   },
 
   lockedBadge: { en: 'Locked', fa: 'قفل' },
+  homeLevelAllDone: {
+    en: "You've finished every scene at your level! See the full path for what's next.",
+    fa: 'همه‌ی درس‌های سطحت را تمام کردی! برای ادامه، «مسیر کامل» را ببین.',
+  },
   curriculumMapTitle: { en: 'Learning Path', fa: 'مسیر آموزشی' },
   curriculumMapSub: {
     en: '{done} of {total} scenes completed',

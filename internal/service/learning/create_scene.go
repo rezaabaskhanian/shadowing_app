@@ -32,6 +32,10 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithKind(richerror.KindForbidden)
 	}
 
+	if err := validateCategory(op, req.Category); err != nil {
+		return dto.Scene{}, err
+	}
+
 	// ========== 2️⃣ تبدیل Difficulty به نوع دامین ==========
 	difficultyLevel, err := toDifficulty(op, req.Difficulty)
 	if err != nil {

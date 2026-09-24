@@ -24,6 +24,7 @@ type Handler struct {
 	progressSvc        *progressservice.Service
 	aiAccessSvc        *aiaccessservice.Service
 	tokenTopupSvc      tokentopupservice.Service
+	profileSvc         speakingProfileGetter
 
 	authSvc authservice.Service
 
@@ -46,6 +47,7 @@ func New(
 	store filestore.Store,
 	aiAccessSvc *aiaccessservice.Service,
 	tokenTopupSvc tokentopupservice.Service,
+	profileSvc speakingProfileGetter,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -60,5 +62,6 @@ func New(
 		store:              store,
 		aiAccessSvc:        aiAccessSvc,
 		tokenTopupSvc:      tokenTopupSvc,
+		profileSvc:         profileSvc,
 	}
 }

@@ -331,30 +331,6 @@ func (r DB) GetPublished(ctx context.Context) ([]scene.Scene, error) {
 	panic("unimplemented")
 }
 
-// GetCategories دسته‌بندی‌های متمایز و غیرخالیِ صحنه‌ها را برمی‌گرداند.
-func (r DB) GetCategories(ctx context.Context) ([]string, error) {
-	const op = "postgres.GetSceneCategories"
-
-	query := `SELECT DISTINCT category FROM scenes WHERE category IS NOT NULL AND category != '' ORDER BY category`
-
-	rows, err := r.conn.Query(ctx, query)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err)
-	}
-	defer rows.Close()
-
-	categories := make([]string, 0)
-	for rows.Next() {
-		var cat string
-		if err := rows.Scan(&cat); err != nil {
-			return nil, richerror.New(op).WithErr(err)
-		}
-		categories = append(categories, cat)
-	}
-
-	return categories, nil
-}
-
 // Update implements [learningservice.Repository].
 func (r DB) Update(ctx context.Context, scene scene.Scene) error {
 	const op = "postgres.UpdateScene"

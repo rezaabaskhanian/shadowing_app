@@ -18,7 +18,7 @@ import { StreakInfoModal } from '../components/StreakInfoModal';
 import { XpInfoModal } from '../components/XpInfoModal';
 import { sceneKeys, useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
-import type { ScenarioCategory } from '../data/scenarios';
+import { SCENE_CATEGORY_LABEL_KEY, type ScenarioCategory } from '../data/scenarios';
 import { COLORS, hexToRgba } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
@@ -42,8 +42,7 @@ export { HomeScreen } from './Home';
 type CategoryFilter = ScenarioCategory | 'all';
 type LevelFilter = string | 'all';
 
-// دسته‌بندی را ادمین دستی تایپ می‌کند؛ «Shop» و «shop » باید یک دسته حساب شوند،
-// وگرنه دو چیپ جدا می‌شد و زدن روی یکی نصف صحنه‌ها را نشان می‌داد.
+// دسته‌بندی‌های قدیمی متن آزاد بودند؛ «Shop» و «shop » باید یک دسته حساب شوند.
 const categoryKey = (c?: string) => (c || '').trim().toLowerCase();
 
 export const ScenesScreen = () => {
@@ -78,17 +77,16 @@ export const ScenesScreen = () => {
     }
   }, [paramCategory, navigation]);
 
-  // دسته‌بندی‌ها دیگر ثابت نیستند؛ از روی دسته‌بندی واقعی صحنه‌ها (که ادمین در
-  // پنل تعیین می‌کند) ساخته می‌شوند. شناسه‌ی چیپ همان categoryKey است.
+  // فقط دسته‌هایی که واقعاً صحنه دارند چیپ می‌گیرند، به ترتیب ثابت لیست
+  // دسته‌بندی‌ها؛ دسته‌ی قدیمیِ خارج از لیست (تا ادمین اصلاحش کند) آخر می‌آید.
   const categories: { id: CategoryFilter; label: string }[] = React.useMemo(() => {
-    const byKey = new Map<string, string>();
-    for (const s of scenes) {
-      const key = categoryKey(s.category);
-      if (key && !byKey.has(key)) byKey.set(key, (s.category || '').trim());
-    }
+    const present = new Set(scenes.map((s) => categoryKey(s.category)).filter(Boolean));
+    const known = Object.keys(SCENE_CATEGORY_LABEL_KEY).filter((c) => present.has(c));
+    const legacy = Array.from(present).filter((c) => !SCENE_CATEGORY_LABEL_KEY[c]);
     return [
       { id: 'all', label: t('all') },
-      ...Array.from(byKey, ([id, label]) => ({ id, label })),
+      ...known.map((id) => ({ id, label: t(SCENE_CATEGORY_LABEL_KEY[id]) })),
+      ...legacy.map((id) => ({ id, label: id })),
     ];
   }, [scenes, t]);
 

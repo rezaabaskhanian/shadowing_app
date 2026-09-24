@@ -38,6 +38,7 @@ export const LanguageHabitScreen = () => {
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
+  const [doneToday, setDoneToday] = useState(false);
 
   const load = useCallback(() => {
     let active = true;
@@ -45,7 +46,8 @@ export const LanguageHabitScreen = () => {
     Promise.all([getTodayMission(), getHabitHistory()])
       .then(([m, h]) => {
         if (!active) return;
-        setMission(m);
+        setDoneToday(!!m?.completed_today);
+        setMission(m?.completed_today ? null : m);
         setHistory(h);
       })
       .catch(() => {
@@ -180,7 +182,7 @@ export const LanguageHabitScreen = () => {
               </View>
             ) : (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>{t('habitNoMissionToday')}</Text>
+                <Text style={styles.emptyText}>{t(doneToday ? 'habitDoneForToday' : 'habitNoMissionToday')}</Text>
               </View>
             )}
 

@@ -103,7 +103,8 @@ func (h Handler) ListScene(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 
-	// صحنه‌های منتشرنشده (پیش‌نویس/آرشیو) فقط برای ادمین نمایش داده می‌شوند.
+	// صحنه‌های منتشرنشده (پیش‌نویس/آرشیو) فقط برای ادمین نمایش داده می‌شوند؛
+	// کاربر عادی هم فقط صحنه‌های مجاز برای سطح خودش را می‌بیند.
 	if !isAdminCaller(c) {
 		published := scenes[:0]
 		for _, s := range scenes {
@@ -111,7 +112,7 @@ func (h Handler) ListScene(c echo.Context) error {
 				published = append(published, s)
 			}
 		}
-		scenes = published
+		scenes = filterByLevel(published, h.userDifficulty(c))
 	}
 
 	freeSamples := freeSampleSceneIDs(scenes)

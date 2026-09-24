@@ -26,6 +26,9 @@ type TodayMissionResponse struct {
 	Activity        Activity          `json:"activity"`
 	Dialogues       []DialogueLineDTO `json:"dialogues"`
 	EstimatedSecond int               `json:"estimated_duration_seconds"`
+	// CompletedToday یعنی ماموریت امروز انجام شده و تا فردا ماموریتی نیست؛
+	// در این حالت بقیه‌ی فیلدها خالی‌اند.
+	CompletedToday bool `json:"completed_today"`
 }
 
 // SubmitSessionResponse - نتیجه‌ی یک جلسه‌ی تمرین عادت که کاربر ارسال کرده.

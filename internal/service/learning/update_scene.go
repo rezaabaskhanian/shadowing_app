@@ -30,6 +30,9 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 			WithMessage("حداقل یک هات‌اسپات باید وجود داشته باشد").
 			WithKind(richerror.KindForbidden)
 	}
+	if err := validateCategory(op, req.Category); err != nil {
+		return dto.Scene{}, err
+	}
 
 	// ========== 2️⃣ واکشی صحنه‌ی فعلی (برای حفظ status/order/createdAt و بررسی وجود) ==========
 	existing, err := s.repo.GetByID(ctx, id)

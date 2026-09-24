@@ -88,6 +88,16 @@ export interface DialogueItem {
 // دسته‌بندی صحنه اکنون متن آزادیست که ادمین در پنل تعیین می‌کند (مثلاً «shop»)
 export type ScenarioCategory = string;
 
+// دسته‌بندی‌های ثابت صحنه (همان scene.Category بک‌اند) به ترتیب نمایش → کلید i18n.
+export const SCENE_CATEGORY_LABEL_KEY: Record<string, string> = {
+  migration: 'categoryMigration',
+  career: 'categoryCareer',
+  education: 'categoryEducation',
+  daily: 'categoryDaily',
+  travel: 'categoryTravel',
+  social: 'categorySocial',
+};
+
 /** نکته‌ی گرامریِ اختیاریِ یک صحنه: موضوع، توضیح فارسی و ۲ تا ۴ مثال از خودِ صحنه. */
 export interface GrammarNote {
   topic: string;

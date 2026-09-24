@@ -325,6 +325,7 @@ export const AppDrawer = ({ visible, onClose, onOpenPlacementTest, speakingLevel
               {(
                 [
                   { id: '', label: t('learningGoalNone') },
+                  { id: 'Migration', label: t('learningGoalMigration') },
                   { id: 'Travel', label: t('learningGoalTravel') },
                   { id: 'Work', label: t('learningGoalWork') },
                   { id: 'Daily Life', label: t('learningGoalDailyLife') },

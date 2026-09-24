@@ -128,7 +128,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
-			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store, aiAccessSvc, tokenTopupSvc,
+			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store, aiAccessSvc, tokenTopupSvc, assessmentSvc,
 		),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),

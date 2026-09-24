@@ -20,10 +20,6 @@ export const HabitMissionResultScreen = () => {
   const { t } = useLanguage();
 
   const result: HabitMissionResult = route.params?.result;
-  const missionType: string | undefined = route.params?.missionType;
-  const missionId: string | undefined = route.params?.missionId;
-  const activity = route.params?.activity;
-  const dialogueLines = route.params?.dialogueLines;
 
   const goDone = () => {
     navigation.dispatch(
@@ -32,12 +28,6 @@ export const HabitMissionResultScreen = () => {
         routes: [{ name: 'LanguageHabit' }],
       })
     );
-  };
-
-  // به‌جای برگشت به هاب و زدن دوباره‌ی Start، همان دیالوگ/فعالیت را بی‌درنگ
-  // از نو تمرین می‌کند — تکرار خودش بخشی از رسیدن به خودکارسازی است.
-  const practiceAgain = () => {
-    navigation.navigate('HabitMissionPractice', { missionId, missionType, activity, dialogueLines });
   };
 
   return (
@@ -78,18 +68,9 @@ export const HabitMissionResultScreen = () => {
           </View>
         ) : null}
 
-        {missionId ? (
-          <TouchableOpacity style={styles.againBtn} onPress={practiceAgain} activeOpacity={0.85}>
-            <Text style={styles.againBtnText}>{t('habitPracticeAgainBtn')}</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <TouchableOpacity
-          style={[styles.doneBtn, styles.doneBtnSecondary]}
-          onPress={goDone}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.doneBtnText, styles.doneBtnTextSecondary]}>{t('habitDoneBtn')}</Text>
+        {/* ماموریت روزی یک‌بار است، پس «دوباره تمرین کن» نداریم — فقط پایان. */}
+        <TouchableOpacity style={styles.doneBtn} onPress={goDone} activeOpacity={0.85}>
+          <Text style={styles.doneBtnText}>{t('habitDoneBtn')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -159,26 +140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  doneBtnSecondary: {
-    backgroundColor: 'transparent',
-    marginTop: 10,
-  },
   doneBtnText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 15,
-  },
-  doneBtnTextSecondary: {
-    color: COLORS.textSecondary,
-  },
-  againBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  againBtnText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,

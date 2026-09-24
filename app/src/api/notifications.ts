@@ -5,7 +5,7 @@ export type ReminderTime = string;
 export type ContentSource = 'leitner' | 'sentences' | 'mixed';
 /** هدف یادگیریِ اختیاری کاربر — رشته‌ی خالی یعنی هنوز انتخاب نکرده. فقط
  * برای اولویت‌دهیِ نرم به انتخاب صحنه در Today's Mission استفاده می‌شود. */
-export type LearningGoal = '' | 'Travel' | 'Work' | 'Daily Life' | 'Study';
+export type LearningGoal = '' | 'Migration' | 'Travel' | 'Work' | 'Daily Life' | 'Study';
 
 export interface NotificationSettings {
   daily_reminder_enabled: boolean;

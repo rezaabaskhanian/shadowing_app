@@ -369,3 +369,18 @@ export interface AssessmentItemPayload {
   difficulty: Difficulty | "";
   is_active: boolean;
 }
+
+// دسته‌بندی‌های ثابت صحنه — باید با scene.Category در بک‌اند
+// (internal/domain/learning/scene/category.go) یکی باشند؛ بک‌اند مقدار دیگری نمی‌پذیرد.
+export const SCENE_CATEGORIES: { value: string; label: string }[] = [
+  { value: "migration", label: "✈️ مهاجرت" },
+  { value: "career", label: "💼 کار و شغل" },
+  { value: "education", label: "🎓 تحصیل" },
+  { value: "daily", label: "🗣️ مکالمه‌ی روزمره" },
+  { value: "travel", label: "🌍 سفر" },
+  { value: "social", label: "🎬 سرگرمی و اجتماعی" },
+];
+
+export function sceneCategoryLabel(value: string): string {
+  return SCENE_CATEGORIES.find((c) => c.value === value)?.label || value;
+}

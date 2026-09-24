@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"math"
-	"strings"
 	"time"
 
 	"shadowing-backend/internal/domain/assessment"
@@ -23,14 +22,7 @@ const secondsPerDialogue = 35
 const minEstimatedMinutes = 3
 
 func difficultyForLevel(level assessment.Level) scene.DifficultyLevel {
-	switch level {
-	case assessment.LevelB1:
-		return scene.DifficultyIntermediate
-	case assessment.LevelB2, assessment.LevelC1:
-		return scene.DifficultyAdvanced
-	default: // A1، A2 یا نامشخص
-		return scene.DifficultyBeginner
-	}
+	return scene.DifficultyLevel(assessment.SceneDifficulty(level))
 }
 
 func capitalize(s string) string {
@@ -59,16 +51,6 @@ func (s *Service) GetTodaysMission(ctx context.Context, userID string) (*dto.Tod
 		return nil, richerror.New(op).WithErr(err)
 	}
 
-	candidates := make([]scene.Scene, 0, len(allScenes))
-	for _, sc := range allScenes {
-		if sc.Status == scene.StatusPublished && !sc.IsLocked {
-			candidates = append(candidates, sc)
-		}
-	}
-	if len(candidates) == 0 {
-		return nil, richerror.New(op).WithMessage("no published scenes available").WithKind(richerror.KindNotFound)
-	}
-
 	level := ""
 	isEstimated := true
 	targetDifficulty := scene.DifficultyBeginner
@@ -78,6 +60,26 @@ func (s *Service) GetTodaysMission(ctx context.Context, userID string) (*dto.Tod
 		targetDifficulty = difficultyForLevel(profile.Level)
 	} else if re, ok := profileErr.(richerror.RichError); profileErr != nil && !(ok && re.Kind() == richerror.KindNotFound) {
 		slog.Warn("mission: failed to load speaking profile, defaulting to beginner", "err", profileErr)
+	}
+
+	// ماموریت فقط از صحنه‌هایی انتخاب می‌شود که کاربر با سطح خودش اجازه‌ی دیدنشان
+	// را دارد (همان قانون لیست صحنه‌ها)؛ قفل دستی بعد از این فیلتر حذف می‌شود
+	// تا سهمیه‌ی پیش‌نمایش سطوح بالاتر دقیقاً همانی باشد که کاربر در لیست می‌بیند.
+	published := make([]scene.Scene, 0, len(allScenes))
+	for _, sc := range allScenes {
+		if sc.Status == scene.StatusPublished {
+			published = append(published, sc)
+		}
+	}
+	visible := scene.FilterByLevel(published, func(sc scene.Scene) scene.DifficultyLevel { return sc.Difficulty }, targetDifficulty)
+	candidates := make([]scene.Scene, 0, len(visible))
+	for _, sc := range visible {
+		if !sc.IsLocked {
+			candidates = append(candidates, sc)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil, richerror.New(op).WithMessage("no published scenes available").WithKind(richerror.KindNotFound)
 	}
 
 	progress, err := s.sceneProgress.GetByUser(ctx, userID)
@@ -172,21 +174,10 @@ func pickScene(candidates []scene.Scene, target scene.DifficultyLevel, completed
 	return candidates[0]
 }
 
-// matchesGoal بررسی می‌کند آیا Category صحنه با goal کاربر هم‌راستاست —
-// چون Category یک رشته‌ی آزاد است که هر صحنه توسط ادمین دستی وارد می‌شود
-// (نه یک enum ثابت)، مقایسه با substring دوطرفه و case-insensitive انجام
-// می‌شود تا هم "Travel" با category "Travel" و هم با چیزی مثل "Airport &
-// Travel" مچ شود.
+// matchesGoal بررسی می‌کند آیا دسته‌ی صحنه با goal کاربر جور است — طبق
+// نگاشت ثابت هدف ← دسته در دامین (scene.MatchesGoal).
 func matchesGoal(sc scene.Scene, goal string) bool {
-	if goal == "" {
-		return false
-	}
-	category := strings.TrimSpace(sc.Category)
-	if category == "" {
-		return false
-	}
-	g, c := strings.ToLower(goal), strings.ToLower(category)
-	return strings.Contains(c, g) || strings.Contains(g, c)
+	return scene.MatchesGoal(sc.Category, goal)
 }
 
 // pickPreferred اولین صحنه‌ی برآورده‌کننده‌ی filter را برمی‌گرداند، مگر

@@ -44,6 +44,7 @@ type updateNotificationSettingsRequest struct {
 // ذخیره نشود.
 var allowedLearningGoals = map[string]bool{
 	"":           true,
+	"Migration":  true,
 	"Travel":     true,
 	"Work":       true,
 	"Daily Life": true,

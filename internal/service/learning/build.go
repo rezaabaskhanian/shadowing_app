@@ -28,6 +28,16 @@ func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 	}
 }
 
+// validateCategory دسته‌بندی را فقط از لیست ثابت دامین می‌پذیرد.
+func validateCategory(op richerror.Op, v string) error {
+	if !scene.IsValidCategory(v) {
+		return richerror.New(op).
+			WithMessage("دسته‌بندی نامعتبر است. مقادیر مجاز: migration, career, education, daily, travel, social").
+			WithKind(richerror.KindInvalid)
+	}
+	return nil
+}
+
 // toSpeaker رشته‌ی گوینده را به نوع دامین تبدیل می‌کند.
 func toSpeaker(op richerror.Op, v string) (scene.SpeakerType, error) {
 	if v == "" {

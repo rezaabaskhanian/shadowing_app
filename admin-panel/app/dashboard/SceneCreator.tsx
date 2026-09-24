@@ -8,7 +8,6 @@ import {
   createScene,
   generateAudio,
   generateScene,
-  listSceneCategories,
   listTTSVoices,
   updateScene,
   uploadAudio,
@@ -28,6 +27,7 @@ import type {
   PhraseInput,
   WordInput,
 } from "@/lib/types";
+import { SCENE_CATEGORIES } from "@/lib/types";
 
 const PRESET_SPEAKERS: { v: string; l: string }[] = [
   { v: "customer", l: "مشتری (customer)" },
@@ -119,7 +119,6 @@ export default function SceneCreator({
   // ترتیب دستی در مسیر آموزشی؛ خالی = بک‌اند خودش تعیین می‌کند (آخر مسیر).
   const [order, setOrder] = useState("");
   const [category, setCategory] = useState("");
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hotspots, setHotspots] = useState<HotspotInput[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -152,12 +151,6 @@ export default function SceneCreator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    listSceneCategories()
-      .then(setCategoryOptions)
-      .catch(() => setCategoryOptions([]));
-  }, []);
-
   // در حالت ویرایش، فرم را با اطلاعات صحنه‌ی موجود پر می‌کنیم.
   useEffect(() => {
     if (!editScene) return;
@@ -167,7 +160,8 @@ export default function SceneCreator({
     setIsLocked(!!editScene.is_locked);
     setIsPublished(editScene.status === "published");
     setOrder(editScene.order > 0 ? String(editScene.order) : "");
-    setCategory(editScene.category || "");
+    // دسته‌بندی قدیمی (خارج از لیست ثابت) خالی می‌شود تا ادمین یکی از لیست را انتخاب کند.
+    setCategory(SCENE_CATEGORIES.some((c) => c.value === editScene.category) ? editScene.category : "");
     setGrammarTopic(editScene.grammar_topic || "");
     setGrammarExplanation(editScene.grammar_explanation || "");
     setGrammarExamples(editScene.grammar_examples || []);
@@ -571,6 +565,7 @@ export default function SceneCreator({
   function validate(): string | null {
     if (!title.trim()) return "عنوان صحنه الزامی است";
     if (!imageUrl) return "ابتدا تصویر پس‌زمینه را آپلود کنید";
+    if (!category) return "دسته‌بندی صحنه را انتخاب کنید";
     if (hotspots.length === 0) return "حداقل یک هات‌اسپات اضافه کنید";
     for (const h of hotspots) {
       for (const d of h.dialogues) {
@@ -919,17 +914,19 @@ export default function SceneCreator({
           با وارد کردن عدد، صحنه در همان جایگاه قرار می‌گیرد و صحنه‌های بعدی یکی عقب می‌روند.
         </p>
         <label>دسته‌بندی</label>
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="مثلاً: shop، travel، restaurant..."
-          list="scene-category-options"
-        />
-        <datalist id="scene-category-options">
-          {categoryOptions.map((c) => (
-            <option key={c} value={c} />
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">— انتخاب دسته‌بندی —</option>
+          {SCENE_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
           ))}
-        </datalist>
+        </select>
+        {editScene?.category && !category && (
+          <p className="hint" style={{ margin: "4px 0 0" }}>
+            دسته‌بندی قبلی این صحنه («{editScene.category}») دیگر مجاز نیست؛ یکی از لیست را انتخاب کن.
+          </p>
+        )}
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <input
             type="checkbox"

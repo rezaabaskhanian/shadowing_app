@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { Mic, Square } from 'lucide-react-native';
+import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { Mic, Square, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -42,6 +42,9 @@ export const HabitMissionPracticeScreen = () => {
   const [phase, setPhase] = useState<'study' | 'idle' | 'uploading' | 'error'>('study');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const startedAtRef = useRef<number | null>(null);
+  // وقتی کاربر با ضربدر خارج می‌شود، ضبطِ نیمه‌کاره نباید ارسال و به‌عنوان
+  // ماموریتِ انجام‌شده ثبت شود.
+  const exitingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export const HabitMissionPracticeScreen = () => {
       setPhase(dialogueLines.length > 0 ? 'study' : 'idle');
       setErrorDetail(null);
       startedAtRef.current = null;
+      exitingRef.current = false;
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -100,6 +104,7 @@ export const HabitMissionPracticeScreen = () => {
 
   const handleRecordingStatus = useCallback(
     (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
+      if (exitingRef.current) return;
       if (status === 'error') {
         setPhase('error');
         return;
@@ -135,6 +140,12 @@ export const HabitMissionPracticeScreen = () => {
 
   const isBusy = phase === 'uploading';
 
+  const exit = () => {
+    exitingRef.current = true;
+    if (isRecording) stopRecording();
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'LanguageHabit' }] }));
+  };
+
   return (
     <View style={styles.screen}>
       <AudioPlayer
@@ -143,6 +154,12 @@ export const HabitMissionPracticeScreen = () => {
         actionCommand={actionCommand}
         onRecordingStatusUpdate={handleRecordingStatus}
       />
+
+      {!isBusy && (
+        <TouchableOpacity style={styles.closeBtn} onPress={exit} hitSlop={10}>
+          <X color={COLORS.text} size={22} />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.header}>
         <HabitActivityIcon name={activity?.icon} size={30} color={COLORS.tertiary} />
@@ -213,6 +230,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 70,
     paddingBottom: 50,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 54,
+    left: 20,
+    zIndex: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',

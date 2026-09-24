@@ -41,7 +41,6 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	// مدیریت صحنه‌ها، هات‌اسپات‌ها و دیالوگ‌ها
 	g.POST("/scenes", h.CreateScene)
 	g.GET("/scenes", h.ListScenes)
-	g.GET("/scenes/categories", h.ListSceneCategories)
 	g.GET("/scenes/:sceneID", h.GetScene)
 	g.PUT("/scenes/:sceneID", h.UpdateScene)
 	g.PATCH("/scenes/:sceneID/order", h.UpdateSceneOrder)

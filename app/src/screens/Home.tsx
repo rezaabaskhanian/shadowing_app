@@ -38,6 +38,8 @@ import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
+import { speakingLevelToSceneLevel } from '../api/scenes';
+import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
 
 // هدف روزانه‌ی تعداد جلسه‌های تمرین — یک مقدار طراحی‌شده‌ی ثابت (مثل «۱۰,۰۰۰
 // قدم» در اپ‌های فیتنس)، نه داده‌ی جعلی کاربر؛ بقیه‌ی مقادیر کارت زیر همه از
@@ -57,7 +59,7 @@ const getGreetingKey = (): string => {
 
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
-  const { scenes } = useScenes();
+  const { scenes, reload: reloadScenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
   const { user } = useAuth();
   const { box } = useVocab();
@@ -179,7 +181,12 @@ export const HomeScreen = () => {
     }, [])
   );
 
-  const primaryScenario = scenes[0] || null;
+  // بک‌اند از قبل فقط صحنه‌های مجاز برای سطح کاربر را برمی‌گرداند (به‌علاوه‌ی
+  // دو پیش‌نمایشِ هر سطح بالاتر)؛ خانه از این هم فشرده‌تر است: فقط صحنه‌های
+  // ناتمامِ دقیقاً همان سطح کاربر.
+  const myLevel = speakingLevelToSceneLevel(speakingProfile?.level);
+  const myUpcomingScenes = scenes.filter((s) => s.level === myLevel && !s.isCompleted);
+  const primaryScenario = myUpcomingScenes[0] || scenes[0] || null;
 
   // تصویر/عنوان/قفل‌بودن از روی صحنه‌ی از قبل بارگذاری‌شده گرفته می‌شود؛
   // فقط برچسب‌های سطح/زمان/مهارت از پاسخِ /v1/mission/today می‌آید. اگر
@@ -190,13 +197,10 @@ export const HomeScreen = () => {
     : null;
   const featuredScenario = missionScene || primaryScenario;
 
-  // پیش‌نمایش خانه: فقط چند صحنه‌ی «بعدی» (ناتمام) رو نشون می‌ده، نه کل
-  // مسیر رو — دیدن همه از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
+  // پیش‌نمایش خانه: فقط چند صحنه‌ی ناتمامِ سطح کاربر، نه کل مسیر — دیدن
+  // همه (با تیکِ تمام‌شده‌ها) از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
   const HOME_PREVIEW_COUNT = 4;
-  const homePreviewScenes = (() => {
-    const upcoming = scenes.filter((s) => !s.isCompleted);
-    return (upcoming.length > 0 ? upcoming : scenes).slice(0, HOME_PREVIEW_COUNT);
-  })();
+  const homePreviewScenes = myUpcomingScenes.slice(0, HOME_PREVIEW_COUNT);
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
@@ -418,7 +422,9 @@ export const HomeScreen = () => {
                       onPress={() => navigation.navigate('Scenes', { category: featuredScenario.category })}
                     >
                       <Text style={styles.storyCategory}>
-                        {featuredScenario.category.toString().toUpperCase()}
+                        {SCENE_CATEGORY_LABEL_KEY[featuredScenario.category]
+                          ? t(SCENE_CATEGORY_LABEL_KEY[featuredScenario.category])
+                          : featuredScenario.category.toString().toUpperCase()}
                       </Text>
                     </TouchableOpacity>
                   ) : null}
@@ -478,6 +484,9 @@ export const HomeScreen = () => {
         </View>
 
         <View style={styles.worldsList}>
+          {homePreviewScenes.length === 0 && scenes.length > 0 && (
+            <Text style={styles.allDoneText}>{t('homeLevelAllDone')}</Text>
+          )}
           {homePreviewScenes.map((scenario, index) => (
             <ScenarioCard
               key={scenario.id || index}
@@ -510,8 +519,10 @@ export const HomeScreen = () => {
           onDone={() => {
             setPlacementModalVisible(false);
             // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
-            // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند.
+            // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
+            // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).
             refreshPlacementState();
+            reloadScenes();
           }}
         />
       </Modal>
@@ -776,6 +787,13 @@ const styles = StyleSheet.create({
   },
   worldsList: {
     gap: 4,
+  },
+  allDoneText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   quickActionsRow: {
     flexDirection: 'row',

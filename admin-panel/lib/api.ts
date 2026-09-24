@@ -249,12 +249,6 @@ export async function deleteScene(id: string) {
   return jsonOrThrow(res);
 }
 
-export async function listSceneCategories(): Promise<string[]> {
-  const res = await authFetch("/v1/admin/scenes/categories", { method: "GET" });
-  const data = await jsonOrThrow(res);
-  return (data.categories || []) as string[];
-}
-
 // ---------- نوتیفیکیشن‌ها ----------
 export async function getNotificationStats(): Promise<NotificationStatsResp> {
   const res = await authFetch("/v1/admin/notifications/stats", { method: "GET" });

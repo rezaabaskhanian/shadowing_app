@@ -24,6 +24,8 @@ export interface HabitMission {
   activity: HabitActivity;
   dialogues: HabitDialogueLine[];
   estimated_duration_seconds: number;
+  // ماموریت امروز انجام شده و تا فردا ماموریتی نیست (بقیه‌ی فیلدها خالی‌اند).
+  completed_today?: boolean;
 }
 
 export interface HabitMissionResult {

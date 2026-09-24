@@ -33,6 +33,7 @@ type repository interface {
 	DialogueLinesByHotspot(ctx context.Context, hotspotID uuid.UUID) ([]posthabit.DialogueLine, error)
 	SuggestHotspot(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	FindActiveMission(ctx context.Context, userID uuid.UUID) (mission.Mission, bool, error)
+	CompletedMissionToday(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 // avgWordsPerSecond تخمین ساده برای مدت زمان تمرین یک دیالوگ چندجمله‌ای —
@@ -85,6 +86,16 @@ func (s Service) TodayMission(ctx context.Context, userID string) (dto.TodayMiss
 	}
 
 	if !found {
+		// روزی فقط یک ماموریت: اگر امروز یکی تمام شده، تا فردا ماموریت تازه‌ای
+		// ساخته نمی‌شود.
+		doneToday, err := s.repo.CompletedMissionToday(ctx, uid)
+		if err != nil {
+			return dto.TodayMissionResponse{}, richerror.New(op).WithErr(err)
+		}
+		if doneToday {
+			return dto.TodayMissionResponse{CompletedToday: true}, nil
+		}
+
 		hotspotID, err := s.repo.SuggestHotspot(ctx, uid)
 		if err != nil {
 			return dto.TodayMissionResponse{}, richerror.New(op).WithErr(err).WithMessage("پیشنهادی برای امروز پیدا نشد")
@@ -172,6 +183,9 @@ func (s Service) SubmitSession(ctx context.Context, missionID, userID, audioPath
 	}
 	if m.UserID.String() != userID {
 		return dto.SubmitSessionResponse{}, richerror.New(op).WithMessage("این ماموریت متعلق به شما نیست").WithKind(richerror.KindInvalid)
+	}
+	if m.Status == mission.StatusCompleted {
+		return dto.SubmitSessionResponse{}, richerror.New(op).WithMessage("این ماموریت قبلاً انجام شده است").WithKind(richerror.KindInvalid)
 	}
 
 	lines, err := s.repo.DialogueLinesByHotspot(ctx, m.HotspotID)

@@ -9,6 +9,7 @@ import {
   updateSceneOrder,
 } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
+import { SCENE_CATEGORIES, sceneCategoryLabel } from "@/lib/types";
 
 // فیلترهای لیست در مرورگر نگه داشته می‌شوند تا با رفتن به بخش دیگری از پنل
 // (یا فرم ویرایش) و برگشتن، دوباره به «همه» برنگردند.
@@ -261,11 +262,19 @@ export default function SceneList({
             style={{ width: 180 }}
           >
             <option value="">همه دسته‌بندی‌ها</option>
-            {Array.from(new Set(scenes.map((s) => s.category).filter(Boolean))).map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {SCENE_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
+            {/* دسته‌های قدیمیِ خارج از لیست ثابت — تا ادمین پیدایشان کند و اصلاحشان کند */}
+            {Array.from(new Set(scenes.map((s) => s.category).filter(Boolean)))
+              .filter((c) => !SCENE_CATEGORIES.some((sc) => sc.value === c))
+              .map((c) => (
+                <option key={c} value={c}>
+                  ⚠️ {c} (قدیمی)
+                </option>
+              ))}
             <option value="__none__">بدون دسته‌بندی</option>
           </select>
           <button className="btn btn-ghost btn-sm" onClick={load}>
@@ -415,7 +424,7 @@ export default function SceneList({
                   {lockBadge(s).text}
                 </span>
                 {s.category ? (
-                  <span className="hint">🏷 {s.category}</span>
+                  <span className="hint">🏷 {sceneCategoryLabel(s.category)}</span>
                 ) : (
                   <span className="hint" style={{ color: "var(--danger, #ef4444)" }}>
                     بدون دسته‌بندی
@@ -477,7 +486,7 @@ export default function SceneList({
             {detail.description && (
               <p className="hint">{detail.description}</p>
             )}
-            <p className="hint">دسته‌بندی: {detail.category || "بدون دسته‌بندی"}</p>
+            <p className="hint">دسته‌بندی: {detail.category ? sceneCategoryLabel(detail.category) : "بدون دسته‌بندی"}</p>
 
             <div className="image-wrap" style={{ cursor: "default" }}>
               <img

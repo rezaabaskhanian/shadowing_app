@@ -38,6 +38,12 @@ func (h Handler) GetScene(c echo.Context) error {
 			"is_locked": true,
 		})
 	}
+	if !isAdminCaller(c) && listErr == nil && !visibleForLevel(allScenes, scene.ID, h.userDifficulty(c)) {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"message":      "این صحنه برای سطح تو هنوز باز نیست",
+			"level_locked": true,
+		})
+	}
 	scene.IsLocked = false
 	scene.Progress, scene.IsCompleted = h.sceneProgressForUser(c, scene.ID)
 

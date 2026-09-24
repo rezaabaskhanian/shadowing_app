@@ -318,6 +318,25 @@ func (r DB) FindActiveMission(ctx context.Context, userID uuid.UUID) (mission.Mi
 	return m, true, nil
 }
 
+// CompletedMissionToday می‌گوید آیا کاربر امروز (همان تعریف «امروز» که استریک
+// استفاده می‌کند: CURRENT_DATE دیتابیس) ماموریتی را تمام کرده یا نه — ماموریت
+// موقعیت واقعی روزی فقط یک‌بار است.
+func (r DB) CompletedMissionToday(ctx context.Context, userID uuid.UUID) (bool, error) {
+	const op = "posthabit.CompletedMissionToday"
+
+	var done bool
+	err := r.conn.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM habit_missions
+			WHERE user_id = $1 AND status = 'completed' AND completed_at::date = CURRENT_DATE
+		)
+	`, userID).Scan(&done)
+	if err != nil {
+		return false, richerror.New(op).WithErr(err)
+	}
+	return done, nil
+}
+
 func (r DB) GetActivity(ctx context.Context, id uuid.UUID) (Activity, error) {
 	const op = "posthabit.GetActivity"
 
