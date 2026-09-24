@@ -57,14 +57,21 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	}
 
 	// ========== 5️⃣ مونتاژ صحنه‌ی به‌روزشده ==========
-	// ترتیب دستیِ جدید = درج در همان جایگاه (بقیه یکی عقب می‌روند)؛
-	// خالی/بدون تغییر = حفظ ترتیب فعلی.
+	// جایگاه دستیِ جدید در مسیرِ سطح = درج در همان جایگاه (بقیه یکی عقب
+	// می‌روند)؛ خالی/بدون تغییر (همان جایگاه و همان سطح) = حفظ ترتیب فعلی.
 	order := existing.Order
-	if req.Order > 0 && req.Order != existing.Order {
-		if err := s.repo.ShiftOrdersFrom(ctx, req.Order, string(existing.ID)); err != nil {
+	if req.LevelPosition > 0 {
+		all, err := s.repo.GetAll(ctx)
+		if err != nil {
 			return dto.Scene{}, richerror.New(op).WithErr(err)
 		}
-		order = req.Order
+		unchanged := difficultyLevel == existing.Difficulty && req.LevelPosition == levelPositionOf(all, existing)
+		if !unchanged {
+			order = orderForLevelPosition(all, difficultyLevel, req.LevelPosition, existing.ID)
+			if err := s.repo.ShiftOrdersFrom(ctx, order, string(existing.ID)); err != nil {
+				return dto.Scene{}, richerror.New(op).WithErr(err)
+			}
+		}
 	}
 
 	grammarTopic, grammarExplanation, grammarExamples, grammarAudioURL := buildGrammarNote(req)

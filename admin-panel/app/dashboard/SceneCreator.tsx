@@ -116,7 +116,7 @@ export default function SceneCreator({
   const [isLocked, setIsLocked] = useState(false);
   // پیش‌فرض منتشرشده، تا رفتار قبلی (نمایش فوری صحنه‌ی جدید در اپ) حفظ شود.
   const [isPublished, setIsPublished] = useState(true);
-  // ترتیب دستی در مسیر آموزشی؛ خالی = بک‌اند خودش تعیین می‌کند (آخر مسیر).
+  // جایگاه دستی در مسیرِ سطح خودش (همان شماره‌ی لیست صحنه‌ها)؛ خالی = آخر مسیر.
   const [order, setOrder] = useState("");
   const [category, setCategory] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -159,7 +159,7 @@ export default function SceneCreator({
     setDifficulty((editScene.difficulty as Difficulty) || "beginner");
     setIsLocked(!!editScene.is_locked);
     setIsPublished(editScene.status === "published");
-    setOrder(editScene.order > 0 ? String(editScene.order) : "");
+    setOrder(editScene.level_position ? String(editScene.level_position) : "");
     // دسته‌بندی قدیمی (خارج از لیست ثابت) خالی می‌شود تا ادمین یکی از لیست را انتخاب کند.
     setCategory(SCENE_CATEGORIES.some((c) => c.value === editScene.category) ? editScene.category : "");
     setGrammarTopic(editScene.grammar_topic || "");
@@ -592,7 +592,7 @@ export default function SceneCreator({
         hotspots,
         is_locked: isLocked,
         is_published: isPublished,
-        order: Number(order) > 0 ? Math.floor(Number(order)) : 0,
+        level_position: Number(order) > 0 ? Math.floor(Number(order)) : 0,
         category: category.trim(),
         grammar_topic: grammarTopic.trim(),
         grammar_explanation: grammarExplanation.trim(),
@@ -902,7 +902,7 @@ export default function SceneCreator({
             </select>
           </div>
         </div>
-        <label>ترتیب در مسیر (اختیاری)</label>
+        <label>شماره در مسیر همین سطح (اختیاری)</label>
         <input
           type="number"
           min={1}
@@ -911,7 +911,7 @@ export default function SceneCreator({
           placeholder="خالی = آخر مسیر"
         />
         <p className="hint" style={{ margin: "4px 0 0" }}>
-          با وارد کردن عدد، صحنه در همان جایگاه قرار می‌گیرد و صحنه‌های بعدی یکی عقب می‌روند.
+          همان شماره‌ای که در لیست صحنه‌ها کنار صحنه می‌بینی (فقط صحنه‌های منتشرشده‌ی همین سطح شمرده می‌شوند). صحنه در همان جایگاه قرار می‌گیرد و بعدی‌ها یکی عقب می‌روند؛ عدد بزرگ‌تر از تعداد صحنه‌های سطح = آخر همین سطح.
         </p>
         <label>دسته‌بندی</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)}>

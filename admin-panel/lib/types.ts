@@ -50,7 +50,8 @@ export interface CreateScenePayload {
   hotspots: HotspotInput[];
   is_locked: boolean;
   is_published: boolean;
-  order?: number;
+  // جایگاه در مسیرِ سطح خودش (۰ = ساخت: آخر مسیر، ویرایش: بدون تغییر)
+  level_position?: number;
   category: string;
   // نکته‌ی گرامریِ اختیاری: موضوع، توضیح فارسی و ۲ تا ۴ مثال
   grammar_topic?: string;
@@ -121,6 +122,8 @@ export interface SceneResp {
   difficulty: string;
   status: string;
   order: number;
+  // فقط سمت پنل: جایگاه صحنه در مسیرِ سطح خودش (برای پیش‌پر کردن فرم ویرایش)
+  level_position?: number;
   is_locked: boolean;
   category: string;
   grammar_topic?: string;

@@ -110,7 +110,7 @@ export default function SceneList({
     try {
       const s = await getScene(id);
       setDetail(null);
-      onEdit(s);
+      onEdit({ ...s, level_position: levelPosition.get(id) });
     } catch (err: any) {
       notify(err.message, "err");
     }
@@ -369,9 +369,6 @@ export default function SceneList({
                     {DIFFICULTY_LABELS[s.difficulty] || s.difficulty}
                   </span>
                 )}
-                <span className="hint" style={{ fontSize: 12, whiteSpace: "nowrap" }} title="ترتیب کلی مسیر">
-                  #{s.order}
-                </span>
               </li>
             ))}
           </ol>
@@ -416,7 +413,6 @@ export default function SceneList({
                     ? ` — صحنه‌ی ${levelPosition.get(s.id)} از ${levelCount[s.difficulty]}`
                     : " — منتشر نشده (در مسیر نیست)"}
                 </span>
-                <span className="hint">🔢 ترتیب کلی مسیر: {s.order}</span>
                 <span
                   className="hint"
                   style={{ color: lockBadge(s).color, fontWeight: 600 }}

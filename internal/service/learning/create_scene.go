@@ -57,15 +57,16 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithMessage("خطا در ساخت سناریو").
 			WithKind(richerror.KindForbidden)
 	}
-	newScene.Order = req.Order
-	// بدون ترتیب مشخص، صحنه‌ی جدید به آخر مسیر آموزشی می‌رود — نه اول آن؛
-	// وگرنه قفل ترتیبی پیشرفت کاربران فعلی را می‌بست و نمونه‌ی رایگان هر سطح
-	// جابه‌جا می‌شد. با ترتیب دستی، صحنه در همان جایگاه درج و بقیه یکی عقب می‌روند.
-	if newScene.Order <= 0 {
-		existing, err := s.repo.GetAll(ctx)
-		if err != nil {
-			return dto.Scene{}, richerror.New(op).WithErr(err)
-		}
+	// بدون جایگاه مشخص، صحنه‌ی جدید به آخر مسیر آموزشی می‌رود — نه اول آن؛
+	// وگرنه نمونه‌ی رایگان هر سطح جابه‌جا می‌شد. با جایگاه دستی (در مسیرِ سطح
+	// خودش)، صحنه همان‌جا درج و بقیه یکی عقب می‌روند.
+	existing, err := s.repo.GetAll(ctx)
+	if err != nil {
+		return dto.Scene{}, richerror.New(op).WithErr(err)
+	}
+	if req.LevelPosition > 0 {
+		newScene.Order = orderForLevelPosition(existing, difficultyLevel, req.LevelPosition, newScene.ID)
+	} else {
 		maxOrder := 0
 		for _, sc := range existing {
 			if sc.Order > maxOrder {
@@ -94,7 +95,7 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 	}
 
 	// ========== 5️⃣ ذخیره در دیتابیس ==========
-	if req.Order > 0 {
+	if req.LevelPosition > 0 {
 		if err := s.repo.ShiftOrdersFrom(ctx, newScene.Order, string(newScene.ID)); err != nil {
 			return dto.Scene{}, richerror.New(op).WithErr(err)
 		}
