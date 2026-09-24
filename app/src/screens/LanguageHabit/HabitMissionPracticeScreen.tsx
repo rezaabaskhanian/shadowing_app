@@ -7,6 +7,7 @@ import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
+import { HabitActivityIcon } from '../../components/HabitActivityIcon';
 import { ensureMicPermission } from '../../services/micPermission';
 import { submitMissionSession, type HabitDialogueLine } from '../../api/habit';
 import type { AudioActionCommand } from '../SceneScreen/types';
@@ -144,7 +145,7 @@ export const HabitMissionPracticeScreen = () => {
       />
 
       <View style={styles.header}>
-        <Text style={styles.activityIcon}>{activity?.icon || '🎯'}</Text>
+        <HabitActivityIcon name={activity?.icon} size={30} color={COLORS.tertiary} />
         <Text style={styles.activityName}>{activityName}</Text>
       </View>
 
@@ -216,9 +217,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: 6,
-  },
-  activityIcon: {
-    fontSize: 30,
   },
   activityName: {
     color: COLORS.text,

@@ -13,6 +13,7 @@ import { Award, ArrowLeft, Clock, EyeOff, Flame, Mic, Sparkles, Target } from 'l
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
+import { HabitActivityIcon } from '../../components/HabitActivityIcon';
 import {
   getHabitHistory,
   getTodayMission,
@@ -110,7 +111,7 @@ export const LanguageHabitScreen = () => {
               <View style={styles.missionCard}>
                 <View style={styles.missionHeaderRow}>
                   <View style={styles.activityIconWrap}>
-                    <Text style={styles.activityIconText}>{mission.activity?.icon || '🎯'}</Text>
+                    <HabitActivityIcon name={mission.activity?.icon} size={24} color={COLORS.tertiary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.missionKicker}>{t('habitMissionKicker')}</Text>
@@ -262,16 +263,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activityIconText: {
-    fontSize: 22,
-  },
+  // متن فارسی خودبه‌خود راست‌چین می‌شود؛ کنار آیکن (سمت چپ) نگهش می‌داریم.
   missionKicker: {
+    textAlign: 'left',
     color: COLORS.tertiary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 11,
     letterSpacing: 0.5,
   },
   missionActivityName: {
+    textAlign: 'left',
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 17,
