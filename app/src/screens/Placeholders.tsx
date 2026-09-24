@@ -513,7 +513,7 @@ import {
   MAX_REMINDER_TIMES,
 } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Clock, MessageSquare, Mic, Plus, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Check, Clock, MessageSquare, Mic, Plus, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
 
 /**
@@ -739,39 +739,45 @@ export const ProfileScreen = () => {
         <ChevronRight color={COLORS.muted} size={18} />
       </TouchableOpacity>
 
-      {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست — عمداً خاکستری/کم‌رنگ‌تر
-          از بقیه‌ی ردیف‌ها، چون یک قابلیت واقعی برای کاربر نیست. */}
-      <TouchableOpacity
-        style={styles.pointsCard}
-        onPress={() => navigation.navigate('ToastDemo')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.pointsIconWrap}>
-          <MessageSquare color={COLORS.muted} size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pointsValue}>{t('toastDemoMenuLabel')}</Text>
-          <Text style={styles.pointsSub}>{t('toastDemoMenuSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
+      {/* ابزارهای فقط-توسعه (پیش‌نمایش توست + PoC مکالمه‌ی زنده) — در بیلد
+          ریلیز برای کاربر نمایش داده نمی‌شوند. */}
+      {__DEV__ && (
+        <>
+          {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست — عمداً خاکستری/کم‌رنگ‌تر
+              از بقیه‌ی ردیف‌ها، چون یک قابلیت واقعی برای کاربر نیست. */}
+          <TouchableOpacity
+            style={styles.pointsCard}
+            onPress={() => navigation.navigate('ToastDemo')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.pointsIconWrap}>
+              <MessageSquare color={COLORS.muted} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pointsValue}>{t('toastDemoMenuLabel')}</Text>
+              <Text style={styles.pointsSub}>{t('toastDemoMenuSub')}</Text>
+            </View>
+            <ChevronRight color={COLORS.muted} size={18} />
+          </TouchableOpacity>
 
-      {/* فقط برای توسعه: PoC معماریِ Realtime Voice (Gemini Live) — نگاه
-          کنید به PRODUCTION_CHECKLIST.md. مثل ردیفِ بالا عمداً کم‌رنگ است. */}
-      <TouchableOpacity
-        style={styles.pointsCard}
-        onPress={() => navigation.navigate('RealtimePoC')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.pointsIconWrap}>
-          <Mic color={COLORS.muted} size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pointsValue}>{t('realtimePoCMenuLabel')}</Text>
-          <Text style={styles.pointsSub}>{t('realtimePoCMenuSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
+          {/* فقط برای توسعه: PoC معماریِ Realtime Voice (Gemini Live) — نگاه
+              کنید به PRODUCTION_CHECKLIST.md. مثل ردیفِ بالا عمداً کم‌رنگ است. */}
+          <TouchableOpacity
+            style={styles.pointsCard}
+            onPress={() => navigation.navigate('RealtimePoC')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.pointsIconWrap}>
+              <Mic color={COLORS.muted} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pointsValue}>{t('realtimePoCMenuLabel')}</Text>
+              <Text style={styles.pointsSub}>{t('realtimePoCMenuSub')}</Text>
+            </View>
+            <ChevronRight color={COLORS.muted} size={18} />
+          </TouchableOpacity>
+        </>
+      )}
 
       {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
       <View style={[styles.settingCard, { marginTop: 16 }]}>
@@ -809,13 +815,13 @@ export const ProfileScreen = () => {
           {HIGHLIGHT_COLOR_OPTIONS.map((color) => (
             <TouchableOpacity
               key={color}
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: color },
-                highlightColor === color && styles.colorSwatchActive,
-              ]}
+              style={[styles.colorSwatch, { backgroundColor: color }]}
               onPress={() => setHighlightColor(color)}
-            />
+              accessibilityRole="radio"
+              accessibilityState={{ selected: highlightColor === color }}
+            >
+              {highlightColor === color && <Check color={COLORS.white} size={18} strokeWidth={3} />}
+            </TouchableOpacity>
           ))}
         </View>
       </View>
@@ -1431,11 +1437,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  colorSwatchActive: {
-    borderColor: COLORS.text,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   testBtn: {
     flexDirection: 'row',
