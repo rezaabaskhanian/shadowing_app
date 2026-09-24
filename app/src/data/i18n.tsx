@@ -840,6 +840,68 @@ export const translations: Translations = {
   placementLevelBadge: { en: 'Level: {level}', fa: 'سطح: {level}' },
   todaysMission: { en: "TODAY'S MISSION", fa: 'ماموریت امروز' },
   speaking: { en: 'Speaking', fa: 'گفتار' },
+
+  // ---- Polysemous verbs ----
+  verbsTab: { en: 'Verbs', fa: 'افعال' },
+  verbsIntro: {
+    en: 'Common verbs with many meanings — each meaning comes with a real sentence from your lessons.',
+    fa: 'فعل‌های پرکاربردی که چند معنا دارند — هر معنا با یک جمله‌ی واقعی از درس‌ها.',
+  },
+  verbsEmpty: { en: 'No verbs yet. Check back soon!', fa: 'هنوز فعلی اضافه نشده. به‌زودی!' },
+  verbLearnedOf: { en: '{learned} of {total} meanings learned', fa: '{learned} از {total} معنا یادگرفته' },
+  verbMeaningsTitle: { en: 'Meanings', fa: 'معناها' },
+  verbHeardIn: { en: 'In: {scene}', fa: 'در درس: {scene}' },
+  verbGoToLesson: { en: 'Go to lesson', fa: 'برو به درس' },
+  verbNoLessonExample: { en: 'Not in your lessons yet', fa: 'هنوز در درس‌ها نیامده' },
+  verbAddToLeitner: { en: 'Add to Leitner', fa: 'افزودن به لایتنر' },
+  verbInLeitner: { en: 'In Leitner', fa: 'در لایتنر' },
+  verbStatusLearned: { en: 'Learned', fa: 'یادگرفته' },
+  verbStatusRecognition: { en: 'Recognized {n}/{target}', fa: 'تشخیص {n} از {target}' },
+  verbStatusSpoken: { en: 'Spoken ✓', fa: 'گفته‌شده ✓' },
+  verbLearnedRule: {
+    en: 'A meaning counts as learned after 2 correct answers on different days, plus either one spoken practice or 2 successful Leitner reviews.',
+    fa: 'یک معنا وقتی «یادگرفته» حساب می‌شود که ۲ بار در دو روز مختلف درست تشخیصش بدهی، و یا یک بار درست با صدا بگویی‌اش یا ۲ بار در لایتنر درست مرورش کنی.',
+  },
+  verbStartQuiz: { en: 'Practice: which meaning?', fa: 'تمرین: کدام معنا؟' },
+  verbSpeakPractice: { en: 'Say it', fa: 'با صدا بگو' },
+  verbQuizQuestion: { en: 'What does "{form}" mean here?', fa: 'این‌جا «{form}» یعنی چه؟' },
+  verbQuizCorrect: { en: 'Correct!', fa: 'درسته!' },
+  verbQuizWrong: { en: 'Not quite — it means: {meaning}', fa: 'نه دقیقاً — این‌جا یعنی: {meaning}' },
+  verbQuizNext: { en: 'Next', fa: 'بعدی' },
+  verbQuizDone: { en: 'Done! {correct} of {total} correct.', fa: 'تمام شد! {correct} از {total} درست.' },
+  verbQuizEmpty: {
+    en: 'Not enough examples for a quiz yet.',
+    fa: 'هنوز مثال کافی برای آزمون این فعل نیست.',
+  },
+  verbBackToVerb: { en: 'Back to the verb', fa: 'برگشت به فعل' },
+  verbSpeakTitle: { en: 'Say one sentence', fa: 'یک جمله بگو' },
+  verbSpeakInstruction: {
+    en: 'Use "{verb}" meaning «{meaning}»:',
+    fa: 'با «{verb}» به معنای «{meaning}»:',
+  },
+  verbSpeakTapToRecord: { en: 'Tap to record, tap again to finish', fa: 'بزن و بگو، دوباره بزن تا تمام شود' },
+  verbSpeakChecking: { en: 'Checking…', fa: 'در حال بررسی…' },
+  verbSpeakYouSaid: { en: 'You said', fa: 'گفتی' },
+  verbSpeakPassed: { en: 'Great — you used it right!', fa: 'عالی — درست به کار بردی!' },
+  verbSpeakNotYet: { en: 'Not quite yet', fa: 'هنوز نه' },
+  verbSpeakBetter: { en: 'A natural way to say it', fa: 'یک شکل طبیعی‌تر' },
+  verbSpeakTryAgain: { en: 'Try again', fa: 'دوباره امتحان کن' },
+  verbSpeakSubscriptionOnly: {
+    en: 'Spoken practice is for subscribers.',
+    fa: 'تمرین صوتی مخصوص مشترک‌هاست.',
+  },
+  verbSpeakQuotaReached: {
+    en: "You've used today's AI allowance.",
+    fa: 'سقف امروزِ هوش مصنوعی‌ات تمام شده.',
+  },
+  verbSpeakFailed: { en: "Couldn't check that. Try again.", fa: 'بررسی نشد. دوباره امتحان کن.' },
+  verbTagHere: { en: '"{form}" here means «{meaning}»', fa: '«{form}» این‌جا یعنی «{meaning}»' },
+  verbTagMore: { en: '{n} more meanings ←', fa: '{n} معنای دیگر ←' },
+  verbPendingTitle: {
+    en: 'You met a new meaning of "{verb}"',
+    fa: 'معنای تازه‌ای از «{verb}» دیدی',
+  },
+  verbPendingSub: { en: '30-second practice?', fa: '۳۰ ثانیه تمرین؟' },
 };
 
 /**

@@ -21,6 +21,7 @@ import (
 	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
+	verbhandler "shadowing-backend/internal/delivery/httpserver/verb"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
@@ -48,6 +49,7 @@ import (
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
+	verbservice "shadowing-backend/internal/service/verb"
 
 	"fmt"
 	userservice "shadowing-backend/internal/service/user"
@@ -89,6 +91,7 @@ type Service struct {
 	landingHandler landinghandler.Handler
 
 	realtimePoCHandler realtimepochandler.Handler
+	verbHandler        verbhandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -113,6 +116,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	freeSpeechSvc *freespeechservice.Service,
 	aiAccessSvc *aiaccessservice.Service,
 	tokenTopupSvc tokentopupservice.Service,
+	verbSvc *verbservice.Service,
 
 ) Service {
 
@@ -152,7 +156,10 @@ func New(cfg config.Config, userSvc userservice.Service,
 			landingSvc,
 			feedbackSvc,
 			authSvc, authConfig, store,
+			verbSvc,
 		),
+
+		verbHandler: verbhandler.New(verbSvc, authSvc, authConfig, uploadDir),
 
 		assessmentHandler: assessmenthandler.New(assessmentSvc, authSvc, authConfig, uploadDir),
 
@@ -250,6 +257,7 @@ func (s Service) Server() {
 
 	// PoC موقتِ معماری Realtime Voice — نگاه کنید به realtimepoc.Handler
 	s.realtimePoCHandler.SetRealtimePoCRoutes(e)
+	s.verbHandler.SetVerbRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

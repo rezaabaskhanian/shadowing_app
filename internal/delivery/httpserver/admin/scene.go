@@ -24,6 +24,7 @@ func (h Handler) CreateScene(c echo.Context) error {
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}
+	h.scanSceneVerbs(scene.ID)
 
 	return c.JSON(http.StatusCreated, scene)
 }
@@ -66,6 +67,7 @@ func (h Handler) UpdateScene(c echo.Context) error {
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}
+	h.scanSceneVerbs(scene.ID)
 
 	return c.JSON(http.StatusOK, scene)
 }

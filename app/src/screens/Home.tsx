@@ -22,6 +22,7 @@ import {
   Sparkles,
   X,
   Zap,
+  Layers,
 } from 'lucide-react-native';
 import { ScenarioCard } from '../components/ScenarioCard';
 import { ProgressRing } from '../components/ProgressRing';
@@ -46,6 +47,7 @@ import { PlacementTestFlow } from './PlacementTest';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
+import { getPendingVerbPractice, type VerbPending } from '../api/verbs';
 import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
 
 // هدف روزانه‌ی تعداد جلسه‌های تمرین — یک مقدار طراحی‌شده‌ی ثابت (مثل «۱۰,۰۰۰
@@ -133,6 +135,21 @@ export const HomeScreen = () => {
     };
   }, []);
   useFocusEffect(refreshMyLevel);
+
+  // یادآوری افعال چندمعنایی: فقط وقتی کاربر معنای تازه‌ای در درس‌ها دیده ولی
+  // هنوز تمرینش نکرده؛ در غیر این صورت کارتی نشان داده نمی‌شود.
+  const [pendingVerb, setPendingVerb] = React.useState<VerbPending | null>(null);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      getPendingVerbPractice()
+        .then((p) => active && setPendingVerb(p))
+        .catch(() => active && setPendingVerb(null));
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   // ماموریتِ امروز: صحنه‌ی پیشنهادی بر اساسِ سطح/مهارتِ ضعیف‌تر کاربر.
   // مستقل از بقیه واکشی می‌شود و شکستش هیچ‌چیزِ دیگری را نمی‌شکند — کارتِ
@@ -373,6 +390,24 @@ export const HomeScreen = () => {
             >
               <X size={18} color={COLORS.muted} />
             </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {pendingVerb && (
+          <TouchableOpacity
+            style={styles.placementCtaCard}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
+          >
+            <View style={styles.placementCtaIconCircle}>
+              <Layers size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.placementCtaTextContainer}>
+              <Text style={styles.placementCtaTitle}>
+                {t('verbPendingTitle').replace('{verb}', pendingVerb.lemma)}
+              </Text>
+              <Text style={styles.placementCtaSub}>{t('verbPendingSub')}</Text>
+            </View>
           </TouchableOpacity>
         )}
 

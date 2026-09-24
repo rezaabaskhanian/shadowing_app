@@ -15,6 +15,7 @@ import UserList from "./UserList";
 import LandingSectionsPanel from "./LandingSectionsPanel";
 import FeedbackQueue from "./FeedbackQueue";
 import AssessmentPanel from "./AssessmentPanel";
+import VerbsPanel from "./VerbsPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -28,7 +29,8 @@ type Tab =
   | "users"
   | "landing"
   | "feedback"
-  | "assessment";
+  | "assessment"
+  | "verbs";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -152,6 +154,12 @@ export default function DashboardPage() {
           >
             تست تعیین سطح
           </button>
+          <button
+            className={`sidebar-link ${tab === "verbs" ? "active" : ""}`}
+            onClick={() => setTab("verbs")}
+          >
+            افعال چندمعنایی
+          </button>
         </nav>
         <div className="sidebar-foot">
           <span className="userbox">{name}</span>
@@ -223,6 +231,7 @@ export default function DashboardPage() {
         )}
         {tab === "subscriptions" && <SubscriptionPlansPanel notify={notify} />}
         {tab === "users" && <UserList notify={notify} />}
+        {tab === "verbs" && <VerbsPanel notify={notify} />}
         {tab === "landing" && <LandingSectionsPanel notify={notify} />}
         {tab === "feedback" && <FeedbackQueue notify={notify} />}
         {tab === "assessment" && <AssessmentPanel notify={notify} />}

@@ -9,13 +9,14 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { BookOpen, Check, Clock, Sparkles, Trash2, X } from 'lucide-react-native';
+import { BookOpen, Check, Clock, Layers, Sparkles, Trash2, X } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { SHADOWS } from '../theme/elevation';
 import { ProgressRing } from '../components/ProgressRing';
 import { useVocab, MAX_LEVEL, isDue, dueLabel, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
+import { VerbList } from '../components/VerbList';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -31,6 +32,8 @@ export const LeitnerScreen = () => {
   const { box, promote, demote, remove } = useVocab();
   const { t, language } = useLanguage();
   const [dueOnly, setDueOnly] = useState(true);
+  // تب سوم «افعال»: به‌جای کارت‌های لایتنر لیست افعال چندمعنایی نشان داده می‌شود.
+  const [showVerbs, setShowVerbs] = useState(false);
   const [index, setIndex] = useState(0);
 
   const dueCount = box.filter(isDue).length;
@@ -72,30 +75,47 @@ export const LeitnerScreen = () => {
         {/* Today vs All Filter Tabs */}
         <View style={styles.filterRow}>
           <TouchableOpacity
-            style={[styles.filterTab, dueOnly && styles.filterTabActive]}
-            onPress={() => setDueOnly(true)}
+            style={[styles.filterTab, !showVerbs && dueOnly && styles.filterTabActive]}
+            onPress={() => {
+              setShowVerbs(false);
+              setDueOnly(true);
+            }}
             activeOpacity={0.8}
           >
-            <Clock size={14} color={dueOnly ? COLORS.white : COLORS.primary} />
-            <Text style={[styles.filterTabText, dueOnly && styles.filterTabTextActive]}>
+            <Clock size={14} color={!showVerbs && dueOnly ? COLORS.white : COLORS.primary} />
+            <Text style={[styles.filterTabText, !showVerbs && dueOnly && styles.filterTabTextActive]}>
               {t('today')} ({dueCount})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterTab, !dueOnly && styles.filterTabActiveGreen]}
-            onPress={() => setDueOnly(false)}
+            style={[styles.filterTab, !showVerbs && !dueOnly && styles.filterTabActiveGreen]}
+            onPress={() => {
+              setShowVerbs(false);
+              setDueOnly(false);
+            }}
             activeOpacity={0.8}
           >
-            <Sparkles size={14} color={!dueOnly ? COLORS.white : COLORS.tertiary} />
-            <Text style={[styles.filterTabText, !dueOnly && styles.filterTabTextActive]}>
+            <Sparkles size={14} color={!showVerbs && !dueOnly ? COLORS.white : COLORS.tertiary} />
+            <Text style={[styles.filterTabText, !showVerbs && !dueOnly && styles.filterTabTextActive]}>
               {t('all')} ({box.length})
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterTab, showVerbs && styles.filterTabActive]}
+            onPress={() => setShowVerbs(true)}
+            activeOpacity={0.8}
+          >
+            <Layers size={14} color={showVerbs ? COLORS.white : COLORS.primary} />
+            <Text style={[styles.filterTabText, showVerbs && styles.filterTabTextActive]}>{t('verbsTab')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Body */}
-        {box.length === 0 ? (
+        {showVerbs ? (
+          <VerbList />
+        ) : box.length === 0 ? (
           <EmptyState
             icon={<BookOpen size={44} color={COLORS.muted} />}
             title={t('leitnerEmptyTitle')}

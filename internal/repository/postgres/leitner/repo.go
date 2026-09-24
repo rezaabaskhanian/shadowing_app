@@ -33,11 +33,11 @@ func scanWord(row pgx.Row) (leitner.Word, error) {
 func (d DB) Create(ctx context.Context, w leitner.Word) error {
 	const op = "postgres.LeitnerRepository.Create"
 
-	query := `INSERT INTO leitner_words (` + wordColumns + `)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	query := `INSERT INTO leitner_words (` + wordColumns + `, verb_meaning_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (user_id, word) DO NOTHING`
 
-	if _, err := d.conn.Exec(ctx, query, w.ID, w.UserID, w.Word, w.Meaning, w.Level, w.NextReview, w.CreatedAt, w.UpdatedAt); err != nil {
+	if _, err := d.conn.Exec(ctx, query, w.ID, w.UserID, w.Word, w.Meaning, w.Level, w.NextReview, w.CreatedAt, w.UpdatedAt, w.VerbMeaningID); err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("failed to create leitner word")
 	}
 	return nil

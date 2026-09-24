@@ -1,6 +1,7 @@
 package adminhandler
 
 import (
+	"context"
 	"shadowing-backend/internal/pkg/filestore"
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
@@ -44,6 +45,21 @@ type Handler struct {
 	// store محل ذخیره‌ی فایل‌های آپلودی/تولیدشده (تصویر/صدا) است — روی دیسکِ
 	// محلی یا object storage، بسته به تنظیمِ OBJECT_STORAGE_* (filestore.New).
 	store filestore.Store
+	// verbSvc بعد از ساخت/ویرایش هر صحنه جمله‌های تازه‌اش را برای افعال
+	// چندمعنایی جست‌وجو می‌کند (به صف بررسی ادمین اضافه می‌شوند).
+	verbSvc sceneVerbScanner
+}
+
+type sceneVerbScanner interface {
+	ScanScene(ctx context.Context, sceneID string)
+}
+
+// scanSceneVerbs در پس‌زمینه اجرا می‌شود تا ذخیره‌ی صحنه منتظر فراخوانی AI نماند.
+func (h Handler) scanSceneVerbs(sceneID string) {
+	if h.verbSvc == nil || sceneID == "" {
+		return
+	}
+	go h.verbSvc.ScanScene(context.Background(), sceneID)
 }
 
 func New(
@@ -65,6 +81,7 @@ func New(
 	authSvc authservice.Service,
 	authConfig authservice.Config,
 	store filestore.Store,
+	verbSvc sceneVerbScanner,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -85,5 +102,6 @@ func New(
 		authSvc:            authSvc,
 		authConfig:         authConfig,
 		store:              store,
+		verbSvc:            verbSvc,
 	}
 }

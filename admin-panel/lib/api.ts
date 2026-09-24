@@ -22,6 +22,12 @@ import type {
   SubscriptionPlan,
   TokenTopupPlan,
   TopicSuggestion,
+  Verb,
+  VerbDetail,
+  VerbMeaning,
+  VerbMeaningSuggestion,
+  VerbOccurrence,
+  VerbSummary,
 } from "./types";
 
 export const API_BASE =
@@ -645,4 +651,63 @@ export async function grantSubscription(
     body: JSON.stringify({ phone, plan_id: planId, points_to_redeem: pointsToRedeem }),
   });
   return jsonOrThrow(res);
+}
+
+// ---------- افعال چندمعنایی ----------
+export async function listVerbs(): Promise<VerbSummary[]> {
+  return jsonOrThrow(await authFetch("/v1/admin/verbs", { method: "GET" }));
+}
+
+export async function getVerb(id: string): Promise<VerbDetail> {
+  return jsonOrThrow(await authFetch(`/v1/admin/verbs/${id}`, { method: "GET" }));
+}
+
+export async function saveVerb(v: Partial<Verb>): Promise<Verb> {
+  return jsonOrThrow(
+    await authFetch(v.id ? `/v1/admin/verbs/${v.id}` : "/v1/admin/verbs", {
+      method: v.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v),
+    })
+  );
+}
+
+export async function deleteVerb(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/verbs/${id}`, { method: "DELETE" }));
+}
+
+export async function suggestVerbMeanings(id: string): Promise<VerbMeaningSuggestion[]> {
+  return jsonOrThrow(await authFetch(`/v1/admin/verbs/${id}/suggest-meanings`, { method: "POST" }));
+}
+
+export async function scanVerb(id: string): Promise<{ found: number; classified: boolean }> {
+  return jsonOrThrow(await authFetch(`/v1/admin/verbs/${id}/scan`, { method: "POST" }));
+}
+
+export async function saveVerbMeaning(verbId: string, m: Partial<VerbMeaning>): Promise<VerbMeaning> {
+  return jsonOrThrow(
+    await authFetch(m.id ? `/v1/admin/verbs/meanings/${m.id}` : `/v1/admin/verbs/${verbId}/meanings`, {
+      method: m.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(m),
+    })
+  );
+}
+
+export async function deleteVerbMeaning(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/verbs/meanings/${id}`, { method: "DELETE" }));
+}
+
+export async function reviewVerbOccurrence(
+  id: string,
+  status: VerbOccurrence["status"],
+  meaningId: string | null
+): Promise<void> {
+  await jsonOrThrow(
+    await authFetch(`/v1/admin/verbs/occurrences/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, meaning_id: meaningId || "" }),
+    })
+  );
 }

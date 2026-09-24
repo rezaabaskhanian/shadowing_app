@@ -29,7 +29,7 @@ func New(repo Repository) Service {
 // AddWord کلمه‌ی جدید را به جعبه‌ی کاربر اضافه می‌کند؛ اگر کلمه از قبل
 // (case-sensitive نیست، طرف کلاینت lowercase می‌شود) وجود داشته باشد،
 // همان ردیف موجود برگردانده می‌شود (idempotent).
-func (s Service) AddWord(ctx context.Context, userID, word, meaning string) (leitner.Word, error) {
+func (s Service) AddWord(ctx context.Context, userID, word, meaning, verbMeaningID string) (leitner.Word, error) {
 	const op = "leitner.AddWord"
 
 	uid, err := uuid.Parse(userID)
@@ -40,6 +40,13 @@ func (s Service) AddWord(ctx context.Context, userID, word, meaning string) (lei
 	newWord, err := leitner.NewWord(uid, word, meaning)
 	if err != nil {
 		return leitner.Word{}, richerror.New(op).WithErr(err).WithKind(richerror.KindInvalid)
+	}
+	if verbMeaningID != "" {
+		mid, err := uuid.Parse(verbMeaningID)
+		if err != nil {
+			return leitner.Word{}, richerror.New(op).WithErr(err).WithMessage("invalid verb meaning ID").WithKind(richerror.KindInvalid)
+		}
+		newWord.VerbMeaningID = &mid
 	}
 
 	if err := s.repo.Create(ctx, newWord); err != nil {

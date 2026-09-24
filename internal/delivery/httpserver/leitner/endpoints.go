@@ -56,6 +56,8 @@ func (h Handler) ListWords(c echo.Context) error {
 type addWordRequest struct {
 	Word    string `json:"word"`
 	Meaning string `json:"meaning"`
+	// اختیاری: کارتِ یک معنای مشخص از فعل‌های چندمعنایی
+	VerbMeaningID string `json:"verb_meaning_id"`
 }
 
 // AddWord یک کلمه‌ی جدید به جعبه‌ی کاربر اضافه می‌کند (idempotent — اگر
@@ -71,7 +73,7 @@ func (h Handler) AddWord(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "درخواست نامعتبر است"})
 	}
 
-	w, err := h.leitnerSvc.AddWord(c.Request().Context(), userClaims.UserID, req.Word, req.Meaning)
+	w, err := h.leitnerSvc.AddWord(c.Request().Context(), userClaims.UserID, req.Word, req.Meaning, req.VerbMeaningID)
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}

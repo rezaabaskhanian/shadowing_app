@@ -15,11 +15,12 @@ export async function listWords(): Promise<BackendLeitnerWord[]> {
   return (data.words || []) as BackendLeitnerWord[];
 }
 
-export async function addWord(word: string, meaning: string): Promise<BackendLeitnerWord> {
+/** verbMeaningId: کارتِ یک معنای مشخص از فعل‌های چندمعنایی (اختیاری). */
+export async function addWord(word: string, meaning: string, verbMeaningId?: string): Promise<BackendLeitnerWord> {
   const res = await authFetch('/v1/leitner/words', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word, meaning }),
+    body: JSON.stringify({ word, meaning, verb_meaning_id: verbMeaningId || '' }),
   });
   return (await jsonOrThrow(res)) as BackendLeitnerWord;
 }

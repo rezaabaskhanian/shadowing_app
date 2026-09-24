@@ -33,6 +33,8 @@ type Word struct {
 	NextReview time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// VerbMeaningID کارتِ یک معنای مشخص از یک فعل چندمعنایی (اختیاری)
+	VerbMeaningID *uuid.UUID
 }
 
 func NewWord(userID uuid.UUID, word, meaning string) (Word, error) {

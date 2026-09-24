@@ -387,3 +387,53 @@ export const SCENE_CATEGORIES: { value: string; label: string }[] = [
 export function sceneCategoryLabel(value: string): string {
   return SCENE_CATEGORIES.find((c) => c.value === value)?.label || value;
 }
+
+// ---------- افعال چندمعنایی ----------
+export interface Verb {
+  id: string;
+  lemma: string;
+  forms: string[];
+  sort_order: number;
+  is_published: boolean;
+}
+
+export interface VerbSummary extends Verb {
+  meaning_count: number;
+  approved_count: number;
+  suggested_count: number;
+}
+
+export interface VerbMeaning {
+  id: string;
+  verb_id: string;
+  meaning_fa: string;
+  explanation_fa: string;
+  fallback_example: string;
+  practice_prompt_fa: string;
+  sort_order: number;
+}
+
+export interface VerbOccurrence {
+  id: string;
+  verb_id: string;
+  meaning_id: string | null;
+  scene_id: string;
+  scene_title: string;
+  sentence: string;
+  matched_form: string;
+  status: "suggested" | "approved" | "rejected";
+  dialogue_id: string;
+}
+
+export interface VerbDetail {
+  verb: Verb;
+  meanings: VerbMeaning[];
+  occurrences: VerbOccurrence[];
+}
+
+export interface VerbMeaningSuggestion {
+  meaning_fa: string;
+  explanation_fa: string;
+  example: string;
+  practice_prompt_fa: string;
+}

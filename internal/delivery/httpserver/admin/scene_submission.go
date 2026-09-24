@@ -44,6 +44,7 @@ func (h Handler) ApproveSceneSubmission(c echo.Context) error {
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}
+	h.scanSceneVerbs(scene.ID)
 
 	reviewerID := ""
 	if userClaims, err := claims.GetClaims(c); err == nil {

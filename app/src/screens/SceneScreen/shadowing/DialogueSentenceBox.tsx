@@ -9,6 +9,7 @@ import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
 import { DialogueSentenceContent } from './DialogueSentenceContent';
 import { DialogueVocabChips } from './DialogueVocabChips';
 import { DialoguePhrases } from './DialoguePhrases';
+import { DialogueVerbTags } from './DialogueVerbTags';
 
 /**
  * جعبه‌ی متن جمله: خودِ جمله (مخفی یا هایلایت‌شده — فقط وقتی textDisplayMode
@@ -114,6 +115,16 @@ export const DialogueSentenceBox: React.FC<{
     {/* اصطلاح/عبارت‌های همین جمله — فقط اگر ادمین چیزی گذاشته باشد؛ خالی = هیچ نمایشی */}
     {activeStepIndex !== 2 && (
       <DialoguePhrases phrases={currentDialogue.phrases} accentColor={accentColor} t={t} />
+    )}
+
+    {/* فعل چندمعنایی این جمله (مثلاً «get این‌جا یعنی رسیدن») — به صفحه‌ی فعل می‌رود */}
+    {activeStepIndex !== 2 && (
+      <DialogueVerbTags
+        dialogueId={currentDialogue.dialogueId}
+        accentColor={accentColor}
+        accentLightColor={accentLightColor}
+        t={t}
+      />
     )}
 
     {activeStepIndex === 1 && (

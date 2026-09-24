@@ -65,7 +65,7 @@ function fromBackend(w: BackendLeitnerWord): BoxWord {
 interface VocabContextValue {
   box: BoxWord[];
   has: (word: string) => boolean;
-  add: (entry: { word: string; meaning: string }) => void;
+  add: (entry: { word: string; meaning: string; verbMeaningId?: string }) => void;
   remove: (word: string) => void;
   promote: (word: string) => void; // بلد بودم → یک سطح بالاتر + موعد دیرتر
   demote: (word: string) => void; // بلد نبودم → برگشت به سطح ۱ + مرور زودتر
@@ -140,7 +140,7 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
   // همه‌ی جهش‌ها (add/remove/promote/demote) اول state لوکال را فوری
   // (optimistic) آپدیت می‌کنند — تجربه‌ی کاربر هیچ‌وقت قفل شبکه نیست — و
   // موازی درخواست سرور را هم می‌فرستند؛ اگر سرور fail شد فقط لاگ می‌شود.
-  const add = useCallback((entry: { word: string; meaning: string }) => {
+  const add = useCallback((entry: { word: string; meaning: string; verbMeaningId?: string }) => {
     const w = key(entry.word);
     if (boxRef.current.some((b) => b.word === w)) return;
     setBox((prev) => {
@@ -157,7 +157,7 @@ export const VocabProvider = ({ children }: { children: React.ReactNode }) => {
       ];
     });
     leitnerApi
-      .addWord(w, entry.meaning)
+      .addWord(w, entry.meaning, entry.verbMeaningId)
       .then((backendWord) => {
         setBox((prev) => prev.map((b) => (b.word === w ? fromBackend(backendWord) : b)));
       })

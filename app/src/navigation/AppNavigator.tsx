@@ -34,6 +34,9 @@ import { MyRecordingsScreen } from '../screens/MyRecordingsScreen';
 import { LanguageHabitScreen } from '../screens/LanguageHabit/LanguageHabitScreen';
 import { HabitMissionPracticeScreen } from '../screens/LanguageHabit/HabitMissionPracticeScreen';
 import { HabitMissionResultScreen } from '../screens/LanguageHabit/HabitMissionResultScreen';
+import { VerbDetailScreen } from '../screens/Verbs/VerbDetailScreen';
+import { VerbQuizScreen } from '../screens/Verbs/VerbQuizScreen';
+import { VerbSpeakScreen } from '../screens/Verbs/VerbSpeakScreen';
 import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
 import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
@@ -58,6 +61,9 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'LanguageHabit',
   'HabitMissionPractice',
   'HabitMissionResult',
+  'VerbDetail',
+  'VerbQuiz',
+  'VerbSpeak',
   'TopicSuggestion',
   'ContactUs',
   'HelpFaq',
@@ -243,6 +249,9 @@ export const AppNavigator = () => {
           tabBarButton: () => null,
         }}
       />
+      <Tab.Screen name="VerbDetail" component={VerbDetailScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="VerbQuiz" component={VerbQuizScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="VerbSpeak" component={VerbSpeakScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen
         name="TopicSuggestion"
         component={TopicSuggestionScreen}
