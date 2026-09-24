@@ -134,11 +134,17 @@ function VerbEditor({
   const [suggestions, setSuggestions] = useState<VerbMeaningSuggestion[]>([]);
   const [draft, setDraft] = useState<Partial<VerbMeaning> | null>(null);
 
+  // پیشنهادها و فرم باز فقط با عوض شدن فعل پاک می‌شوند — نه با هر بارگذاری
+  // دوباره‌ی داده (بعد از هر عمل، آرایه‌ی forms یک شیء تازه است و قبلاً
+  // پیشنهادهای هوش مصنوعی را بلافاصله بعد از نمایش پاک می‌کرد).
+  const formsText = verb.forms.join(", ");
   useEffect(() => {
-    setForms(verb.forms.join(", "));
     setSuggestions([]);
     setDraft(null);
-  }, [verb.id, verb.forms]);
+  }, [verb.id]);
+  useEffect(() => {
+    setForms(formsText);
+  }, [formsText]);
 
   async function run(action: () => Promise<unknown>, okMsg?: string) {
     setBusy(true);
