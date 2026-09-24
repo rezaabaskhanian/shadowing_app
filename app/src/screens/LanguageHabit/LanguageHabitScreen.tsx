@@ -119,7 +119,7 @@ export const LanguageHabitScreen = () => {
                 </View>
 
                 <Text style={styles.missionSentence}>
-                  {t('habitPracticeWhile')} {activityName(mission.activity).toLowerCase()}
+                  {t('habitPracticeWhile').replace('{activity}', activityName(mission.activity).toLowerCase())}
                 </Text>
 
                 <Text style={styles.missionPurpose}>{t('habitPurposeText')}</Text>

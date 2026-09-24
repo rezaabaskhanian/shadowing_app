@@ -555,7 +555,7 @@ export const translations: Translations = {
 
   habitScreenTitle: { en: 'Real Situations', fa: 'موقعیت‌های واقعی' },
   habitTodaysMission: { en: "Today's Mission", fa: 'ماموریت امروز' },
-  habitPracticeWhile: { en: 'Practice this dialogue while', fa: 'این دیالوگ را همزمان با' },
+  habitPracticeWhile: { en: 'Practice this dialogue while {activity}', fa: 'این دیالوگ را همزمان با {activity} تمرین کن' },
   habitStartMission: { en: 'Start Mission', fa: 'شروع ماموریت' },
   habitHistoryTitle: { en: 'Your Progress', fa: 'پیشرفت شما' },
   habitCompletedMissions: { en: 'Completed missions', fa: 'ماموریت‌های انجام‌شده' },
@@ -571,8 +571,8 @@ export const translations: Translations = {
     fa: 'موقعیت واقعی امروز',
   },
   habitPurposeText: {
-    en: "This is a real situation you'll actually run into — say this dialogue from memory while you're in it. The more you practice it, the more automatic it gets, until it comes out without thinking.",
-    fa: 'این یک موقعیت واقعیه — باید این دیالوگ را از حفظ، توی همون موقعیت بگی. هرچی بیشتر تمرینش کنی، خودکارتر می‌شه، تا جایی که بدون فکر کردن از دهنت میاد بیرون.',
+    en: "This dialogue is picked from scenes you've practiced well in shadowing (or a new scene if you're just starting). Saying it from memory while your hands and mind are busy with an everyday task makes it automatic — so in a real conversation it comes out without thinking.",
+    fa: 'این دیالوگ از صحنه‌هایی انتخاب می‌شود که در شادوئینگ خوب تمرینشان کرده‌ای (اگر تازه شروع کرده‌ای، از یک صحنه‌ی جدید). وقتی آن را وسط یک کار روزمره و در حالی که دست و ذهنت درگیر کار دیگری است از حفظ بگویی، خودکار می‌شود؛ تا در یک مکالمه‌ی واقعی بدون فکر کردن از دهانت بیرون بیاید.',
   },
   habitHowItWorksTitle: { en: 'How this mission works', fa: 'این ماموریت چطور کار می‌کند' },
   habitHowItWorks1: {
@@ -580,12 +580,12 @@ export const translations: Translations = {
     fa: 'اول متن کامل دیالوگ را می‌بینی و فرصت داری حفظش کنی.',
   },
   habitHowItWorks2: {
-    en: "Then the text is hidden and you say it from memory while you record.",
-    fa: 'بعد متن مخفی می‌شود و باید حین ضبط، آن را از حفظ بگویی.',
+    en: 'Then the text is hidden — start the task and say the dialogue from memory while you record.',
+    fa: 'بعد متن مخفی می‌شود؛ کار روزمره را شروع کن و همزمان دیالوگ را از حفظ بگو تا ضبط شود.',
   },
   habitHowItWorks3: {
-    en: "At the end, you'll see your accuracy, and the mission counts toward your streak.",
-    fa: 'در پایان، دقت گفتارت را می‌بینی و این ماموریت در استریکت حساب می‌شود.',
+    en: "At the end, you'll see your accuracy and the mission counts toward your streak. A new mission arrives every day.",
+    fa: 'در پایان، دقت گفتارت را می‌بینی و این ماموریت در استریکت حساب می‌شود. هر روز یک ماموریت تازه می‌آید.',
   },
 
   habitStudyTitle: { en: 'Memorize this dialogue', fa: 'این دیالوگ را حفظ کن' },
@@ -698,10 +698,6 @@ export const translations: Translations = {
   },
 
   lockedBadge: { en: 'Locked', fa: 'قفل' },
-  sequenceLockedMsg: {
-    en: 'Finish the previous scene in the path to unlock this one',
-    fa: 'برای باز شدن این صحنه، اول صحنه‌ی قبلی مسیر رو کامل کن',
-  },
   curriculumMapTitle: { en: 'Learning Path', fa: 'مسیر آموزشی' },
   curriculumMapSub: {
     en: '{done} of {total} scenes completed',

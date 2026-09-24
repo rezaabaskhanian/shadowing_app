@@ -1,14 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Check, Crown, Lock, Play, Trophy } from 'lucide-react-native';
+import { ArrowLeft, Check, Crown, Play, Trophy } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { COLORS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { useScenes } from '../../data/ScenesContext';
-import { useToast } from '../../data/ToastContext';
 import { LEVEL_LABEL_KEY, LEVEL_BADGE_STYLE } from '../../components/SceneListCard';
 import type { Scenario } from '../../data/scenarios';
 
@@ -44,15 +43,12 @@ interface SectionBand {
   allCompleted: boolean;
 }
 
-type NodeState = 'completed' | 'current' | 'sequenceLocked' | 'subLocked';
+type NodeState = 'completed' | 'current' | 'subLocked';
 
-// بک‌اند تضمین می‌کند حداکثر یک صحنه‌ی «باز و ناتمام» به‌ازای هر سطح دشواری
-// وجود دارد (زنجیره‌ی قفل ترتیبی جدا برای هر سطح است)، پس نیازی به پیداکردن
-// «اولین» صحنه در کلِ لیست نیست — هر صحنه‌ی باز-و-ناتمام خودش «فعلیِ» همان
-// سطح است.
+// هر صحنه‌ی باز-و-ناتمام «فعلی» حساب می‌شود (قفل ترتیبی وجود ندارد؛ فقط
+// قفلِ اشتراک).
 function nodeState(scenario: Scenario): NodeState {
   if (scenario.isLocked) return 'subLocked';
-  if (scenario.isSequenceLocked) return 'sequenceLocked';
   if (scenario.isCompleted) return 'completed';
   return 'current';
 }
@@ -61,7 +57,6 @@ export const CurriculumMapScreen = () => {
   const navigation = useNavigation<any>();
   const { t } = useLanguage();
   const { scenes } = useScenes();
-  const toast = useToast();
   const scrollRef = useRef<ScrollView>(null);
 
   // نقشه همیشه از آسان به سخت مرتب می‌شود (نه بر اساس "order" خام ادمین)؛
@@ -134,7 +129,7 @@ export const CurriculumMapScreen = () => {
   // با مسیرهای بلند (مثلاً صدها صحنه)، کاربر نباید هر بار از بالای مسیر
   // (سطح مبتدی) دستی اسکرول کنه تا برسه به جایی که الان هست — همون لحظه‌ی
   // باز شدن صفحه، خودکار می‌ره سراغ اولین نودِ «فعلی».
-  const sceneIdsKey = ordered.map((s) => `${s.id}:${s.isCompleted}:${s.isSequenceLocked}`).join(',');
+  const sceneIdsKey = ordered.map((s) => `${s.id}:${s.isCompleted}`).join(',');
   useEffect(() => {
     const current = nodeItems.find((item) => nodeState(item.scenario) === 'current');
     if (!current) return;
@@ -149,10 +144,6 @@ export const CurriculumMapScreen = () => {
   const openScene = (scenario: Scenario) => {
     if (scenario.isLocked) {
       navigation.navigate('Paywall');
-      return;
-    }
-    if (scenario.isSequenceLocked) {
-      toast.info(t('sequenceLockedMsg'));
       return;
     }
     navigation.navigate('Shadowing', { scenarioId: scenario.id });
@@ -282,24 +273,17 @@ export const CurriculumMapScreen = () => {
   );
 };
 
-// دو نوع قفل کاملاً متفاوت‌اند و باید ظاهر متفاوتی هم داشته باشن: قفلِ
-// اشتراک (subLocked) طلایی با تاج — چون معنیش «محتوای ویژه»ست؛ قفلِ ترتیبی
-// (sequenceLocked) کهربایی با قفل ساده — چون معنیش «هنوز نوبتش نشده»ست، نه
-// چیزی که باید بخری.
+// قفلِ اشتراک (subLocked) طلایی با تاج — چون معنیش «محتوای ویژه»ست.
 const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state, onPress }) => {
   const bg =
     state === 'completed'
       ? COLORS.tertiary
       : state === 'current'
       ? COLORS.primary
-      : state === 'sequenceLocked'
-      ? COLORS.warningLight
       : hexToRgba(COLORS.secondary, 0.16);
   const iconColor =
     state === 'completed' || state === 'current'
       ? COLORS.white
-      : state === 'sequenceLocked'
-      ? COLORS.warningDeep
       : COLORS.secondaryContainer;
 
   return (
@@ -312,10 +296,8 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
         <Check color={iconColor} size={26} />
       ) : state === 'current' ? (
         <Play color={iconColor} size={24} fill={iconColor} />
-      ) : state === 'subLocked' ? (
-        <Crown color={iconColor} size={22} />
       ) : (
-        <Lock color={iconColor} size={22} />
+        <Crown color={iconColor} size={22} />
       )}
     </TouchableOpacity>
   );

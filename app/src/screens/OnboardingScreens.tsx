@@ -65,7 +65,11 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ onDone }) 
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: slides[index].bg }]}>
+    <View style={styles.container}>
+      {/* رنگ هر اسلاید نیمه‌شفاف است؛ اگر مستقیم روی container بنشیند، پس‌زمینه‌ی
+          پنجره‌ی اندروید (لوگوی launch_background) از زیرش دیده می‌شود. پس container
+          مات می‌ماند و رنگ اسلاید یک لایه‌ی جدا روی آن است. */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: slides[index].bg }]} />
       <TouchableOpacity
         style={[styles.skipBtn, { top: insets.top + SPACING.s }]}
         onPress={onDone}

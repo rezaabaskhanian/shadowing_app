@@ -118,8 +118,6 @@ export interface Scenario {
   isCompleted?: boolean;
   // ترتیب این صحنه در مسیر آموزشی (برای صفحه‌ی نقشه/مسیر)
   order?: number;
-  // جدا از isLocked (اشتراک): یعنی صحنه‌ی قبلیِ همین مسیر هنوز کامل نشده.
-  isSequenceLocked?: boolean;
   // فقط برای صحنه‌هایی که ادمین نکته‌ی گرامری برایشان ساخته (در صفحه‌ی معرفی نشان داده می‌شود).
   grammarNote?: GrammarNote;
 }

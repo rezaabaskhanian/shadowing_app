@@ -25,8 +25,7 @@ func (h Handler) GetScene(c echo.Context) error {
 		})
 	}
 
-	// لیستِ کل صحنه‌ها را یک‌بار می‌گیریم و برای هر دو بررسی (نمونه‌ی رایگانِ
-	// هر سطح + قفل ترتیبی) از همین استفاده می‌کنیم.
+	// لیستِ کل صحنه‌ها برای تشخیص نمونه‌ی رایگانِ هر سطح.
 	allScenes, listErr := h.learningSvc.ListScene(c.Request().Context())
 	isFreeSample := listErr == nil && freeSampleSceneIDs(allScenes)[scene.ID]
 
@@ -41,23 +40,6 @@ func (h Handler) GetScene(c echo.Context) error {
 	}
 	scene.IsLocked = false
 	scene.Progress, scene.IsCompleted = h.sceneProgressForUser(c, scene.ID)
-
-	// قفل ترتیبی: باید کل مسیر را از اول پیمود تا بفهمیم صحنه‌ی قبلی کامل
-	// شده یا نه — همان لیستی که بالاتر گرفتیم را دوباره استفاده می‌کنیم.
-	if !isAdminCaller(c) && listErr == nil {
-		for i := range allScenes {
-			_, allScenes[i].IsCompleted = h.sceneProgressForUser(c, allScenes[i].ID)
-		}
-		applySequenceLock(allScenes, false)
-		for _, s := range allScenes {
-			if s.ID == scene.ID && s.SequenceLocked {
-				return c.JSON(http.StatusForbidden, echo.Map{
-					"message":         "برای باز شدن این صحنه باید صحنه‌ی قبلی در مسیر آموزشی را کامل کنی",
-					"sequence_locked": true,
-				})
-			}
-		}
-	}
 
 	dialogueScores := h.dialogueProgressForUser(c, scene.ID)
 	for i := range scene.Hotspots {

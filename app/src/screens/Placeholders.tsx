@@ -52,7 +52,6 @@ export const ScenesScreen = () => {
   const queryClient = useQueryClient();
   const { scenes, loading } = useScenes();
   const { t } = useLanguage();
-  const toast = useToast();
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
   const [activeLevel, setActiveLevel] = React.useState<LevelFilter>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -226,15 +225,10 @@ export const ScenesScreen = () => {
               time={scenario.time}
               imageUri={scenario.imageUri}
               isLocked={scenario.isLocked}
-              isSequenceLocked={scenario.isSequenceLocked}
               isCompleted={scenario.isCompleted}
               onPress={() => {
                 if (scenario.isLocked) {
                   navigation.navigate('Paywall');
-                  return;
-                }
-                if (scenario.isSequenceLocked) {
-                  toast.info(t('sequenceLockedMsg'));
                   return;
                 }
                 navigation.navigate('Shadowing', { scenarioId: scenario.id });

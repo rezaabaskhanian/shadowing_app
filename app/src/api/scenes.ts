@@ -14,15 +14,6 @@ export class SceneLockedError extends Error {
   }
 }
 
-// جدا از SceneLockedError (اشتراک): این یعنی صحنه‌ی قبلیِ مسیر آموزشی هنوز
-// کامل نشده — راه‌حلش خرید اشتراک نیست، تمرین‌کردن صحنه‌ی قبلی است.
-export class SceneSequenceLockedError extends Error {
-  constructor() {
-    super('برای باز شدن این صحنه باید صحنه‌ی قبلی در مسیر آموزشی را کامل کنی');
-    this.name = 'SceneSequenceLockedError';
-  }
-}
-
 // ---- شکل پاسخ بک‌اند ----
 interface BackendWord {
   word: string;
@@ -76,7 +67,6 @@ interface BackendScene {
   is_locked?: boolean;
   progress?: number;
   is_completed?: boolean;
-  sequence_locked?: boolean;
   // نکته‌ی گرامریِ اختیاری (فقط در پاسخ تک‌صحنه، نه در لیست)
   grammar_topic?: string;
   grammar_explanation?: string;
@@ -158,7 +148,6 @@ function mapScene(s: BackendScene): Scenario {
     isLocked: !!s.is_locked,
     isCompleted: !!s.is_completed,
     order: s.order,
-    isSequenceLocked: !!s.sequence_locked,
     grammarNote: mapGrammarNote(s),
   };
 }
@@ -192,7 +181,6 @@ export async function fetchScene(id: string): Promise<Scenario> {
   if (res.status === 403) {
     const body = await res.json().catch(() => ({}));
     if (body?.is_locked) throw new SceneLockedError();
-    if (body?.sequence_locked) throw new SceneSequenceLockedError();
     throw new Error(body?.message || 'دسترسی به این صحنه مجاز نیست');
   }
   if (!res.ok) throw new Error('failed to fetch scene');

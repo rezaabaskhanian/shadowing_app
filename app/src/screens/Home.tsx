@@ -32,7 +32,6 @@ import { useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
-import { useToast } from '../data/ToastContext';
 import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
 import { getAssessmentTest, getSpeakingProfile, type AssessmentItem, type SpeakingProfile } from '../api/assessment';
 import { getTodaysMission, type TodaysMission } from '../api/mission';
@@ -60,7 +59,6 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
-  const toast = useToast();
   const { user } = useAuth();
   const { box } = useVocab();
   const dueCount = box.filter(isDue).length;
@@ -205,16 +203,10 @@ export const HomeScreen = () => {
   };
 
   // اگه صحنه قفله (خارج از سقف رایگان و بدون اشتراک فعال)، به‌جای رفتن
-  // مستقیم به تمرین، پی‌وال (Paywall) باز میشه. جدا از این، اگه صحنه‌ی
-  // قبلیِ مسیر آموزشی هنوز کامل نشده (isSequenceLocked)، راه‌حلش خریدن
-  // اشتراک نیست — فقط یه پیام نشون می‌دیم که اول صحنه‌ی قبلی رو کامل کنه.
-  const openScene = (scenario: { id: string; isLocked?: boolean; isSequenceLocked?: boolean }) => {
+  // مستقیم به تمرین، پی‌وال (Paywall) باز میشه.
+  const openScene = (scenario: { id: string; isLocked?: boolean }) => {
     if (scenario.isLocked) {
       navigation.navigate('Paywall');
-      return;
-    }
-    if (scenario.isSequenceLocked) {
-      toast.info(t('sequenceLockedMsg'));
       return;
     }
     navigation.navigate('Shadowing', { scenarioId: scenario.id });
@@ -498,7 +490,6 @@ export const HomeScreen = () => {
               sentencesCount={scenario.sentencesCount || 24}
               isCompleted={!!scenario.isCompleted}
               isLocked={scenario.isLocked}
-              isSequenceLocked={scenario.isSequenceLocked}
               onPress={() => openScene(scenario)}
             />
           ))}

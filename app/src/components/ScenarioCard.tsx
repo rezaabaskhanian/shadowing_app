@@ -25,10 +25,6 @@ interface ScenarioCardProps {
   sentencesCount?: number;
   isCompleted?: boolean;
   isLocked?: boolean;
-  // جدا از isLocked (اشتراک): صحنه‌ی قبلیِ مسیر آموزشی هنوز کامل نشده.
-  // همون آیکن قفل رو نشون می‌دیم ولی رنگ متفاوت (کهربایی نه خاکستری) تا با
-  // قفل اشتراک اشتباه گرفته نشه.
-  isSequenceLocked?: boolean;
   onPress?: () => void;
   isSmall?: boolean;
 }
@@ -43,15 +39,12 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   sentencesCount = 24,
   isCompleted = false,
   isLocked = false,
-  isSequenceLocked = false,
   onPress,
 }) => {
   const { t } = useLanguage();
   const imageSource = typeof imageUri === 'string' ? { uri: imageUri } : imageUri;
   const levelLabel = t(LEVEL_LABEL_KEY[level] || LEVEL_LABEL_KEY.Beginner);
   const levelColor = LEVEL_COLOR[level] || LEVEL_COLOR.Beginner;
-  const dimmed = isLocked || isSequenceLocked;
-  const lockTint = isLocked ? COLORS.muted : COLORS.warningDeep;
 
   return (
     <TouchableOpacity
@@ -61,10 +54,10 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
     >
       {/* THUMBNAIL */}
       <View>
-        <Image source={imageSource} style={[styles.thumbnail, dimmed && styles.thumbnailLocked]} />
-        {dimmed && (
+        <Image source={imageSource} style={[styles.thumbnail, isLocked && styles.thumbnailLocked]} />
+        {isLocked && (
           <View style={styles.lockOverlay}>
-            <Lock size={18} color={isLocked ? COLORS.white : COLORS.warningDeep} />
+            <Lock size={18} color={COLORS.white} />
           </View>
         )}
       </View>
@@ -79,7 +72,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
         </View>
 
         <Text style={styles.subtitle} numberOfLines={1}>
-          {isSequenceLocked && !isLocked ? t('sequenceLockedMsg') : subtitle || title}
+          {subtitle || title}
         </Text>
 
         <Text style={styles.metaText}>
@@ -89,8 +82,8 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
 
       {/* ACTION RIGHT */}
       <View style={styles.actionRight}>
-        {dimmed ? (
-          <Lock size={20} color={lockTint} />
+        {isLocked ? (
+          <Lock size={20} color={COLORS.muted} />
         ) : isCompleted || progress >= 100 ? (
           <View style={styles.completedBadge}>
             <Check size={16} color={COLORS.white} />

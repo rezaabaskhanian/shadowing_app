@@ -17,8 +17,6 @@ interface SceneListCardProps {
   time: string;
   imageUri: any;
   isLocked?: boolean;
-  // جدا از isLocked (اشتراک): صحنه‌ی قبلیِ مسیر آموزشی هنوز کامل نشده.
-  isSequenceLocked?: boolean;
   isCompleted?: boolean;
   onPress?: () => void;
 }
@@ -29,23 +27,22 @@ export const LEVEL_BADGE_STYLE: Record<string, { bg: string; text: string; Icon:
   Advanced: { bg: COLORS.levelAdvancedBg, text: COLORS.white, Icon: Gauge },
 };
 
-export function SceneListCard({ title, level, time, imageUri, isLocked, isSequenceLocked, isCompleted, onPress }: SceneListCardProps) {
+export function SceneListCard({ title, level, time, imageUri, isLocked, isCompleted, onPress }: SceneListCardProps) {
   const { t } = useLanguage();
   const levelStyle = LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner;
   const LevelIcon = levelStyle.Icon;
   const levelLabel = t(LEVEL_LABEL_KEY[level] || LEVEL_LABEL_KEY.Beginner);
-  const dimmed = isLocked || isSequenceLocked;
 
   return (
     <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={onPress}>
       <Image
         source={typeof imageUri === 'string' ? { uri: imageUri } : imageUri}
-        style={[styles.image, dimmed && styles.imageLocked]}
+        style={[styles.image, isLocked && styles.imageLocked]}
       />
       <View style={styles.scrim} />
 
-      {dimmed ? (
-        <View style={[styles.lockBadge, !isLocked && styles.lockBadgeSequence]}>
+      {isLocked ? (
+        <View style={styles.lockBadge}>
           <Lock size={14} color={COLORS.white} />
         </View>
       ) : isCompleted ? (
@@ -94,9 +91,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  lockBadgeSequence: {
-    backgroundColor: COLORS.warningDeep,
   },
   completedBadge: {
     position: 'absolute',
