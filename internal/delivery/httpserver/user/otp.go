@@ -1,6 +1,8 @@
 package userhandler
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -53,6 +55,13 @@ func (h Handler) SendOtp(c echo.Context) error {
 	}
 
 	if err := h.otpSvc.Send(c.Request().Context(), req.Phone, req.Purpose); err != nil {
+		// RichError.Error() فقط پیام فارسی را برمی‌گرداند؛ علت واقعی (مثلاً پاسخ
+		// sms.ir یا تنظیم‌نبودن کلید) در Unwrap است و باید لاگ شود.
+		cause := err
+		if inner := errors.Unwrap(err); inner != nil {
+			cause = inner
+		}
+		slog.Warn("otp: send failed", "purpose", req.Purpose, "cause", cause.Error())
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "otp_send_failed",
 			"message": err.Error(),
