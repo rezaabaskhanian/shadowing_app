@@ -163,6 +163,7 @@ export interface SettingsResp {
   tts_provider: string;
   gemini_tts_model: string;
   gemini_tts_voice: string;
+  openrouter_tts_model: string;
   groq_api_key: SettingItem;
   groq_stt_model: string;
   fcm_service_account_json: SettingItem;

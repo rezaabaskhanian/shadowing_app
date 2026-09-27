@@ -59,6 +59,11 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
     hint: "مثلاً Kore (زن) یا Puck (مرد) — خالی بگذار برای پیش‌فرض (Kore)",
   },
   {
+    key: "OPENROUTER_TTS_MODEL",
+    label: "مدل TTS در OpenRouter",
+    hint: "مثلاً google/gemini-3.8-flash-lite-tts (ارزان‌تر) — خالی بگذار برای پیش‌فرض (google/gemini-3.8-flash-tts). صدا از «صدای پیش‌فرض Gemini TTS» خوانده می‌شود",
+  },
+  {
     key: "GROQ_API_KEY",
     label: "کلید Groq (رونویسی سریع صدا برای توضیح آزاد و گفتگوی AI)",
     hint: "خالی = فقط Whisper خودِ سرور (کندتر). اگر Groq خطا بدهد، خودکار به Whisper سرور برمی‌گردد",
@@ -78,7 +83,7 @@ export default function SettingsPanel({
 }) {
   const [settings, setSettings] = useState<SettingsResp | null>(null);
   const [provider, setProvider] = useState<"anthropic" | "gemini" | "deepseek" | "openrouter">("anthropic");
-  const [ttsProvider, setTTSProvider] = useState<"elevenlabs" | "gemini">("elevenlabs");
+  const [ttsProvider, setTTSProvider] = useState<"elevenlabs" | "gemini" | "openrouter">("elevenlabs");
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,7 +150,9 @@ export default function SettingsPanel({
       const s = await getSettings();
       setSettings(s);
       setProvider((s.ai_provider as "anthropic" | "gemini" | "deepseek" | "openrouter") || "anthropic");
-      setTTSProvider(s.tts_provider === "gemini" ? "gemini" : "elevenlabs");
+      setTTSProvider(
+        s.tts_provider === "gemini" || s.tts_provider === "openrouter" ? s.tts_provider : "elevenlabs"
+      );
     } catch (err: any) {
       notify(err.message, "err");
     } finally {
@@ -173,7 +180,7 @@ export default function SettingsPanel({
     }
   }
 
-  async function saveTTSProvider(next: "elevenlabs" | "gemini") {
+  async function saveTTSProvider(next: "elevenlabs" | "gemini" | "openrouter") {
     setTTSProvider(next);
     setSaving("TTS_PROVIDER");
     try {
@@ -360,7 +367,9 @@ export default function SettingsPanel({
         <h2 style={{ marginTop: 0 }}>🔊 ارائه‌دهنده‌ی تولید صدا (TTS)</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           صدای دیالوگ‌ها، grammar note و آیتم‌های Assessment با همین provider ساخته می‌شود.
-          Gemini از همان «کلید Gemini» پایین همین صفحه استفاده می‌کند.
+          Gemini از همان «کلید Gemini» و OpenRouter از همان «کلید OpenRouter» پایین همین صفحه استفاده می‌کند.
+          OpenRouter به‌طور پیش‌فرض همان مدل Gemini 3.8 Flash TTS را صدا می‌زند، ولی با اعتبار OpenRouter
+          (بدون سقف ۱۰ درخواست روزانه‌ی نسخه‌ی رایگان گوگل).
         </p>
         <div style={{ display: "flex", gap: 8 }}>
           <button
@@ -376,6 +385,13 @@ export default function SettingsPanel({
             disabled={saving === "TTS_PROVIDER"}
           >
             Gemini TTS
+          </button>
+          <button
+            className={`btn ${ttsProvider === "openrouter" ? "" : "btn-ghost"}`}
+            onClick={() => saveTTSProvider("openrouter")}
+            disabled={saving === "TTS_PROVIDER"}
+          >
+            OpenRouter
           </button>
         </div>
       </div>

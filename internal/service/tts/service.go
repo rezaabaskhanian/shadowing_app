@@ -11,6 +11,7 @@ import (
 const (
 	ProviderElevenLabs = "elevenlabs"
 	ProviderGemini     = "gemini"
+	ProviderOpenRouter = "openrouter"
 )
 
 // Voice یک صدای در دسترس را نشان می‌دهد (برای انتخاب مرد/زن در پنل).
@@ -36,13 +37,14 @@ type provider interface {
 	listVoices(ctx context.Context) ([]Voice, error)
 }
 
-// Service بین providerهای TTS (ElevenLabs / Gemini) بر اساس تنظیم TTS_PROVIDER
+// Service بین providerهای TTS (ElevenLabs / Gemini / OpenRouter) بر اساس تنظیم TTS_PROVIDER
 // سوییچ می‌کند. مقدار در لحظه‌ی هر درخواست از settings خوانده می‌شود تا تغییر
 // آن از پنل ادمین بدون ری‌استارت سرور اعمال شود.
 type Service struct {
 	settings   *settingsservice.Service
 	elevenLabs provider
 	gemini     provider
+	openRouter provider
 }
 
 func New(settings *settingsservice.Service) Service {
@@ -50,23 +52,32 @@ func New(settings *settingsservice.Service) Service {
 		settings:   settings,
 		elevenLabs: newElevenLabsProvider(settings),
 		gemini:     newGeminiProvider(settings),
+		openRouter: newOpenRouterProvider(settings),
 	}
 }
 
 // ProviderName نام provider فعال را برمی‌گرداند؛ پیش‌فرض elevenlabs است تا
 // رفتار فعلی بدون تنظیم جدید عوض نشود.
 func (s Service) ProviderName() string {
-	if strings.EqualFold(strings.TrimSpace(s.settings.Get(settingsservice.KeyTTSProvider)), ProviderGemini) {
+	switch strings.ToLower(strings.TrimSpace(s.settings.Get(settingsservice.KeyTTSProvider))) {
+	case ProviderGemini:
 		return ProviderGemini
+	case ProviderOpenRouter:
+		return ProviderOpenRouter
+	default:
+		return ProviderElevenLabs
 	}
-	return ProviderElevenLabs
 }
 
 func (s Service) active() provider {
-	if s.ProviderName() == ProviderGemini {
+	switch s.ProviderName() {
+	case ProviderGemini:
 		return s.gemini
+	case ProviderOpenRouter:
+		return s.openRouter
+	default:
+		return s.elevenLabs
 	}
-	return s.elevenLabs
 }
 
 // Enabled مشخص می‌کند آیا کلید API برای provider فعال تنظیم شده است یا نه.

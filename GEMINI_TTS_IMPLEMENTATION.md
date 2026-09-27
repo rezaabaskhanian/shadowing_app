@@ -120,3 +120,44 @@ ElevenLabs به‌خاطر خطای 402 و بلاک 401 `unusual_activity` عم�
 - صدای دیالوگ با سرعت ۰٫۷ ساخته شود و دیده شود که کندتر است، یا در لاگ backend پیام
   `gemini rejected pace style` آمده است. آمدن این پیام یعنی `speechMetadata` پذیرفته نشده و سرعت اعمال نمی‌شود.
 - صداهایی که قبل از این اصلاح ساخته شده‌اند، جمله‌ی اضافه را دارند و باید دوباره ساخته شوند.
+
+---
+
+## افزودن OpenRouter به‌عنوان provider سوم TTS (۲۰۲۶-۰۹-۲۷)
+**مشکل:** کلید Gemini روی free tier است. سقف مدل `gemini-3.8-flash-tts` در این حالت **۱۰ درخواست در روز** است و
+خطای `429 RESOURCE_EXHAUSTED` با پیام `GenerateRequestsPerDayPerProjectPerModel-FreeTier` برگشت. هر بار زدن دکمه‌ی ساخت صدا
+برای یک دیالوگ یک درخواست حساب می‌شود.
+
+**راه‌حل:** provider جدید `openrouter` با کلید `OPENROUTER_API_KEY` که از قبل داشتیم. مدل پیش‌فرض همان
+`google/gemini-3.8-flash-tts` است، ولی از اعتبار پرداختی OpenRouter استفاده می‌کند و سقف free tier گوگل را ندارد.
+قیمت آن همان قیمت گوگل است: ورودی ۰٫۵ دلار و خروجی ۹ دلار برای هر یک میلیون توکن.
+
+| فایل | تغییر |
+|---|---|
+| [internal/service/tts/openrouter.go](internal/service/tts/openrouter.go) | **جدید.** `POST https://openrouter.ai/api/v1/audio/speech` با `model`، `input` (متن دست‌نخورده)، `voice` و `response_format: pcm`. خروجی PCM خام 24kHz است که به WAV و بعد به mp3 تبدیل می‌شود. برای مدل‌های `google/*`، سرعت در `provider.options["google-ai-studio"].speech_metadata.style` می‌رود. برای بقیه‌ی مدل‌ها (مثلاً OpenAI) پارامتر عددی `speed` فرستاده می‌شود. اگر درخواست دارای دستور سرعت با 400 رد شود، یک بار بدون آن دوباره تلاش می‌شود. |
+| [internal/service/tts/openrouter_test.go](internal/service/tts/openrouter_test.go) | **جدید.** تست بدنه‌ی درخواست برای مدل Google و مدل غیر Google. |
+| [internal/service/tts/service.go](internal/service/tts/service.go) | `TTS_PROVIDER` حالا مقدار `openrouter` را هم قبول می‌کند. |
+| [internal/service/settings/service.go](internal/service/settings/service.go) | کلید جدید `OPENROUTER_TTS_MODEL`. |
+| [internal/delivery/httpserver/admin/settings.go](internal/delivery/httpserver/admin/settings.go) | فیلد `openrouter_tts_model` به پاسخ تنظیمات اضافه شد. |
+| [admin-panel/app/dashboard/SettingsPanel.tsx](admin-panel/app/dashboard/SettingsPanel.tsx) | دکمه‌ی سوم **OpenRouter** در کارت «🔊 ارائه‌دهنده‌ی تولید صدا» و فیلد «مدل TTS در OpenRouter» اضافه شد. |
+| [admin-panel/lib/types.ts](admin-panel/lib/types.ts) | فیلد `openrouter_tts_model` اضافه شد. |
+
+- صدای پیش‌فرض برای مدل‌های Gemini از همان تنظیم `GEMINI_TTS_VOICE` خوانده می‌شود (پیش‌فرض `Kore`). لیست صداهای Gemini در پنل
+  هم مثل قبل نمایش داده می‌شود.
+- مستند مرجع: https://openrouter.ai/docs/guides/overview/multimodal/tts. در این مستند صریحاً آمده که Gemini 3.8 فیلد input را کلمه‌به‌کلمه
+  می‌خواند و style باید در `speech_metadata` بیاید. پس اصلاح قبلی هم تأیید شد.
+- ✅ `go build`، `go test ./internal/service/tts/` و `tsc --noEmit` بدون خطا اجرا شدند. ⏳ تست واقعی روی سرور هنوز انجام نشده.
+
+**تست روی سرور:**
+1. `backend` و بعد `admin` را جدا از هم build کنید.
+2. در پنل، بخش تنظیمات، کارت «🔊 ارائه‌دهنده‌ی تولید صدا» را پیدا کنید و **OpenRouter** را بزنید.
+3. صفحه‌ی ساخت صحنه را رفرش کنید و صدای یک دیالوگ را بسازید.
+
+**یادداشت درباره‌ی یک توصیه‌ی بیرونی:** یک پیشنهاد گفته بود «صدا را زمان اجرای اپ نساز، یک بار روی سرور بساز و روی CDN بگذار».
+معماری فعلی از قبل همین است:
+- TTS فقط با کلیک ادمین در پنل صدا زده می‌شود.
+- فایل یک بار ساخته و در filestore ذخیره می‌شود: دیسک سرور، یا object storage اگر `OBJECT_STORAGE_*` ست شده باشد.
+- اپ فقط URL فایل را پخش می‌کند و هیچ‌وقت به API گوگل وصل نمی‌شود.
+
+همچنین برای کلمه‌های تکی (مثل «ran out») درخواست TTS فرستاده نمی‌شود. آن متن در اسکرین‌شات فقط فیلد واژه‌های فرم بود که پشت پیام خطا
+دیده می‌شد.

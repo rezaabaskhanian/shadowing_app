@@ -26,6 +26,7 @@ const (
 	KeyTTSProvider         = "TTS_PROVIDER"
 	KeyGeminiTTSModel      = "GEMINI_TTS_MODEL"
 	KeyGeminiTTSVoice      = "GEMINI_TTS_VOICE"
+	KeyOpenRouterTTSModel  = "OPENROUTER_TTS_MODEL"
 	KeyGroqAPIKey          = "GROQ_API_KEY"
 	KeyGroqSTTModel        = "GROQ_STT_MODEL"
 	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
@@ -51,6 +52,7 @@ var AllowedKeys = map[string]bool{
 	KeyTTSProvider:         true,
 	KeyGeminiTTSModel:      true,
 	KeyGeminiTTSVoice:      true,
+	KeyOpenRouterTTSModel:  true,
 	KeyGroqAPIKey:          true,
 	KeyGroqSTTModel:        true,
 	KeyFCMServiceAccount:   true,

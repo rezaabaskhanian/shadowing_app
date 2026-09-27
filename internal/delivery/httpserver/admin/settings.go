@@ -26,25 +26,26 @@ type settingItem struct {
 }
 
 type settingsResponse struct {
-	AIProvider        string      `json:"ai_provider"`
-	Anthropic         settingItem `json:"anthropic_api_key"`
-	ClaudeModel       string      `json:"claude_model"`
-	Gemini            settingItem `json:"gemini_api_key"`
-	GeminiModel       string      `json:"gemini_model"`
-	DeepSeek          settingItem `json:"deepseek_api_key"`
-	DeepSeekModel     string      `json:"deepseek_model"`
-	OpenRouter        settingItem `json:"openrouter_api_key"`
-	OpenRouterModel   string      `json:"openrouter_model"`
-	AIDailyTokenLimit string      `json:"ai_daily_token_limit"`
-	ElevenLabs        settingItem `json:"elevenlabs_api_key"`
-	VoiceID           settingItem `json:"elevenlabs_voice_id"`
-	ElevenLabsModel   string      `json:"elevenlabs_model_id"`
-	TTSProvider       string      `json:"tts_provider"`
-	GeminiTTSModel    string      `json:"gemini_tts_model"`
-	GeminiTTSVoice    string      `json:"gemini_tts_voice"`
-	Groq              settingItem `json:"groq_api_key"`
-	GroqSTTModel      string      `json:"groq_stt_model"`
-	FCMKey            settingItem `json:"fcm_service_account_json"`
+	AIProvider         string      `json:"ai_provider"`
+	Anthropic          settingItem `json:"anthropic_api_key"`
+	ClaudeModel        string      `json:"claude_model"`
+	Gemini             settingItem `json:"gemini_api_key"`
+	GeminiModel        string      `json:"gemini_model"`
+	DeepSeek           settingItem `json:"deepseek_api_key"`
+	DeepSeekModel      string      `json:"deepseek_model"`
+	OpenRouter         settingItem `json:"openrouter_api_key"`
+	OpenRouterModel    string      `json:"openrouter_model"`
+	AIDailyTokenLimit  string      `json:"ai_daily_token_limit"`
+	ElevenLabs         settingItem `json:"elevenlabs_api_key"`
+	VoiceID            settingItem `json:"elevenlabs_voice_id"`
+	ElevenLabsModel    string      `json:"elevenlabs_model_id"`
+	TTSProvider        string      `json:"tts_provider"`
+	GeminiTTSModel     string      `json:"gemini_tts_model"`
+	GeminiTTSVoice     string      `json:"gemini_tts_voice"`
+	OpenRouterTTSModel string      `json:"openrouter_tts_model"`
+	Groq               settingItem `json:"groq_api_key"`
+	GroqSTTModel       string      `json:"groq_stt_model"`
+	FCMKey             settingItem `json:"fcm_service_account_json"`
 }
 
 // GetSettings وضعیت فعلی تنظیمات را برمی‌گرداند؛ خودِ کلیدها هیچ‌وقت کامل نمایش
@@ -62,25 +63,26 @@ func (h Handler) GetSettings(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, settingsResponse{
-		AIProvider:        provider,
-		Anthropic:         get(settingsservice.KeyAnthropicAPIKey),
-		ClaudeModel:       s.Get(settingsservice.KeyClaudeModel),
-		Gemini:            get(settingsservice.KeyGeminiAPIKey),
-		GeminiModel:       s.Get(settingsservice.KeyGeminiModel),
-		DeepSeek:          get(settingsservice.KeyDeepSeekAPIKey),
-		DeepSeekModel:     s.Get(settingsservice.KeyDeepSeekModel),
-		OpenRouter:        get(settingsservice.KeyOpenRouterAPIKey),
-		OpenRouterModel:   s.Get(settingsservice.KeyOpenRouterModel),
-		AIDailyTokenLimit: s.Get(settingsservice.KeyAIDailyTokenLimit),
-		ElevenLabs:        get(settingsservice.KeyElevenLabsAPIKey),
-		VoiceID:           get(settingsservice.KeyElevenLabsVoiceID),
-		ElevenLabsModel:   s.Get(settingsservice.KeyElevenLabsModelID),
-		TTSProvider:       h.ttsSvc.ProviderName(),
-		GeminiTTSModel:    s.Get(settingsservice.KeyGeminiTTSModel),
-		GeminiTTSVoice:    s.Get(settingsservice.KeyGeminiTTSVoice),
-		Groq:              get(settingsservice.KeyGroqAPIKey),
-		GroqSTTModel:      s.Get(settingsservice.KeyGroqSTTModel),
-		FCMKey:            get(settingsservice.KeyFCMServiceAccount),
+		AIProvider:         provider,
+		Anthropic:          get(settingsservice.KeyAnthropicAPIKey),
+		ClaudeModel:        s.Get(settingsservice.KeyClaudeModel),
+		Gemini:             get(settingsservice.KeyGeminiAPIKey),
+		GeminiModel:        s.Get(settingsservice.KeyGeminiModel),
+		DeepSeek:           get(settingsservice.KeyDeepSeekAPIKey),
+		DeepSeekModel:      s.Get(settingsservice.KeyDeepSeekModel),
+		OpenRouter:         get(settingsservice.KeyOpenRouterAPIKey),
+		OpenRouterModel:    s.Get(settingsservice.KeyOpenRouterModel),
+		AIDailyTokenLimit:  s.Get(settingsservice.KeyAIDailyTokenLimit),
+		ElevenLabs:         get(settingsservice.KeyElevenLabsAPIKey),
+		VoiceID:            get(settingsservice.KeyElevenLabsVoiceID),
+		ElevenLabsModel:    s.Get(settingsservice.KeyElevenLabsModelID),
+		TTSProvider:        h.ttsSvc.ProviderName(),
+		GeminiTTSModel:     s.Get(settingsservice.KeyGeminiTTSModel),
+		GeminiTTSVoice:     s.Get(settingsservice.KeyGeminiTTSVoice),
+		OpenRouterTTSModel: s.Get(settingsservice.KeyOpenRouterTTSModel),
+		Groq:               get(settingsservice.KeyGroqAPIKey),
+		GroqSTTModel:       s.Get(settingsservice.KeyGroqSTTModel),
+		FCMKey:             get(settingsservice.KeyFCMServiceAccount),
 	})
 }
 
