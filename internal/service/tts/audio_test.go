@@ -35,15 +35,39 @@ func TestSampleRateFromMime(t *testing.T) {
 	}
 }
 
-func TestBuildPromptPace(t *testing.T) {
-	if p := buildPrompt("Hi", 0); !strings.HasSuffix(p, "naturally:\nHi") {
-		t.Errorf("default speed prompt: %q", p)
+func TestBuildTTSPart(t *testing.T) {
+	const line = "No problem, that's what we're here for."
+
+	// 3.8: متن باید دقیقاً خودِ دیالوگ باشد و دستور سرعت جدا بیاید.
+	part := buildTTSPart("gemini-3.8-flash-tts", line, 0, true)
+	if part["text"] != line {
+		t.Errorf("3.8 default speed: text must be verbatim, got %q", part["text"])
 	}
-	if p := buildPrompt("Hi", 0.7); !strings.Contains(p, "slow") {
-		t.Errorf("slow speed prompt: %q", p)
+	if _, ok := part["speechMetadata"]; ok {
+		t.Error("3.8 default speed: no speechMetadata expected")
 	}
-	if p := buildPrompt("Hi", 1.2); !strings.Contains(p, "faster") {
-		t.Errorf("fast speed prompt: %q", p)
+
+	part = buildTTSPart("gemini-3.8-flash-lite-tts", line, 0.7, true)
+	if part["text"] != line {
+		t.Errorf("3.8 slow: text must be verbatim, got %q", part["text"])
+	}
+	meta, ok := part["speechMetadata"].(map[string]string)
+	if !ok || !strings.Contains(meta["style"], "slow") {
+		t.Errorf("3.8 slow: expected slow style, got %v", part["speechMetadata"])
+	}
+
+	part = buildTTSPart("gemini-3.8-flash-tts", line, 0.7, false)
+	if _, ok := part["speechMetadata"]; ok {
+		t.Error("withStyle=false must drop speechMetadata")
+	}
+
+	// مدل‌های قدیمی‌تر: دستور جلوی متن.
+	part = buildTTSPart("gemini-2.5-flash-preview-tts", line, 1.2, true)
+	if txt, _ := part["text"].(string); !strings.Contains(txt, "faster") || !strings.HasSuffix(txt, line) {
+		t.Errorf("legacy fast: got %q", txt)
+	}
+	if part = buildTTSPart("gemini-2.5-flash-preview-tts", line, 0, true); part["text"] != line {
+		t.Errorf("legacy default speed: text must be verbatim, got %q", part["text"])
 	}
 }
 

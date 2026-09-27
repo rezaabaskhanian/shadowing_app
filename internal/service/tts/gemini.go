@@ -100,27 +100,50 @@ func (p geminiProvider) missingKeyMessage() string {
 	return "کلید GEMINI_API_KEY تنظیم نشده است"
 }
 
-// paceInstruction سرعت عددی پنل را به دستور متنی تبدیل می‌کند؛ Gemini TTS
-// پارامتر عددیِ سرعت ندارد و سرعت را از دستورِ زبانِ طبیعی می‌گیرد.
-func paceInstruction(speed float64) string {
+// paceStyle سرعت عددی پنل را به دستور متنی تبدیل می‌کند؛ Gemini TTS پارامتر
+// عددیِ سرعت ندارد و سرعت را از دستورِ زبانِ طبیعی می‌گیرد. رشته‌ی خالی یعنی
+// سرعت عادی و هیچ دستوری فرستاده نمی‌شود.
+func paceStyle(speed float64) string {
 	switch {
 	case speed == 0:
 		return ""
 	case speed <= 0.8:
-		return " at a slow, careful pace"
+		return "Speak at a slow, careful pace."
 	case speed < 0.95:
-		return " slightly slower than normal"
+		return "Speak slightly slower than normal."
 	case speed > 1.1:
-		return " slightly faster than normal"
+		return "Speak slightly faster than normal."
 	default:
 		return ""
 	}
 }
 
-// buildPrompt متن را داخل یک دستور کوتاه می‌پیچد. بدون دستور، مدل روی متن‌های
-// خیلی کوتاه گاهی به‌جای خواندن، سعی می‌کند «جواب» بدهد و خطا برمی‌گرداند.
-func buildPrompt(text string, speed float64) string {
-	return fmt.Sprintf("Read the following text aloud clearly and naturally%s:\n%s", paceInstruction(speed), text)
+// isVerbatimTTSModel مدل‌هایی را تشخیص می‌دهد (Gemini 3.8 به بعد) که فیلد text
+// را کلمه‌به‌کلمه می‌خوانند؛ برای این‌ها دستور سبک/سرعت نباید داخل text برود
+// (وگرنه خودِ دستور هم خوانده می‌شود) و باید در speechMetadata.style بیاید.
+func isVerbatimTTSModel(model string) bool {
+	return strings.Contains(model, "gemini-3.8")
+}
+
+// buildTTSPart بخش text درخواست را می‌سازد. در 3.8 متن دیالوگ دست‌نخورده
+// می‌رود و سرعت در speechMetadata.style؛ در مدل‌های قدیمی‌تر (2.5/3.1) که
+// speechMetadata را نمی‌پذیرند، دستور به روش مستندِ «Say ...:» جلوی متن می‌آید.
+func buildTTSPart(model, text string, speed float64, withStyle bool) map[string]any {
+	style := ""
+	if withStyle {
+		style = paceStyle(speed)
+	}
+	if isVerbatimTTSModel(model) {
+		part := map[string]any{"text": text}
+		if style != "" {
+			part["speechMetadata"] = map[string]string{"style": style}
+		}
+		return part
+	}
+	if style != "" {
+		return map[string]any{"text": style + " Say the following:\n" + text}
+	}
+	return map[string]any{"text": text}
 }
 
 // generateSpeech متن را به صدا تبدیل می‌کند. خروجی Gemini WAV (نسخه‌ی 3.8) یا
@@ -139,49 +162,24 @@ func (p geminiProvider) generateSpeech(ctx context.Context, text, voiceID string
 	if speed != 0 {
 		speed = min(max(speed, minSpeed), maxSpeed)
 	}
+	model := p.model()
 
-	payload, err := json.Marshal(map[string]any{
-		"contents": []map[string]any{
-			{"parts": []map[string]string{{"text": buildPrompt(text, speed)}}},
-		},
-		"generationConfig": map[string]any{
-			"responseModalities": []string{"AUDIO"},
-			"speechConfig": map[string]any{
-				"voiceConfig": map[string]any{
-					"prebuiltVoiceConfig": map[string]string{"voiceName": voiceID},
-				},
-			},
-		},
-	})
-	if err != nil {
-		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست Gemini TTS")
-	}
-
-	endpoint := geminiEndpoint + url.PathEscape(p.model()) + ":generateContent"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
-	if err != nil {
-		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست Gemini TTS")
-	}
-	req.Header.Set("x-goog-api-key", key)
-	req.Header.Set("Content-Type", "application/json")
-
-	httpClient, err := outboundhttp.Client()
-	if err != nil {
-		return Audio{}, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
-	}
-	resp, err := httpClient.Do(req)
+	status, body, err := p.call(ctx, key, model, buildTTSPart(model, text, speed, true), voiceID)
 	if err != nil {
 		return Audio{}, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی Gemini TTS: %v", err))
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن پاسخ Gemini TTS")
+	// اگر مدل دستور سرعت را نپذیرفت (400)، یک بار بدون آن تلاش می‌کنیم تا
+	// ساخت صدا به‌خاطر سرعت شکست نخورد.
+	if status == http.StatusBadRequest && paceStyle(speed) != "" {
+		slog.Warn("tts: gemini rejected pace style, retrying without it", "model", model, "body", string(body))
+		status, body, err = p.call(ctx, key, model, buildTTSPart(model, text, speed, false), voiceID)
+		if err != nil {
+			return Audio{}, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی Gemini TTS: %v", err))
+		}
 	}
-	if resp.StatusCode != http.StatusOK {
+	if status != http.StatusOK {
 		return Audio{}, richerror.New(op).WithMessage(
-			fmt.Sprintf("خطا در فراخوانی Gemini TTS (%d): %s", resp.StatusCode, string(body)),
+			fmt.Sprintf("خطا در فراخوانی Gemini TTS (%d): %s", status, string(body)),
 		)
 	}
 
@@ -239,6 +237,50 @@ func (p geminiProvider) generateSpeech(ctx context.Context, text, voiceID string
 		return Audio{Data: wav, ContentType: "audio/wav", Ext: ".wav"}, nil
 	}
 	return Audio{Data: mp3, ContentType: "audio/mpeg", Ext: ".mp3"}, nil
+}
+
+// call یک درخواست generateContent با خروجی AUDIO می‌فرستد و status و body را برمی‌گرداند.
+func (p geminiProvider) call(ctx context.Context, key, model string, part map[string]any, voiceID string) (int, []byte, error) {
+	payload, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"parts": []map[string]any{part}},
+		},
+		"generationConfig": map[string]any{
+			"responseModalities": []string{"AUDIO"},
+			"speechConfig": map[string]any{
+				"voiceConfig": map[string]any{
+					"prebuiltVoiceConfig": map[string]string{"voiceName": voiceID},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return 0, nil, err
+	}
+
+	endpoint := geminiEndpoint + url.PathEscape(model) + ":generateContent"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return 0, nil, err
+	}
+	req.Header.Set("x-goog-api-key", key)
+	req.Header.Set("Content-Type", "application/json")
+
+	httpClient, err := outboundhttp.Client()
+	if err != nil {
+		return 0, nil, fmt.Errorf("خطا در تنظیم پراکسی خروجی: %w", err)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, nil, err
+	}
+	return resp.StatusCode, body, nil
 }
 
 func (p geminiProvider) listVoices(ctx context.Context) ([]Voice, error) {
