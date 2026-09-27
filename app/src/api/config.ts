@@ -7,10 +7,10 @@ const PROD_API_BASE = 'https://api.lingoflow.ir';
 
 export const API_BASE = PROD_API_BASE;
 
-// TODO: کلید RSA واقعی رو از پنل توسعه‌دهندگان کافه‌بازار (بخش «تنظیمات پرداخت»
-// همین اپ) بگیر و اینجا جایگزین کن — بدون این کلید واقعی، خرید Poolakey کار
-// نمی‌کنه (SDK موقع connect خطا می‌ده).
-export const CAFEBAZAAR_RSA_KEY = '';
+// کلید عمومی RSA پرداخت درون‌برنامه‌ای، از پنل توسعه‌دهندگان کافه‌بازار.
+// عمومی است و قرار گرفتنش داخل اپ امن است؛ Poolakey با آن امضای خریدها را چک می‌کند.
+export const CAFEBAZAAR_RSA_KEY =
+  'MIHNMA0GCSqGSIb3DQEBAQUAA4G7ADCBtwKBrwCtKPzCq8h/cr1rruwqaE498nu6axfnC1OSBHbcbUWzJy0oW9xoZxy821I1hxE3F0WJhyuTQbnRNvXXSc6SEAcbHK1EI+Pa+QSlYGv+hpMh2/tXWeGv/kaksnCf5Q/6XGyKo0MHzfl7UO4ht9FZUqq5gWPktKimFWLZG4NHTWntJpHpBU2IDwPVWLp+oRbMQOdg/9QE4RZ7TElogBLQt8pwg9hvE7l+Tu8GFOpKGn8CAwEAAQ==';
 
 // تبدیل مسیر نسبی (مثل /uploads/x.png) به URL کامل.
 export function absUrl(path?: string | null): string {

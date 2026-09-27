@@ -347,11 +347,10 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// پرداخت درون‌برنامه‌ای کافه‌بازار (Poolakey). اگر env های زیر پر نباشند،
 	// billing service غیرفعال می‌ماند و verify-purchase با خطای مشخص رد
 	// می‌شود — مثل الگوی WHISPER_URL، اپ سرپا می‌ماند بدون این قابلیت.
+	// CAFEBAZAAR_API_SECRET همان توکن «API پیشخان بازار» (روش جدید) است.
 	cafebazaarClient := billingservice.NewCafeBazaarClient(
 		getEnv("CAFEBAZAAR_PACKAGE_NAME", ""),
-		getEnv("CAFEBAZAAR_CLIENT_ID", ""),
-		getEnv("CAFEBAZAAR_CLIENT_SECRET", ""),
-		getEnv("CAFEBAZAAR_REFRESH_TOKEN", ""),
+		getEnv("CAFEBAZAAR_API_SECRET", ""),
 	)
 	billingSvc := billingservice.New(cafebazaarClient, subscriptionSvc)
 	if billingSvc.Enabled() {

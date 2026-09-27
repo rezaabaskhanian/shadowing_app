@@ -45,6 +45,8 @@ cd app/android
 2. در پنل بازار، در بخش پرداخت درون‌برنامه‌ای:
    - کلید RSA را بردارید.
    - ۴ محصول **in-app** بسازید: `shadowing_1m`، `shadowing_3m`، `shadowing_6m` و `shadowing_12m`.
-   - client id و secret را برای env بک‌اند بگیرید.
+   - از منوی «API پیشخان بازار» گزینه‌ی «دریافت توکن جدید» را بزنید و توکن را در `.env` سرور بگذارید:
+     `CAFEBAZAAR_PACKAGE_NAME=com.shadowingapp` و `CAFEBAZAAR_API_SECRET=<توکن>`.
+     روش قدیمی client id، secret و refresh token دیگر لازم نیست.
 3. کلید RSA را در [src/api/config.ts](src/api/config.ts) بگذارید.
 4. `APP_VERSION_CODE=2` کنید، دوباره build بگیرید و **نسخه‌ی ۲** را برای بررسی بفرستید.

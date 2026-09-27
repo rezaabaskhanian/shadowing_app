@@ -222,13 +222,19 @@ const Flashcard = ({
 }) => {
   const { t } = useLanguage();
   const translateX = useSharedValue(0);
-  const flip = useSharedValue(0);
+  // کدام رو دیده شود فقط از state ری‌اکت می‌آید. قبلاً با چرخش سه‌بعدی
+  // (useAnimatedStyle روی rotateY/opacity) بود، ولی روی اندروید آن تغییرها
+  // روی صفحه نمی‌نشست و با لمس، معنی نمایش داده نمی‌شد.
+  const [flipped, setFlipped] = useState(false);
 
   const toggleFlip = () => {
-    flip.value = withTiming(flip.value === 0 ? 1 : 0, { duration: 320 });
+    setFlipped((f) => !f);
   };
 
+  // Pan فقط بعد از یک حرکت افقیِ واقعی فعال می‌شود؛ بدون activeOffsetX،
+  // Pan همان لمس ساده را هم می‌گرفت و Tap (برگرداندن کارت) هیچ‌وقت کامل نمی‌شد.
   const pan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
     .onUpdate((e) => {
       translateX.value = e.translationX;
     })
@@ -246,9 +252,11 @@ const Flashcard = ({
       }
     });
 
-  const tap = Gesture.Tap().onEnd(() => {
-    runOnJS(toggleFlip)();
-  });
+  const tap = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => {
+      toggleFlip();
+    });
 
   const gesture = Gesture.Race(pan, tap);
 
@@ -259,22 +267,6 @@ const Flashcard = ({
         rotate: `${interpolate(translateX.value, [-300, 0, 300], [-12, 0, 12])}deg`,
       },
     ],
-  }));
-
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1200 },
-      { rotateY: `${interpolate(flip.value, [0, 1], [0, 180])}deg` },
-    ],
-    opacity: flip.value < 0.5 ? 1 : 0,
-  }));
-
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1200 },
-      { rotateY: `${interpolate(flip.value, [0, 1], [-180, 0])}deg` },
-    ],
-    opacity: flip.value >= 0.5 ? 1 : 0,
   }));
 
   const knowLabelStyle = useAnimatedStyle(() => ({
@@ -295,25 +287,28 @@ const Flashcard = ({
           <Text style={styles.swipeLabelText}>{t('forgotIt')}</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.card, styles.cardFace, frontStyle]}>
-          <View style={[styles.levelBadge, { borderColor: levelColor(item.level) }]}>
-            <Text style={[styles.levelText, { color: levelColor(item.level) }]}>
-              {t('level')} {item.level}/{MAX_LEVEL}
-            </Text>
+        {flipped ? (
+          <View style={[styles.card, styles.cardFace, styles.cardBack]}>
+            <View pointerEvents="none" style={styles.cardBackTint} />
+            <Text style={styles.meaning}>{item.meaning}</Text>
           </View>
-          <Text style={styles.word}>{item.word}</Text>
-          <View style={[styles.dueBadge, isDue(item) && styles.dueBadgeNow]}>
-            <Clock color={isDue(item) ? COLORS.primary : COLORS.textSecondary} size={11} />
-            <Text style={[styles.dueText, isDue(item) && styles.dueTextNow]}>
-              {dueLabel(item, language)}
-            </Text>
+        ) : (
+          <View style={[styles.card, styles.cardFace]}>
+            <View style={[styles.levelBadge, { borderColor: levelColor(item.level) }]}>
+              <Text style={[styles.levelText, { color: levelColor(item.level) }]}>
+                {t('level')} {item.level}/{MAX_LEVEL}
+              </Text>
+            </View>
+            <Text style={styles.word}>{item.word}</Text>
+            <View style={[styles.dueBadge, isDue(item) && styles.dueBadgeNow]}>
+              <Clock color={isDue(item) ? COLORS.primary : COLORS.textSecondary} size={11} />
+              <Text style={[styles.dueText, isDue(item) && styles.dueTextNow]}>
+                {dueLabel(item, language)}
+              </Text>
+            </View>
+            <Text style={styles.tapHint}>{t('tapToReveal')}</Text>
           </View>
-          <Text style={styles.tapHint}>{t('tapToReveal')}</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.card, styles.cardFace, styles.cardBack, backStyle]}>
-          <Text style={styles.meaning}>{item.meaning}</Text>
-        </Animated.View>
+        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -328,6 +323,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 54,
+    // جا برای نوار پایینِ شناور، مثل بقیه‌ی صفحه‌ها؛ بدون این، دکمه‌های
+    // «بلد بودم / بلد نبودم» پشت نوار پنهان می‌شدند.
+    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
@@ -467,7 +465,7 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     flex: 1,
-    minHeight: 340,
+    minHeight: 220,
   },
   card: {
     position: 'absolute',
@@ -482,15 +480,20 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backfaceVisibility: 'hidden',
     ...SHADOWS.level1,
   },
   cardFace: {
     gap: 14,
   },
+  // پس‌زمینه‌ی خودِ کارت مات می‌ماند و رنگ بنفش کم‌رنگ روی یک لایه‌ی جدا می‌آید؛
+  // پس‌زمینه‌ی نیمه‌شفاف روی اندروید سایه‌ی elevation را به‌صورت قاب خاکستری نشان می‌داد.
   cardBack: {
-    backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
+  },
+  cardBackTint: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.primaryLight,
   },
   word: {
     color: COLORS.text,

@@ -79,9 +79,7 @@ services:
       # کافه‌بازار > برنامه > تب «پرداخت درون‌برنامه‌ای» > API). بدون این‌ها
       # verify-purchase با خطای "cafebazaar billing is not configured" fail می‌شود.
       CAFEBAZAAR_PACKAGE_NAME: ${CAFEBAZAAR_PACKAGE_NAME}
-      CAFEBAZAAR_CLIENT_ID: ${CAFEBAZAAR_CLIENT_ID}
-      CAFEBAZAAR_CLIENT_SECRET: ${CAFEBAZAAR_CLIENT_SECRET}
-      CAFEBAZAAR_REFRESH_TOKEN: ${CAFEBAZAAR_REFRESH_TOKEN}
+      CAFEBAZAAR_API_SECRET: ${CAFEBAZAAR_API_SECRET}
       # پراکسی خروجی برای دور زدن بلاک جغرافیایی Gemini/Anthropic/ElevenLabs از IP ایران؛
       # به سایدکار xray (سرویس بالا) وصل می‌شود. لینک vless از پنل ادمین (تب تنظیمات) ست می‌شود.
       AI_OUTBOUND_PROXY: socks5://xray:1080
