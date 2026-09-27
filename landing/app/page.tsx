@@ -233,6 +233,7 @@ export default async function HomePage() {
           </div>
           <div className="footer-bottom">
             <span>© {new Date().getFullYear()} LingoFlow</span>
+            <a href="/privacy">حریم خصوصی</a>
             <span>www.lingoflow.ir</span>
           </div>
         </div>

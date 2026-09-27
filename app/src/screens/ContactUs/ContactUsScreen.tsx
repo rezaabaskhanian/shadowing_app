@@ -17,8 +17,7 @@ import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { createFeedback } from '../../api/feedback';
 
-// TODO: placeholder — no real support channel exists anywhere in the codebase yet.
-const SUPPORT_EMAIL = 'support@example.com';
+const SUPPORT_EMAIL = 'rezaabaskhanian1367kash@gmail.com';
 
 // دراور قبلاً یک ردیف جدای «پیشنهادات و انتقادات» هم داشت؛ چون هر دو در نهایت
 // یک راه ارتباطی با تیم‌اند، اینجا زیر همین صفحه یکی شدند.
