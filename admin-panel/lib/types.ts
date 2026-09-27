@@ -160,6 +160,9 @@ export interface SettingsResp {
   elevenlabs_api_key: SettingItem;
   elevenlabs_voice_id: SettingItem;
   elevenlabs_model_id: string;
+  tts_provider: string;
+  gemini_tts_model: string;
+  gemini_tts_voice: string;
   groq_api_key: SettingItem;
   groq_stt_model: string;
   fcm_service_account_json: SettingItem;

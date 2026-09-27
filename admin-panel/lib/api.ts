@@ -130,7 +130,7 @@ export async function uploadAudio(file: File): Promise<string> {
   return data.url as string;
 }
 
-// تولید صدای دیالوگ با هوش مصنوعی (ElevenLabs) — جایگزین آپلود دستی فایل صوتی
+// تولید صدای دیالوگ با هوش مصنوعی (ElevenLabs یا Gemini، طبق TTS_PROVIDER) — جایگزین آپلود دستی فایل صوتی
 export async function generateAudio(
   text: string,
   voiceId?: string,

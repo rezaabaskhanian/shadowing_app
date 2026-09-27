@@ -39,6 +39,9 @@ type settingsResponse struct {
 	ElevenLabs        settingItem `json:"elevenlabs_api_key"`
 	VoiceID           settingItem `json:"elevenlabs_voice_id"`
 	ElevenLabsModel   string      `json:"elevenlabs_model_id"`
+	TTSProvider       string      `json:"tts_provider"`
+	GeminiTTSModel    string      `json:"gemini_tts_model"`
+	GeminiTTSVoice    string      `json:"gemini_tts_voice"`
 	Groq              settingItem `json:"groq_api_key"`
 	GroqSTTModel      string      `json:"groq_stt_model"`
 	FCMKey            settingItem `json:"fcm_service_account_json"`
@@ -72,6 +75,9 @@ func (h Handler) GetSettings(c echo.Context) error {
 		ElevenLabs:        get(settingsservice.KeyElevenLabsAPIKey),
 		VoiceID:           get(settingsservice.KeyElevenLabsVoiceID),
 		ElevenLabsModel:   s.Get(settingsservice.KeyElevenLabsModelID),
+		TTSProvider:       h.ttsSvc.ProviderName(),
+		GeminiTTSModel:    s.Get(settingsservice.KeyGeminiTTSModel),
+		GeminiTTSVoice:    s.Get(settingsservice.KeyGeminiTTSVoice),
 		Groq:              get(settingsservice.KeyGroqAPIKey),
 		GroqSTTModel:      s.Get(settingsservice.KeyGroqSTTModel),
 		FCMKey:            get(settingsservice.KeyFCMServiceAccount),

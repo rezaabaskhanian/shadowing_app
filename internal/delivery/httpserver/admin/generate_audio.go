@@ -14,12 +14,12 @@ type generateAudioRequest struct {
 	Speed   float64 `json:"speed"`
 }
 
-// GenerateAudio متن یک دیالوگ را با ElevenLabs به صدا تبدیل و در uploads ذخیره می‌کند
+// GenerateAudio متن یک دیالوگ را با provider فعال TTS (ElevenLabs یا Gemini) به صدا تبدیل و در uploads ذخیره می‌کند
 // و آدرس آن را برمی‌گرداند (دقیقاً مشابه خروجی UploadAudio، برای جایگزینی آپلود دستی).
 func (h Handler) GenerateAudio(c echo.Context) error {
 	if !h.ttsSvc.Enabled() {
 		return c.JSON(http.StatusServiceUnavailable, echo.Map{
-			"message": "کلید ELEVENLABS_API_KEY تنظیم نشده است",
+			"message": h.ttsSvc.MissingKeyMessage(),
 		})
 	}
 
@@ -36,8 +36,8 @@ func (h Handler) GenerateAudio(c echo.Context) error {
 		return c.JSON(http.StatusBadGateway, echo.Map{"message": err.Error()})
 	}
 
-	filename := uuid.NewString() + ".mp3"
-	url, err := h.store.Save(c.Request().Context(), filename, audio, "audio/mpeg")
+	filename := uuid.NewString() + audio.Ext
+	url, err := h.store.Save(c.Request().Context(), filename, audio.Data, audio.ContentType)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در ذخیره فایل صوتی"})
 	}

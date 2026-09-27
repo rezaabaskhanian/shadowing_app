@@ -32,30 +32,22 @@ const (
 const ttsEndpoint = "https://api.elevenlabs.io/v1/text-to-speech/"
 const voicesEndpoint = "https://api.elevenlabs.io/v1/voices"
 
-// Voice یک صدای در دسترسِ حساب ElevenLabs را نشان می‌دهد (برای انتخاب مرد/زن در پنل).
-type Voice struct {
-	VoiceID string `json:"voice_id"`
-	Name    string `json:"name"`
-	Gender  string `json:"gender"`
-	Accent  string `json:"accent"`
-}
-
-// Service صدای هر متن دیالوگ را با کمک ElevenLabs Text-to-Speech API می‌سازد.
+// elevenLabsProvider صدای هر متن دیالوگ را با کمک ElevenLabs Text-to-Speech API می‌سازد.
 // کلید API در لحظه‌ی هر درخواست از settings خوانده می‌شود تا تغییر آن از پنل
 // ادمین بدون ری‌استارت سرور اعمال شود.
-type Service struct {
+type elevenLabsProvider struct {
 	settings *settingsservice.Service
 }
 
-func New(settings *settingsservice.Service) Service {
-	return Service{settings: settings}
+func newElevenLabsProvider(settings *settingsservice.Service) elevenLabsProvider {
+	return elevenLabsProvider{settings: settings}
 }
 
-func (s Service) apiKey() string {
+func (s elevenLabsProvider) apiKey() string {
 	return s.settings.Get(settingsservice.KeyElevenLabsAPIKey)
 }
 
-func (s Service) voiceID() string {
+func (s elevenLabsProvider) voiceID() string {
 	v := s.settings.Get(settingsservice.KeyElevenLabsVoiceID)
 	if v == "" {
 		return defaultVoiceID
@@ -63,7 +55,7 @@ func (s Service) voiceID() string {
 	return v
 }
 
-func (s Service) modelID() string {
+func (s elevenLabsProvider) modelID() string {
 	v := s.settings.Get(settingsservice.KeyElevenLabsModelID)
 	if v == "" {
 		return defaultModelID
@@ -71,21 +63,24 @@ func (s Service) modelID() string {
 	return v
 }
 
-// Enabled مشخص می‌کند آیا کلید API تنظیم شده است یا نه.
-func (s Service) Enabled() bool {
+func (s elevenLabsProvider) enabled() bool {
 	return s.apiKey() != ""
 }
 
-// GenerateSpeech متن را به صدا (فایل mp3، به‌صورت بایت) تبدیل می‌کند.
+func (s elevenLabsProvider) missingKeyMessage() string {
+	return "کلید ELEVENLABS_API_KEY تنظیم نشده است"
+}
+
+// generateSpeech متن را به صدا (فایل mp3) تبدیل می‌کند.
 // اگر voiceID خالی باشد از صدای پیش‌فرض تنظیمات استفاده می‌شود، وگرنه همان صدای
 // انتخاب‌شده (مثلاً یک صدای مرد یا زن مشخص) به کار می‌رود.
 // speed سرعت گفتار را کنترل می‌کند (بازه‌ی مجاز ۰.۷ تا ۱.۲؛ ۰ یعنی مقدار پیش‌فرض ۱.۰).
-func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string, speed float64) ([]byte, error) {
-	const op = "ttsservice.GenerateSpeech"
+func (s elevenLabsProvider) generateSpeech(ctx context.Context, text, voiceID string, speed float64) (Audio, error) {
+	const op = "ttsservice.elevenLabs.generateSpeech"
 
 	key := s.apiKey()
 	if key == "" {
-		return nil, richerror.New(op).WithMessage("کلید ELEVENLABS_API_KEY تنظیم نشده است")
+		return Audio{}, richerror.New(op).WithMessage("کلید ELEVENLABS_API_KEY تنظیم نشده است")
 	}
 	if voiceID == "" {
 		voiceID = s.voiceID()
@@ -110,12 +105,12 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string, speed
 		},
 	})
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست ElevenLabs")
+		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست ElevenLabs")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ttsEndpoint+voiceID, bytes.NewReader(payload))
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست ElevenLabs")
+		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت درخواست ElevenLabs")
 	}
 	req.Header.Set("xi-api-key", key)
 	req.Header.Set("Content-Type", "application/json")
@@ -123,31 +118,31 @@ func (s Service) GenerateSpeech(ctx context.Context, text, voiceID string, speed
 
 	httpClient, err := outboundhttp.Client()
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
+		return Audio{}, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در تنظیم پراکسی خروجی: %v", err))
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی ElevenLabs: %v", err))
+		return Audio{}, richerror.New(op).WithErr(err).WithMessage(fmt.Sprintf("خطا در فراخوانی ElevenLabs: %v", err))
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن پاسخ ElevenLabs")
+		return Audio{}, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن پاسخ ElevenLabs")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, richerror.New(op).WithMessage(
+		return Audio{}, richerror.New(op).WithMessage(
 			fmt.Sprintf("خطا در فراخوانی ElevenLabs (%d): %s", resp.StatusCode, string(body)),
 		)
 	}
 
-	return body, nil
+	return Audio{Data: body, ContentType: "audio/mpeg", Ext: ".mp3"}, nil
 }
 
-// ListVoices صداهای در دسترسِ حساب ElevenLabs را برمی‌گرداند (برای انتخاب مرد/زن در پنل).
-func (s Service) ListVoices(ctx context.Context) ([]Voice, error) {
-	const op = "ttsservice.ListVoices"
+// listVoices صداهای در دسترسِ حساب ElevenLabs را برمی‌گرداند (برای انتخاب مرد/زن در پنل).
+func (s elevenLabsProvider) listVoices(ctx context.Context) ([]Voice, error) {
+	const op = "ttsservice.elevenLabs.listVoices"
 
 	key := s.apiKey()
 	if key == "" {
