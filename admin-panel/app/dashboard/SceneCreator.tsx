@@ -723,25 +723,33 @@ export default function SceneCreator({
           یک موقعیت کوتاه بنویس؛ دیالوگ‌ها، ترجمه و واژه‌ها خودکار ساخته و در فرم
           زیر پر می‌شوند. بعدش تصویر را آپلود کن و جای نقاط را تنظیم کن.
         </p>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <textarea
             value={aiPrompt}
             onChange={(e) => setAiPrompt(e.target.value)}
-            placeholder="مثلاً: مکالمه در داروخانه"
+            placeholder={"مثلاً: مکالمه در داروخانه\nمی‌توانی جزئیات بیشتری هم بنویسی: نقش‌ها، لحن، واژه‌های مورد نظر و…"}
             disabled={generating}
+            rows={6}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !generating) handleGenerate();
+              // Enter خط جدید می‌سازد؛ Ctrl/Cmd+Enter تولید را شروع می‌کند.
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !generating) {
+                e.preventDefault();
+                handleGenerate();
+              }
             }}
-            style={{ flex: 1 }}
+            style={{ width: "100%", minHeight: 120, resize: "vertical", lineHeight: 1.7 }}
           />
-          <button
-            className="btn"
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating}
-          >
-            {generating ? "در حال تولید..." : "✨ تولید"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              className="btn"
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+            >
+              {generating ? "در حال تولید..." : "✨ تولید"}
+            </button>
+            <span className="hint" style={{ fontSize: 12 }}>Ctrl/⌘ + Enter</span>
+          </div>
         </div>
       </div>
 
