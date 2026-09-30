@@ -43,7 +43,7 @@ type repository interface {
 	ListPlans(ctx context.Context) ([]postgressubscription.Plan, error)
 	CreatePlan(ctx context.Context, name string, durationDays, priceToman int, productID string) (postgressubscription.Plan, error)
 	GetPlanByProductID(ctx context.Context, productID string) (postgressubscription.Plan, error)
-	DeletePlan(ctx context.Context, id string) error
+	DeletePlan(ctx context.Context, id string) (archived bool, err error)
 	GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int, provider, purchaseToken string) error
 	HasActiveSubscription(ctx context.Context, userID string) (bool, error)
 	PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error)
@@ -82,7 +82,8 @@ func (s Service) RevenueStats(ctx context.Context, days int) (postgressubscripti
 	return s.repo.RevenueStats(ctx, days)
 }
 
-func (s Service) DeletePlan(ctx context.Context, id string) error {
+// DeletePlan پلن را حذف می‌کند، یا اگر خرید قبلی دارد آرشیوش می‌کند.
+func (s Service) DeletePlan(ctx context.Context, id string) (archived bool, err error) {
 	return s.repo.DeletePlan(ctx, id)
 }
 

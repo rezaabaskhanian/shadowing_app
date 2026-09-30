@@ -46,10 +46,14 @@ func (h Handler) CreateSubscriptionPlan(c echo.Context) error {
 
 // DeleteSubscriptionPlan یک طرح اشتراک را حذف می‌کند.
 func (h Handler) DeleteSubscriptionPlan(c echo.Context) error {
-	if err := h.subscriptionSvc.DeletePlan(c.Request().Context(), c.Param("id")); err != nil {
+	archived, err := h.subscriptionSvc.DeletePlan(c.Request().Context(), c.Param("id"))
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در حذف طرح اشتراک"})
 	}
-	return c.JSON(http.StatusOK, echo.Map{"message": "حذف شد"})
+	if archived {
+		return c.JSON(http.StatusOK, echo.Map{"message": "این طرح قبلاً خریداری شده؛ به‌جای حذف آرشیو شد و دیگر نمایش داده نمی‌شود", "archived": true})
+	}
+	return c.JSON(http.StatusOK, echo.Map{"message": "حذف شد", "archived": false})
 }
 
 type grantSubscriptionRequest struct {

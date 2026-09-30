@@ -7,6 +7,7 @@ import (
 	"shadowing-backend/internal/pkg/richerror"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,11 +28,11 @@ type Plan struct {
 	CreatedAt    string `json:"created_at"`
 }
 
-// ListPlans همه‌ی طرح‌های اشتراک را برمی‌گرداند.
+// ListPlans همه‌ی طرح‌های اشتراک فعال (آرشیونشده) را برمی‌گرداند.
 func (r DB) ListPlans(ctx context.Context) ([]Plan, error) {
 	const op = "postgressubscription.ListPlans"
 
-	rows, err := r.conn.Query(ctx, `SELECT id::text, name, duration_days, price_toman, COALESCE(product_id, ''), created_at::text FROM subscription_plans ORDER BY duration_days`)
+	rows, err := r.conn.Query(ctx, `SELECT id::text, name, duration_days, price_toman, COALESCE(product_id, ''), created_at::text FROM subscription_plans WHERE archived_at IS NULL ORDER BY duration_days`)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن طرح‌های اشتراک")
 	}
@@ -54,7 +55,8 @@ func (r DB) GetPlanByProductID(ctx context.Context, productID string) (Plan, err
 	const op = "postgressubscription.GetPlanByProductID"
 
 	const query = `SELECT id::text, name, duration_days, price_toman, COALESCE(product_id, ''), created_at::text
-		FROM subscription_plans WHERE product_id = $1`
+		FROM subscription_plans WHERE product_id = $1
+		ORDER BY archived_at DESC NULLS FIRST LIMIT 1`
 
 	var p Plan
 	err := r.conn.QueryRow(ctx, query, productID).Scan(
@@ -91,14 +93,26 @@ func (r DB) CreatePlan(ctx context.Context, name string, durationDays, priceToma
 	return p, nil
 }
 
-// DeletePlan یک طرح اشتراک را حذف می‌کند.
-func (r DB) DeletePlan(ctx context.Context, id string) error {
+// DeletePlan یک طرح اشتراک را حذف می‌کند. اگر کاربری قبلاً این پلن را
+// خریده باشد (FK از user_subscriptions)، به‌جای حذف آرشیو می‌شود تا تاریخچه‌ی
+// خرید از بین نرود؛ archived=true یعنی آرشیو شد.
+func (r DB) DeletePlan(ctx context.Context, id string) (archived bool, err error) {
 	const op = "postgressubscription.DeletePlan"
 
-	if _, err := r.conn.Exec(ctx, `DELETE FROM subscription_plans WHERE id = $1`, id); err != nil {
-		return richerror.New(op).WithErr(err).WithMessage("خطا در حذف طرح اشتراک")
+	_, err = r.conn.Exec(ctx, `DELETE FROM subscription_plans WHERE id = $1`, id)
+	if err == nil {
+		return false, nil
 	}
-	return nil
+
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23503" {
+		return false, richerror.New(op).WithErr(err).WithMessage("خطا در حذف طرح اشتراک")
+	}
+
+	if _, err := r.conn.Exec(ctx, `UPDATE subscription_plans SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
+		return false, richerror.New(op).WithErr(err).WithMessage("خطا در آرشیو طرح اشتراک")
+	}
+	return true, nil
 }
 
 // GrantSubscription یک اشتراک را برای کاربر فعال می‌کند؛ اگر پوینت ریدیم شود،

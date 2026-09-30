@@ -143,8 +143,8 @@ export default function SubscriptionPlansPanel({
 
   async function handleDeletePlan(id: string) {
     try {
-      await deleteSubscriptionPlan(id);
-      notify("طرح حذف شد", "ok");
+      const res = await deleteSubscriptionPlan(id);
+      notify(res?.message || "طرح حذف شد", "ok");
       load();
     } catch (err: any) {
       notify(err.message, "err");
