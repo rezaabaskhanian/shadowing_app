@@ -1,7 +1,12 @@
+# REGISTRY اجازه می‌دهد ایمیج‌های پایه روی سرور aramina از آینه‌ی Docker Hub
+# آروان (DOCKER_REGISTRY=docker.arvancloud.ir در .env) کشیده شوند — دانلود
+# مستقیم از Docker Hub از سرور ایران خیلی کند است (مثل MathMotion).
+ARG REGISTRY=docker.io
+
 # -----------------------------
 # مرحله اول: Build کردن برنامه
 # -----------------------------
-    FROM golang:1.25-alpine AS builder
+    FROM ${REGISTRY}/library/golang:1.25-alpine AS builder
 
     ENV GO111MODULE=on
 
@@ -25,7 +30,7 @@
     # -----------------------------
     # مرحله دوم: ساخت ایمیج سبک نهایی
     # -----------------------------
-    FROM alpine:latest
+    FROM ${REGISTRY}/library/alpine:latest
 
     # ffmpeg برای تبدیل ضبط کاربر (webm/opus) به WAV 16k mono، پیش‌نیاز
     # نمره‌دهی تلفظ. بدون آن نمره‌ها به حالت تخمینی برمی‌گردند.

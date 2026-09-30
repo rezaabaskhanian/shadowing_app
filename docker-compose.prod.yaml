@@ -27,6 +27,8 @@ services:
   xray:
     build:
       context: ./deploy/xray
+      args:
+        REGISTRY: ${DOCKER_REGISTRY:-docker.io}
     container_name: shadowing_xray_prod
     restart: unless-stopped
     volumes:
@@ -35,7 +37,11 @@ services:
       - aramina_net
 
   whisper:
-    build: ./whisper-service
+    build:
+      context: ./whisper-service
+      args:
+        REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://package-mirror.liara.ir/repository/pypi/simple}
     container_name: shadowing_whisper_prod
     restart: unless-stopped
     environment:
@@ -50,6 +56,8 @@ services:
   backend:
     build:
       context: .
+      args:
+        REGISTRY: ${DOCKER_REGISTRY:-docker.io}
     container_name: shadowing_backend_prod
     restart: unless-stopped
     depends_on:
@@ -100,6 +108,8 @@ services:
     build:
       context: ./admin-panel
       args:
+        REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
         NEXT_PUBLIC_API_URL: https://api.lingoflow.ir
     container_name: shadowing_admin_prod
     restart: unless-stopped
@@ -118,6 +128,8 @@ services:
     build:
       context: ./landing
       args:
+        REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
         NEXT_PUBLIC_API_URL: https://api.lingoflow.ir
     container_name: shadowing_landing_prod
     restart: unless-stopped

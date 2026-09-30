@@ -1,4 +1,8 @@
-FROM python:3.11-slim
+# REGISTRY اجازه می‌دهد ایمیج‌های پایه روی سرور aramina از آینه‌ی Docker Hub
+# آروان (DOCKER_REGISTRY=docker.arvancloud.ir در .env) کشیده شوند — دانلود
+# مستقیم از Docker Hub از سرور ایران خیلی کند است (مثل MathMotion).
+ARG REGISTRY=docker.io
+FROM ${REGISTRY}/library/python:3.11-slim
 
 # ffmpeg برای خواندن فرمت‌هایی مثل webm/opus لازم است؛ faster-whisper خودش از
 # طریق av/ffmpeg فایل را دیکد می‌کند.
@@ -10,12 +14,11 @@ WORKDIR /app
 
 COPY requirements.txt .
 # ایندکس پیش‌فرض PyPI از سرورهای ایران قابل‌دسترس نیست (شبیه مشکل دانلود مدل
-# از HuggingFace در download-model.sh)؛ به‌جایش از آینه‌ی ایرانی رانفلر استفاده
-# می‌شود.
-RUN pip install --no-cache-dir \
-    --index-url https://mirror-pypi.runflare.com/simple \
-    --trusted-host mirror-pypi.runflare.com \
-    -r requirements.txt
+# از HuggingFace در download-model.sh)؛ به‌جایش از آینه‌ی ایرانی استفاده
+# می‌شود. آینه‌ی رانفلر قبلاً شکست خورده بود؛ پیش‌فرض لیاراست (مثل MathMotion)
+# و با PIP_INDEX_URL در .env قابل تغییر است.
+ARG PIP_INDEX_URL=https://package-mirror.liara.ir/repository/pypi/simple
+RUN pip install --no-cache-dir --index-url ${PIP_INDEX_URL} -r requirements.txt
 
 COPY main.py .
 
