@@ -11,6 +11,7 @@
 
 import os
 import tempfile
+import threading
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from faster_whisper import WhisperModel
@@ -25,14 +26,21 @@ app = FastAPI(title="Shadowing STT")
 # طول می‌کشد و کل مزیت سرعت را از بین می‌برد.
 model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
 
+# روی CPU کمِ VPS اجرای همزمانِ چند تشخیص فقط همه را کندتر می‌کند؛ درخواست‌ها
+# یکی‌یکی از این قفل رد می‌شوند و بقیه در صف می‌مانند.
+_transcribe_lock = threading.Lock()
+
 
 @app.get("/health")
 def health():
     return {"status": "ok", "model": MODEL_SIZE}
 
 
+# عمداً def (نه async def): تشخیص گفتار کارِ سنگینِ sync است و داخل async def
+# event loop را قفل می‌کرد — حتی /health تا پایانِ تشخیص جواب نمی‌داد. با def،
+# FastAPI آن را در threadpool اجرا می‌کند و loop آزاد می‌ماند.
 @app.post("/transcribe")
-async def transcribe(
+def transcribe(
     audio: UploadFile = File(...),
     # متن مرجع پذیرفته می‌شود ولی عمداً به مدل داده نمی‌شود.
     #
@@ -54,7 +62,7 @@ async def transcribe(
     # تلفظ دست‌نخورده بماند.
     beam_size: int = Form(5),
 ):
-    data = await audio.read()
+    data = audio.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="empty audio")
 
@@ -64,27 +72,30 @@ async def transcribe(
         tmp_path = tmp.name
 
     try:
-        segments, info = model.transcribe(
-            tmp_path,
-            language=language or None,
-            word_timestamps=word_timestamps,
-            vad_filter=True,
-            beam_size=max(1, min(beam_size, 10)),
-        )
+        # segments یک generator است و تشخیصِ واقعی موقعِ پیمایشش انجام می‌شود،
+        # پس پیمایش هم باید داخلِ قفل باشد، نه فقط صدا زدنِ transcribe.
+        with _transcribe_lock:
+            segments, info = model.transcribe(
+                tmp_path,
+                language=language or None,
+                word_timestamps=word_timestamps,
+                vad_filter=True,
+                beam_size=max(1, min(beam_size, 10)),
+            )
 
-        words = []
-        text_parts = []
-        for segment in segments:
-            text_parts.append(segment.text)
-            for word in segment.words or []:
-                words.append(
-                    {
-                        "word": word.word.strip(),
-                        "start": round(word.start, 3),
-                        "end": round(word.end, 3),
-                        "probability": round(word.probability, 4),
-                    }
-                )
+            words = []
+            text_parts = []
+            for segment in segments:
+                text_parts.append(segment.text)
+                for word in segment.words or []:
+                    words.append(
+                        {
+                            "word": word.word.strip(),
+                            "start": round(word.start, 3),
+                            "end": round(word.end, 3),
+                            "probability": round(word.probability, 4),
+                        }
+                    )
 
         return {
             "text": "".join(text_parts).strip(),

@@ -1221,6 +1221,29 @@ That's the entire personalization surface. Per spec section 10, the intended sig
 **Explicitly not building tomorrow (part B, deferred until a product decision is made):**
 - No goal field, no onboarding/profile UI for it, no scene-category filtering by goal. This needs the user to decide, before code: does a goal filter scene *category* (e.g., "Travel" scenes) or just bias *difficulty/order*, and where does the app ask for it (a settings screen, since Onboarding already deliberately said no to asking at first-open)?
 
+## Dubbing / Role-swap — "speak as the character" (proposed 2026-10-01, deferred to the next version — not started)
+
+The user watches a short clip, picks a character, then replays it with that character's dialogue muted and speaks their lines in time. Parked deliberately: the current version is submitted to Cafe Bazaar and still waiting in the review queue, so this is planned for the version after.
+
+**Decision Framework (section 31), applied:**
+- **User problem:** shadowing always has the model voice underneath — the learner repeats but never performs a line *independently*, at natural speed, with timing and intonation.
+- **Why it's needed:** extends the core loop one step: Listen → Shadow → **independent performance**. Trains timing/intonation, which the current pronunciation score does not measure.
+- **Phase:** not MVP. All Phase 2 code is shipped, so this is a reasonable next differentiator.
+- **Core Loop fit:** strong — modelled as a scene type whose dialogues carry video timestamps; reuses the pronunciation evaluator, STT (Groq) and the scene/dialogue structure.
+- **Advantage vs ELSA:** ELSA has nothing like it; video is the strongest form of the "visual context" differentiator (section 29). Proven demand elsewhere (Chinese app Qupeiyin), and the output is shareable (growth).
+
+**Main risk — copyright:** clips from real movies/TV shows risk takedown (Play Store especially). Alternatives: AI-generated video of our own scenarios (Veo/Kling/Sora), animating existing scene images + TTS dialogue audio, or public-domain/CC content. **Open decision for the user.**
+
+**Infra:** video must not live on the VPS (1.9GB RAM / 23GB disk, shared) → object storage/CDN (e.g. Arvan). Clips 15–40s, 720p (~3–6MB). Mix the user's voice client-side — no server-side rendering. Muting only the dialogue needs separated voice/background tracks: native if we produce the video, otherwise Demucs at admin upload time.
+
+**Proposed mechanic:** watch once with original audio → pick character → replay with that character muted (background kept), karaoke subtitles + mic opens on their turn → score with the existing pronunciation evaluator + a new **timing score** (spoke within the line's window?) → playback of the whole clip with the user's voice (share button in a later iteration).
+
+**Recommended path:**
+- **v1 — no video:** role-swap on existing scenes/dialogues. User picks a character; other lines play via TTS; user speaks theirs in time. No new storage, no new content, no copyright risk — a cheap demand test.
+- **v2 — video:** AI-generated clips, if v1 lands.
+
+**Open questions:** real films vs self-produced clips? Start with no-video v1 or go straight to video?
+
 
 
 
@@ -2435,3 +2458,25 @@ LingoFlow در درجه اول یک اپلیکیشن درس انگلیسی نی�
 
 **صراحتاً فردا ساخته نمی‌شود (بخش B، به تعویق افتاده تا یک تصمیم محصول گرفته شود):**
 - بدون فیلد هدف، بدون UI Onboarding/پروفایل برای آن، بدون فیلتر دسته صحنه بر اساس هدف. این نیاز به تصمیم کاربر دارد، قبل از کد: آیا یک هدف *دسته* صحنه را فیلتر می‌کند (مثلاً صحنه‌های "Travel") یا فقط *دشواری/ترتیب* را سوگیری می‌دهد، و اپ کجا آن را می‌پرسد (یک صفحه تنظیمات، چون Onboarding قبلاً عمداً گفت نه به پرسیدن در اولین باز شدن)؟
+## دوبله / جابه‌جایی نقش — «جای شخصیت حرف بزن» (پیشنهاد ۲۰۲۶-۱۰-۰۱، موکول به نسخهٔ بعدی — شروع نشده)
+
+کاربر یک کلیپ کوتاه را می‌بیند، یک شخصیت را انتخاب می‌کند، سپس کلیپ دوباره پخش می‌شود در حالی که دیالوگ آن شخصیت بی‌صدا شده و کاربر خط‌های او را سر وقت می‌گوید. عمداً عقب انداخته شد: نسخهٔ فعلی به کافه‌بازار ارسال شده و هنوز در صف بررسی است، پس این برای نسخهٔ بعد برنامه‌ریزی شده.
+
+**چارچوب تصمیم (بخش ۳۱):**
+- **مشکل کاربر:** در سایه‌گویی همیشه صدای مدل زیر صدای کاربر است — کاربر تکرار می‌کند ولی هیچ‌وقت یک جمله را *مستقل*، با سرعت طبیعی، زمان‌بندی و لحن اجرا نمی‌کند.
+- **چرا لازم است:** حلقهٔ اصلی را یک قدم جلو می‌برد: شنیدن ← سایه‌گویی ← **اجرای مستقل**. زمان‌بندی و لحن را تمرین می‌دهد که امتیاز تلفظ فعلی اندازه نمی‌گیرد.
+- **فاز:** MVP نیست. همهٔ کدهای فاز ۲ ارسال شده‌اند، پس تمایزدهندهٔ بعدی منطقی است.
+- **سازگاری با حلقهٔ اصلی:** قوی — به‌صورت یک نوع صحنه که دیالوگ‌هایش timestamp ویدیو دارند؛ evaluator تلفظ، STT (Groq) و ساختار صحنه/دیالوگ دوباره استفاده می‌شوند.
+- **مزیت نسبت به ELSA:** ELSA چیزی شبیه این ندارد؛ ویدیو قوی‌ترین شکل تمایز «زمینهٔ بصری» است (بخش ۲۹). تقاضای اثبات‌شده (اپ چینی Qupeiyin) و خروجی قابل اشتراک (رشد).
+
+**ریسک اصلی — کپی‌رایت:** کلیپ فیلم/سریال واقعی خطر حذف اپ دارد (به‌خصوص Play Store). جایگزین‌ها: ویدیوی ساخته‌شده با AI از سناریوهای خودمان (Veo/Kling/Sora)، متحرک‌سازی تصاویر صحنه‌های فعلی + صدای TTS دیالوگ، یا محتوای public domain/CC. **تصمیم باز با کاربر.**
+
+**زیرساخت:** ویدیو نباید روی VPS باشد (۱.۹GB رم / ۲۳GB دیسک، مشترک) ← Object Storage/CDN (مثلاً Arvan). کلیپ‌ها ۱۵–۴۰ ثانیه، 720p (حدود ۳–۶MB). میکس صدای کاربر سمت کلاینت — بدون رندر سمت سرور. برای قطع فقط صدای دیالوگ، ترک صدا و پس‌زمینه باید جدا باشند: اگر ویدیو را خودمان بسازیم ذاتاً جداست، وگرنه Demucs هنگام آپلود در پنل ادمین.
+
+**مکانیک پیشنهادی:** یک بار تماشا با صدای اصلی ← انتخاب شخصیت ← پخش مجدد با صدای آن شخصیت قطع (پس‌زمینه باقی)، زیرنویس karaoke-style + باز شدن میکروفون سر نوبت او ← امتیاز با evaluator تلفظ فعلی + یک **امتیاز زمان‌بندی** جدید (در پنجرهٔ زمانی گفت؟) ← پخش کل کلیپ با صدای کاربر (دکمهٔ اشتراک در نسخهٔ بعدی).
+
+**مسیر پیشنهادی:**
+- **نسخهٔ ۱ — بدون ویدیو:** جابه‌جایی نقش روی صحنه‌ها/دیالوگ‌های موجود. کاربر شخصیت را انتخاب می‌کند؛ خط‌های بقیه با TTS پخش می‌شوند؛ کاربر خط‌های خودش را سر وقت می‌گوید. بدون storage جدید، بدون محتوای جدید، بدون ریسک کپی‌رایت — تست ارزان تقاضا.
+- **نسخهٔ ۲ — ویدیو:** کلیپ‌های ساخته‌شده با AI، اگر نسخهٔ ۱ استقبال شد.
+
+**سؤالات باز:** فیلم واقعی یا کلیپ ساخت خودمان؟ شروع با نسخهٔ ۱ بدون ویدیو یا مستقیم ویدیو؟
