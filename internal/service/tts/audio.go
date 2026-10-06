@@ -44,6 +44,12 @@ func pcmToWAV(pcm []byte, sampleRate int) []byte {
 
 // wavToMP3 با ffmpeg (که در ایمیج Docker نصب است) WAV را به mp3 تبدیل می‌کند
 // تا حجم فایل برای اپ موبایل حدود ۱۰ برابر کمتر شود.
+//
+// بیت‌ریت باید ثابت (CBR) باشد، نه متغیر (-q:a): خروجی به pipe می‌رود و ffmpeg
+// نمی‌تواند برگردد و هدر Xing (طول واقعی فایل VBR) را بنویسد. بدون آن هدر،
+// پلیر اندروید (ExoPlayer) طول را از بیت‌ریتِ فریم اول — که برای سکوتِ ابتدای
+// صدا فقط ۸kbps است — حدس می‌زند و یک جمله‌ی ۳ ثانیه‌ای را ۲۶ ثانیه می‌بیند؛
+// اپ هم تا پایانِ آن ۲۶ ثانیه منتظر می‌ماند. با CBR طول همیشه دقیق است.
 func wavToMP3(ctx context.Context, wav []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -51,7 +57,7 @@ func wavToMP3(ctx context.Context, wav []byte) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-hide_banner", "-loglevel", "error",
 		"-f", "wav", "-i", "pipe:0",
-		"-codec:a", "libmp3lame", "-q:a", "4",
+		"-codec:a", "libmp3lame", "-b:a", "64k",
 		"-f", "mp3", "pipe:1",
 	)
 	cmd.Stdin = bytes.NewReader(wav)
