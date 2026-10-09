@@ -14,6 +14,8 @@ import { ForbiddenError } from '../../api/client';
 import { getAIUsageStatus } from '../../api/aiUsage';
 import { speakVerbMeaning, type VerbSpeakResult } from '../../api/verbs';
 import type { AudioActionCommand } from '../SceneScreen/types';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useFeedbackPop } from '../../components/FeedbackPop';
 
 type Phase = 'idle' | 'recording' | 'checking' | 'result' | 'error' | 'no_subscription' | 'quota';
 
@@ -26,6 +28,7 @@ export const VerbSpeakScreen = () => {
   const route = useRoute<any>();
   const { meaningId, lemma, meaningFa, promptFa } = route.params || {};
   const { t } = useLanguage();
+  const pop = useFeedbackPop();
   const queryClient = useQueryClient();
 
   const [phase, setPhase] = useState<Phase>('idle');
@@ -70,6 +73,7 @@ export const VerbSpeakScreen = () => {
         const res = await speakVerbMeaning(meaningId, filePath, mimeType || 'audio/m4a');
         setResult(res);
         setPhase('result');
+        pop.show(res.passed ? 'correct' : 'wrong', t(res.passed ? 'verbSpeakPassed' : 'verbSpeakNotYet'));
       } catch (err) {
         if (err instanceof ForbiddenError) {
           // ۴۰۳ هم برای «بدون اشتراک» هم «سقف روزانه تمام» است؛ جدا می‌پرسیم.
@@ -84,6 +88,8 @@ export const VerbSpeakScreen = () => {
         setPhase('error');
       }
     },
+    // pop/t پایدارند (useCallback/context)؛ فقط meaningId سؤال را عوض می‌کند.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [meaningId]
   );
 
@@ -135,7 +141,7 @@ export const VerbSpeakScreen = () => {
             <Text style={styles.message}>{t('verbSpeakChecking')}</Text>
           </View>
         ) : phase === 'result' && result ? (
-          <View style={styles.resultCard}>
+          <Animated.View entering={FadeInUp.springify().damping(14)} style={styles.resultCard}>
             <View style={styles.resultHeader}>
               {result.passed ? (
                 <CheckCircle2 size={22} color={COLORS.tertiary} />
@@ -158,7 +164,7 @@ export const VerbSpeakScreen = () => {
             <TouchableOpacity style={[styles.primaryBtn, { marginTop: 16 }]} onPress={start}>
               <Text style={styles.primaryBtnText}>{t('verbSpeakTryAgain')}</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : (
           <View style={styles.center}>
             {phase === 'error' && <Text style={[styles.message, { color: COLORS.error }]}>{t('verbSpeakFailed')}</Text>}
@@ -177,6 +183,7 @@ export const VerbSpeakScreen = () => {
           </View>
         )}
       </ScrollView>
+      {pop.element}
     </View>
   );
 };

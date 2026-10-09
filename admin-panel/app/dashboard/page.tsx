@@ -176,7 +176,7 @@ export default function DashboardPage() {
             className={`sidebar-link ${tab === "course" ? "active" : ""}`}
             onClick={() => setTab("course")}
           >
-            🌱 دوره‌ی شروع
+            🌱 قدم اول
           </button>
           <button
             className={`sidebar-link ${tab === "podcasts" ? "active" : ""}`}

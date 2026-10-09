@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ImageField from "./ImageField";
 import { deleteWritingPrompt, listWritingPrompts, saveWritingPrompt, suggestWritingPrompt } from "@/lib/api";
 import type { SpeakingTopicLevel, WritingPrompt } from "@/lib/types";
 
@@ -22,6 +23,7 @@ type Draft = {
   max_words: number;
   position: number;
   is_active: boolean;
+  image_url: string;
 };
 
 const emptyDraft = (position = 0): Draft => ({
@@ -34,6 +36,7 @@ const emptyDraft = (position = 0): Draft => ({
   max_words: 150,
   position,
   is_active: true,
+  image_url: "",
 });
 
 const lines = (text: string) =>
@@ -87,6 +90,7 @@ export default function WritingPromptsPanel({
       max_words: t.max_words,
       position: t.position,
       is_active: t.is_active,
+      image_url: t.image_url || "",
     });
     setIdea("");
   }
@@ -126,6 +130,7 @@ export default function WritingPromptsPanel({
         max_words: draft.max_words,
         position: draft.position,
         is_active: draft.is_active,
+        image_url: draft.image_url,
       });
       notify("موضوع ذخیره شد");
       setDraft(null);
@@ -234,6 +239,8 @@ export default function WritingPromptsPanel({
               />
             </div>
           </div>
+
+          <ImageField value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} notify={notify} />
 
           <label>توضیح فارسی برای کاربر (درباره‌ی چه بنویسد)</label>
           <textarea

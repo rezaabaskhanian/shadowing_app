@@ -13,6 +13,7 @@ import { absUrl } from '../../api/config';
 import { answerVerbQuiz, getVerbQuiz, type VerbQuizQuestion } from '../../api/verbs';
 import type { AudioActionCommand } from '../SceneScreen/types';
 import { SentenceWithForm } from './VerbDetailScreen';
+import { useFeedbackPop } from '../../components/FeedbackPop';
 
 /**
  * آزمون تشخیص: جمله‌ای از درس‌ها + «این‌جا فعل یعنی چه؟» با ۴ گزینه که همه
@@ -29,6 +30,7 @@ export const VerbQuizScreen = () => {
   const [questions, setQuestions] = useState<VerbQuizQuestion[] | null>(null);
   const [index, setIndex] = useState(0);
   const [chosen, setChosen] = useState<string | null>(null);
+  const pop = useFeedbackPop();
   const [feedback, setFeedback] = useState<{ correct: boolean; meaning: string } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
 
@@ -76,10 +78,12 @@ export const VerbQuizScreen = () => {
       const res = await answerVerbQuiz(q.meaning_id, optionId);
       setFeedback({ correct: res.correct, meaning: res.correct_meaning_fa });
       if (res.correct) setCorrectCount((c) => c + 1);
+      pop.show(res.correct ? 'correct' : 'wrong', t(res.correct ? 'verbQuizCorrect' : 'leitnerFeedbackForgot'));
     } catch {
       const correct = optionId === q.meaning_id;
       setFeedback({ correct, meaning: q.options.find((o) => o.meaning_id === q.meaning_id)?.meaning_fa || '' });
       if (correct) setCorrectCount((c) => c + 1);
+      pop.show(correct ? 'correct' : 'wrong', t(correct ? 'verbQuizCorrect' : 'leitnerFeedbackForgot'));
     }
   };
 
@@ -163,6 +167,7 @@ export const VerbQuizScreen = () => {
           </>
         ) : null}
       </ScrollView>
+      {pop.element}
     </View>
   );
 };

@@ -4,6 +4,10 @@ import { Flame, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
+import { HotspotPulse } from '../../components/HotspotPulse';
+
+// زوم‌اوت (۴۵۰) + زوم‌این (۵۵۰): پالس بعد از نشستنِ دوربین روی نقطه ظاهر می‌شود.
+const CAMERA_SETTLE_MS = 1000;
 
 // بازه‌ی مجاز زوم دوربین. برای هات‌اسپات‌های نزدیک وسط تصویر همان حداقل کافی
 // است؛ برای هات‌اسپات‌های نزدیک لبه/گوشه، زوم به‌صورت پویا تا همین سقف بالا
@@ -295,6 +299,16 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
           resizeMode="contain" 
         />
       </View>
+
+      {/* پالسِ هات‌اسپاتِ فعال، دقیقاً همان نقطه‌ای که نوکِ حباب رویش می‌نشیند. */}
+      {cameraZoomedIn && anchor && activeTarget && (
+        <HotspotPulse
+          key={`${activeTarget.hotspotId}|${refocusKey ?? ''}`}
+          x={anchor.x}
+          y={anchor.y}
+          appearDelayMs={CAMERA_SETTLE_MS}
+        />
+      )}
 
       {/* حباب دیالوگ — بالای سر گوینده‌ی فعلی. موقعیتش دقیقاً همان نقطه‌ی
           واقعی روی‌صفحه‌ی هات‌اسپات است (نه فرضِ «همیشه وسط»)، چون برای

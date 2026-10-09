@@ -28,6 +28,7 @@ type Topic struct {
 	UsefulPhrases   []string `json:"useful_phrases"`
 	Level           string   `json:"level"`
 	DurationSeconds int      `json:"duration_seconds"`
+	ImageURL        string   `json:"image_url"`
 	Position        int      `json:"position"`
 	IsActive        bool     `json:"is_active"`
 	CreatedAt       string   `json:"created_at"`
@@ -51,11 +52,11 @@ type Attempt struct {
 }
 
 const topicColumns = `id::text, title, prompt_fa, guide_questions, useful_phrases, level,
-	duration_seconds, position, is_active, created_at::text`
+	duration_seconds, image_url, position, is_active, created_at::text`
 
 func scanTopic(row pgx.Row, t *Topic, extra ...any) error {
 	dest := append([]any{&t.ID, &t.Title, &t.PromptFa, &t.GuideQuestions, &t.UsefulPhrases, &t.Level,
-		&t.DurationSeconds, &t.Position, &t.IsActive, &t.CreatedAt}, extra...)
+		&t.DurationSeconds, &t.ImageURL, &t.Position, &t.IsActive, &t.CreatedAt}, extra...)
 	return row.Scan(dest...)
 }
 
@@ -134,10 +135,10 @@ func (r DB) Create(ctx context.Context, t Topic) (Topic, error) {
 	const op = "postgrestopicspeaking.Create"
 	var out Topic
 	err := scanTopic(r.conn.QueryRow(ctx, `
-		INSERT INTO speaking_topics (title, prompt_fa, guide_questions, useful_phrases, level, duration_seconds, position, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO speaking_topics (title, prompt_fa, guide_questions, useful_phrases, level, duration_seconds, position, is_active, image_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING `+topicColumns,
-		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive), &out)
+		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL), &out)
 	if err != nil {
 		return Topic{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت موضوع")
 	}
@@ -150,10 +151,10 @@ func (r DB) Update(ctx context.Context, t Topic) (Topic, error) {
 	err := scanTopic(r.conn.QueryRow(ctx, `
 		UPDATE speaking_topics
 		SET title = $2, prompt_fa = $3, guide_questions = $4, useful_phrases = $5, level = $6,
-			duration_seconds = $7, position = $8, is_active = $9
+			duration_seconds = $7, position = $8, is_active = $9, image_url = $10
 		WHERE id = $1::uuid
 		RETURNING `+topicColumns,
-		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive), &out)
+		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Topic{}, richerror.New(op).WithErr(err).WithMessage("موضوع پیدا نشد").WithKind(richerror.KindNotFound)
 	}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Flame, Snowflake } from 'lucide-react-native';
+import { Snowflake } from 'lucide-react-native';
+import { Celebration } from './Celebration';
 
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -30,9 +31,8 @@ export const StreakInfoModal: React.FC<StreakInfoModalProps> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity style={styles.card} activeOpacity={1} onPress={() => {}}>
-          <View style={styles.iconWrap}>
-            <Flame size={28} color={COLORS.secondary} fill={COLORS.secondary} />
-          </View>
+          {/* شعله‌ی استریک (Lottie اگر فایلش اضافه شده باشد، وگرنه Reanimated) */}
+          {visible && <Celebration kind="streak" size={96} />}
 
           <Text style={styles.streakValue}>
             {language === 'fa' ? `${streak} روز متوالی` : `${streak}-day streak`}
@@ -77,15 +77,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
-  },
-  iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 149, 0, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
   },
   streakValue: {
     color: COLORS.text,

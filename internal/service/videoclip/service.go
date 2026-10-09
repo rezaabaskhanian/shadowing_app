@@ -131,6 +131,8 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Clip, error) {
 var (
 	validLevels  = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
 	validSources = map[string]bool{"flow": true, "movie": true}
+	// همان دسته‌های صحنه‌ها (app: SCENE_CATEGORY_LABEL_KEY)؛ خالی = بدون دسته.
+	validCategories = map[string]bool{"migration": true, "career": true, "education": true, "daily": true, "travel": true, "social": true}
 )
 
 // AdminSave کلیپ و خطوطش را اعتبارسنجی و ذخیره می‌کند؛ کلیپ با خطوطش برمی‌گردد.
@@ -150,6 +152,13 @@ func (s *Service) AdminSave(ctx context.Context, id string, c Clip) (Clip, error
 	}
 	if !validLevels[c.Level] {
 		c.Level = "beginner"
+	}
+	if !validCategories[c.Category] {
+		c.Category = ""
+	}
+	c.MovieTitle = strings.TrimSpace(c.MovieTitle)
+	if c.Source != "movie" {
+		c.MovieTitle = ""
 	}
 
 	lines := make([]Line, 0, len(c.Lines))

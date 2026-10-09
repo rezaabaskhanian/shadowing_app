@@ -480,6 +480,7 @@ export interface SpeakingTopic {
   useful_phrases: string[];
   level: SpeakingTopicLevel;
   duration_seconds: number;
+  image_url: string;
   position: number;
   is_active: boolean;
   created_at?: string;
@@ -516,6 +517,10 @@ export interface VideoClip {
   title: string;
   description_fa: string;
   source: "flow" | "movie";
+  /** همان دسته‌های صحنه (SCENE_CATEGORIES)؛ خالی = بدون دسته. */
+  category: string;
+  /** نام فیلمِ منبع (فقط برای source=movie). */
+  movie_title: string;
   video_url: string;
   poster_url: string;
   level: VideoClipLevel;
@@ -543,6 +548,7 @@ export interface WritingPrompt {
   level: SpeakingTopicLevel;
   min_words: number;
   max_words: number;
+  image_url: string;
   position: number;
   is_active: boolean;
   created_at?: string;
@@ -614,6 +620,7 @@ export interface Podcast {
   audio_status: "none" | "generating" | "ready" | "failed";
   audio_error: string;
   duration_seconds: number;
+  image_url: string;
   position: number;
   is_active: boolean;
   line_count?: number;

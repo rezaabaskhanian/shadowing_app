@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ImageField from "./ImageField";
 import {
   API_BASE,
   deletePodcast,
@@ -42,6 +43,7 @@ const emptyDraft = (position = 0): Draft => ({
   audio_status: "none",
   audio_error: "",
   duration_seconds: 0,
+  image_url: "",
   position,
   is_active: false,
   lines: [],
@@ -255,6 +257,12 @@ export default function PodcastsPanel({
               <input type="number" value={draft.position} onChange={(e) => update({ position: Number(e.target.value) || 0 })} />
             </div>
           </div>
+          <ImageField
+            label="تصویر کارت (اختیاری — اگر خالی باشد و صحنه انتخاب شده باشد، تصویرِ همان صحنه نشان داده می‌شود)"
+            value={draft.image_url || ""}
+            onChange={(url) => update({ image_url: url })}
+            notify={notify}
+          />
           <label>توضیح فارسی (در این قسمت چه یاد می‌گیرد)</label>
           <textarea rows={2} value={draft.description_fa} onChange={(e) => update({ description_fa: e.target.value })} />
 

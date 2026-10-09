@@ -15,6 +15,7 @@ import { getAIUsageStatus } from '../../api/aiUsage';
 import { submitTopicSpeaking, type SpeakingTopic, type TopicSpeakingResult } from '../../api/topicSpeaking';
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { track } from '../../services/analytics';
+import { RiseIn } from '../../components/RiseIn';
 
 type Phase = 'idle' | 'recording' | 'analyzing' | 'result' | 'error' | 'locked';
 type ActionCommand = 'none' | 'start_record' | 'stop_record';
@@ -228,7 +229,7 @@ export const TopicSpeakingScreen: React.FC = () => {
 
         {phase === 'result' && result && meta && (
           <>
-            <View style={[styles.card, styles.scoreCard]}>
+            <RiseIn i={0} style={[styles.card, styles.scoreCard]}>
               <View style={[styles.scoreCircle, { borderColor: scoreColor(result.score) }]}>
                 <Text style={[styles.scoreValue, { color: scoreColor(result.score) }]}>{result.score}</Text>
                 <Text style={styles.scoreLabel}>{t('topicSpeakingScore')}</Text>
@@ -245,39 +246,39 @@ export const TopicSpeakingScreen: React.FC = () => {
                 </Text>
                 {!!result.summary_fa && <Text style={styles.summary}>{result.summary_fa}</Text>}
               </View>
-            </View>
+            </RiseIn>
 
             {result.strengths_fa.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={1} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingStrengths')}</Text>
                 {result.strengths_fa.map((s, i) => (
                   <Text key={i} style={styles.listItem}>
                     ✓ {s}
                   </Text>
                 ))}
-              </View>
+              </RiseIn>
             )}
 
-            <View style={styles.card}>
+            <RiseIn i={2} style={styles.card}>
               <Text style={styles.cardLabel}>{t('topicSpeakingMistakes')}</Text>
               {result.mistakes.length === 0 ? (
                 <Text style={styles.listItem}>{t('topicSpeakingNoMistakes')}</Text>
               ) : (
                 result.mistakes.map((m, i) => (
-                  <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                  <RiseIn key={i} i={3 + i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
                     <Text style={styles.wrongText}>{m.original}</Text>
                     <Text style={styles.rightText}>{m.corrected}</Text>
                     {!!m.explanation_fa && <Text style={styles.explain}>{m.explanation_fa}</Text>}
-                  </View>
+                  </RiseIn>
                 ))
               )}
-            </View>
+            </RiseIn>
 
             {result.better_phrases.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={3} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingBetter')}</Text>
                 {result.better_phrases.map((p, i) => (
-                  <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                  <RiseIn key={i} i={4 + i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
                     <Text style={styles.explain}>
                       {t('topicSpeakingInsteadOf')}: <Text style={styles.plainEn}>{p.instead_of}</Text>
                     </Text>
@@ -285,13 +286,13 @@ export const TopicSpeakingScreen: React.FC = () => {
                       {t('topicSpeakingSay')}: {p.try}
                     </Text>
                     {!!p.note_fa && <Text style={styles.explain}>{p.note_fa}</Text>}
-                  </View>
+                  </RiseIn>
                 ))}
-              </View>
+              </RiseIn>
             )}
 
             {result.used_phrases.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={4} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingUsedPhrases')}</Text>
                 <View style={styles.chips}>
                   {result.used_phrases.map((p, i) => (
@@ -300,20 +301,20 @@ export const TopicSpeakingScreen: React.FC = () => {
                     </View>
                   ))}
                 </View>
-              </View>
+              </RiseIn>
             )}
 
             {!!result.improved_version && (
-              <View style={styles.card}>
+              <RiseIn i={5} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingImproved')}</Text>
                 <Text style={styles.paragraph}>{result.improved_version}</Text>
-              </View>
+              </RiseIn>
             )}
 
-            <View style={styles.card}>
+            <RiseIn i={6} style={styles.card}>
               <Text style={styles.cardLabel}>{t('topicSpeakingYourTalk')}</Text>
               <Text style={[styles.paragraph, styles.mutedParagraph]}>{result.transcript}</Text>
-            </View>
+            </RiseIn>
           </>
         )}
       </ScrollView>

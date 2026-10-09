@@ -29,6 +29,7 @@ type Prompt struct {
 	Level          string   `json:"level"`
 	MinWords       int      `json:"min_words"`
 	MaxWords       int      `json:"max_words"`
+	ImageURL       string   `json:"image_url"`
 	Position       int      `json:"position"`
 	IsActive       bool     `json:"is_active"`
 	CreatedAt      string   `json:"created_at"`
@@ -51,11 +52,11 @@ type Attempt struct {
 }
 
 const promptColumns = `id::text, title, prompt_fa, guide_questions, useful_phrases, level,
-	min_words, max_words, position, is_active, created_at::text`
+	min_words, max_words, image_url, position, is_active, created_at::text`
 
 func scanPrompt(row pgx.Row, t *Prompt, extra ...any) error {
 	dest := append([]any{&t.ID, &t.Title, &t.PromptFa, &t.GuideQuestions, &t.UsefulPhrases, &t.Level,
-		&t.MinWords, &t.MaxWords, &t.Position, &t.IsActive, &t.CreatedAt}, extra...)
+		&t.MinWords, &t.MaxWords, &t.ImageURL, &t.Position, &t.IsActive, &t.CreatedAt}, extra...)
 	return row.Scan(dest...)
 }
 
@@ -134,10 +135,10 @@ func (r DB) Create(ctx context.Context, t Prompt) (Prompt, error) {
 	const op = "postgreswriting.Create"
 	var out Prompt
 	err := scanPrompt(r.conn.QueryRow(ctx, `
-		INSERT INTO writing_prompts (title, prompt_fa, guide_questions, useful_phrases, level, min_words, max_words, position, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO writing_prompts (title, prompt_fa, guide_questions, useful_phrases, level, min_words, max_words, position, is_active, image_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING `+promptColumns,
-		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.MinWords, t.MaxWords, t.Position, t.IsActive), &out)
+		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.MinWords, t.MaxWords, t.Position, t.IsActive, t.ImageURL), &out)
 	if err != nil {
 		return Prompt{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت موضوع")
 	}
@@ -150,10 +151,10 @@ func (r DB) Update(ctx context.Context, t Prompt) (Prompt, error) {
 	err := scanPrompt(r.conn.QueryRow(ctx, `
 		UPDATE writing_prompts
 		SET title = $2, prompt_fa = $3, guide_questions = $4, useful_phrases = $5, level = $6,
-			min_words = $7, max_words = $8, position = $9, is_active = $10
+			min_words = $7, max_words = $8, position = $9, is_active = $10, image_url = $11
 		WHERE id = $1::uuid
 		RETURNING `+promptColumns,
-		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.MinWords, t.MaxWords, t.Position, t.IsActive), &out)
+		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.MinWords, t.MaxWords, t.Position, t.IsActive, t.ImageURL), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Prompt{}, richerror.New(op).WithErr(err).WithMessage("موضوع پیدا نشد").WithKind(richerror.KindNotFound)
 	}

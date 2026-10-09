@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, Touchab
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
+import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { Pause, Play, RotateCcw, RotateCw, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
@@ -14,6 +15,7 @@ import { getPodcast, type Podcast } from '../../api/podcasts';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { track } from '../../services/analytics';
 import { formatDuration } from './PodcastListScreen';
+import { KaraokeText } from '../../components/KaraokeText';
 
 const RATES = [0.75, 1, 1.25];
 const PODCAST_TRACK_ID = 'podcast';
@@ -69,21 +71,38 @@ export const PodcastScreen: React.FC = () => {
     };
   }, [podcastId]);
 
+  // هایلایتِ کلمه‌به‌کلمه: پلیر هر ۱۰۰ms موقعیت می‌دهد؛ بینِ دو رویداد، روی UI
+  // thread با سرعتِ پخش جلو می‌بریم تا حرکتِ هایلایت نرم باشد (بدون re-render).
+  const positionSV = useSharedValue(0);
+  const playingSV = useSharedValue(false);
+  const rateSV = useSharedValue(1);
+  useFrameCallback((frame) => {
+    if (playingSV.value && frame.timeSincePreviousFrame) {
+      positionSV.value += frame.timeSincePreviousFrame * rateSV.value;
+    }
+  });
+
   // رویدادهای پلیر: موقعیت برای متن هم‌زمان، وضعیت برای دکمه‌ی پخش.
   useEffect(() => {
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
-      setPositionMs(Math.round(d.position * 1000));
+      const ms = Math.round(d.position * 1000);
+      positionSV.value = ms;
+      setPositionMs(ms);
     });
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
+      playingSV.value = d.state === State.Playing;
       setPlaying(d.state === State.Playing);
     });
-    const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => setPlaying(false));
+    const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      playingSV.value = false;
+      setPlaying(false);
+    });
     return () => {
       progressSub.remove();
       stateSub.remove();
       endedSub.remove();
     };
-  }, []);
+  }, [positionSV, playingSV]);
 
   // تب‌ها بعد از خروج mount می‌مانند؛ پادکست نباید در پس‌زمینه ادامه دهد.
   useFocusEffect(
@@ -112,18 +131,22 @@ export const PodcastScreen: React.FC = () => {
 
   const seekBy = async (deltaSeconds: number) => {
     const { position } = await TrackPlayer.getProgress();
-    await TrackPlayer.seekTo(Math.max(0, position + deltaSeconds));
+    const target = Math.max(0, position + deltaSeconds);
+    positionSV.value = target * 1000;
+    await TrackPlayer.seekTo(target);
   };
 
   const seekToLine = async (startMs: number) => {
     if (!ready) return;
     await TrackPlayer.seekTo(startMs / 1000);
+    positionSV.value = startMs;
     setPositionMs(startMs);
     if (!playing) await TrackPlayer.play();
   };
 
   const changeRate = async (r: number) => {
     setRate(r);
+    rateSV.value = r;
     await TrackPlayer.setRate(r).catch(() => {});
   };
 
@@ -199,7 +222,17 @@ export const PodcastScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <Text style={[styles.speaker, i % 2 === 1 && styles.speakerAlt]}>{l.speaker}</Text>
-              <Text style={[styles.lineText, isActive && styles.lineTextActive]}>{l.text}</Text>
+              {isActive ? (
+                <KaraokeText
+                  text={l.text}
+                  startMs={l.start_ms}
+                  endMs={l.end_ms}
+                  positionMs={positionSV}
+                  textStyle={StyleSheet.flatten([styles.lineText, styles.lineTextActive])}
+                />
+              ) : (
+                <Text style={styles.lineText}>{l.text}</Text>
+              )}
               {showTranslation && !!l.translation_fa && <Text style={styles.translation}>{l.translation_fa}</Text>}
             </TouchableOpacity>
           );

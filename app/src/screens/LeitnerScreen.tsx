@@ -17,6 +17,8 @@ import { ProgressRing } from '../components/ProgressRing';
 import { useVocab, MAX_LEVEL, isDue, dueLabel, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { VerbList } from '../components/VerbList';
+import { useFeedbackPop } from '../components/FeedbackPop';
+import { Celebration } from '../components/Celebration';
 
 const SWIPE_THRESHOLD = 120;
 
@@ -35,6 +37,8 @@ export const LeitnerScreen = () => {
   // تب سوم «افعال»: به‌جای کارت‌های لایتنر لیست افعال چندمعنایی نشان داده می‌شود.
   const [showVerbs, setShowVerbs] = useState(false);
   const [index, setIndex] = useState(0);
+  // بالای نوارِ پایینِ شناورِ تب‌ها
+  const feedback = useFeedbackPop(80);
 
   const dueCount = box.filter(isDue).length;
   const list = (dueOnly ? box.filter(isDue) : box).sort(
@@ -50,8 +54,19 @@ export const LeitnerScreen = () => {
 
   const handleAdvance = (direction: 'know' | 'forgot') => {
     if (!current) return;
-    if (direction === 'know') promote(current.word);
-    else demote(current.word);
+    if (direction === 'know') {
+      promote(current.word);
+      feedback.show(
+        'correct',
+        t('leitnerFeedbackKnew'),
+        t('leitnerFeedbackKnewSub')
+          .replace('{word}', current.word)
+          .replace('{level}', String(Math.min(MAX_LEVEL, current.level + 1)))
+      );
+    } else {
+      demote(current.word);
+      feedback.show('wrong', t('leitnerFeedbackForgot'), t('leitnerFeedbackForgotSub').replace('{word}', current.word));
+    }
     setIndex((i) => i + 1);
   };
 
@@ -130,7 +145,7 @@ export const LeitnerScreen = () => {
         ) : isDone ? (
           <View style={styles.doneWrap}>
             <EmptyState
-              icon={<Sparkles size={44} color={COLORS.tertiary} />}
+              icon={<Celebration kind="reviewDone" size={120} />}
               title={t('leitnerDoneTitle')}
               text={t('leitnerDoneText')}
             />
@@ -188,6 +203,7 @@ export const LeitnerScreen = () => {
           </>
         )}
       </View>
+      {feedback.element}
     </View>
   );
 };

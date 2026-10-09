@@ -12,6 +12,7 @@ import {
   uploadImage,
   uploadVideo,
 } from "@/lib/api";
+import { SCENE_CATEGORIES } from "@/lib/types";
 import type { VideoClip, VideoClipLevel, VideoClipLine, VideoClipQuestion } from "@/lib/types";
 
 const LEVELS: { id: VideoClipLevel; label: string }[] = [
@@ -26,6 +27,8 @@ const emptyDraft = (position = 0): Draft => ({
   title: "",
   description_fa: "",
   source: "flow",
+  category: "",
+  movie_title: "",
   video_url: "",
   poster_url: "",
   level: "beginner",
@@ -216,6 +219,27 @@ export default function VideoClipsPanel({
                 <option value="movie">تکه‌ای از فیلم</option>
               </select>
             </div>
+            <div>
+              <label>موضوع (مثل صحنه‌ها)</label>
+              <select value={draft.category || ""} onChange={(e) => update({ category: e.target.value })}>
+                <option value="">— بدون موضوع —</option>
+                {SCENE_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {draft.source === "movie" && (
+              <div style={{ flex: "1 1 180px" }}>
+                <label>نام فیلم</label>
+                <input
+                  value={draft.movie_title || ""}
+                  onChange={(e) => update({ movie_title: e.target.value })}
+                  placeholder="Friends (S01E05)"
+                />
+              </div>
+            )}
             <div>
               <label>سطح</label>
               <select value={draft.level} onChange={(e) => update({ level: e.target.value as VideoClipLevel })}>
@@ -440,7 +464,9 @@ export default function VideoClipsPanel({
                 <div>
                   <div style={{ fontWeight: 700 }}>{c.title}</div>
                   <div className="hint" style={{ margin: 0 }}>
-                    {c.source === "movie" ? "فیلم" : "Flow"} · {LEVELS.find((l) => l.id === c.level)?.label} ·{" "}
+                    {c.source === "movie" ? `فیلم${c.movie_title ? ` (${c.movie_title})` : ""}` : "Flow"}
+                    {c.category ? ` · ${SCENE_CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}` : ""} ·{" "}
+                    {LEVELS.find((l) => l.id === c.level)?.label} ·{" "}
                     {c.duration_seconds} ثانیه · {c.speaker_count ?? 0} شخصیت · {c.questions.length} سؤال
                     {c.is_active ? "" : " · غیرفعال"}
                   </div>

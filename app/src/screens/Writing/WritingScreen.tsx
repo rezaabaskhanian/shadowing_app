@@ -22,6 +22,7 @@ import { ForbiddenError } from '../../api/client';
 import { getAIUsageStatus } from '../../api/aiUsage';
 import { submitWriting, type WritingPrompt, type WritingResult } from '../../api/writing';
 import { track } from '../../services/analytics';
+import { RiseIn } from '../../components/RiseIn';
 
 type Phase = 'write' | 'checking' | 'result' | 'locked';
 
@@ -198,7 +199,7 @@ export const WritingScreen: React.FC = () => {
 
         {phase === 'result' && result && meta && (
           <>
-            <View style={[styles.card, styles.scoreCard]}>
+            <RiseIn i={0} style={[styles.card, styles.scoreCard]}>
               <View style={[styles.scoreCircle, { borderColor: scoreColor(result.score) }]}>
                 <Text style={[styles.scoreValue, { color: scoreColor(result.score) }]}>{result.score}</Text>
                 <Text style={styles.mutedSmall}>{t('topicSpeakingScore')}</Text>
@@ -211,52 +212,52 @@ export const WritingScreen: React.FC = () => {
                 <Text style={styles.mutedSmall}>{t('writingWords').replace('{n}', String(result.word_count))}</Text>
                 {!!result.summary_fa && <Text style={styles.summary}>{result.summary_fa}</Text>}
               </View>
-            </View>
+            </RiseIn>
 
             {result.strengths_fa.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={1} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingStrengths')}</Text>
                 {result.strengths_fa.map((s, i) => (
                   <Text key={i} style={styles.listItem}>
                     ✓ {s}
                   </Text>
                 ))}
-              </View>
+              </RiseIn>
             )}
 
-            <View style={styles.card}>
+            <RiseIn i={2} style={styles.card}>
               <Text style={styles.cardLabel}>{t('topicSpeakingMistakes')}</Text>
               {result.mistakes.length === 0 ? (
                 <Text style={styles.listItem}>{t('topicSpeakingNoMistakes')}</Text>
               ) : (
                 result.mistakes.map((m, i) => (
-                  <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                  <RiseIn key={i} i={3 + i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
                     <Text style={styles.wrongText}>{m.original}</Text>
                     <Text style={styles.rightText}>{m.corrected}</Text>
                     {!!m.explanation_fa && <Text style={styles.explain}>{m.explanation_fa}</Text>}
-                  </View>
+                  </RiseIn>
                 ))
               )}
-            </View>
+            </RiseIn>
 
             {result.structures.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={3} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('writingStructures')}</Text>
                 {result.structures.map((st, i) => (
-                  <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                  <RiseIn key={i} i={4 + i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
                     <Text style={styles.structureText}>{st.structure}</Text>
                     {!!st.example && <Text style={styles.exampleText}>{st.example}</Text>}
                     {!!st.note_fa && <Text style={styles.explain}>{st.note_fa}</Text>}
-                  </View>
+                  </RiseIn>
                 ))}
-              </View>
+              </RiseIn>
             )}
 
             {result.better_phrases.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={4} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingBetter')}</Text>
                 {result.better_phrases.map((p, i) => (
-                  <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                  <RiseIn key={i} i={5 + i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
                     <Text style={styles.explain}>
                       {t('topicSpeakingInsteadOf')}: <Text style={styles.plainEn}>{p.instead_of}</Text>
                     </Text>
@@ -264,13 +265,13 @@ export const WritingScreen: React.FC = () => {
                       {t('writingWrite')}: {p.try}
                     </Text>
                     {!!p.note_fa && <Text style={styles.explain}>{p.note_fa}</Text>}
-                  </View>
+                  </RiseIn>
                 ))}
-              </View>
+              </RiseIn>
             )}
 
             {result.used_phrases.length > 0 && (
-              <View style={styles.card}>
+              <RiseIn i={5} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingUsedPhrases')}</Text>
                 <View style={styles.chips}>
                   {result.used_phrases.map((p, i) => (
@@ -279,14 +280,14 @@ export const WritingScreen: React.FC = () => {
                     </View>
                   ))}
                 </View>
-              </View>
+              </RiseIn>
             )}
 
             {!!result.improved_version && (
-              <View style={styles.card}>
+              <RiseIn i={6} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('writingImproved')}</Text>
                 <Text style={styles.paragraph}>{result.improved_version}</Text>
-              </View>
+              </RiseIn>
             )}
           </>
         )}

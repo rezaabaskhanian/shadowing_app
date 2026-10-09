@@ -191,7 +191,7 @@ export default function CoursePanel({
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
-            <h2 style={{ margin: 0 }}>🌱 دوره‌ی شروع (مبتدی‌مبتدی)</h2>
+            <h2 style={{ margin: 0 }}>🌱 قدم اول (پایه‌تر از مبتدی)</h2>
             <p className="hint" style={{ margin: "4px 0 0" }}>
               فصل ← درس ← کارت. در اپ: برای هر کارت صدا پخش می‌شود، کاربر تکرار می‌کند و ستاره می‌گیرد؛ درس‌ها به ترتیب
               (فصل، بعد درس) باز می‌شوند. درسِ بدون کارت در اپ نشان داده نمی‌شود. این دوره رایگان است.

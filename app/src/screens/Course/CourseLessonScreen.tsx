@@ -16,6 +16,8 @@ import { completeCourseLesson, getCourseLesson, type CourseLesson } from '../../
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { track } from '../../services/analytics';
 import { Stars } from './CourseHomeScreen';
+import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import { Celebration } from '../../components/Celebration';
 
 type Phase = 'intro' | 'card' | 'done';
 type CardState = 'listen' | 'recording' | 'scoring' | 'feedback';
@@ -245,10 +247,12 @@ export const CourseLessonScreen: React.FC = () => {
           </View>
 
           {cardState === 'feedback' && lastScore !== null && (
-            <View style={styles.feedback}>
+            // بازخوردِ هر کارت با فنر بالا می‌آید؛ ۳ ستاره یک جشنِ کوچک هم دارد.
+            <Animated.View key={`fb-${index}-${lastScore}`} entering={ZoomIn.springify().damping(10)} style={styles.feedback}>
+              {starsFor(lastScore) === 3 && <Celebration kind="correct" size={64} />}
               <Stars count={starsFor(lastScore)} size={26} />
               <Text style={styles.feedbackText}>{t(feedbackKey)}</Text>
-            </View>
+            </Animated.View>
           )}
           {cardState === 'scoring' && (
             <View style={styles.feedback}>
@@ -297,9 +301,13 @@ export const CourseLessonScreen: React.FC = () => {
 
       {phase === 'done' && (
         <View style={styles.centerFill}>
-          <Text style={styles.bigEmoji}>🎉</Text>
-          <Text style={styles.introTitle}>{t('courseDoneTitle')}</Text>
-          <Stars count={lessonStars} size={34} />
+          <Celebration kind="courseDone" size={180} />
+          <Animated.Text entering={FadeInUp.delay(250)} style={styles.introTitle}>
+            {t('courseDoneTitle')}
+          </Animated.Text>
+          <Animated.View entering={ZoomIn.delay(450).springify().damping(9)}>
+            <Stars count={lessonStars} size={34} />
+          </Animated.View>
           <Text style={styles.mutedText}>{t(lessonStars === 3 ? 'courseDonePerfect' : 'courseDoneGood')}</Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
             <Text style={styles.primaryBtnText}>{t('courseBackToMap')}</Text>
