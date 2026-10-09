@@ -1036,10 +1036,10 @@ export const translations: Translations = {
   writingEditAgain: { en: 'Edit and resubmit', fa: 'ویرایش و ارسال دوباره' },
 
   // دوره‌ی شروع (مبتدی‌مبتدی)
-  courseTitle: { en: 'Starter Course', fa: 'دوره‌ی شروع' },
+  courseTitle: { en: 'First Steps', fa: 'قدم اول' },
   courseSubtitle: {
-    en: 'From zero, step by step — listen and say it out loud',
-    fa: 'از صفر، قدم‌به‌قدم — گوش کن و بلند تکرار کن',
+    en: 'Your first words and sentences, step by step — listen and say it out loud',
+    fa: 'اولین کلمه‌ها و جمله‌ها، قدم‌به‌قدم — گوش کن و بلند تکرار کن',
   },
   courseLoadError: { en: 'Could not load the course.', fa: 'دوره بارگذاری نشد.' },
   courseEmpty: { en: 'The course is being prepared. Check back soon!', fa: 'دوره در حال آماده شدن است. به‌زودی!' },
