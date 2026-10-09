@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRoute } from '@react-navigation/native';
 import {
   Platform,
   StyleSheet,
@@ -46,11 +47,41 @@ import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { TokenTopupScreen } from '../screens/TokenTopup/TokenTopupScreen';
 import { AIConversationScreen } from '../screens/AIConversation';
 import { FreeSpeechScreen } from '../screens/FreeSpeech';
+import { TopicListScreen } from '../screens/TopicSpeaking/TopicListScreen';
+import { TopicSpeakingScreen } from '../screens/TopicSpeaking/TopicSpeakingScreen';
+import { VideoClipListScreen } from '../screens/VideoClips/VideoClipListScreen';
+import { VideoClipScreen } from '../screens/VideoClips/VideoClipScreen';
+import { WritingListScreen } from '../screens/Writing/WritingListScreen';
+import { WritingScreen } from '../screens/Writing/WritingScreen';
+import { CourseHomeScreen } from '../screens/Course/CourseHomeScreen';
+import { CourseLessonScreen } from '../screens/Course/CourseLessonScreen';
+import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
+import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { RealtimePoCScreen } from '../screens/RealtimePoC';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
+
+/**
+ * تب‌ها بعد از ترک صفحه unmount نمی‌شوند و navigate دوباره فقط params را عوض
+ * می‌کند؛ برای صفحه‌های تمرینیِ تک‌موضوعی (موضوع/کلیپ/درس/پادکست) این یعنی
+ * نتیجه‌ی موضوع قبلی روی موضوع تازه می‌ماند. هر بار باز شدن (openedAt در params)
+ * یک نمونه‌ی تازه‌ی صفحه می‌سازد.
+ */
+function freshPerOpen<P extends object>(Screen: React.ComponentType<P>): React.FC<P> {
+  const Fresh: React.FC<P> = (props) => {
+    const route = useRoute<any>();
+    return <Screen key={String(route.params?.openedAt ?? '')} {...props} />;
+  };
+  return Fresh;
+}
+
+const FreshTopicSpeaking = freshPerOpen(TopicSpeakingScreen);
+const FreshVideoClip = freshPerOpen(VideoClipScreen);
+const FreshWriting = freshPerOpen(WritingScreen);
+const FreshCourseLesson = freshPerOpen(CourseLessonScreen);
+const FreshPodcast = freshPerOpen(PodcastScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
@@ -71,6 +102,16 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'SceneQuiz',
   'AIConversation',
   'FreeSpeech',
+  'TopicList',
+  'TopicSpeaking',
+  'VideoClipList',
+  'VideoClip',
+  'WritingList',
+  'Writing',
+  'CourseHome',
+  'CourseLesson',
+  'PodcastList',
+  'Podcast',
   'Paywall',
   'TokenTopup',
   'ToastDemo',
@@ -252,6 +293,16 @@ export const AppNavigator = () => {
       <Tab.Screen name="VerbDetail" component={VerbDetailScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="VerbQuiz" component={VerbQuizScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="VerbSpeak" component={VerbSpeakScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="TopicList" component={TopicListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="TopicSpeaking" component={FreshTopicSpeaking} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="VideoClipList" component={VideoClipListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="VideoClip" component={FreshVideoClip} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="WritingList" component={WritingListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="Writing" component={FreshWriting} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="CourseHome" component={CourseHomeScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="CourseLesson" component={FreshCourseLesson} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen
         name="TopicSuggestion"
         component={TopicSuggestionScreen}

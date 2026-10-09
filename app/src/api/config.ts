@@ -7,6 +7,11 @@ const PROD_API_BASE = 'https://api.lingoflow.ir';
 
 export const API_BASE = PROD_API_BASE;
 
+// نسخه‌ی اپ برای آنالیتیکس (ماندگاری به تفکیک نسخه در پنل ادمین). باید با
+// APP_VERSION_NAME در android/gradle.properties یکی باشد — هر بار نسخه بالا
+// می‌رود، هر دو را با هم عوض کنید.
+export const APP_VERSION = '1.0.0';
+
 // کلید عمومی RSA پرداخت درون‌برنامه‌ای، از پنل توسعه‌دهندگان کافه‌بازار.
 // عمومی است و قرار گرفتنش داخل اپ امن است؛ Poolakey با آن امضای خریدها را چک می‌کند.
 export const CAFEBAZAAR_RSA_KEY =

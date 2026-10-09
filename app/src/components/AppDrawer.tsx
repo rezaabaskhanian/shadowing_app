@@ -16,15 +16,19 @@ import {
   Bell,
   BookOpen,
   ChevronRight,
+  Clapperboard,
   Coins,
   Compass,
   GraduationCap,
+  Headphones,
   HelpCircle,
   Lightbulb,
   LogOut,
   Mail,
   MessageCircle,
   Mic,
+  PenLine,
+  Sprout,
   Target,
   TrendingUp,
   User as UserIcon,
@@ -247,6 +251,61 @@ export const AppDrawer = ({
               <MessageCircle color={COLORS.primary} size={18} />
             </View>
             <Text style={styles.rowText}>{t('drawerConversationTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('CourseHome')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
+              <Sprout color={COLORS.success} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('courseTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('VideoClipList')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
+              <Clapperboard color={COLORS.error} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('videoClipsTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('PodcastList')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <Headphones color={COLORS.primary} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('podcastTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('WritingList')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+              <PenLine color={COLORS.info} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('writingTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => go('TopicList')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
+              <Mic color={COLORS.secondary} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('topicSpeakingTitle')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

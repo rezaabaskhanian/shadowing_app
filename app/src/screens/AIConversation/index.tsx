@@ -21,6 +21,7 @@ import {
   type ConversationRole,
   type ConversationSuggestion,
 } from '../../api/conversation';
+import { track } from '../../services/analytics';
 
 interface Message {
   role: ConversationRole;
@@ -144,6 +145,7 @@ export const AIConversationScreen: React.FC = () => {
     startConversation(scenarioId)
       .then((res) => {
         if (!active) return;
+        track('ai_conversation_started', scenarioId);
         setConversationId(res.conversation_id);
         setSceneTitle(res.scene_title);
         setMaxUserTurns(res.max_user_turns);

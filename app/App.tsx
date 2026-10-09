@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
-import { StatusBar } from 'react-native';
+import { AppState, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -22,11 +22,15 @@ import { getAssessmentTest, getSpeakingProfile, type AssessmentItem } from './sr
 import { PlacementTestFlow } from './src/screens/PlacementTest';
 import { OnboardingScreens } from './src/screens/OnboardingScreens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { track, trackAppOpen, trackScreen } from './src/services/analytics';
 
 type PlacementGateStatus = 'checking' | 'show' | 'hide';
 type OnboardingGateStatus = 'checking' | 'show' | 'hide';
 
 const ONBOARDING_SEEN_KEY = 'onboarding_v1_seen';
+
+// برای آنالیتیکس: نام route فعلی، تا با هر جابه‌جایی «دیدن صفحه» ثبت شود.
+const navigationRef = createNavigationContainerRef<Record<string, object | undefined>>();
 
 function AppContent({ showSplash }: { showSplash: boolean }) {
   const { isAuthenticated, isRestoring } = useAuth();
@@ -46,8 +50,28 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
     };
   }, []);
   const completeOnboarding = () => {
+    track('onboarding_completed');
     setOnboardingStatus('hide');
     AsyncStorage.setItem(ONBOARDING_SEEN_KEY, '1').catch(() => {});
+  };
+
+  // «ورود موفق» فقط وقتی ثبت می‌شود که کاربر واقعاً از حالت خارج‌شده وارد شود،
+  // نه وقتی نشستِ قبلی موقع باز شدن اپ بازیابی می‌شود.
+  const wasAuthenticated = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (isRestoring) return;
+    if (wasAuthenticated.current === false && isAuthenticated) track('signed_in');
+    wasAuthenticated.current = isAuthenticated;
+  }, [isAuthenticated, isRestoring]);
+
+  // نام صفحه‌ی قبلی، تا رندرهای تکراری روی همان صفحه دوباره ثبت نشوند.
+  const lastScreen = useRef<string | null>(null);
+  const onNavigationStateChange = () => {
+    const name = navigationRef.getCurrentRoute()?.name;
+    if (name && name !== lastScreen.current) {
+      lastScreen.current = name;
+      trackScreen(name);
+    }
   };
 
   // فقط یک‌بار به‌ازای هر ورود بررسی می‌شود: اگر ادمین محتوایی برای تست
@@ -125,7 +149,10 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
         <PlacementTestFlow
           items={placementItems}
           onSkip={() => setPlacementStatus('hide')}
-          onDone={() => setPlacementStatus('hide')}
+          onDone={() => {
+            track('placement_completed');
+            setPlacementStatus('hide');
+          }}
         />
       </NotificationProvider>
     );
@@ -136,7 +163,11 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
       <ScenesProvider>
         <VocabProvider>
           <PracticeSettingsProvider>
-            <NavigationContainer>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={onNavigationStateChange}
+              onStateChange={onNavigationStateChange}
+            >
               <StatusBar barStyle="light-content" />
               <NotificationBanner />
               <AppNavigator />
@@ -157,6 +188,16 @@ export default function App() {
     }, 1900);
 
     return () => clearTimeout(splashTimer);
+  }, []);
+
+  // آنالیتیکس: باز شدن اپ، هم در اجرای اول هم هر بار که از پس‌زمینه برمی‌گردد
+  // (trackAppOpen خودش برگشت‌های نزدیک به هم را یک جلسه حساب می‌کند).
+  useEffect(() => {
+    trackAppOpen();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') trackAppOpen();
+    });
+    return () => sub.remove();
   }, []);
 
   return (

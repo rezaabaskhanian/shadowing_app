@@ -15,6 +15,7 @@ import {
   type TokenTopupPlan,
 } from '../../api/aiUsage';
 import { CAFEBAZAAR_RSA_KEY } from '../../api/config';
+import { track } from '../../services/analytics';
 
 const formatToman = (n: number) => n.toLocaleString('en-US');
 const formatTokens = (n: number) => n.toLocaleString('en-US');
@@ -39,6 +40,7 @@ export const TokenTopupScreen = () => {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
+    track('token_topup_viewed');
     let active = true;
     Promise.all([getTokenTopupPlans(), getAIUsageStatus().catch(() => null)])
       .then(([list, status]) => {
@@ -72,6 +74,7 @@ export const TokenTopupScreen = () => {
       await verifyTokenTopupPurchase(selectedPlan.product_id, result.purchaseToken);
       // consumable: باید consume بشه تا کاربر بتونه دوباره همین بسته رو بخره.
       await bazaar.consumePurchase(result.purchaseToken).catch(() => {});
+      track('token_topup_purchased', selectedPlan.product_id);
       setPhase('success');
     } catch (err) {
       setErrorDetail(err instanceof Error ? err.message : String(err));

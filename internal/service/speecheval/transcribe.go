@@ -15,6 +15,10 @@ import (
 // تأخیرِ توقفِ ضبط است، تا صدای یک کاربرِ عادی هیچ‌وقت وسطِ جمله بریده نشود.
 const maxTranscribeSeconds = 22
 
+// maxLongTranscribeSeconds همان سقف برای «صحبت درباره‌ی یک موضوع» (۱ تا ۲
+// دقیقه): اپ ضبط را روی ۱۲۰ ثانیه می‌بندد، ۱۰ ثانیه حاشیه برای تأخیر توقف.
+const maxLongTranscribeSeconds = 130
+
 // errTranscriptionUnavailable برای HybridEvaluator: بدون کلاینت whisper، هیچ
 // رونویسی واقعی ممکن نیست — بر خلاف Evaluate که تخمین برمی‌گرداند، اینجا
 // دروغین جایگزینی برای متن رونویسی وجود ندارد، پس فقط خطا برمی‌گردانیم.
@@ -26,22 +30,38 @@ type Transcriber interface {
 	TranscribeOnly(ctx context.Context, audioPath string) (string, error)
 }
 
+// LongTranscriber رونویسیِ صدای بلند (تا maxLongTranscribeSeconds) — جدا از
+// TranscribeOnly تا سقفِ کوتاهِ بقیه‌ی قابلیت‌ها (و هزینه/زمانشان) دست نخورد.
+type LongTranscriber interface {
+	TranscribeLong(ctx context.Context, audioPath string) (string, error)
+}
+
 // EvaluatorTranscriber - هم نمره‌دهی معمول شدوئینگ و هم رونویسی خام.
 type EvaluatorTranscriber interface {
 	Evaluator
 	Transcriber
+	LongTranscriber
 }
 
 // TranscribeOnly فقط تشخیص گفتار را انجام می‌دهد، بدون نمره‌دهی. targetText
 // در Transcribe فقط یک راهنمای واژگان اختیاری است (whisper_client.go)، پس
 // خالی فرستادنش مشکلی ندارد.
 func (e *WhisperEvaluator) TranscribeOnly(ctx context.Context, audioPath string) (string, error) {
+	return e.transcribe(ctx, audioPath, maxTranscribeSeconds)
+}
+
+// TranscribeLong همان TranscribeOnly برای صدای ۱ تا ۲ دقیقه‌ای.
+func (e *WhisperEvaluator) TranscribeLong(ctx context.Context, audioPath string) (string, error) {
+	return e.transcribe(ctx, audioPath, maxLongTranscribeSeconds)
+}
+
+func (e *WhisperEvaluator) transcribe(ctx context.Context, audioPath string, maxSeconds float64) (string, error) {
 	if audioPath == "" {
 		return "", errNoAudio
 	}
 
 	convertStart := time.Now()
-	wavPath, err := audio.ToWAV16kMonoMax(ctx, audioPath, maxTranscribeSeconds)
+	wavPath, err := audio.ToWAV16kMonoMax(ctx, audioPath, maxSeconds)
 	if err != nil {
 		return "", err
 	}
@@ -86,5 +106,10 @@ func (e *WhisperEvaluator) TranscribeOnly(ctx context.Context, audioPath string)
 
 // TranscribeOnly - بدون کلاینت whisper، رونویسی واقعی ممکن نیست.
 func (e *HybridEvaluator) TranscribeOnly(ctx context.Context, audioPath string) (string, error) {
+	return "", errTranscriptionUnavailable
+}
+
+// TranscribeLong - بدون کلاینت whisper، رونویسی واقعی ممکن نیست.
+func (e *HybridEvaluator) TranscribeLong(ctx context.Context, audioPath string) (string, error) {
 	return "", errTranscriptionUnavailable
 }

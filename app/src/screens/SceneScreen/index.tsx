@@ -28,6 +28,7 @@ import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
+import { track } from '../../services/analytics';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -376,6 +377,7 @@ export const SceneScreen = () => {
   );
 
   const handleEnterScene = () => {
+    track('scene_opened', scenarioId ? String(scenarioId) : undefined);
     setInScene(true);
     playDialogueAt(0);
   };
@@ -546,6 +548,7 @@ export const SceneScreen = () => {
       const duration = Math.max(1, Math.round(elapsedSeconds || DEFAULT_LINE_SECONDS));
 
       const lineIndex = activeIndex;
+      track('shadow_recorded', scenarioId ? String(scenarioId) : undefined);
       setRecordings((prev) => ({ ...prev, [lineIndex]: { filePath, mimeType, duration } }));
       // ضبط دوباره یعنی نمره‌ی قبلی این جمله دیگر معتبر نیست.
       setEvaluations((prev) => {
@@ -794,6 +797,7 @@ export const SceneScreen = () => {
       // تیکِ صحنه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ کش را بی‌اعتبار
       // می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
       queryClient.invalidateQueries({ queryKey: sceneKeys.list });
+      track('scene_completed', scenarioId ? String(scenarioId) : undefined);
       setLessonCompleteVisible(true);
       return;
     }
@@ -812,7 +816,7 @@ export const SceneScreen = () => {
       items: dialogueItems,
       forceIndex: firstUndone,
     });
-  }, [dialogueItems, gradableIndexes, comparedCount, evaluations, recordings, queryClient, toast, t]);
+  }, [dialogueItems, gradableIndexes, comparedCount, evaluations, recordings, queryClient, toast, t, scenarioId]);
 
   const toggleRevealText = useCallback(() => {
     setTextRevealed((prev) => !prev);

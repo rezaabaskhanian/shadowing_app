@@ -1,6 +1,18 @@
 import type {
   AdminUsersResp,
   AIUsageReport,
+  AnalyticsSummary,
+  SpeakingTopic,
+  VideoClip,
+  VideoClipCompletion,
+  VideoClipLine,
+  WritingPrompt,
+  CourseLesson,
+  CourseLessonSuggestion,
+  CourseUnit,
+  Podcast,
+  PodcastScript,
+  SpeakingTopicSuggestion,
   AssessmentItem,
   AssessmentItemPayload,
   BroadcastItem,
@@ -710,4 +722,209 @@ export async function reviewVerbOccurrence(
       body: JSON.stringify({ status, meaning_id: meaningId || "" }),
     })
   );
+}
+
+// ---------- آمار اپ (آنالیتیکس) ----------
+export async function getAnalyticsSummary(days = 30): Promise<AnalyticsSummary> {
+  const res = await authFetch(`/v1/admin/analytics?days=${days}`, { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+// ---------- صحبت درباره‌ی یک موضوع ----------
+export async function listSpeakingTopics(): Promise<SpeakingTopic[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/speaking-topics", { method: "GET" }))) || [];
+}
+
+export async function saveSpeakingTopic(t: Omit<SpeakingTopic, "id"> & { id?: string }): Promise<SpeakingTopic> {
+  return jsonOrThrow(
+    await authFetch(t.id ? `/v1/admin/speaking-topics/${t.id}` : "/v1/admin/speaking-topics", {
+      method: t.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(t),
+    })
+  );
+}
+
+export async function deleteSpeakingTopic(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/speaking-topics/${id}`, { method: "DELETE" }));
+}
+
+export async function suggestSpeakingTopic(idea: string, level: string): Promise<SpeakingTopicSuggestion> {
+  return jsonOrThrow(
+    await authFetch("/v1/admin/speaking-topics/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea, level }),
+    })
+  );
+}
+
+// ---------- تمرین با ویدیو ----------
+export async function listVideoClips(): Promise<VideoClip[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/video-clips", { method: "GET" }))) || [];
+}
+
+export async function getVideoClip(id: string): Promise<VideoClip> {
+  return jsonOrThrow(await authFetch(`/v1/admin/video-clips/${id}`, { method: "GET" }));
+}
+
+export async function saveVideoClip(c: Omit<VideoClip, "id"> & { id?: string }): Promise<VideoClip> {
+  return jsonOrThrow(
+    await authFetch(c.id ? `/v1/admin/video-clips/${c.id}` : "/v1/admin/video-clips", {
+      method: c.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(c),
+    })
+  );
+}
+
+export async function deleteVideoClip(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/video-clips/${id}`, { method: "DELETE" }));
+}
+
+export async function uploadVideo(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("video", file);
+  const data = await jsonOrThrow(await authFetch("/v1/admin/video-clips/upload-video", { method: "POST", body: fd }));
+  return data.url as string;
+}
+
+export async function detectVideoLines(videoUrl: string): Promise<VideoClipLine[]> {
+  return (
+    (await jsonOrThrow(
+      await authFetch("/v1/admin/video-clips/detect-lines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_url: videoUrl }),
+      })
+    )) || []
+  );
+}
+
+export async function completeVideoClip(payload: {
+  title: string;
+  description_fa: string;
+  level: string;
+  lines: VideoClipLine[];
+}): Promise<VideoClipCompletion> {
+  return jsonOrThrow(
+    await authFetch("/v1/admin/video-clips/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+// ---------- تمرین نوشتن ----------
+export async function listWritingPrompts(): Promise<WritingPrompt[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/writing-prompts", { method: "GET" }))) || [];
+}
+
+export async function saveWritingPrompt(p: Omit<WritingPrompt, "id"> & { id?: string }): Promise<WritingPrompt> {
+  return jsonOrThrow(
+    await authFetch(p.id ? `/v1/admin/writing-prompts/${p.id}` : "/v1/admin/writing-prompts", {
+      method: p.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(p),
+    })
+  );
+}
+
+export async function deleteWritingPrompt(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/writing-prompts/${id}`, { method: "DELETE" }));
+}
+
+export async function suggestWritingPrompt(idea: string, level: string): Promise<SpeakingTopicSuggestion> {
+  return jsonOrThrow(
+    await authFetch("/v1/admin/writing-prompts/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea, level }),
+    })
+  );
+}
+
+// ---------- دوره‌ی شروع (مبتدی‌مبتدی) ----------
+const jsonBody = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+export async function getCourseTree(): Promise<CourseUnit[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/course", { method: "GET" }))) || [];
+}
+
+export async function saveCourseUnit(u: Omit<CourseUnit, "id" | "lessons"> & { id?: string }): Promise<string> {
+  const data = await jsonOrThrow(
+    await authFetch(u.id ? `/v1/admin/course/units/${u.id}` : "/v1/admin/course/units", jsonBody(u.id ? "PUT" : "POST", u))
+  );
+  return data.id as string;
+}
+
+export async function deleteCourseUnit(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/course/units/${id}`, { method: "DELETE" }));
+}
+
+export async function getCourseLesson(id: string): Promise<CourseLesson> {
+  return jsonOrThrow(await authFetch(`/v1/admin/course/lessons/${id}`, { method: "GET" }));
+}
+
+export async function saveCourseLesson(l: Omit<CourseLesson, "id"> & { id?: string }): Promise<CourseLesson> {
+  return jsonOrThrow(
+    await authFetch(l.id ? `/v1/admin/course/lessons/${l.id}` : "/v1/admin/course/lessons", jsonBody(l.id ? "PUT" : "POST", l))
+  );
+}
+
+export async function deleteCourseLesson(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/course/lessons/${id}`, { method: "DELETE" }));
+}
+
+export async function suggestCourseLesson(topic: string, unit: string, count: number): Promise<CourseLessonSuggestion> {
+  return jsonOrThrow(await authFetch("/v1/admin/course/suggest", jsonBody("POST", { topic, unit, count })));
+}
+
+/** برای کارت‌های بدون صدا TTS می‌سازد؛ اگر وسط کار خطا بدهد، درسِ به‌روز همراه پیام خطا برمی‌گردد. */
+export async function generateCourseAudio(
+  lessonId: string,
+  voiceId: string
+): Promise<{ lesson: CourseLesson; made: number; message?: string }> {
+  const res = await authFetch(`/v1/admin/course/lessons/${lessonId}/generate-audio`, jsonBody("POST", { voice_id: voiceId }));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok && !data.lesson) throw new Error(data.message || "خطای ناشناخته");
+  return { lesson: data.lesson, made: data.made ?? 0, message: res.ok ? undefined : data.message };
+}
+
+// ---------- پادکست ----------
+export async function listPodcasts(): Promise<Podcast[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/podcasts", { method: "GET" }))) || [];
+}
+
+export async function getPodcast(id: string): Promise<Podcast> {
+  return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}`, { method: "GET" }));
+}
+
+export async function savePodcast(p: Omit<Podcast, "id"> & { id?: string }): Promise<Podcast> {
+  return jsonOrThrow(
+    await authFetch(p.id ? `/v1/admin/podcasts/${p.id}` : "/v1/admin/podcasts", jsonBody(p.id ? "PUT" : "POST", p))
+  );
+}
+
+export async function deletePodcast(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}`, { method: "DELETE" }));
+}
+
+export async function generatePodcastScript(payload: {
+  topic: string;
+  scene: string;
+  level: string;
+  minutes: number;
+}): Promise<PodcastScript> {
+  return jsonOrThrow(await authFetch("/v1/admin/podcasts/generate-script", jsonBody("POST", payload)));
+}
+
+/** ساخت صدا در پس‌زمینه شروع می‌شود؛ وضعیت را با getPodcast دنبال کن. */
+export async function generatePodcastAudio(id: string): Promise<Podcast> {
+  return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}/generate-audio`, { method: "POST" }));
 }

@@ -15,7 +15,9 @@ import (
 
 	postgresaiaccess "shadowing-backend/internal/repository/postgres/aiaccess"
 	postgresaiconversation "shadowing-backend/internal/repository/postgres/aiconversation"
+	postgresappevent "shadowing-backend/internal/repository/postgres/appevent"
 	postgresassessment "shadowing-backend/internal/repository/postgres/assessment"
+	postgrescourse "shadowing-backend/internal/repository/postgres/course"
 	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
 	postgresfreespeech "shadowing-backend/internal/repository/postgres/freespeech"
 	posthabit "shadowing-backend/internal/repository/postgres/habit"
@@ -24,6 +26,7 @@ import (
 	postgresleitner "shadowing-backend/internal/repository/postgres/leitner"
 	postgresnotification "shadowing-backend/internal/repository/postgres/notification"
 	postgresotp "shadowing-backend/internal/repository/postgres/otp"
+	postgrespodcast "shadowing-backend/internal/repository/postgres/podcast"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
 	postgresgrammar "shadowing-backend/internal/repository/postgres/progress/grammar"
@@ -35,9 +38,12 @@ import (
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
 	postgretokentopup "shadowing-backend/internal/repository/postgres/tokentopup"
+	postgrestopicspeaking "shadowing-backend/internal/repository/postgres/topicspeaking"
 	posttopicsuggestion "shadowing-backend/internal/repository/postgres/topicsuggestion"
 	postgresuser "shadowing-backend/internal/repository/postgres/user"
 	postgresverb "shadowing-backend/internal/repository/postgres/verb"
+	postgresvideoclip "shadowing-backend/internal/repository/postgres/videoclip"
+	postgreswriting "shadowing-backend/internal/repository/postgres/writing"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
@@ -46,6 +52,7 @@ import (
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
+	analyticsservice "shadowing-backend/internal/service/analytics"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
@@ -67,10 +74,16 @@ import (
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
+	topicspeakingservice "shadowing-backend/internal/service/topicspeaking"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	verbservice "shadowing-backend/internal/service/verb"
+	videoclipservice "shadowing-backend/internal/service/videoclip"
 
+	courseservice "shadowing-backend/internal/service/course"
+	podcastservice "shadowing-backend/internal/service/podcast"
+	ttsservice "shadowing-backend/internal/service/tts"
 	userservice "shadowing-backend/internal/service/user"
+	writingservice "shadowing-backend/internal/service/writing"
 
 	"time"
 )
@@ -158,11 +171,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc)
 
 	server.Server()
 
@@ -232,7 +245,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -341,6 +354,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	habitRepo := posthabit.New(MyPostgresgresRepo.DB)
 	habitSvc := habitservice.New(habitRepo, progressSvc, getEnv("WHISPER_URL", ""))
 
+	// آنالیتیکس اپ موبایل (صفحه‌ی «آمار» پنل ادمین) — ببینید analyticsservice.
+	analyticsSvc := analyticsservice.New(postgresappevent.New(MyPostgresgresRepo.DB))
+
 	landingRepo := postgreslanding.New(MyPostgresgresRepo.DB)
 	landingSvc := landingservice.New(landingRepo)
 
@@ -397,7 +413,22 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// افعال چندمعنایی: همان STT + AI + سقف مصرف روزانه‌ی Free Speech برای تمرین صوتی.
 	verbSvc := verbservice.New(postgresverb.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), aiAccessSvc, evaluator)
 
+	// «صحبت درباره‌ی یک موضوع» (۱ تا ۲ دقیقه) — ببینید topicspeakingservice.
+	topicSpeakingSvc := topicspeakingservice.New(postgrestopicspeaking.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), aiAccessSvc, evaluator)
+
+	// «تمرین با ویدیو» (کلیپ Flow / تکه‌ی فیلم + جای شخصیت حرف زدن) — ببینید videoclipservice.
+	videoClipSvc := videoclipservice.New(postgresvideoclip.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), store, speecheval.NewGroqClient(settingsSvc))
+
+	// «پادکست» (گفتگوی دو مجری با متن هم‌زمان؛ صدا در پس‌زمینه) — ببینید podcastservice.
+	podcastSvc := podcastservice.New(postgrespodcast.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)
+
+	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
+	courseSvc := courseservice.New(postgrescourse.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)
+
+	// «تمرین نوشتن» (داستان کوتاه + تصحیح با AI) — ببینید writingservice.
+	writingSvc := writingservice.New(postgreswriting.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), aiAccessSvc)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc
 }

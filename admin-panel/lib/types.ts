@@ -441,3 +441,188 @@ export interface VerbMeaningSuggestion {
   example: string;
   practice_prompt_fa: string;
 }
+
+// ---------- آمار اپ (آنالیتیکس) ----------
+export interface AnalyticsDaily {
+  date: string;
+  opens: number;
+  active_devices: number;
+  new_devices: number;
+  active_users: number;
+}
+
+export interface AnalyticsCohort {
+  app_version: string;
+  new_devices: number;
+  d1_eligible: number;
+  d1_retained: number;
+  d7_eligible: number;
+  d7_retained: number;
+}
+
+export interface AnalyticsSummary {
+  days: number;
+  daily: AnalyticsDaily[];
+  versions: AnalyticsCohort[];
+  screens: { screen: string; views: number; devices: number }[];
+  events: { event: string; count: number; devices: number }[];
+  funnel: { event: string; devices: number }[];
+}
+
+// ---------- صحبت درباره‌ی یک موضوع ----------
+export type SpeakingTopicLevel = "beginner" | "intermediate" | "advanced";
+
+export interface SpeakingTopic {
+  id: string;
+  title: string;
+  prompt_fa: string;
+  guide_questions: string[];
+  useful_phrases: string[];
+  level: SpeakingTopicLevel;
+  duration_seconds: number;
+  position: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface SpeakingTopicSuggestion {
+  title: string;
+  prompt_fa: string;
+  guide_questions: string[];
+  useful_phrases: string[];
+}
+
+// ---------- تمرین با ویدیو ----------
+export type VideoClipLevel = "beginner" | "intermediate" | "advanced";
+
+export interface VideoClipLine {
+  id?: string;
+  position: number;
+  speaker: string;
+  text: string;
+  translation_fa: string;
+  start_ms: number;
+  end_ms: number;
+}
+
+export interface VideoClipQuestion {
+  question_fa: string;
+  options: string[];
+  answer_index: number;
+}
+
+export interface VideoClip {
+  id: string;
+  title: string;
+  description_fa: string;
+  source: "flow" | "movie";
+  video_url: string;
+  poster_url: string;
+  level: VideoClipLevel;
+  duration_seconds: number;
+  questions: VideoClipQuestion[];
+  position: number;
+  is_active: boolean;
+  created_at?: string;
+  lines: VideoClipLine[];
+  speaker_count?: number;
+}
+
+export interface VideoClipCompletion {
+  lines: { index: number; speaker: string; translation_fa: string }[];
+  questions: VideoClipQuestion[];
+}
+
+// ---------- تمرین نوشتن ----------
+export interface WritingPrompt {
+  id: string;
+  title: string;
+  prompt_fa: string;
+  guide_questions: string[];
+  useful_phrases: string[];
+  level: SpeakingTopicLevel;
+  min_words: number;
+  max_words: number;
+  position: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+// ---------- دوره‌ی شروع (مبتدی‌مبتدی) ----------
+export interface CourseItem {
+  id?: string;
+  position: number;
+  text_en: string;
+  meaning_fa: string;
+  emoji: string;
+  image_url: string;
+  audio_url: string;
+  tip_fa: string;
+}
+
+export interface CourseLesson {
+  id: string;
+  unit_id: string;
+  title_fa: string;
+  title_en: string;
+  emoji: string;
+  goal_fa: string;
+  position: number;
+  is_active: boolean;
+  item_count?: number;
+  items?: CourseItem[];
+}
+
+export interface CourseUnit {
+  id: string;
+  title_fa: string;
+  title_en: string;
+  emoji: string;
+  description_fa: string;
+  position: number;
+  is_active: boolean;
+  lessons: CourseLesson[];
+}
+
+export interface CourseLessonSuggestion {
+  title_en: string;
+  goal_fa: string;
+  emoji: string;
+  items: { text_en: string; meaning_fa: string; emoji: string; tip_fa: string }[];
+}
+
+// ---------- پادکست ----------
+export interface PodcastLine {
+  id?: string;
+  position: number;
+  speaker: string;
+  text: string;
+  translation_fa: string;
+  start_ms: number;
+  end_ms: number;
+}
+
+export interface Podcast {
+  id: string;
+  title: string;
+  description_fa: string;
+  level: "beginner" | "intermediate" | "advanced";
+  scene_id: string;
+  vocabulary: { word: string; meaning_fa: string }[];
+  voices: Record<string, string>;
+  audio_url: string;
+  audio_status: "none" | "generating" | "ready" | "failed";
+  audio_error: string;
+  duration_seconds: number;
+  position: number;
+  is_active: boolean;
+  line_count?: number;
+  lines: PodcastLine[];
+}
+
+export interface PodcastScript {
+  title: string;
+  description_fa: string;
+  lines: { speaker: string; text: string; translation_fa: string }[];
+  vocabulary: { word: string; meaning_fa: string }[];
+}

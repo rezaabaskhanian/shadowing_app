@@ -9,25 +9,32 @@ import (
 
 	adminhandler "shadowing-backend/internal/delivery/httpserver/admin"
 	aiconversationhandler "shadowing-backend/internal/delivery/httpserver/aiconversation"
+	analyticshandler "shadowing-backend/internal/delivery/httpserver/analytics"
 	assessmenthandler "shadowing-backend/internal/delivery/httpserver/assessment"
 	freespeechhandler "shadowing-backend/internal/delivery/httpserver/freespeech"
 	habithandler "shadowing-backend/internal/delivery/httpserver/habit"
 	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
+	coursehandler "shadowing-backend/internal/delivery/httpserver/course"
 	landinghandler "shadowing-backend/internal/delivery/httpserver/landing"
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	missionhandler "shadowing-backend/internal/delivery/httpserver/mission"
+	podcasthandler "shadowing-backend/internal/delivery/httpserver/podcast"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
+	topicspeakinghandler "shadowing-backend/internal/delivery/httpserver/topicspeaking"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
 	verbhandler "shadowing-backend/internal/delivery/httpserver/verb"
+	videocliphandler "shadowing-backend/internal/delivery/httpserver/videoclip"
+	writinghandler "shadowing-backend/internal/delivery/httpserver/writing"
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
+	analyticsservice "shadowing-backend/internal/service/analytics"
 	assessmentservice "shadowing-backend/internal/service/assessment"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
@@ -47,12 +54,17 @@ import (
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
+	topicspeakingservice "shadowing-backend/internal/service/topicspeaking"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
 	verbservice "shadowing-backend/internal/service/verb"
+	videoclipservice "shadowing-backend/internal/service/videoclip"
 
 	"fmt"
+	courseservice "shadowing-backend/internal/service/course"
+	podcastservice "shadowing-backend/internal/service/podcast"
 	userservice "shadowing-backend/internal/service/user"
+	writingservice "shadowing-backend/internal/service/writing"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -92,6 +104,13 @@ type Service struct {
 
 	realtimePoCHandler realtimepochandler.Handler
 	verbHandler        verbhandler.Handler
+	analyticsHandler   analyticshandler.Handler
+
+	topicSpeakingHandler topicspeakinghandler.Handler
+	videoClipHandler     videocliphandler.Handler
+	podcastHandler       podcasthandler.Handler
+	courseHandler        coursehandler.Handler
+	writingHandler       writinghandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -117,7 +136,12 @@ func New(cfg config.Config, userSvc userservice.Service,
 	aiAccessSvc *aiaccessservice.Service,
 	tokenTopupSvc tokentopupservice.Service,
 	verbSvc *verbservice.Service,
-
+	analyticsSvc analyticsservice.Service,
+	topicSpeakingSvc *topicspeakingservice.Service,
+	videoClipSvc *videoclipservice.Service,
+	writingSvc *writingservice.Service,
+	courseSvc *courseservice.Service,
+	podcastSvc *podcastservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -176,6 +200,14 @@ func New(cfg config.Config, userSvc userservice.Service,
 		landingHandler: landinghandler.New(landingSvc),
 
 		realtimePoCHandler: realtimepochandler.New(settingsSvc, authSvc, authConfig),
+
+		analyticsHandler: analyticshandler.New(analyticsSvc, authSvc, authConfig),
+
+		topicSpeakingHandler: topicspeakinghandler.New(topicSpeakingSvc, authSvc, authConfig, uploadDir),
+		videoClipHandler:     videocliphandler.New(videoClipSvc, authSvc, authConfig),
+		podcastHandler:       podcasthandler.New(podcastSvc, authSvc, authConfig),
+		courseHandler:        coursehandler.New(courseSvc, authSvc, authConfig),
+		writingHandler:       writinghandler.New(writingSvc, authSvc, authConfig),
 	}
 }
 
@@ -258,6 +290,24 @@ func (s Service) Server() {
 	// PoC موقتِ معماری Realtime Voice — نگاه کنید به realtimepoc.Handler
 	s.realtimePoCHandler.SetRealtimePoCRoutes(e)
 	s.verbHandler.SetVerbRoutes(e)
+
+	// آنالیتیکس اپ (ثبت رویداد عمومی + گزارش «آمار» ادمین)
+	s.analyticsHandler.SetAnalyticsRoutes(e)
+
+	// صحبت ۱ تا ۲ دقیقه‌ای درباره‌ی یک موضوع (اپ + مدیریت موضوع‌ها در پنل)
+	s.topicSpeakingHandler.SetTopicSpeakingRoutes(e)
+
+	// تمرین با ویدیو: کلیپ‌ها + جای شخصیت حرف زدن (اپ) و مدیریت کلیپ‌ها (پنل)
+	s.videoClipHandler.SetVideoClipRoutes(e)
+
+	// «پادکست» (گفتگوی دو مجری با متن هم‌زمان؛ صدا در پس‌زمینه) — ببینید podcastservice.
+	s.podcastHandler.SetPodcastRoutes(e)
+
+	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
+	s.courseHandler.SetCourseRoutes(e)
+
+	// «تمرین نوشتن» (داستان کوتاه + تصحیح با AI) — ببینید writingservice.
+	s.writingHandler.SetWritingRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

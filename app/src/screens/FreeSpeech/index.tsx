@@ -14,6 +14,7 @@ import { transcribeFreeSpeech, getFreeSpeechFeedback, type FreeSpeechFeedback } 
 import { ForbiddenError } from '../../api/client';
 import { getAIUsageStatus } from '../../api/aiUsage';
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
+import { track } from '../../services/analytics';
 
 type Phase = 'idle' | 'recording' | 'transcribing' | 'result' | 'error';
 // بازخوردِ ربط/گرامر بعد از نمایشِ متن، جدا لود می‌شود. forbidden یعنی بدون
@@ -162,6 +163,7 @@ export const FreeSpeechScreen: React.FC = () => {
       if (status !== 'stopped' || !filePath || !scenarioId) return;
       setActionCommand('none');
       setPhase('transcribing');
+      track('free_speech_submitted', scenarioId);
       // مرحله‌ی اول: فقط رونویسی. متن که رسید همان لحظه نشان داده می‌شود و
       // بازخوردِ ربط/گرامر جدا، بعدش می‌آید.
       transcribeFreeSpeech(filePath, mimeType)

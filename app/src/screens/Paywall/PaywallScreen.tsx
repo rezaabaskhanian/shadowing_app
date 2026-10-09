@@ -11,6 +11,7 @@ import { useScenes } from '../../data/ScenesContext';
 import { getSubscriptionPlans, verifyPurchase, bonusDaysForPoints, SubscriptionPlan } from '../../api/billing';
 import { getMyPoints } from '../../api/submissions';
 import { CAFEBAZAAR_RSA_KEY } from '../../api/config';
+import { track } from '../../services/analytics';
 
 const formatToman = (n: number) => n.toLocaleString('en-US');
 
@@ -30,6 +31,7 @@ export const PaywallScreen = () => {
   const [redeemPoints, setRedeemPoints] = useState(false);
 
   useEffect(() => {
+    track('paywall_viewed');
     let active = true;
     getSubscriptionPlans()
       .then((list) => {
@@ -67,6 +69,7 @@ export const PaywallScreen = () => {
       // مصرف‌کردن خرید توی کافه‌بازار لازمه وگرنه چون این محصول non-consumable
       // ثبت شده، دفعه‌ی بعد (مثلاً بعد از انقضای اشتراک) دیگه قابل خرید نیست.
       await bazaar.consumePurchase(result.purchaseToken).catch(() => {});
+      track('purchase_completed', selectedPlan.product_id);
       await reload();
       setPhase('success');
     } catch (err) {

@@ -16,6 +16,12 @@ import LandingSectionsPanel from "./LandingSectionsPanel";
 import FeedbackQueue from "./FeedbackQueue";
 import AssessmentPanel from "./AssessmentPanel";
 import VerbsPanel from "./VerbsPanel";
+import AnalyticsPanel from "./AnalyticsPanel";
+import SpeakingTopicsPanel from "./SpeakingTopicsPanel";
+import VideoClipsPanel from "./VideoClipsPanel";
+import WritingPromptsPanel from "./WritingPromptsPanel";
+import CoursePanel from "./CoursePanel";
+import PodcastsPanel from "./PodcastsPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -30,7 +36,13 @@ type Tab =
   | "landing"
   | "feedback"
   | "assessment"
-  | "verbs";
+  | "verbs"
+  | "analytics"
+  | "speakingTopics"
+  | "videoClips"
+  | "writing"
+  | "course"
+  | "podcasts";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -160,6 +172,42 @@ export default function DashboardPage() {
           >
             افعال چندمعنایی
           </button>
+          <button
+            className={`sidebar-link ${tab === "course" ? "active" : ""}`}
+            onClick={() => setTab("course")}
+          >
+            🌱 دوره‌ی شروع
+          </button>
+          <button
+            className={`sidebar-link ${tab === "podcasts" ? "active" : ""}`}
+            onClick={() => setTab("podcasts")}
+          >
+            🎧 پادکست
+          </button>
+          <button
+            className={`sidebar-link ${tab === "videoClips" ? "active" : ""}`}
+            onClick={() => setTab("videoClips")}
+          >
+            🎬 تمرین با ویدیو
+          </button>
+          <button
+            className={`sidebar-link ${tab === "writing" ? "active" : ""}`}
+            onClick={() => setTab("writing")}
+          >
+            ✍️ تمرین نوشتن
+          </button>
+          <button
+            className={`sidebar-link ${tab === "speakingTopics" ? "active" : ""}`}
+            onClick={() => setTab("speakingTopics")}
+          >
+            🎤 صحبت درباره‌ی موضوع
+          </button>
+          <button
+            className={`sidebar-link ${tab === "analytics" ? "active" : ""}`}
+            onClick={() => setTab("analytics")}
+          >
+            📊 آمار اپ
+          </button>
         </nav>
         <div className="sidebar-foot">
           <span className="userbox">{name}</span>
@@ -235,6 +283,12 @@ export default function DashboardPage() {
         {tab === "landing" && <LandingSectionsPanel notify={notify} />}
         {tab === "feedback" && <FeedbackQueue notify={notify} />}
         {tab === "assessment" && <AssessmentPanel notify={notify} />}
+        {tab === "analytics" && <AnalyticsPanel notify={notify} />}
+        {tab === "speakingTopics" && <SpeakingTopicsPanel notify={notify} />}
+        {tab === "videoClips" && <VideoClipsPanel notify={notify} />}
+        {tab === "writing" && <WritingPromptsPanel notify={notify} />}
+        {tab === "course" && <CoursePanel notify={notify} />}
+        {tab === "podcasts" && <PodcastsPanel notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
