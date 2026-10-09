@@ -28,6 +28,10 @@ export interface VideoClip {
   title: string;
   description_fa: string;
   source: 'flow' | 'movie' | string;
+  /** همان دسته‌های صحنه (daily, travel, ...)؛ خالی = بدون دسته. */
+  category?: string;
+  /** نام فیلمِ منبع (فقط برای source=movie). */
+  movie_title?: string;
   video_url: string;
   poster_url: string;
   level: ClipLevel;

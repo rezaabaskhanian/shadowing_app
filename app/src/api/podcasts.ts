@@ -19,6 +19,8 @@ export interface Podcast {
   level: 'beginner' | 'intermediate' | 'advanced';
   audio_url: string;
   duration_seconds: number;
+  /** تصویرِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط؛ خالی = بدون عکس. */
+  cover_url?: string;
   line_count: number;
   vocabulary: { word: string; meaning_fa: string }[];
   lines: PodcastLine[];

@@ -49,6 +49,32 @@ import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
 import { getPendingVerbPractice, type VerbPending } from '../api/verbs';
 import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
+import { HomeContentCard } from '../components/HomeContentCard';
+import { absUrl } from '../api/config';
+import { getVideoClips, type VideoClipListItem } from '../api/videoClips';
+import { getPodcasts, type Podcast } from '../api/podcasts';
+import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
+import { getWritingPrompts, type WritingPrompt } from '../api/writing';
+import { getCourse, type CourseLesson } from '../api/course';
+import { formatDuration } from './Podcast/PodcastListScreen';
+
+// هر بخشِ محتوایی در خانه (مثل «دنیای مکالمات») فقط چند موردِ اول را نشان
+// می‌دهد؛ بقیه از دکمه‌ی «همه».
+const HOME_SECTION_PREVIEW_COUNT = 4;
+
+const LEVEL_LABEL_KEY: Record<string, string> = {
+  beginner: 'levelBeginner',
+  intermediate: 'levelIntermediate',
+  advanced: 'levelAdvanced',
+};
+
+/** درس‌های بعدیِ دوره: از اولین درسِ تمام‌نشده به بعد (درس‌های بدون کارت حذف). */
+const upcomingLessons = (lessons: CourseLesson[]) => {
+  const playable = lessons.filter((l) => l.item_count > 0);
+  const firstOpen = playable.findIndex((l) => !l.completed);
+  const start = firstOpen === -1 ? 0 : firstOpen;
+  return playable.slice(start, start + HOME_SECTION_PREVIEW_COUNT);
+};
 
 // هدف روزانه‌ی تعداد جلسه‌های تمرین — یک مقدار طراحی‌شده‌ی ثابت (مثل «۱۰,۰۰۰
 // قدم» در اپ‌های فیتنس)، نه داده‌ی جعلی کاربر؛ بقیه‌ی مقادیر کارت زیر همه از
@@ -83,6 +109,37 @@ export const HomeScreen = () => {
   const [totalXP, setTotalXP] = React.useState(0);
   const [levelName, setLevelName] = React.useState('');
   const [xpInfoVisible, setXpInfoVisible] = React.useState(false);
+
+  // بخش‌های محتوایی خانه: شکستِ واکشی یا خالی‌بودنِ هر کدام فقط همان بخش را
+  // پنهان می‌کند (ورودی‌شان در دراور همیشه هست).
+  const [clips, setClips] = React.useState<VideoClipListItem[]>([]);
+  const [podcasts, setPodcasts] = React.useState<Podcast[]>([]);
+  const [topics, setTopics] = React.useState<SpeakingTopic[]>([]);
+  const [prompts, setPrompts] = React.useState<WritingPrompt[]>([]);
+  const [courseLessons, setCourseLessons] = React.useState<CourseLesson[]>([]);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      getVideoClips()
+        .then((list) => active && setClips(list))
+        .catch(() => active && setClips([]));
+      getPodcasts()
+        .then((list) => active && setPodcasts(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .catch(() => active && setPodcasts([]));
+      getSpeakingTopics()
+        .then((list) => active && setTopics(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .catch(() => active && setTopics([]));
+      getWritingPrompts()
+        .then((list) => active && setPrompts(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .catch(() => active && setPrompts([]));
+      getCourse()
+        .then((units) => active && setCourseLessons(upcomingLessons(units.flatMap((u) => u.lessons))))
+        .catch(() => active && setCourseLessons([]));
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   // آیتم‌های تست: فقط وقتی ادمین محتوا ساخته باشد پر می‌شوند (وگرنه null، یعنی
   // کل فیچر نامرئی است). برخلاف قبل، مستقل از داشتن/نداشتنِ پروفایلِ فعلی
@@ -256,6 +313,74 @@ export const HomeScreen = () => {
     }
     navigation.navigate('Shadowing', { scenarioId: scenario.id });
   };
+
+  // ویدیوها دو بخشِ جدا دارند: ساخته‌ی خودمان (Google Flow) و تکه‌هایی از فیلم‌ها.
+  const flowClips = clips.filter((c) => c.source !== 'movie').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const movieClips = clips.filter((c) => c.source === 'movie').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  // دوره‌ی شروع برای کاربرِ مبتدی بالای «دنیای مکالمات» می‌آید؛ برای بقیه آخرِ صفحه.
+  const isBeginner = myLevel ? difficultyToLevel(myLevel.scene_level) === 'Beginner' : false;
+
+  const levelLabel = (level?: string) => t(LEVEL_LABEL_KEY[level || ''] || LEVEL_LABEL_KEY.beginner);
+  const seconds = (s: number) => t('topicSpeakingSeconds').replace('{s}', String(s));
+  const best = (attempts: number, score: number) =>
+    attempts > 0 ? ` · ${t('topicSpeakingBest').replace('{score}', String(score))}` : '';
+
+  const renderSectionHeader = (labelKey: string, onSeeAll: () => void) => (
+    <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
+      <Text style={styles.sectionLabel}>{t(labelKey)}</Text>
+      <TouchableOpacity onPress={onSeeAll}>
+        <Text style={styles.viewPathLink}>{t('homeSeeAll')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderClipSection = (labelKey: string, list: VideoClipListItem[], source: 'flow' | 'movie') =>
+    list.length > 0 && (
+      <>
+        {renderSectionHeader(labelKey, () => navigation.navigate('VideoClipList', { source }))}
+        {list.map((clip) => (
+          <HomeContentCard
+            key={clip.id}
+            title={clip.title}
+            subtitle={
+              source === 'movie' && clip.movie_title ? `🎞 ${clip.movie_title}` : clip.description_fa || undefined
+            }
+            meta={
+              (clip.duration_seconds > 0 ? `${seconds(clip.duration_seconds)} · ` : '') +
+              t('videoClipsCharacters').replace('{n}', String(clip.speaker_count)) +
+              best(clip.attempts, clip.best_score)
+            }
+            imageUri={clip.poster_url ? absUrl(clip.poster_url) : undefined}
+            level={clip.level}
+            levelLabel={levelLabel(clip.level)}
+            isCompleted={clip.attempts > 0}
+            onPress={() => navigation.navigate('VideoClip', { clipId: clip.id, openedAt: Date.now() })}
+          />
+        ))}
+      </>
+    );
+
+  const courseSection = courseLessons.length > 0 && (
+    <>
+      {renderSectionHeader('courseTitle', () => navigation.navigate('CourseHome'))}
+      {courseLessons.map((lesson) => (
+        <HomeContentCard
+          key={lesson.id}
+          title={lesson.title_fa || lesson.title_en}
+          subtitle={lesson.goal_fa || lesson.title_en || undefined}
+          meta={lesson.completed ? '⭐'.repeat(Math.max(1, lesson.stars)) : undefined}
+          emoji={lesson.emoji || '🌱'}
+          isCompleted={lesson.completed}
+          isLocked={!lesson.unlocked}
+          onPress={
+            lesson.unlocked
+              ? () => navigation.navigate('CourseLesson', { lessonId: lesson.id, openedAt: Date.now() })
+              : undefined
+          }
+        />
+      ))}
+    </>
+  );
 
   const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
@@ -537,6 +662,8 @@ export const HomeScreen = () => {
           </>
         )}
 
+        {isBeginner && courseSection}
+
         {/* WORLDS SECTION — فقط چند مورد «بعدی» رو پیش‌نمایش می‌ده، نه کل
             مسیر رو؛ وگرنه با صدها صحنه این صفحه خودش یه اسکرول بی‌پایان
             می‌شد. دیدن کل مسیر از دکمه‌ی زیر می‌ره سراغ نقشه. */}
@@ -567,6 +694,70 @@ export const HomeScreen = () => {
             />
           ))}
         </View>
+
+        {renderClipSection('homeFlowVideos', flowClips, 'flow')}
+        {renderClipSection('homeMovieClips', movieClips, 'movie')}
+
+        {podcasts.length > 0 && (
+          <>
+            {renderSectionHeader('podcastTitle', () => navigation.navigate('PodcastList'))}
+            {podcasts.map((p) => (
+              <HomeContentCard
+                key={p.id}
+                title={p.title}
+                subtitle={p.description_fa || undefined}
+                meta={`🎧 ${formatDuration(p.duration_seconds)}`}
+                imageUri={p.cover_url ? absUrl(p.cover_url) : undefined}
+                level={p.level}
+                levelLabel={levelLabel(p.level)}
+                onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
+              />
+            ))}
+          </>
+        )}
+
+        {topics.length > 0 && (
+          <>
+            {renderSectionHeader('topicSpeakingTitle', () => navigation.navigate('TopicList'))}
+            {topics.map((topic) => (
+              <HomeContentCard
+                key={topic.id}
+                title={topic.title}
+                subtitle={topic.prompt_fa || undefined}
+                meta={`🎤 ${seconds(topic.duration_seconds)}${best(topic.attempts, topic.best_score)}`}
+                imageUri={topic.image_url ? absUrl(topic.image_url) : undefined}
+                level={topic.level}
+                levelLabel={levelLabel(topic.level)}
+                isCompleted={topic.attempts > 0}
+                onPress={() => navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() })}
+              />
+            ))}
+          </>
+        )}
+
+        {prompts.length > 0 && (
+          <>
+            {renderSectionHeader('writingTitle', () => navigation.navigate('WritingList'))}
+            {prompts.map((prompt) => (
+              <HomeContentCard
+                key={prompt.id}
+                title={prompt.title}
+                subtitle={prompt.prompt_fa || undefined}
+                meta={`✍️ ${t('writingWords').replace('{n}', `${prompt.min_words}–${prompt.max_words}`)}${best(
+                  prompt.attempts,
+                  prompt.best_score
+                )}`}
+                imageUri={prompt.image_url ? absUrl(prompt.image_url) : undefined}
+                level={prompt.level}
+                levelLabel={levelLabel(prompt.level)}
+                isCompleted={prompt.attempts > 0}
+                onPress={() => navigation.navigate('Writing', { prompt, openedAt: Date.now() })}
+              />
+            ))}
+          </>
+        )}
+
+        {!isBeginner && courseSection}
 
         {/* Bottom padding for tab bar */}
         <View style={{ height: 90 }} />

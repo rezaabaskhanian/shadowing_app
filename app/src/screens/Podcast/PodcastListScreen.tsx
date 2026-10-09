@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Clock, Headphones, X } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
+import { absUrl } from '../../api/config';
 import { getPodcasts, type Podcast } from '../../api/podcasts';
 
 const LEVEL_META: Record<string, { labelKey: string; bg: string }> = {
@@ -83,7 +84,11 @@ export const PodcastListScreen: React.FC = () => {
                 onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
               >
                 <View style={styles.cardIcon}>
-                  <Headphones size={22} color={COLORS.primary} />
+                  {p.cover_url ? (
+                    <Image source={{ uri: absUrl(p.cover_url) }} style={styles.cardCover} />
+                  ) : (
+                    <Headphones size={22} color={COLORS.primary} />
+                  )}
                 </View>
                 <View style={styles.cardBody}>
                   <Text style={styles.cardTitle}>{p.title}</Text>
@@ -177,6 +182,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cardCover: {
+    width: '100%',
+    height: '100%',
   },
   cardBody: {
     flex: 1,

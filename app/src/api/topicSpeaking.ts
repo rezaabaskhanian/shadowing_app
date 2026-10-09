@@ -15,6 +15,8 @@ export interface SpeakingTopic {
   useful_phrases: string[];
   level: TopicLevel;
   duration_seconds: number;
+  /** تصویرِ کارت (از پنل ادمین)؛ خالی = کارت بدون عکس. */
+  image_url?: string;
   attempts: number;
   best_score: number;
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
@@ -55,7 +55,12 @@ export const PodcastScreen: React.FC = () => {
         setPodcast(p);
         await ensureTrackPlayerSetup();
         await TrackPlayer.reset();
-        await TrackPlayer.add({ id: PODCAST_TRACK_ID, url: absUrl(p.audio_url), title: p.title });
+        await TrackPlayer.add({
+          id: PODCAST_TRACK_ID,
+          url: absUrl(p.audio_url),
+          title: p.title,
+          artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
+        });
         if (active) setReady(true);
       })
       .catch(() => active && setLoadError(true));
@@ -170,6 +175,10 @@ export const PodcastScreen: React.FC = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* تصویرِ پادکست (یا صحنه‌ی مرتبط)؛ بدون تصویر چیزی جایش نمی‌آید. */}
+        {!!podcast.cover_url && (
+          <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
+        )}
         {!!podcast.description_fa && <Text style={styles.desc}>{podcast.description_fa}</Text>}
 
         <View style={styles.switchRow}>
@@ -252,6 +261,13 @@ export const PodcastScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  cover: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.surfaceLight,
+    marginBottom: SPACING.m,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

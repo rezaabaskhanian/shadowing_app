@@ -705,6 +705,9 @@ export const translations: Translations = {
   },
 
   lockedBadge: { en: 'Locked', fa: 'قفل' },
+  homeFlowVideos: { en: 'OUR VIDEOS', fa: 'ویدیوهای ما' },
+  homeMovieClips: { en: 'SCENES FROM MOVIES', fa: 'صحنه‌هایی از فیلم‌ها' },
+  homeSeeAll: { en: 'See all', fa: 'همه' },
   homeLevelAllDone: {
     en: "You've finished every scene at your level! See the full path for what's next.",
     fa: 'همه‌ی درس‌های سطحت را تمام کردی! برای ادامه، «مسیر کامل» را ببین.',
@@ -953,6 +956,11 @@ export const translations: Translations = {
   },
   videoClipsLoadError: { en: 'Could not load the videos.', fa: 'ویدیوها بارگذاری نشد.' },
   videoClipsEmpty: { en: 'No videos yet. Check back soon!', fa: 'هنوز ویدیویی اضافه نشده. به‌زودی!' },
+  videoClipsFilterAll: { en: 'All', fa: 'همه' },
+  videoClipsFilterFlow: { en: 'Our videos', fa: 'ساخته‌ی ما' },
+  videoClipsFilterMovie: { en: 'From movies', fa: 'از فیلم‌ها' },
+  videoClipsAllMovies: { en: 'All movies', fa: 'همه‌ی فیلم‌ها' },
+  videoClipsEmptyFilter: { en: 'No videos here yet.', fa: 'هنوز ویدیویی در این بخش نیست.' },
   videoClipsSourceMovie: { en: 'Movie', fa: 'فیلم' },
   videoClipsSourceFlow: { en: 'Scene', fa: 'صحنه' },
   videoClipsCharacters: { en: '{n} characters', fa: '{n} شخصیت' },
