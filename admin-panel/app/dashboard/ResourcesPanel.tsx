@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { deleteResource, getResource, listResources, saveResource } from "@/lib/api";
+import { createScene, deleteResource, getResource, listResources, saveResource } from "@/lib/api";
+import { sceneJsonToPayload } from "@/lib/sceneJson";
 import type { ContentResource, ResourceKind } from "@/lib/types";
 
 const KINDS: { id: ResourceKind; label: string }[] = [
@@ -61,6 +62,7 @@ export default function ResourcesPanel({ notify }: { notify: (msg: string, type?
   const [search, setSearch] = useState("");
   const [kindFilter, setKindFilter] = useState<"" | ResourceKind>("");
   const [viewing, setViewing] = useState<ContentResource | null>(null);
+  const [building, setBuilding] = useState(false);
   const [editing, setEditing] = useState<EditDraft | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +161,36 @@ export default function ResourcesPanel({ notify }: { notify: (msg: string, type?
     }
   }
 
+  // ساخت صحنه از روی فایل: یک صحنه، آرایه‌ای از صحنه‌ها یا { scenes: [...] }.
+  // صحنه‌ی بی‌عکس پیش‌نویس ساخته می‌شود؛ عکس را بعداً از «لیست صحنه‌ها ← ویرایش»
+  // آپلود کن تا نقاط همان جایی که در JSON آمده روی عکس بنشینند.
+  async function buildScenes(targets: ContentResource[]) {
+    if (targets.length === 0) return;
+    setBuilding(true);
+    let created = 0;
+    const failed: string[] = [];
+    for (const r of targets) {
+      try {
+        const full = await getResource(r.id);
+        const c = full.content as any;
+        const scenes: unknown[] = Array.isArray(c) ? c : Array.isArray(c?.scenes) ? c.scenes : [c];
+        for (const [i, raw] of scenes.entries()) {
+          try {
+            await createScene(sceneJsonToPayload(raw));
+            created++;
+          } catch (err: any) {
+            failed.push(`${r.title}${scenes.length > 1 ? ` #${i + 1}` : ""}: ${err.message}`);
+          }
+        }
+      } catch (err: any) {
+        failed.push(`${r.title}: ${err.message}`);
+      }
+    }
+    setBuilding(false);
+    if (created) notify(`${created} صحنه ساخته شد ✅ — در «لیست صحنه‌ها» هستند؛ بی‌عکس‌ها پیش‌نویس‌اند تا عکسشان را آپلود کنی.`);
+    if (failed.length) notify(`ساخته نشد — ${failed.join(" | ")}`, "err");
+  }
+
   async function handleDelete(r: ContentResource) {
     if (!confirm(`فایل «${r.title}» حذف شود؟`)) return;
     try {
@@ -232,6 +264,17 @@ export default function ResourcesPanel({ notify }: { notify: (msg: string, type?
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, minWidth: 220 }}
           />
+          {filtered.length > 1 && (
+            <button
+              className="btn btn-sm btn-ghost"
+              disabled={building}
+              onClick={() =>
+                confirm(`از هر ${filtered.length} فایلِ این لیست صحنه ساخته شود؟`) && buildScenes(filtered)
+              }
+            >
+              {building ? "در حال ساخت..." : `🎬 ساخت صحنه از همه (${filtered.length})`}
+            </button>
+          )}
           <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as "" | ResourceKind)} style={{ width: "auto" }}>
             <option value="">همه‌ی نوع‌ها</option>
             {KINDS.map((k) => (
@@ -309,6 +352,14 @@ export default function ResourcesPanel({ notify }: { notify: (msg: string, type?
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => confirm(`از «${r.title}» صحنه ساخته شود؟`) && buildScenes([r])}
+                      disabled={building}
+                      title="ساخت صحنه (پیش‌نویس اگر عکس ندارد)"
+                    >
+                      🎬 ساخت صحنه
+                    </button>
                     <button className="btn btn-ghost btn-sm" onClick={() => open(r)}>
                       مشاهده
                     </button>
