@@ -12,14 +12,17 @@ ARG NPM_REGISTRY=https://registry.npmjs.org/
 RUN npm config set registry ${NPM_REGISTRY}
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# کشِ دانلودِ npm بین buildها می‌ماند؛ اگر package-lock عوض شود فقط
+# پکیج‌های تازه از اینترنت گرفته می‌شوند. (نیاز به BuildKit؛ پیش‌فرضِ Docker 23+)
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-RUN npm run build
+# کشِ build خودِ Next.js؛ با تغییرِ چند صفحه، فقط همان‌ها دوباره ساخته می‌شوند.
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 FROM ${REGISTRY}/library/node:20-alpine
 

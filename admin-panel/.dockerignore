@@ -1,0 +1,11 @@
+# node_modules و .next داخل خودِ ایمیج (npm ci / npm run build) ساخته می‌شوند؛
+# کپی‌شدنِ نسخه‌ی محلی‌شان هم کند است و هم کشِ «COPY . .» را بی‌دلیل باطل
+# می‌کند. ‎.env.local هم نباید وارد ایمیج شود.
+node_modules
+.next
+.git
+.env*
+tsconfig.tsbuildinfo
+README.md
+Dockerfile
+.dockerignore

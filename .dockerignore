@@ -1,0 +1,15 @@
+# ایمیجِ backend فقط به کدِ Go نیاز دارد (cmd/، internal/، go.mod، go.sum).
+# بدون این فایل کلِ پوشه (اپ موبایل، پنل، لندینگ، آپلودها) به Docker فرستاده
+# می‌شد و هر تغییرِ کوچک در اپ یا پنل، کشِ «COPY . .» را باطل و Go را از اول
+# build می‌کرد.
+.git
+app
+admin-panel
+landing
+whisper-service
+deploy
+scripts
+uploads
+main
+*.md
+docker-compose*.yaml

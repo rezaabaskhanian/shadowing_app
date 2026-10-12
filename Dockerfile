@@ -21,11 +21,16 @@ ARG REGISTRY=docker.io
     WORKDIR /app
 
     COPY go.mod go.sum ./
-    RUN go mod download
+    RUN --mount=type=cache,target=/go/pkg/mod go mod download
     
     COPY . .
     
-    RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/main.go
+    # کشِ build خودِ Go (پکیج‌های کامپایل‌شده) بینِ buildها نگه داشته می‌شود؛
+    # با تغییرِ چند فایل، فقط همان‌ها دوباره کامپایل می‌شوند نه کلِ پروژه و
+    # وابستگی‌هایش. نیاز به BuildKit دارد (پیش‌فرضِ Docker 23 به بعد).
+    RUN --mount=type=cache,target=/go/pkg/mod \
+        --mount=type=cache,target=/root/.cache/go-build \
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/main.go
     
     # -----------------------------
     # مرحله دوم: ساخت ایمیج سبک نهایی
