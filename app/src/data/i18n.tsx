@@ -58,6 +58,7 @@ export const translations: Translations = {
   reviewAgain: { en: 'Review Again', fa: 'مرور دوباره' },
   removeWord: { en: 'Remove from box', fa: 'حذف از جعبه' },
   level: { en: 'Level', fa: 'سطح' },
+  levelStarter: { en: 'First Steps', fa: 'قدم اول' },
   levelBeginner: { en: 'Beginner', fa: 'مبتدی' },
   levelIntermediate: { en: 'Intermediate', fa: 'متوسط' },
   levelAdvanced: { en: 'Advanced', fa: 'پیشرفته' },

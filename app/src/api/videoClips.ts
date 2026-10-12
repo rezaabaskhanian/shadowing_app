@@ -32,6 +32,8 @@ export interface VideoClip {
   category?: string;
   /** نام فیلمِ منبع (فقط برای source=movie). */
   movie_title?: string;
+  /** حاشیه‌ی قطع صدای ویدیو قبل و بعد از جمله‌ی کاربر (ms) — از پنل ادمین. */
+  mute_padding_ms?: number;
   video_url: string;
   poster_url: string;
   level: ClipLevel;

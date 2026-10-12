@@ -29,7 +29,7 @@ const CONTENT_WIDTH = Dimensions.get('window').width - SCREEN_PADDING * 2;
 // ترتیب نمایش سطح‌ها روی نقشه: همیشه از آسان به سخت، صرف‌نظر از اینکه
 // ادمین چه عددی برای "order" هر صحنه گذاشته — چون خودِ درخواست کاربر این
 // بود که نقشه بر اساس سختی مرتب باشه، نه ترتیب خام ادمین.
-const LEVEL_RANK: Record<string, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 };
+const LEVEL_RANK: Record<string, number> = { Starter: 0, Beginner: 1, Intermediate: 2, Advanced: 3 };
 
 type LayoutItem =
   | { kind: 'header'; level: string; top: number }

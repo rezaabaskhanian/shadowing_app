@@ -76,6 +76,8 @@ interface BackendScene {
 
 export function difficultyToLevel(d?: string): string {
   switch ((d || '').trim()) {
+    case 'starter':
+      return 'Starter';
     case 'beginner':
       return 'Beginner';
     case 'intermediate':

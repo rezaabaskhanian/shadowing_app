@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Clock, GraduationCap, Plane, Gauge, Lock, Check } from 'lucide-react-native';
+import { Clock, GraduationCap, Plane, Gauge, Lock, Check, Sprout } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 
+// ترتیب کلیدها همان ترتیب نمایش سطح‌ها (آسان به سخت) در فیلترهاست.
 export const LEVEL_LABEL_KEY: Record<string, string> = {
+  Starter: 'levelStarter',
   Beginner: 'levelBeginner',
   Intermediate: 'levelIntermediate',
   Advanced: 'levelAdvanced',
@@ -22,6 +24,7 @@ interface SceneListCardProps {
 }
 
 export const LEVEL_BADGE_STYLE: Record<string, { bg: string; text: string; Icon: any }> = {
+  Starter: { bg: COLORS.levelStarterBg, text: COLORS.white, Icon: Sprout },
   Beginner: { bg: COLORS.levelBeginnerBg, text: COLORS.white, Icon: GraduationCap },
   Intermediate: { bg: COLORS.levelIntermediateBg, text: COLORS.white, Icon: Plane },
   Advanced: { bg: COLORS.levelAdvancedBg, text: COLORS.white, Icon: Gauge },

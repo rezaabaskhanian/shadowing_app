@@ -12,19 +12,25 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
   BookOpen,
+  Clapperboard,
   Clock,
+  Film,
   Flame,
   Globe,
+  Headphones,
   Menu,
   Mic,
+  PenLine,
   Play,
   Repeat,
   Sparkles,
+  Sprout,
   X,
   Zap,
   Layers,
 } from 'lucide-react-native';
-import { ScenarioCard } from '../components/ScenarioCard';
+import { BENTO_ITEM_COUNT, BENTO_PATTERNS, BentoGrid, BentoSectionHeader, type BentoItem } from '../components/BentoGrid';
+import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY as SCENE_LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
 import { StreakInfoModal } from '../components/StreakInfoModal';
@@ -49,7 +55,6 @@ import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
 import { getPendingVerbPractice, type VerbPending } from '../api/verbs';
 import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
-import { HomeContentCard } from '../components/HomeContentCard';
 import { absUrl } from '../api/config';
 import { getVideoClips, type VideoClipListItem } from '../api/videoClips';
 import { getPodcasts, type Podcast } from '../api/podcasts';
@@ -58,9 +63,17 @@ import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
 import { formatDuration } from './Podcast/PodcastListScreen';
 
-// هر بخشِ محتوایی در خانه (مثل «دنیای مکالمات») فقط چند موردِ اول را نشان
-// می‌دهد؛ بقیه از دکمه‌ی «همه».
-const HOME_SECTION_PREVIEW_COUNT = 4;
+// هر بخشِ محتوایی در خانه فقط چند موردِ اول را در یک شبکه‌ی ناهمگون (مستطیل +
+// مربع‌ها) نشان می‌دهد؛ بقیه از دکمه‌ی «همه».
+const HOME_SECTION_PREVIEW_COUNT = BENTO_ITEM_COUNT;
+
+// رنگِ سطحِ محتواهای غیرصحنه (ویدیو، پادکست، ...) برای بجِ روی کارت.
+const CONTENT_LEVEL_BG: Record<string, string> = {
+  starter: COLORS.levelStarterBg,
+  beginner: COLORS.levelBeginnerBg,
+  intermediate: COLORS.levelIntermediateBg,
+  advanced: COLORS.levelAdvancedBg,
+};
 
 const LEVEL_LABEL_KEY: Record<string, string> = {
   beginner: 'levelBeginner',
@@ -297,7 +310,7 @@ export const HomeScreen = () => {
 
   // پیش‌نمایش خانه: فقط چند صحنه‌ی ناتمامِ سطح کاربر، نه کل مسیر — دیدن
   // همه (با تیکِ تمام‌شده‌ها) از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
-  const HOME_PREVIEW_COUNT = 4;
+  const HOME_PREVIEW_COUNT = HOME_SECTION_PREVIEW_COUNT;
   const homePreviewScenes = myUpcomingScenes.slice(0, HOME_PREVIEW_COUNT);
 
   const toggleLanguage = () => {
@@ -318,69 +331,183 @@ export const HomeScreen = () => {
   const flowClips = clips.filter((c) => c.source !== 'movie').slice(0, HOME_SECTION_PREVIEW_COUNT);
   const movieClips = clips.filter((c) => c.source === 'movie').slice(0, HOME_SECTION_PREVIEW_COUNT);
   // دوره‌ی شروع برای کاربرِ مبتدی بالای «دنیای مکالمات» می‌آید؛ برای بقیه آخرِ صفحه.
-  const isBeginner = myLevel ? difficultyToLevel(myLevel.scene_level) === 'Beginner' : false;
+  const isBeginner = myLevel ? ['Starter', 'Beginner'].includes(difficultyToLevel(myLevel.scene_level)) : false;
 
   const levelLabel = (level?: string) => t(LEVEL_LABEL_KEY[level || ''] || LEVEL_LABEL_KEY.beginner);
   const seconds = (s: number) => t('topicSpeakingSeconds').replace('{s}', String(s));
   const best = (attempts: number, score: number) =>
     attempts > 0 ? ` · ${t('topicSpeakingBest').replace('{score}', String(score))}` : '';
 
-  const renderSectionHeader = (labelKey: string, onSeeAll: () => void) => (
-    <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
-      <Text style={styles.sectionLabel}>{t(labelKey)}</Text>
-      <TouchableOpacity onPress={onSeeAll}>
-        <Text style={styles.viewPathLink}>{t('homeSeeAll')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const contentBadge = (level?: string) => ({
+    label: levelLabel(level),
+    color: CONTENT_LEVEL_BG[level || ''] || CONTENT_LEVEL_BG.beginner,
+  });
+  const uriImage = (path?: string) => (path ? { uri: absUrl(path) } : undefined);
 
-  const renderClipSection = (labelKey: string, list: VideoClipListItem[], source: 'flow' | 'movie') =>
-    list.length > 0 && (
-      <>
-        {renderSectionHeader(labelKey, () => navigation.navigate('VideoClipList', { source }))}
-        {list.map((clip) => (
-          <HomeContentCard
-            key={clip.id}
-            title={clip.title}
-            subtitle={
-              source === 'movie' && clip.movie_title ? `🎞 ${clip.movie_title}` : clip.description_fa || undefined
-            }
-            meta={
-              (clip.duration_seconds > 0 ? `${seconds(clip.duration_seconds)} · ` : '') +
-              t('videoClipsCharacters').replace('{n}', String(clip.speaker_count)) +
-              best(clip.attempts, clip.best_score)
-            }
-            imageUri={clip.poster_url ? absUrl(clip.poster_url) : undefined}
-            level={clip.level}
-            levelLabel={levelLabel(clip.level)}
-            isCompleted={clip.attempts > 0}
-            onPress={() => navigation.navigate('VideoClip', { clipId: clip.id, openedAt: Date.now() })}
-          />
-        ))}
-      </>
-    );
+  const clipItems = (list: VideoClipListItem[], source: 'flow' | 'movie'): BentoItem[] =>
+    list.map((clip) => ({
+      key: clip.id,
+      title: clip.title,
+      subtitle: source === 'movie' && clip.movie_title ? `🎞 ${clip.movie_title}` : clip.description_fa || undefined,
+      meta:
+        (clip.duration_seconds > 0 ? `${seconds(clip.duration_seconds)} · ` : '') +
+        t('videoClipsCharacters').replace('{n}', String(clip.speaker_count)) +
+        best(clip.attempts, clip.best_score),
+      image: uriImage(clip.poster_url),
+      emoji: source === 'movie' ? '🍿' : '🎬',
+      badge: contentBadge(clip.level),
+      completed: clip.attempts > 0,
+      onPress: () => navigation.navigate('VideoClip', { clipId: clip.id, openedAt: Date.now() }),
+    }));
 
-  const courseSection = courseLessons.length > 0 && (
-    <>
-      {renderSectionHeader('courseTitle', () => navigation.navigate('CourseHome'))}
-      {courseLessons.map((lesson) => (
-        <HomeContentCard
-          key={lesson.id}
-          title={lesson.title_fa || lesson.title_en}
-          subtitle={lesson.goal_fa || lesson.title_en || undefined}
-          meta={lesson.completed ? '⭐'.repeat(Math.max(1, lesson.stars)) : undefined}
-          emoji={lesson.emoji || '🌱'}
-          isCompleted={lesson.completed}
-          isLocked={!lesson.unlocked}
-          onPress={
-            lesson.unlocked
-              ? () => navigation.navigate('CourseLesson', { lessonId: lesson.id, openedAt: Date.now() })
-              : undefined
-          }
-        />
-      ))}
-    </>
-  );
+  // بخش‌های خانه به ترتیب نمایش؛ بخشِ خالی کلاً حذف می‌شود و چیدمانِ شبکه
+  // (مستطیل بالا / کارت بلند / مستطیل پایین) بین بخش‌های باقی‌مانده نوبتی است.
+  type HomeSection = {
+    key: string;
+    title: string;
+    icon: React.ReactNode;
+    accent: string;
+    actionLabel: string;
+    onAction: () => void;
+    items: BentoItem[];
+    emptyText?: string;
+  };
+
+  const courseSection: HomeSection = {
+    key: 'course',
+    title: t('courseTitle'),
+    icon: <Sprout size={16} color={COLORS.white} />,
+    accent: COLORS.success,
+    actionLabel: t('homeSeeAll'),
+    onAction: () => navigation.navigate('CourseHome'),
+    items: courseLessons.map((lesson) => ({
+      key: lesson.id,
+      title: lesson.title_fa || lesson.title_en,
+      subtitle: lesson.goal_fa || lesson.title_en || undefined,
+      meta: lesson.completed ? '⭐'.repeat(Math.max(1, lesson.stars)) : undefined,
+      emoji: lesson.emoji || '🌱',
+      completed: lesson.completed,
+      locked: !lesson.unlocked,
+      onPress: lesson.unlocked
+        ? () => navigation.navigate('CourseLesson', { lessonId: lesson.id, openedAt: Date.now() })
+        : undefined,
+    })),
+  };
+
+  const worldsSection: HomeSection = {
+    key: 'worlds',
+    title: t('worlds'),
+    icon: <Globe size={16} color={COLORS.white} />,
+    accent: COLORS.primary,
+    actionLabel: t('viewFullPath'),
+    onAction: () => navigation.navigate('CurriculumMap'),
+    emptyText: myLevel && scenes.length > 0 ? t('homeLevelAllDone') : undefined,
+    items: homePreviewScenes.map((scenario, index) => {
+      const level = scenario.level || 'Beginner';
+      return {
+        key: scenario.id || String(index),
+        title: scenario.title,
+        subtitle: scenario.category && SCENE_CATEGORY_LABEL_KEY[scenario.category]
+          ? t(SCENE_CATEGORY_LABEL_KEY[scenario.category])
+          : undefined,
+        meta: scenario.time || undefined,
+        image: typeof scenario.imageUri === 'string' ? { uri: scenario.imageUri } : scenario.imageUri,
+        emoji: '🌍',
+        badge: {
+          label: t(SCENE_LEVEL_LABEL_KEY[level] || SCENE_LEVEL_LABEL_KEY.Beginner),
+          color: (LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner).bg,
+        },
+        progress: scenario.progress || 0,
+        completed: !!scenario.isCompleted,
+        locked: scenario.isLocked,
+        onPress: () => openScene(scenario),
+      };
+    }),
+  };
+
+  const allHomeSections: HomeSection[] = [
+    ...(isBeginner ? [courseSection] : []),
+    worldsSection,
+    {
+      key: 'flow',
+      title: t('homeFlowVideos'),
+      icon: <Clapperboard size={16} color={COLORS.white} />,
+      accent: COLORS.levelIntermediateBg,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('VideoClipList', { source: 'flow' }),
+      items: clipItems(flowClips, 'flow'),
+    },
+    {
+      key: 'movie',
+      title: t('homeMovieClips'),
+      icon: <Film size={16} color={COLORS.white} />,
+      accent: COLORS.error,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('VideoClipList', { source: 'movie' }),
+      items: clipItems(movieClips, 'movie'),
+    },
+    {
+      key: 'podcast',
+      title: t('podcastTitle'),
+      icon: <Headphones size={16} color={COLORS.white} />,
+      accent: COLORS.audioMine,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('PodcastList'),
+      items: podcasts.map((p) => ({
+        key: p.id,
+        title: p.title,
+        subtitle: p.description_fa || undefined,
+        meta: `🎧 ${formatDuration(p.duration_seconds)}`,
+        image: uriImage(p.cover_url),
+        emoji: '🎧',
+        badge: contentBadge(p.level),
+        onPress: () => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() }),
+      })),
+    },
+    {
+      key: 'topics',
+      title: t('topicSpeakingTitle'),
+      icon: <Mic size={16} color={COLORS.white} />,
+      accent: COLORS.warning,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('TopicList'),
+      items: topics.map((topic) => ({
+        key: topic.id,
+        title: topic.title,
+        subtitle: topic.prompt_fa || undefined,
+        meta: `🎤 ${seconds(topic.duration_seconds)}${best(topic.attempts, topic.best_score)}`,
+        image: uriImage(topic.image_url),
+        emoji: '🗣️',
+        badge: contentBadge(topic.level),
+        completed: topic.attempts > 0,
+        onPress: () => navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() }),
+      })),
+    },
+    {
+      key: 'writing',
+      title: t('writingTitle'),
+      icon: <PenLine size={16} color={COLORS.white} />,
+      accent: COLORS.levelAdvancedBg,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('WritingList'),
+      items: prompts.map((prompt) => ({
+        key: prompt.id,
+        title: prompt.title,
+        subtitle: prompt.prompt_fa || undefined,
+        meta: `✍️ ${t('writingWords').replace('{n}', `${prompt.min_words}–${prompt.max_words}`)}${best(
+          prompt.attempts,
+          prompt.best_score
+        )}`,
+        image: uriImage(prompt.image_url),
+        emoji: '✍️',
+        badge: contentBadge(prompt.level),
+        completed: prompt.attempts > 0,
+        onPress: () => navigation.navigate('Writing', { prompt, openedAt: Date.now() }),
+      })),
+    },
+    ...(!isBeginner ? [courseSection] : []),
+  ];
+  const homeSections = allHomeSections.filter((section) => section.items.length > 0 || !!section.emptyText);
 
   const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
@@ -662,102 +789,26 @@ export const HomeScreen = () => {
           </>
         )}
 
-        {isBeginner && courseSection}
-
-        {/* WORLDS SECTION — فقط چند مورد «بعدی» رو پیش‌نمایش می‌ده، نه کل
-            مسیر رو؛ وگرنه با صدها صحنه این صفحه خودش یه اسکرول بی‌پایان
-            می‌شد. دیدن کل مسیر از دکمه‌ی زیر می‌ره سراغ نقشه. */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionLabel}>{t('worlds')}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('CurriculumMap')}>
-            <Text style={styles.viewPathLink}>{t('viewFullPath')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.worldsList}>
-          {myLevel && homePreviewScenes.length === 0 && scenes.length > 0 && (
-            <Text style={styles.allDoneText}>{t('homeLevelAllDone')}</Text>
-          )}
-          {homePreviewScenes.map((scenario, index) => (
-            <ScenarioCard
-              key={scenario.id || index}
-              title={scenario.title}
-              level={scenario.level || 'Beginner'}
-              progress={scenario.progress || 0}
-              time={scenario.time || '12 min'}
-              imageUri={scenario.imageUri}
-              subtitle={scenario.lesson || scenario.title}
-              sentencesCount={scenario.sentencesCount || 24}
-              isCompleted={!!scenario.isCompleted}
-              isLocked={scenario.isLocked}
-              onPress={() => openScene(scenario)}
+        {homeSections.map((section, index) => (
+          <View key={section.key}>
+            <BentoSectionHeader
+              title={section.title}
+              icon={section.icon}
+              accent={section.accent}
+              actionLabel={section.actionLabel}
+              onAction={section.onAction}
             />
-          ))}
-        </View>
-
-        {renderClipSection('homeFlowVideos', flowClips, 'flow')}
-        {renderClipSection('homeMovieClips', movieClips, 'movie')}
-
-        {podcasts.length > 0 && (
-          <>
-            {renderSectionHeader('podcastTitle', () => navigation.navigate('PodcastList'))}
-            {podcasts.map((p) => (
-              <HomeContentCard
-                key={p.id}
-                title={p.title}
-                subtitle={p.description_fa || undefined}
-                meta={`🎧 ${formatDuration(p.duration_seconds)}`}
-                imageUri={p.cover_url ? absUrl(p.cover_url) : undefined}
-                level={p.level}
-                levelLabel={levelLabel(p.level)}
-                onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
+            {section.items.length === 0 && section.emptyText ? (
+              <Text style={styles.allDoneText}>{section.emptyText}</Text>
+            ) : (
+              <BentoGrid
+                items={section.items}
+                pattern={BENTO_PATTERNS[index % BENTO_PATTERNS.length]}
+                accent={section.accent}
               />
-            ))}
-          </>
-        )}
-
-        {topics.length > 0 && (
-          <>
-            {renderSectionHeader('topicSpeakingTitle', () => navigation.navigate('TopicList'))}
-            {topics.map((topic) => (
-              <HomeContentCard
-                key={topic.id}
-                title={topic.title}
-                subtitle={topic.prompt_fa || undefined}
-                meta={`🎤 ${seconds(topic.duration_seconds)}${best(topic.attempts, topic.best_score)}`}
-                imageUri={topic.image_url ? absUrl(topic.image_url) : undefined}
-                level={topic.level}
-                levelLabel={levelLabel(topic.level)}
-                isCompleted={topic.attempts > 0}
-                onPress={() => navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() })}
-              />
-            ))}
-          </>
-        )}
-
-        {prompts.length > 0 && (
-          <>
-            {renderSectionHeader('writingTitle', () => navigation.navigate('WritingList'))}
-            {prompts.map((prompt) => (
-              <HomeContentCard
-                key={prompt.id}
-                title={prompt.title}
-                subtitle={prompt.prompt_fa || undefined}
-                meta={`✍️ ${t('writingWords').replace('{n}', `${prompt.min_words}–${prompt.max_words}`)}${best(
-                  prompt.attempts,
-                  prompt.best_score
-                )}`}
-                imageUri={prompt.image_url ? absUrl(prompt.image_url) : undefined}
-                level={prompt.level}
-                levelLabel={levelLabel(prompt.level)}
-                isCompleted={prompt.attempts > 0}
-                onPress={() => navigation.navigate('Writing', { prompt, openedAt: Date.now() })}
-              />
-            ))}
-          </>
-        )}
-
-        {!isBeginner && courseSection}
+            )}
+          </View>
+        ))}
 
         {/* Bottom padding for tab bar */}
         <View style={{ height: 90 }} />
@@ -938,22 +989,11 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: 12,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
   sectionLabel: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
     letterSpacing: 1.1,
-  },
-  viewPathLink: {
-    color: COLORS.primary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
   },
   storyCard: {
     height: 200,
@@ -1040,9 +1080,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 6,
-  },
-  worldsList: {
-    gap: 4,
   },
   allDoneText: {
     color: COLORS.textSecondary,

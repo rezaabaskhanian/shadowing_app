@@ -9,6 +9,7 @@ import { LEVEL_LABEL_KEY } from './SceneListCard';
  * بج تا الان همیشه خاکستری خنثی بود؛ استفاده از آن باعث می‌شود سطح از همون
  * نگاه اول با رنگ هم قابل‌تشخیص باشد، نه فقط با متن. */
 const LEVEL_COLOR: Record<string, string> = {
+  Starter: COLORS.levelStarterBg,
   Beginner: COLORS.levelBeginnerBg,
   Intermediate: COLORS.levelIntermediateBg,
   Advanced: COLORS.levelAdvancedBg,

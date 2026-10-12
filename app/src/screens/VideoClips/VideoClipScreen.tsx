@@ -24,9 +24,8 @@ type RecCommand = 'none' | 'start_record' | 'stop_record' | 'play_recording';
 const REC_LEAD_MS = 150;
 /** ...و کمی دیرتر بسته می‌شود تا آخر جمله‌ی کاربر بریده نشود. */
 const REC_TAIL_MS = 450;
-/** صدای ویدیو در این بازه‌ی اطراف خط کاربر قطع است. */
-const MUTE_LEAD_MS = 100;
-const MUTE_TAIL_MS = 200;
+/** صدای ویدیو در این بازه‌ی اطراف خط کاربر قطع است (اگر کلیپ mute_padding_ms نداشت). */
+const DEFAULT_MUTE_PADDING_MS = 250;
 
 interface LineRecording {
   filePath: string;
@@ -212,9 +211,8 @@ export const VideoClipScreen: React.FC = () => {
     if (step !== 'perform') return;
 
     // صدای ویدیو فقط در بازه‌ی خطوط شخصیت انتخابی قطع است.
-    const inMyWindow = myLineIdx.some(
-      (i) => ms >= lines[i].start_ms - MUTE_LEAD_MS && ms <= lines[i].end_ms + MUTE_TAIL_MS
-    );
+    const pad = clip?.mute_padding_ms ?? DEFAULT_MUTE_PADDING_MS;
+    const inMyWindow = myLineIdx.some((i) => ms >= lines[i].start_ms - pad && ms <= lines[i].end_ms + pad);
     if (inMyWindow !== muted) setMuted(inMyWindow);
 
     // پایان ضبط خط فعلی (یا زودتر، اگر خط بعدی خودش بلافاصله شروع می‌شود).

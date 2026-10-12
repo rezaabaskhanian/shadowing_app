@@ -44,6 +44,7 @@ import { useToast } from '../data/ToastContext';
 import { getMyPoints } from '../api/submissions';
 import type { LearningGoal } from '../api/notifications';
 import { setMyLevel, type MyLevel, type SceneLevel } from '../api/assessment';
+import { getCachedAvailability, loadContentAvailability } from '../data/contentAvailability';
 
 const DRAWER_WIDTH = Math.min(320, Dimensions.get('window').width * 0.82);
 
@@ -66,11 +67,12 @@ interface AppDrawerProps {
 }
 
 const SCENE_LEVELS: { id: SceneLevel; labelKey: string }[] = [
+  { id: 'starter', labelKey: 'levelStarter' },
   { id: 'beginner', labelKey: 'levelBeginner' },
   { id: 'intermediate', labelKey: 'levelIntermediate' },
   { id: 'advanced', labelKey: 'levelAdvanced' },
 ];
-const SCENE_LEVEL_RANK: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+const SCENE_LEVEL_RANK: Record<string, number> = { starter: 0, beginner: 1, intermediate: 2, advanced: 3 };
 
 // کشوی کناری (راست) شامل خلاصه کاربر، عادت زبانی، راهنما و خروج از حساب.
 export const AppDrawer = ({
@@ -118,6 +120,8 @@ export const AppDrawer = ({
     setWeeklyDigestEnabled,
   } = useNotifications();
   const [points, setPoints] = useState(0);
+  // بخش‌های تازه فقط وقتی در منو می‌آیند که ادمین برایشان محتوا ساخته باشد.
+  const [available, setAvailable] = useState(getCachedAvailability);
   const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
 
   // مودال فقط وقتی صفحه‌ی میزبان (مثلاً Home) فوکوس داره نمایش داده میشه؛
@@ -129,6 +133,9 @@ export const AppDrawer = ({
     if (modalVisible) {
       getMyPoints()
         .then(setPoints)
+        .catch(() => {});
+      loadContentAvailability()
+        .then(setAvailable)
         .catch(() => {});
       Animated.timing(translateX, {
         toValue: 0,
@@ -253,60 +260,70 @@ export const AppDrawer = ({
             <Text style={styles.rowText}>{t('drawerConversationTitle')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('CourseHome')}
-          >
-            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
-              <Sprout color={COLORS.success} size={18} />
-            </View>
-            <Text style={styles.rowText}>{t('courseTitle')}</Text>
-          </TouchableOpacity>
+          {available.course && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => go('CourseHome')}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
+                <Sprout color={COLORS.success} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('courseTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('VideoClipList')}
-          >
-            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
-              <Clapperboard color={COLORS.error} size={18} />
-            </View>
-            <Text style={styles.rowText}>{t('videoClipsTitle')}</Text>
-          </TouchableOpacity>
+          {available.videoClips && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => go('VideoClipList')}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
+                <Clapperboard color={COLORS.error} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('videoClipsTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('PodcastList')}
-          >
-            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
-              <Headphones color={COLORS.primary} size={18} />
-            </View>
-            <Text style={styles.rowText}>{t('podcastTitle')}</Text>
-          </TouchableOpacity>
+          {available.podcasts && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => go('PodcastList')}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                <Headphones color={COLORS.primary} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('podcastTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('WritingList')}
-          >
-            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
-              <PenLine color={COLORS.info} size={18} />
-            </View>
-            <Text style={styles.rowText}>{t('writingTitle')}</Text>
-          </TouchableOpacity>
+          {available.writing && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => go('WritingList')}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+                <PenLine color={COLORS.info} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('writingTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => go('TopicList')}
-          >
-            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
-              <Mic color={COLORS.secondary} size={18} />
-            </View>
-            <Text style={styles.rowText}>{t('topicSpeakingTitle')}</Text>
-          </TouchableOpacity>
+          {available.topicSpeaking && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => go('TopicList')}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
+                <Mic color={COLORS.secondary} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('topicSpeakingTitle')}</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.row}
