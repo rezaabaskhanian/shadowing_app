@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronRight, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw } from 'lucide-react-native';
+import { ChevronRight, Headphones, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw } from 'lucide-react-native';
 
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -13,6 +13,8 @@ interface LessonCompleteModalProps {
   onStartFreeSpeech: () => void;
   onPracticeAgain: () => void;
   onBackHome: () => void;
+  /** اگر برای این صحنه پادکست هست، گزینه‌ی «پادکست همین صحنه» اول لیست می‌آید. */
+  onListenPodcast?: () => void;
 }
 
 /**
@@ -29,10 +31,14 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
   onStartFreeSpeech,
   onPracticeAgain,
   onBackHome,
+  onListenPodcast,
 }) => {
   const { t } = useLanguage();
 
   const options: { key: string; Icon: typeof ListChecks; label: string; onPress: () => void }[] = [
+    ...(onListenPodcast
+      ? [{ key: 'podcast', Icon: Headphones, label: t('listenScenePodcast'), onPress: onListenPodcast }]
+      : []),
     { key: 'quiz', Icon: ListChecks, label: t('startQuiz'), onPress: onStartQuiz },
     { key: 'ai', Icon: MessageCircle, label: t('startAiConversation'), onPress: onStartAiConversation },
     { key: 'free', Icon: Mic, label: t('startFreeSpeech'), onPress: onStartFreeSpeech },

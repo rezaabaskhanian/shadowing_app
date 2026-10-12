@@ -32,6 +32,8 @@ func (h Handler) SetPodcastRoutes(e *echo.Echo) {
 	admin.GET("", h.AdminList)
 	admin.POST("", h.AdminCreate)
 	admin.POST("/generate-script", h.AdminGenerateScript)
+	admin.GET("/level-presets", h.AdminGetLevelPresets)
+	admin.PUT("/level-presets", h.AdminSaveLevelPresets)
 	admin.GET("/:id", h.AdminGet)
 	admin.PUT("/:id", h.AdminUpdate)
 	admin.DELETE("/:id", h.AdminDelete)
@@ -86,20 +88,29 @@ func (h Handler) AdminDelete(c echo.Context) error {
 }
 
 func (h Handler) AdminGenerateScript(c echo.Context) error {
-	var req struct {
-		Topic   string `json:"topic"`
-		Scene   string `json:"scene"`
-		Level   string `json:"level"`
-		Minutes int    `json:"minutes"`
-	}
+	var req podcastservice.ScriptRequest
 	if err := c.Bind(&req); err != nil {
 		return badRequest(c)
 	}
-	res, err := h.svc.AdminGenerateScript(c.Request().Context(), req.Topic, req.Scene, req.Level, req.Minutes)
+	res, err := h.svc.AdminGenerateScript(c.Request().Context(), req)
 	return respond(c, res, err)
 }
 
 func (h Handler) AdminGenerateAudio(c echo.Context) error {
 	p, err := h.svc.AdminGenerateAudio(c.Request().Context(), c.Param("id"))
 	return respond(c, p, err)
+}
+
+// AdminGetLevelPresets پیش‌فرض‌های ساختِ پادکست برای هر سطح.
+func (h Handler) AdminGetLevelPresets(c echo.Context) error {
+	return c.JSON(http.StatusOK, h.svc.LevelPresets())
+}
+
+func (h Handler) AdminSaveLevelPresets(c echo.Context) error {
+	var req map[string]podcastservice.LevelPreset
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	res, err := h.svc.AdminSaveLevelPresets(c.Request().Context(), req)
+	return respond(c, res, err)
 }

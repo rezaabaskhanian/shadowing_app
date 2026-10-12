@@ -16,7 +16,11 @@ export interface Podcast {
   id: string;
   title: string;
   description_fa: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
+  level: 'starter' | 'beginner' | 'intermediate' | 'advanced';
+  /** صحنه‌ای که پادکست درباره‌ی آن است (بعد از تمام شدن صحنه پیشنهاد می‌شود). */
+  scene_id?: string;
+  /** lesson = درسی، featured = منتخب (موضوع آزاد، بی‌ربط به درس‌ها). */
+  kind?: 'lesson' | 'featured';
   audio_url: string;
   duration_seconds: number;
   /** تصویرِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط؛ خالی = بدون عکس. */

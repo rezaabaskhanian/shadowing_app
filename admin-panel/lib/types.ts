@@ -619,10 +619,15 @@ export interface Podcast {
   id: string;
   title: string;
   description_fa: string;
-  level: "beginner" | "intermediate" | "advanced";
+  level: "starter" | "beginner" | "intermediate" | "advanced";
+  /** lesson = درسی (صحنه/موضوع درس‌ها)، featured = منتخب (موضوع آزاد و جذاب). */
+  kind: "lesson" | "featured";
   scene_id: string;
   vocabulary: { word: string; meaning_fa: string }[];
   voices: Record<string, string>;
+  /** سرعت گفتار TTS (۰٫۷ تا ۱٫۲) و مکث بین جمله‌ها؛ ۰ = پیش‌فرض سطح. */
+  speech_speed: number;
+  line_gap_ms: number;
   audio_url: string;
   audio_status: "none" | "generating" | "ready" | "failed";
   audio_error: string;
@@ -677,4 +682,14 @@ export interface IdiomImportResult {
   created: number;
   updated: number;
   skipped: number;
+}
+
+/** پیش‌فرض‌های ساخت پادکست برای هر سطح (پنل ← تنظیمات سطح‌ها). */
+export interface PodcastLevelPreset {
+  max_words_per_sentence: number; // ۰ = آزاد
+  min_lines: number;
+  max_lines: number;
+  new_vocab: number;
+  speech_speed: number;
+  line_gap_ms: number;
 }

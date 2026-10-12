@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { Mic, Pause, Play, RotateCcw, RotateCw, X } from 'lucide-react-native';
+import { Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -17,7 +17,7 @@ import { track } from '../../services/analytics';
 import { formatDuration } from './PodcastListScreen';
 import { KaraokeText } from '../../components/KaraokeText';
 
-const RATES = [0.75, 1, 1.25];
+const RATES = [0.5, 0.75, 1, 1.25];
 const PODCAST_TRACK_ID = 'podcast';
 
 /**
@@ -41,6 +41,10 @@ export const PodcastScreen: React.FC = () => {
   const [rate, setRate] = useState(1);
   const [showTranslation, setShowTranslation] = useState(false);
   const trackedRef = useRef(false);
+  // تکرار جمله: وقتی روشن است، با رسیدن به پایانِ جمله‌ی فعلی دوباره از اولش پخش می‌شود.
+  const [repeatLine, setRepeatLine] = useState(false);
+  const repeatRef = useRef<{ on: boolean; start: number; end: number }>({ on: false, start: 0, end: 0 });
+  const [trackWidth, setTrackWidth] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
   const lastActive = useRef(-1);
@@ -86,6 +90,13 @@ export const PodcastScreen: React.FC = () => {
   useEffect(() => {
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
       const ms = Math.round(d.position * 1000);
+      const rep = repeatRef.current;
+      if (rep.on && rep.end > rep.start && ms >= rep.end) {
+        positionSV.value = rep.start;
+        setPositionMs(rep.start);
+        TrackPlayer.seekTo(rep.start / 1000).catch(() => {});
+        return;
+      }
       positionSV.value = ms;
       setPositionMs(ms);
     });
@@ -138,6 +149,9 @@ export const PodcastScreen: React.FC = () => {
 
   const seekToLine = async (startMs: number) => {
     if (!ready) return;
+    // پرش به جمله‌ی دیگر یعنی تکرارِ جمله‌ی قبلی تمام شد.
+    repeatRef.current = { on: false, start: 0, end: 0 };
+    setRepeatLine(false);
     await TrackPlayer.seekTo(startMs / 1000);
     positionSV.value = startMs;
     setPositionMs(startMs);
@@ -152,6 +166,40 @@ export const PodcastScreen: React.FC = () => {
 
   const lines = podcast?.lines ?? [];
   const activeIdx = lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 350);
+
+  // جمله‌ی قبلی/بعدی: اگر بیش از یک ثانیه از جمله‌ی فعلی گذشته، «قبلی» همین جمله را از اول پخش می‌کند.
+  const prevLine = () => {
+    const idx = lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 350);
+    if (idx >= 0 && positionMs - lines[idx].start_ms > 1000) return seekToLine(lines[idx].start_ms);
+    const before = [...lines].reverse().find((l) => l.start_ms < positionMs - 200 && l !== lines[idx]);
+    return seekToLine(before ? before.start_ms : 0);
+  };
+  const nextLine = () => {
+    const after = lines.find((l) => l.start_ms > positionMs + 100);
+    if (after) seekToLine(after.start_ms);
+  };
+
+  const toggleRepeat = () => {
+    const line = lines[activeIdx];
+    if (repeatLine || !line) {
+      repeatRef.current = { on: false, start: 0, end: 0 };
+      setRepeatLine(false);
+      return;
+    }
+    repeatRef.current = { on: true, start: line.start_ms, end: line.end_ms + 150 };
+    setRepeatLine(true);
+  };
+
+  // لمس هر جای نوار پیشرفت = پرش به همان لحظه.
+  const seekToFraction = async (x: number) => {
+    if (!ready || !podcast) return;
+    const ms = Math.max(0, Math.min(1, x / trackWidth)) * podcast.duration_seconds * 1000;
+    repeatRef.current = { on: false, start: 0, end: 0 };
+    setRepeatLine(false);
+    positionSV.value = ms;
+    setPositionMs(ms);
+    await TrackPlayer.seekTo(ms / 1000);
+  };
 
   // جمله‌ی در حال پخش همیشه در دید بماند.
   useEffect(() => {
@@ -267,16 +315,26 @@ export const PodcastScreen: React.FC = () => {
       </ScrollView>
 
       <View style={[styles.player, { paddingBottom: insets.bottom + SPACING.m }]}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-        </View>
+        <TouchableOpacity
+          activeOpacity={1}
+          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width || 1)}
+          onPress={(e) => seekToFraction(e.nativeEvent.locationX)}
+          style={styles.progressHit}
+        >
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          </View>
+        </TouchableOpacity>
         <View style={styles.timeRow}>
           <Text style={styles.time}>{formatDuration(positionMs / 1000)}</Text>
           <Text style={styles.time}>{formatDuration(podcast.duration_seconds)}</Text>
         </View>
         <View style={styles.controls}>
-          <TouchableOpacity onPress={() => seekBy(-10)} disabled={!ready} activeOpacity={0.8}>
-            <RotateCcw size={26} color={COLORS.text} />
+          <TouchableOpacity onPress={prevLine} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
+            <SkipBack size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => seekBy(-10)} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
+            <RotateCcw size={24} color={COLORS.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.playBtn} onPress={togglePlay} disabled={!ready} activeOpacity={0.85}>
             {!ready ? (
@@ -287,11 +345,22 @@ export const PodcastScreen: React.FC = () => {
               <Play size={28} color={COLORS.white} fill={COLORS.white} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => seekBy(10)} disabled={!ready} activeOpacity={0.8}>
-            <RotateCw size={26} color={COLORS.text} />
+          <TouchableOpacity onPress={() => seekBy(10)} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
+            <RotateCw size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={nextLine} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
+            <SkipForward size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
         <View style={styles.rates}>
+          <TouchableOpacity
+            style={[styles.rateBtn, repeatLine && styles.rateBtnActive]}
+            onPress={toggleRepeat}
+            disabled={!ready || (activeIdx < 0 && !repeatLine)}
+            activeOpacity={0.85}
+          >
+            <Repeat1 size={14} color={repeatLine ? COLORS.white : COLORS.textSecondary} />
+          </TouchableOpacity>
           {RATES.map((r) => (
             <TouchableOpacity
               key={r}
@@ -480,7 +549,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.xl,
+    gap: SPACING.l,
+  },
+  progressHit: {
+    paddingVertical: 8,
   },
   playBtn: {
     width: 64,

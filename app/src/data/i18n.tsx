@@ -1084,6 +1084,12 @@ export const translations: Translations = {
     fa: 'قسمت‌های کوتاه با متن کامل — گوش کن و عبارت‌های تازه یاد بگیر',
   },
   podcastLoadError: { en: 'Could not load the podcast.', fa: 'پادکست بارگذاری نشد.' },
+  podcastFeaturedTitle: { en: 'Featured podcasts', fa: 'پادکست‌های منتخب' },
+  podcastLessonsTitle: { en: 'Lesson podcasts', fa: 'پادکست‌های درسی' },
+  podcastFilterAll: { en: 'All', fa: 'همه' },
+  podcastFilterLessons: { en: 'Lessons', fa: 'درسی' },
+  podcastFilterFeatured: { en: 'Featured', fa: 'منتخب' },
+  listenScenePodcast: { en: 'Listen to this scene\'s podcast', fa: 'پادکست همین صحنه را گوش بده' },
   myVersionTitle: { en: 'My version', fa: 'نسخه‌ی من' },
   myVersionButton: { en: 'Record my version', fa: 'نسخه‌ی خودم را بسازم' },
   myVersionPickHint: {

@@ -422,7 +422,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	videoClipSvc := videoclipservice.New(postgresvideoclip.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), store, speecheval.NewGroqClient(settingsSvc), settingsSvc)
 
 	// «پادکست» (گفتگوی دو مجری با متن هم‌زمان؛ صدا در پس‌زمینه) — ببینید podcastservice.
-	podcastSvc := podcastservice.New(postgrespodcast.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)
+	podcastSvc := podcastservice.New(postgrespodcast.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store, settingsSvc)
 
 	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
 	courseSvc := courseservice.New(postgrescourse.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)

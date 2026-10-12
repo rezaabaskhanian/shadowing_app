@@ -36,13 +36,14 @@ type Podcast = postgrespodcast.Podcast
 type Line = postgrespodcast.Line
 
 type Service struct {
-	repo  repository
-	ai    aiservice.Service
-	tts   ttsservice.Service
-	store filestore.Store
+	repo     repository
+	ai       aiservice.Service
+	tts      ttsservice.Service
+	store    filestore.Store
+	settings settingsStore
 }
 
-func New(repo repository, ai aiservice.Service, tts ttsservice.Service, store filestore.Store) *Service {
+func New(repo repository, ai aiservice.Service, tts ttsservice.Service, store filestore.Store, settings settingsStore) *Service {
 	// ساختی که با ری‌استارت سرور نیمه‌کاره ماند، برای همیشه «در حال ساخت» نماند
 	// (تک‌instance است، پس هر generating موقع بالا آمدن یعنی ساخت قطع‌شده).
 	go func() {
@@ -50,7 +51,7 @@ func New(repo repository, ai aiservice.Service, tts ttsservice.Service, store fi
 			slog.Warn("podcast: reset stuck generations failed", "err", err)
 		}
 	}()
-	return &Service{repo: repo, ai: ai, tts: tts, store: store}
+	return &Service{repo: repo, ai: ai, tts: tts, store: store, settings: settings}
 }
 
 func parseID(op richerror.Op, id string) error {
@@ -95,7 +96,7 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Podcast, error) {
 	return s.repo.Get(ctx, id)
 }
 
-var validLevels = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
+var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
 
 func sameScript(a, b []Line) bool {
 	if len(a) != len(b) {
@@ -123,6 +124,9 @@ func (s *Service) AdminSave(ctx context.Context, id string, p Podcast) (Podcast,
 	}
 	if !validLevels[p.Level] {
 		p.Level = "beginner"
+	}
+	if p.Kind != "featured" {
+		p.Kind = "lesson"
 	}
 	if p.SceneID != "" {
 		if err := parseID(op, p.SceneID); err != nil {
@@ -154,6 +158,16 @@ func (s *Service) AdminSave(ctx context.Context, id string, p Podcast) (Podcast,
 	if p.Voices == nil {
 		p.Voices = map[string]string{}
 	}
+	// سرعت/مکثِ صفر یعنی «پیش‌فرضِ سطح» (پادکست‌های قدیمی و درخواست‌های بدون این دو).
+	preset := s.LevelPresets()[p.Level]
+	if p.SpeechSpeed == 0 {
+		p.SpeechSpeed = preset.SpeechSpeed
+	}
+	p.SpeechSpeed = clampFloat(p.SpeechSpeed, 0.7, 1.2)
+	if p.LineGapMs <= 0 {
+		p.LineGapMs = preset.LineGapMs
+	}
+	p.LineGapMs = clampInt(p.LineGapMs, 0, 3000)
 
 	keepAudio := false
 	if id != "" {
@@ -167,7 +181,8 @@ func (s *Service) AdminSave(ctx context.Context, id string, p Podcast) (Podcast,
 		if old.AudioStatus == "generating" {
 			return invalid("صدای این پادکست در حال ساخت است؛ چند دقیقه بعد ذخیره کن")
 		}
-		keepAudio = old.AudioStatus == "ready" && sameScript(old.Lines, p.Lines) && sameVoices(old.Voices, p.Voices)
+		keepAudio = old.AudioStatus == "ready" && sameScript(old.Lines, p.Lines) && sameVoices(old.Voices, p.Voices) &&
+			old.SpeechSpeed == p.SpeechSpeed && old.LineGapMs == p.LineGapMs
 		if p.IsActive && !keepAudio {
 			p.IsActive = false // بدون صدای آماده نمی‌شود منتشر کرد
 		}
@@ -206,19 +221,56 @@ func (s *Service) AdminDelete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
+// ScriptRequest ورودیِ نوشتنِ متن: موضوع و/یا زمینه (صحنه‌ی اپ یا یکی از
+// فایل‌های کتابخانه‌ی محتوا)، سطح و تنظیماتِ سختی (پیش‌فرضِ سطح، قابل تغییر).
+type ScriptRequest struct {
+	Topic               string `json:"topic"`
+	Scene               string `json:"scene"`
+	Source              string `json:"source"`
+	Level               string `json:"level"`
+	MaxWordsPerSentence int    `json:"max_words_per_sentence"`
+	MinLines            int    `json:"min_lines"`
+	MaxLines            int    `json:"max_lines"`
+	NewVocab            int    `json:"new_vocab"`
+	Kind                string `json:"kind"`
+}
+
+// maxSourceChars سقفِ متنِ منبع که به AI فرستاده می‌شود (هزینه و طولِ ورودی).
+const maxSourceChars = 12000
+
 // AdminGenerateScript متن پادکست را با AI می‌نویسد (چیزی ذخیره نمی‌کند).
-func (s *Service) AdminGenerateScript(ctx context.Context, topic, sceneContext, level string, minutes int) (aiservice.PodcastScript, error) {
+func (s *Service) AdminGenerateScript(ctx context.Context, req ScriptRequest) (aiservice.PodcastScript, error) {
 	const op = "podcast.AdminGenerateScript"
-	if strings.TrimSpace(topic) == "" && strings.TrimSpace(sceneContext) == "" {
-		return aiservice.PodcastScript{}, richerror.New(op).WithMessage("موضوع بنویس یا یک صحنه انتخاب کن").WithKind(richerror.KindInvalid)
+	req.Source = strings.TrimSpace(req.Source)
+	if len(req.Source) > maxSourceChars {
+		req.Source = req.Source[:maxSourceChars]
 	}
-	if !validLevels[level] {
-		level = "beginner"
+	if strings.TrimSpace(req.Topic) == "" && strings.TrimSpace(req.Scene) == "" && req.Source == "" {
+		return aiservice.PodcastScript{}, richerror.New(op).WithMessage("موضوع بنویس، یا یک صحنه یا منبع انتخاب کن").WithKind(richerror.KindInvalid)
 	}
-	if minutes < 1 || minutes > 8 {
-		minutes = 3
+	if !validLevels[req.Level] {
+		req.Level = "beginner"
 	}
-	res, err := s.ai.GeneratePodcastScript(ctx, topic, sceneContext, level, minutes)
+	preset := s.LevelPresets()[req.Level]
+	if req.MaxWordsPerSentence != 0 || req.MinLines != 0 || req.MaxLines != 0 {
+		preset.MaxWordsPerSentence = req.MaxWordsPerSentence
+		preset.MinLines, preset.MaxLines = req.MinLines, req.MaxLines
+	}
+	if req.NewVocab != 0 {
+		preset.NewVocab = req.NewVocab
+	}
+	preset = preset.normalize()
+	res, err := s.ai.GeneratePodcastScript(ctx, aiservice.PodcastScriptInput{
+		Topic:               req.Topic,
+		Scene:               req.Scene,
+		Source:              req.Source,
+		Level:               req.Level,
+		MaxWordsPerSentence: preset.MaxWordsPerSentence,
+		MinLines:            preset.MinLines,
+		MaxLines:            preset.MaxLines,
+		NewVocab:            preset.NewVocab,
+		Featured:            req.Kind == "featured",
+	})
 	if err != nil {
 		return res, richerror.New(op).WithErr(err).WithMessage("نوشتن متن پادکست ناموفق بود، دوباره امتحان کن")
 	}
@@ -280,12 +332,16 @@ func (s *Service) buildAudio(p Podcast) {
 
 	voices := s.voicesFor(ctx, p)
 	bytesPerMs := podcastSampleRate * 2 / 1000
-	gap := make([]byte, podcastGapMs*bytesPerMs)
+	gapMs := p.LineGapMs
+	if gapMs <= 0 {
+		gapMs = podcastGapMs
+	}
+	gap := make([]byte, gapMs*bytesPerMs)
 
 	var pcm []byte
 	timings := make(map[string][2]int, len(p.Lines))
 	for i, l := range p.Lines {
-		a, err := s.tts.GenerateSpeech(ctx, l.Text, voices[l.Speaker], 0)
+		a, err := s.tts.GenerateSpeech(ctx, l.Text, voices[l.Speaker], p.SpeechSpeed)
 		if err != nil {
 			fail(fmt.Sprintf("ساخت صدای جمله‌ی %d ناموفق بود", i+1), err)
 			return

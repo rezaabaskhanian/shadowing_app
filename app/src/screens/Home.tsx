@@ -22,6 +22,7 @@ import {
   Mic,
   PenLine,
   Play,
+  Radio,
   Repeat,
   Sparkles,
   Sprout,
@@ -76,6 +77,7 @@ const CONTENT_LEVEL_BG: Record<string, string> = {
 };
 
 const LEVEL_LABEL_KEY: Record<string, string> = {
+  starter: 'levelStarter',
   beginner: 'levelBeginner',
   intermediate: 'levelIntermediate',
   advanced: 'levelAdvanced',
@@ -137,7 +139,7 @@ export const HomeScreen = () => {
         .then((list) => active && setClips(list))
         .catch(() => active && setClips([]));
       getPodcasts()
-        .then((list) => active && setPodcasts(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .then((list) => active && setPodcasts(list))
         .catch(() => active && setPodcasts([]));
       getSpeakingTopics()
         .then((list) => active && setTopics(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
@@ -360,6 +362,21 @@ export const HomeScreen = () => {
       onPress: () => navigation.navigate('VideoClip', { clipId: clip.id, openedAt: Date.now() }),
     }));
 
+  // پادکست‌ها دو بخشِ جدا دارند: درسی (درباره‌ی صحنه/موضوعِ درس‌ها) و منتخب (موضوعِ آزاد).
+  const lessonPodcasts = podcasts.filter((p) => p.kind !== 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const featuredPodcasts = podcasts.filter((p) => p.kind === 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const podcastItems = (list: Podcast[], emoji: string): BentoItem[] =>
+    list.map((p) => ({
+      key: p.id,
+      title: p.title,
+      subtitle: p.description_fa || undefined,
+      meta: `🎧 ${formatDuration(p.duration_seconds)}`,
+      image: uriImage(p.cover_url),
+      emoji,
+      badge: contentBadge(p.level),
+      onPress: () => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() }),
+    }));
+
   // بخش‌های خانه به ترتیب نمایش؛ بخشِ خالی کلاً حذف می‌شود و چیدمانِ شبکه
   // (مستطیل بالا / کارت بلند / مستطیل پایین) بین بخش‌های باقی‌مانده نوبتی است.
   type HomeSection = {
@@ -448,21 +465,21 @@ export const HomeScreen = () => {
     },
     {
       key: 'podcast',
-      title: t('podcastTitle'),
+      title: featuredPodcasts.length > 0 ? t('podcastLessonsTitle') : t('podcastTitle'),
       icon: <Headphones size={16} color={COLORS.white} />,
       accent: COLORS.audioMine,
       actionLabel: t('homeSeeAll'),
-      onAction: () => navigation.navigate('PodcastList'),
-      items: podcasts.map((p) => ({
-        key: p.id,
-        title: p.title,
-        subtitle: p.description_fa || undefined,
-        meta: `🎧 ${formatDuration(p.duration_seconds)}`,
-        image: uriImage(p.cover_url),
-        emoji: '🎧',
-        badge: contentBadge(p.level),
-        onPress: () => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() }),
-      })),
+      onAction: () => navigation.navigate('PodcastList', { kind: 'lesson' }),
+      items: podcastItems(lessonPodcasts, '🎧'),
+    },
+    {
+      key: 'featuredPodcast',
+      title: t('podcastFeaturedTitle'),
+      icon: <Radio size={16} color={COLORS.white} />,
+      accent: COLORS.pink,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('PodcastList', { kind: 'featured' }),
+      items: podcastItems(featuredPodcasts, '⭐'),
     },
     {
       key: 'topics',

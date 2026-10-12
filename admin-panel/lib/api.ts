@@ -1,4 +1,5 @@
 import type {
+  PodcastLevelPreset,
   ContentResource,
   Idiom,
   IdiomImportResult,
@@ -938,10 +939,26 @@ export async function deletePodcast(id: string): Promise<void> {
 export async function generatePodcastScript(payload: {
   topic: string;
   scene: string;
+  /** متن یکی از فایل‌های کتابخانه‌ی محتوا (درس/صحنه). */
+  source?: string;
   level: string;
-  minutes: number;
+  max_words_per_sentence: number;
+  min_lines: number;
+  max_lines: number;
+  new_vocab: number;
+  kind: string;
 }): Promise<PodcastScript> {
   return jsonOrThrow(await authFetch("/v1/admin/podcasts/generate-script", jsonBody("POST", payload)));
+}
+
+export async function getPodcastLevelPresets(): Promise<Record<string, PodcastLevelPreset>> {
+  return jsonOrThrow(await authFetch("/v1/admin/podcasts/level-presets", { method: "GET" }));
+}
+
+export async function savePodcastLevelPresets(
+  presets: Record<string, PodcastLevelPreset>
+): Promise<Record<string, PodcastLevelPreset>> {
+  return jsonOrThrow(await authFetch("/v1/admin/podcasts/level-presets", jsonBody("PUT", presets)));
 }
 
 /** ساخت صدا در پس‌زمینه شروع می‌شود؛ وضعیت را با getPodcast دنبال کن. */

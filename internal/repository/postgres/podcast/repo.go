@@ -35,10 +35,12 @@ type Line struct {
 }
 
 type Podcast struct {
-	ID              string            `json:"id"`
-	Title           string            `json:"title"`
-	DescriptionFa   string            `json:"description_fa"`
-	Level           string            `json:"level"`
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	DescriptionFa string `json:"description_fa"`
+	Level         string `json:"level"`
+	// Kind: lesson (درسی) یا featured (منتخب، موضوع آزاد و بی‌ربط به درس‌ها).
+	Kind            string            `json:"kind"`
 	SceneID         string            `json:"scene_id"`
 	Vocabulary      []VocabItem       `json:"vocabulary"`
 	Voices          map[string]string `json:"voices"`
@@ -47,6 +49,9 @@ type Podcast struct {
 	AudioError      string            `json:"audio_error"`
 	DurationSeconds int               `json:"duration_seconds"`
 	ImageURL        string            `json:"image_url"`
+	// SpeechSpeed سرعت گفتار TTS (۰٫۷ تا ۱٫۲) و LineGapMs مکث بین جمله‌ها.
+	SpeechSpeed float64 `json:"speech_speed"`
+	LineGapMs   int     `json:"line_gap_ms"`
 	// CoverURL تصویرِ کارت در اپ: image_url خودِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط.
 	CoverURL  string `json:"cover_url"`
 	Position  int    `json:"position"`
@@ -59,12 +64,14 @@ type Podcast struct {
 const podcastColumns = `p.id::text, p.title, p.description_fa, p.level, COALESCE(p.scene_id::text, ''), p.vocabulary, p.voices,
 	p.audio_url, p.audio_status, p.audio_error, p.duration_seconds, p.position, p.is_active, p.created_at::text,
 	(SELECT COUNT(*) FROM podcast_lines l WHERE l.podcast_id = p.id), p.image_url,
-	COALESCE(NULLIF(p.image_url, ''), (SELECT s.background_image_url FROM scenes s WHERE s.id = p.scene_id), '')`
+	COALESCE(NULLIF(p.image_url, ''), (SELECT s.background_image_url FROM scenes s WHERE s.id = p.scene_id), ''),
+	p.speech_speed, p.line_gap_ms, p.kind`
 
 func scanPodcast(row pgx.Row, p *Podcast) error {
 	var vocab, voices []byte
 	if err := row.Scan(&p.ID, &p.Title, &p.DescriptionFa, &p.Level, &p.SceneID, &vocab, &voices,
-		&p.AudioURL, &p.AudioStatus, &p.AudioError, &p.DurationSeconds, &p.Position, &p.IsActive, &p.CreatedAt, &p.LineCount, &p.ImageURL, &p.CoverURL); err != nil {
+		&p.AudioURL, &p.AudioStatus, &p.AudioError, &p.DurationSeconds, &p.Position, &p.IsActive, &p.CreatedAt, &p.LineCount, &p.ImageURL, &p.CoverURL,
+		&p.SpeechSpeed, &p.LineGapMs, &p.Kind); err != nil {
 		return err
 	}
 	p.Vocabulary = []VocabItem{}
@@ -145,9 +152,11 @@ func (r DB) Save(ctx context.Context, p Podcast, keepAudio bool) (string, error)
 	id := p.ID
 	if id == "" {
 		err = tx.QueryRow(ctx, `
-			INSERT INTO podcasts (title, description_fa, level, scene_id, vocabulary, voices, position, is_active, image_url)
-			VALUES ($1, $2, $3, $4::uuid, $5, $6, $7, $8, $9) RETURNING id::text`,
-			p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL).Scan(&id)
+			INSERT INTO podcasts (title, description_fa, level, scene_id, vocabulary, voices, position, is_active, image_url,
+				speech_speed, line_gap_ms, kind)
+			VALUES ($1, $2, $3, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id::text`,
+			p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL,
+			p.SpeechSpeed, p.LineGapMs, p.Kind).Scan(&id)
 	} else {
 		audioReset := ""
 		if !keepAudio {
@@ -155,9 +164,11 @@ func (r DB) Save(ctx context.Context, p Podcast, keepAudio bool) (string, error)
 		}
 		_, err = tx.Exec(ctx, `
 			UPDATE podcasts SET title = $2, description_fa = $3, level = $4, scene_id = $5::uuid, vocabulary = $6,
-				voices = $7, position = $8, is_active = $9, image_url = $10`+audioReset+`
+				voices = $7, position = $8, is_active = $9, image_url = $10, speech_speed = $11, line_gap_ms = $12,
+				kind = $13`+audioReset+`
 			WHERE id = $1::uuid`,
-			id, p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL)
+			id, p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL,
+			p.SpeechSpeed, p.LineGapMs, p.Kind)
 	}
 	if err != nil {
 		return "", richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره‌ی پادکست")

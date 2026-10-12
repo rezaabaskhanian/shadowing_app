@@ -29,6 +29,7 @@ import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
 import { track } from '../../services/analytics';
+import { getPodcasts } from '../../api/podcasts';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -103,6 +104,21 @@ export const SceneScreen = () => {
   const [streakFreezes, setStreakFreezes] = useState<number | undefined>(undefined);
   const [streakInfoVisible, setStreakInfoVisible] = useState(false);
   const [lessonCompleteVisible, setLessonCompleteVisible] = useState(false);
+  // پادکستی که درباره‌ی همین صحنه ساخته شده؛ در پایان درس پیشنهاد می‌شود.
+  const [scenePodcastId, setScenePodcastId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lessonCompleteVisible || !scenarioId) return;
+    let active = true;
+    getPodcasts()
+      .then((list) => {
+        const match = list.find((p) => p.scene_id && String(p.scene_id) === String(scenarioId));
+        if (active) setScenePodcastId(match ? match.id : null);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [lessonCompleteVisible, scenarioId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1005,6 +1021,14 @@ export const SceneScreen = () => {
         />
         <LessonCompleteModal
           visible={lessonCompleteVisible}
+          onListenPodcast={
+            scenePodcastId
+              ? () => {
+                  setLessonCompleteVisible(false);
+                  navigation.navigate('Podcast', { podcastId: scenePodcastId, openedAt: Date.now() });
+                }
+              : undefined
+          }
           onStartQuiz={() => {
             setLessonCompleteVisible(false);
             navigation.navigate('SceneQuiz', { scenarioId });
