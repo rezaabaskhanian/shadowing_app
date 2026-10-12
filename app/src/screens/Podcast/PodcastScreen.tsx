@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { Pause, Play, RotateCcw, RotateCw, X } from 'lucide-react-native';
+import { Mic, Pause, Play, RotateCcw, RotateCw, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -204,6 +204,21 @@ export const PodcastScreen: React.FC = () => {
         )}
         {!!podcast.description_fa && <Text style={styles.desc}>{podcast.description_fa}</Text>}
 
+        {/* «نسخه‌ی من»: کاربر جمله‌های یک مجری را خودش ضبط می‌کند (PodcastMyVersionScreen). */}
+        {lines.length > 0 && (
+          <TouchableOpacity
+            style={styles.myVersionBtn}
+            activeOpacity={0.85}
+            onPress={async () => {
+              await TrackPlayer.pause().catch(() => {});
+              navigation.navigate('PodcastMyVersion', { podcastId: podcast.id, openedAt: Date.now() });
+            }}
+          >
+            <Mic size={18} color={COLORS.primary} />
+            <Text style={styles.myVersionText}>{t('myVersionButton')}</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
           <Switch value={showTranslation} onValueChange={setShowTranslation} trackColor={{ true: COLORS.primary }} />
@@ -294,6 +309,23 @@ export const PodcastScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  myVersionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: 10,
+    marginBottom: SPACING.m,
+    backgroundColor: COLORS.primaryLight,
+  },
+  myVersionText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+  },
   cover: {
     width: '100%',
     aspectRatio: 16 / 9,

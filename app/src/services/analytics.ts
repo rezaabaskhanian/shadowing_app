@@ -29,6 +29,8 @@ export type AnalyticsEvent =
   | 'writing_submitted'
   | 'course_lesson_completed'
   | 'podcast_played'
+  | 'podcast_my_version_started'
+  | 'podcast_my_version_played'
   | 'token_topup_viewed'
   | 'token_topup_purchased';
 

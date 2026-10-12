@@ -34,9 +34,12 @@ const (
 	EventWritingSubmitted    = "writing_submitted"
 	EventCourseLessonDone    = "course_lesson_completed"
 	EventPodcastPlayed       = "podcast_played"
-	EventFreeSpeechSubmitted = "free_speech_submitted"
-	EventTokenTopupViewed    = "token_topup_viewed"
-	EventTokenTopupPurchased = "token_topup_purchased"
+	// «نسخه‌ی من» از پادکست: شروع ضبط جمله‌ها / پخش نسخه‌ی ضبط‌شده.
+	EventPodcastMyVersionStarted = "podcast_my_version_started"
+	EventPodcastMyVersionPlayed  = "podcast_my_version_played"
+	EventFreeSpeechSubmitted     = "free_speech_submitted"
+	EventTokenTopupViewed        = "token_topup_viewed"
+	EventTokenTopupPurchased     = "token_topup_purchased"
 )
 
 var validEvents = map[string]bool{
@@ -47,6 +50,7 @@ var validEvents = map[string]bool{
 	EventAIConversationStart: true, EventFreeSpeechSubmitted: true, EventTopicSpeakingDone: true,
 	EventVideoClipOpened: true, EventVideoClipQuizDone: true, EventVideoClipPerformed: true,
 	EventWritingSubmitted: true, EventCourseLessonDone: true, EventPodcastPlayed: true,
+	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,
 	EventTokenTopupViewed: true, EventTokenTopupPurchased: true,
 }
 

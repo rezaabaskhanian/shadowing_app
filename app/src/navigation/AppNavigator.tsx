@@ -11,14 +11,15 @@ import {
   createBottomTabNavigator,
   BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
-import {
-  Home as HomeIcon,
-  BarChart2,
-  BookOpen,
-  Mic,
-  User,
-} from 'lucide-react-native';
-import { COLORS } from '../theme/colors';
+import { AudioLines, CircleUserRound, House, Layers, TrendingUp } from 'lucide-react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { COLORS, hexToRgba } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { SHADOWS } from '../theme/elevation';
 import { HomeScreen } from '../screens/Home';
@@ -57,6 +58,7 @@ import { CourseHomeScreen } from '../screens/Course/CourseHomeScreen';
 import { CourseLessonScreen } from '../screens/Course/CourseLessonScreen';
 import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
+import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { RealtimePoCScreen } from '../screens/RealtimePoC';
 import { useLanguage } from '../data/i18n';
@@ -82,6 +84,7 @@ const FreshVideoClip = freshPerOpen(VideoClipScreen);
 const FreshWriting = freshPerOpen(WritingScreen);
 const FreshCourseLesson = freshPerOpen(CourseLessonScreen);
 const FreshPodcast = freshPerOpen(PodcastScreen);
+const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
@@ -112,13 +115,97 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'CourseLesson',
   'PodcastList',
   'Podcast',
+  'PodcastMyVersion',
   'Paywall',
   'TokenTopup',
   'ToastDemo',
   'RealtimePoC',
 ];
 
-const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
+// هر تب رنگ خودش را دارد؛ وقتی انتخاب می‌شود، آیکون و پس‌زمینه‌ی کم‌رنگش به
+// همین رنگ درمی‌آیند (خانه همان بنفشِ اصلی اپ است).
+const TAB_META: Record<string, { Icon: typeof House; color: string }> = {
+  Progress: { Icon: TrendingUp, color: COLORS.tertiary },
+  Leitner: { Icon: Layers, color: COLORS.info },
+  Home: { Icon: House, color: COLORS.primary },
+  Scenes: { Icon: AudioLines, color: COLORS.warning },
+  Profile: { Icon: CircleUserRound, color: COLORS.pink },
+};
+
+/** یک تبِ معمولی: با انتخاب شدن، پس‌زمینه‌ی رنگی نرم ظاهر و آیکون کمی بزرگ می‌شود. */
+const TabButton = ({
+  routeName,
+  label,
+  isFocused,
+  onPress,
+}: {
+  routeName: string;
+  label: string;
+  isFocused: boolean;
+  onPress: () => void;
+}) => {
+  const { Icon, color } = TAB_META[routeName] || TAB_META.Home;
+  const focus = useSharedValue(isFocused ? 1 : 0);
+  React.useEffect(() => {
+    focus.value = withTiming(isFocused ? 1 : 0, { duration: 220 });
+  }, [isFocused, focus]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(focus.value, [0, 1], ['transparent', hexToRgba(color, 0.14)]),
+    transform: [{ scale: 0.9 + focus.value * 0.1 }],
+  }));
+
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.tabItem} activeOpacity={0.7}>
+      <Animated.View style={[styles.iconContainer, pillStyle]}>
+        <Icon
+          color={isFocused ? color : COLORS.textSecondary}
+          size={21}
+          strokeWidth={isFocused ? 2.4 : 1.8}
+        />
+      </Animated.View>
+      <Text
+        style={[styles.tabLabel, isFocused && styles.activeLabel, isFocused && { color }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * دکمه‌ی وسطِ خانه: انتخاب‌نشده سفید با آیکون بنفش، انتخاب‌شده بنفشِ پُر با
+ * آیکون سفید و کمی بزرگ‌تر (با فنر).
+ */
+const HomeTabButton = ({ label, isFocused, onPress }: { label: string; isFocused: boolean; onPress: () => void }) => {
+  const focus = useSharedValue(isFocused ? 1 : 0);
+  React.useEffect(() => {
+    focus.value = withSpring(isFocused ? 1 : 0, { damping: 14, stiffness: 180 });
+  }, [isFocused, focus]);
+
+  const circleStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(focus.value, [0, 1], [COLORS.surface, COLORS.primary]),
+    borderColor: interpolateColor(focus.value, [0, 1], [COLORS.primary, COLORS.background]),
+    transform: [{ scale: 0.94 + focus.value * 0.12 }],
+  }));
+
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.centerTabItem} activeOpacity={0.85}>
+      <Animated.View style={[styles.centerCircle, circleStyle]}>
+        <House
+          color={isFocused ? COLORS.white : COLORS.primary}
+          size={24}
+          strokeWidth={isFocused ? 2.4 : 2}
+          fill={isFocused ? hexToRgba(COLORS.white, 0.25) : 'transparent'}
+        />
+      </Animated.View>
+      <Text style={[styles.tabLabel, styles.centerLabel, !isFocused && styles.centerLabelIdle]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
   const { t } = useLanguage();
 
   // Hide tab bar on detail/flow screens (scene practice, scene submission)
@@ -170,55 +257,17 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           }
 
           if (isHome) {
-            return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={onPress}
-                style={styles.centerTabItem}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.centerCircle, isFocused && styles.centerCircleActive]}>
-                  <HomeIcon color={COLORS.white} size={24} fill={COLORS.white} />
-                </View>
-                <Text style={[styles.tabLabel, styles.centerLabel, isFocused && styles.activeLabel]}>
-                  {labelText}
-                </Text>
-              </TouchableOpacity>
-            );
+            return <HomeTabButton key={route.key} label={labelText} isFocused={isFocused} onPress={onPress} />;
           }
 
-          const renderIcon = () => {
-            const color = isFocused ? COLORS.primary : COLORS.textSecondary;
-            const size = 20;
-
-            switch (route.name) {
-              case 'Progress':
-                return <BarChart2 color={color} size={size} />;
-              case 'Leitner':
-                return <BookOpen color={color} size={size} />;
-              case 'Scenes':
-                return <Mic color={color} size={size} />;
-              case 'Profile':
-                return <User color={color} size={size} />;
-              default:
-                return <HomeIcon color={color} size={size} />;
-            }
-          };
-
           return (
-            <TouchableOpacity
+            <TabButton
               key={route.key}
+              routeName={route.name}
+              label={labelText}
+              isFocused={isFocused}
               onPress={onPress}
-              style={styles.tabItem}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconContainer, isFocused && styles.activeIconContainer]}>
-                {renderIcon()}
-              </View>
-              <Text style={[styles.tabLabel, isFocused && styles.activeLabel]} numberOfLines={1}>
-                {labelText}
-              </Text>
-            </TouchableOpacity>
+            />
           );
         })}
       </View>
@@ -303,6 +352,7 @@ export const AppNavigator = () => {
       <Tab.Screen name="CourseLesson" component={FreshCourseLesson} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />
       <Tab.Screen
         name="TopicSuggestion"
         component={TopicSuggestionScreen}
@@ -420,29 +470,20 @@ const styles = StyleSheet.create({
     marginTop: -14,
   },
   centerCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.primary,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: COLORS.background,
     ...SHADOWS.level2,
   },
-  centerCircleActive: {
-    backgroundColor: COLORS.primary,
-    transform: [{ scale: 1.05 }],
-  },
   iconContainer: {
-    width: 36,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  activeIconContainer: {
-    backgroundColor: COLORS.primaryLight,
   },
   tabLabel: {
     color: COLORS.textSecondary,
@@ -456,7 +497,10 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   activeLabel: {
-    color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
+  },
+  centerLabelIdle: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
   },
 });
