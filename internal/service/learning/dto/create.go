@@ -3,8 +3,8 @@ package dto
 type CreateSceneRequest struct {
 	Title              string    `json:"title" validate:"required"`
 	Description        string    `json:"description"`
-	BackgroundImageURL string    `json:"background_image_url" validate:"required,url"`
-	Difficulty         string    `json:"difficulty" validate:"required,oneof=beginner intermediate advanced"`
+	BackgroundImageURL string    `json:"background_image_url" validate:"required_if=IsPublished true"`
+	Difficulty         string    `json:"difficulty" validate:"required,oneof=starter beginner intermediate advanced"`
 	Hotspots           []Hotspot `json:"hotspots"`
 	IsLocked           bool      `json:"is_locked"`
 	// IsPublished تعیین می‌کند صحنه در اپ نمایش داده شود (published) یا فقط

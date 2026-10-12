@@ -22,6 +22,8 @@ import VideoClipsPanel from "./VideoClipsPanel";
 import WritingPromptsPanel from "./WritingPromptsPanel";
 import CoursePanel from "./CoursePanel";
 import PodcastsPanel from "./PodcastsPanel";
+import ResourcesPanel from "./ResourcesPanel";
+import IdiomsPanel from "./IdiomsPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -42,7 +44,9 @@ type Tab =
   | "videoClips"
   | "writing"
   | "course"
-  | "podcasts";
+  | "podcasts"
+  | "idioms"
+  | "resources";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -203,6 +207,18 @@ export default function DashboardPage() {
             🎤 صحبت درباره‌ی موضوع
           </button>
           <button
+            className={`sidebar-link ${tab === "idioms" ? "active" : ""}`}
+            onClick={() => setTab("idioms")}
+          >
+            💬 اصطلاحات
+          </button>
+          <button
+            className={`sidebar-link ${tab === "resources" ? "active" : ""}`}
+            onClick={() => setTab("resources")}
+          >
+            📚 کتابخانه‌ی محتوا
+          </button>
+          <button
             className={`sidebar-link ${tab === "analytics" ? "active" : ""}`}
             onClick={() => setTab("analytics")}
           >
@@ -289,6 +305,8 @@ export default function DashboardPage() {
         {tab === "writing" && <WritingPromptsPanel notify={notify} />}
         {tab === "course" && <CoursePanel notify={notify} />}
         {tab === "podcasts" && <PodcastsPanel notify={notify} />}
+        {tab === "idioms" && <IdiomsPanel notify={notify} />}
+        {tab === "resources" && <ResourcesPanel notify={notify} />}
       </main>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}

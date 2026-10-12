@@ -20,9 +20,11 @@ func (s Service) CreateScene(ctx context.Context, req dto.CreateSceneRequest) (d
 			WithKind(richerror.KindForbidden)
 	}
 
-	if req.BackgroundImageURL == "" {
+	// پیش‌نویس (مثلاً صحنه‌ای که از JSON وارد شده) می‌تواند فعلاً عکس نداشته
+	// باشد؛ فقط انتشار عکس لازم دارد.
+	if req.BackgroundImageURL == "" && req.IsPublished {
 		return dto.Scene{}, richerror.New(op).
-			WithMessage("آدرس تصویر پس‌زمینه الزامی است").
+			WithMessage("برای انتشار صحنه، تصویر پس‌زمینه لازم است").
 			WithKind(richerror.KindForbidden)
 	}
 

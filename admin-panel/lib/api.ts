@@ -1,4 +1,8 @@
 import type {
+  ContentResource,
+  Idiom,
+  IdiomImportResult,
+  IdiomInput,
   AdminUsersResp,
   AIUsageReport,
   AnalyticsSummary,
@@ -789,6 +793,15 @@ export async function uploadVideo(file: File): Promise<string> {
   return data.url as string;
 }
 
+/** تنظیمات سراسری «تمرین با ویدیو» (مثل پنهان کردن یکجای کلیپ‌های فیلم). */
+export async function getVideoClipSettings(): Promise<{ hide_movie_clips: boolean }> {
+  return jsonOrThrow(await authFetch("/v1/admin/video-clips/settings", { method: "GET" }));
+}
+
+export async function saveVideoClipSettings(s: { hide_movie_clips: boolean }): Promise<{ hide_movie_clips: boolean }> {
+  return jsonOrThrow(await authFetch("/v1/admin/video-clips/settings", jsonBody("PUT", s)));
+}
+
 export async function detectVideoLines(videoUrl: string): Promise<VideoClipLine[]> {
   return (
     (await jsonOrThrow(
@@ -927,4 +940,50 @@ export async function generatePodcastScript(payload: {
 /** ساخت صدا در پس‌زمینه شروع می‌شود؛ وضعیت را با getPodcast دنبال کن. */
 export async function generatePodcastAudio(id: string): Promise<Podcast> {
   return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}/generate-audio`, { method: "POST" }));
+}
+
+// ---------- کتابخانه‌ی محتوا (فایل‌های JSON مرجع) ----------
+export async function listResources(): Promise<ContentResource[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/resources", { method: "GET" }))) || [];
+}
+
+export async function getResource(id: string): Promise<ContentResource> {
+  return jsonOrThrow(await authFetch(`/v1/admin/resources/${id}`, { method: "GET" }));
+}
+
+/** content در ویرایش اختیاری است؛ بدون آن فقط عنوان/نوع/یادداشت عوض می‌شود. */
+export async function saveResource(r: {
+  id?: string;
+  title: string;
+  kind: string;
+  notes: string;
+  file_name?: string;
+  content?: unknown;
+}): Promise<ContentResource> {
+  return jsonOrThrow(
+    await authFetch(r.id ? `/v1/admin/resources/${r.id}` : "/v1/admin/resources", jsonBody(r.id ? "PUT" : "POST", r))
+  );
+}
+
+export async function deleteResource(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/resources/${id}`, { method: "DELETE" }));
+}
+
+// ---------- اصطلاحات ----------
+export async function listIdioms(): Promise<Idiom[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/idioms", { method: "GET" }))) || [];
+}
+
+export async function saveIdiom(i: IdiomInput & { id?: string }): Promise<Idiom> {
+  return jsonOrThrow(
+    await authFetch(i.id ? `/v1/admin/idioms/${i.id}` : "/v1/admin/idioms", jsonBody(i.id ? "PUT" : "POST", i))
+  );
+}
+
+export async function importIdioms(items: Partial<IdiomInput>[], overwrite: boolean): Promise<IdiomImportResult> {
+  return jsonOrThrow(await authFetch("/v1/admin/idioms/import", jsonBody("POST", { items, overwrite })));
+}
+
+export async function deleteIdioms(ids: string[]): Promise<void> {
+  await jsonOrThrow(await authFetch("/v1/admin/idioms/delete", jsonBody("POST", { ids })));
 }

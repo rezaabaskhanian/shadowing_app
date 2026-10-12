@@ -28,6 +28,8 @@ import type {
   WordInput,
 } from "@/lib/types";
 import { SCENE_CATEGORIES } from "@/lib/types";
+import type { CreateScenePayload } from "@/lib/types";
+import { parseScenesJson, sceneJsonToPayload } from "@/lib/sceneJson";
 
 const PRESET_SPEAKERS: { v: string; l: string }[] = [
   { v: "customer", l: "مشتری (customer)" },
@@ -125,6 +127,8 @@ export default function SceneCreator({
   const [uploadingImg, setUploadingImg] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [jsonText, setJsonText] = useState("");
+  const jsonFileRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
   // نکته‌ی گرامریِ اختیاری: موضوع را ادمین تایپ می‌کند؛ توضیح فارسی و مثال‌ها را AI
   // پر می‌کند (یا ادمین دستی)، و همه‌چیز قابل ویرایش است.
@@ -295,6 +299,48 @@ export default function SceneCreator({
       notify(err.message, "err");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // ---------- وارد کردن از JSON ----------
+  // فرم را از روی JSON صحنه پر می‌کند (چیزی ذخیره نمی‌شود). جای هات‌اسپات‌ها
+  // از خود JSON می‌آید؛ با آپلود عکس روی آن نشان داده می‌شوند و با کشیدن
+  // قابل جابه‌جایی‌اند. بدون عکس، صحنه فقط به‌صورت پیش‌نویس ذخیره می‌شود.
+  function applyScenePayload(p: CreateScenePayload) {
+    setTitle(p.title);
+    setDescription(p.description);
+    setDifficulty(p.difficulty);
+    setCategory(p.category);
+    setIsLocked(p.is_locked);
+    setIsPublished(p.is_published);
+    setOrder(p.level_position ? String(p.level_position) : "");
+    setGrammarTopic(p.grammar_topic || "");
+    setGrammarExplanation(p.grammar_explanation || "");
+    setGrammarExamples(p.grammar_examples || []);
+    setGrammarAudioURL(p.grammar_audio_url || "");
+    if (p.background_image_url) setImageUrl(p.background_image_url);
+    setHotspots(p.hotspots);
+    setSelected(p.hotspots.length > 0 ? 0 : null);
+  }
+
+  function handleJsonImport(text: string) {
+    try {
+      const scenes = parseScenesJson(text);
+      if (scenes.length !== 1) {
+        notify("این فایل چند صحنه دارد؛ برای وارد کردن گروهی از «لیست صحنه‌ها» استفاده کن", "err");
+        return;
+      }
+      const p = sceneJsonToPayload(scenes[0]);
+      applyScenePayload(p);
+      const dialogues = p.hotspots.reduce((n, h) => n + h.dialogues.length, 0);
+      notify(
+        `«${p.title}» وارد شد: ${p.hotspots.length} نقطه و ${dialogues} دیالوگ ✅` +
+          (imageUrl || p.background_image_url ? "" : " — عکس را هر وقت داشتی آپلود کن؛ تا آن موقع پیش‌نویس ذخیره می‌شود."),
+        "ok"
+      );
+      setJsonText("");
+    } catch (err: any) {
+      notify(err instanceof SyntaxError ? "متن JSON معتبر نیست" : err.message, "err");
     }
   }
 
@@ -564,7 +610,8 @@ export default function SceneCreator({
   // ---------- ذخیره ----------
   function validate(): string | null {
     if (!title.trim()) return "عنوان صحنه الزامی است";
-    if (!imageUrl) return "ابتدا تصویر پس‌زمینه را آپلود کنید";
+    if (!imageUrl && isPublished)
+      return "برای انتشار، تصویر پس‌زمینه لازم است؛ اگر عکس هنوز آماده نیست، تیک «انتشار» را بردار تا پیش‌نویس ذخیره شود";
     if (!category) return "دسته‌بندی صحنه را انتخاب کنید";
     if (hotspots.length === 0) return "حداقل یک هات‌اسپات اضافه کنید";
     for (const h of hotspots) {
@@ -587,7 +634,7 @@ export default function SceneCreator({
       const payload = {
         title: title.trim(),
         description: description.trim(),
-        background_image_url: imageUrl!,
+        background_image_url: imageUrl || "",
         difficulty,
         hotspots,
         is_locked: isLocked,
@@ -715,6 +762,44 @@ export default function SceneCreator({
           </button>
         </div>
       )}
+
+      {/* وارد کردن صحنه از JSON (فرم را پر می‌کند) */}
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>📥 وارد کردن از JSON (اختیاری)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
+          JSON صحنه را بچسبان یا فایلش را انتخاب کن؛ عنوان، سطح، دسته، نکته‌ی گرامری، نقاط و دیالوگ‌ها (با واژه‌ها و
+          اصطلاح‌ها) در فرم پر می‌شوند. عکس را می‌توانی بعداً آپلود کنی: نقاط همان جایی که در JSON آمده روی عکس می‌نشینند و
+          با کشیدن جابه‌جا می‌شوند. تا عکس نیامده، صحنه فقط پیش‌نویس ذخیره می‌شود. برای چند صحنه با هم، از «لیست صحنه‌ها»
+          استفاده کن.
+        </p>
+        <input
+          ref={jsonFileRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: "none" }}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) handleJsonImport(await file.text());
+            e.target.value = "";
+          }}
+        />
+        <textarea
+          dir="ltr"
+          rows={5}
+          value={jsonText}
+          onChange={(e) => setJsonText(e.target.value)}
+          placeholder='{ "title": "Hello!", "difficulty": "starter", "hotspots": [ ... ] }'
+          style={{ width: "100%" }}
+        />
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button className="btn" type="button" onClick={() => handleJsonImport(jsonText)} disabled={!jsonText.trim()}>
+            وارد کردن
+          </button>
+          <button className="btn btn-ghost" type="button" onClick={() => jsonFileRef.current?.click()}>
+            ⬆️ انتخاب فایل JSON
+          </button>
+        </div>
+      </div>
 
       {/* تولید با هوش مصنوعی (اختیاری — فرم را پر می‌کند) */}
       <div className="card" style={{ borderColor: "var(--primary)" }}>
@@ -904,6 +989,7 @@ export default function SceneCreator({
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value as Difficulty)}
             >
+              <option value="starter">قدم اول (پایه‌تر از مبتدی)</option>
               <option value="beginner">مبتدی</option>
               <option value="intermediate">متوسط</option>
               <option value="advanced">پیشرفته</option>
@@ -971,6 +1057,13 @@ export default function SceneCreator({
           disabled={uploadingImg}
         />
         {uploadingImg && <p className="hint">در حال آپلود...</p>}
+        {!imageUrl && hotspots.length > 0 && (
+          <p className="hint" style={{ marginBottom: 0 }}>
+            📌 {hotspots.length} نقطه و {hotspots.reduce((n, h) => n + h.dialogues.length, 0)} دیالوگ آماده است (
+            {hotspots.map((h) => h.name).join("، ")}). با آپلود عکس، نقاط روی آن نشان داده می‌شوند. بدون عکس، صحنه فقط
+            پیش‌نویس ذخیره می‌شود.
+          </p>
+        )}
       </div>
 
       {/* ویرایشگر هات‌اسپات + دیالوگ */}

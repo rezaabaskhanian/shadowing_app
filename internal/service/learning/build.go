@@ -15,6 +15,8 @@ import (
 // toDifficulty رشته‌ی سطح زبان‌آموز را به نوع دامین تبدیل می‌کند.
 func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 	switch v {
+	case "starter":
+		return scene.DifficultyStarter, nil
 	case "beginner":
 		return scene.DifficultyBeginner, nil
 	case "intermediate":
@@ -23,7 +25,7 @@ func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 		return scene.DifficultyAdvanced, nil
 	default:
 		return "", richerror.New(op).
-			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: beginner, intermediate, advanced").
+			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced").
 			WithKind(richerror.KindForbidden)
 	}
 }

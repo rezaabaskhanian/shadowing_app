@@ -29,10 +29,11 @@ func (h Handler) CreateScene(c echo.Context) error {
 		})
 	}
 
-	if req.BackgroundImageURL == "" {
+	// پیش‌نویس می‌تواند فعلاً عکس نداشته باشد؛ فقط انتشار عکس لازم دارد.
+	if req.BackgroundImageURL == "" && req.IsPublished {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "background_image_required",
-			"message": "آدرس تصویر پس‌زمینه الزامی است",
+			"message": "برای انتشار صحنه، تصویر پس‌زمینه لازم است",
 		})
 	}
 
@@ -45,6 +46,7 @@ func (h Handler) CreateScene(c echo.Context) error {
 
 	// 3️⃣ اعتبارسنجی Difficulty
 	validDifficulties := map[string]bool{
+		"starter":      true,
 		"beginner":     true,
 		"intermediate": true,
 		"advanced":     true,
@@ -52,7 +54,7 @@ func (h Handler) CreateScene(c echo.Context) error {
 	if !validDifficulties[req.Difficulty] {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_difficulty",
-			"message": "سطح زبان‌آموز باید یکی از مقادیر beginner, intermediate, advanced باشد",
+			"message": "سطح زبان‌آموز باید یکی از مقادیر starter, beginner, intermediate, advanced باشد",
 		})
 	}
 

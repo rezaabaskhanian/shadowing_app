@@ -29,6 +29,8 @@ func NewDialogueID() DialogueID {
 type DifficultyLevel string
 
 const (
+	// DifficultyStarter «قدم اول»: پایه‌تر از مبتدی.
+	DifficultyStarter      DifficultyLevel = "starter"
 	DifficultyBeginner     DifficultyLevel = "beginner"
 	DifficultyIntermediate DifficultyLevel = "intermediate"
 	DifficultyAdvanced     DifficultyLevel = "advanced"

@@ -5,9 +5,10 @@ package scence
 const PreviewPerHigherLevel = 2
 
 var difficultyRank = map[DifficultyLevel]int{
-	DifficultyBeginner:     0,
-	DifficultyIntermediate: 1,
-	DifficultyAdvanced:     2,
+	DifficultyStarter:      0,
+	DifficultyBeginner:     1,
+	DifficultyIntermediate: 2,
+	DifficultyAdvanced:     3,
 }
 
 // FilterByLevel صحنه‌هایی را نگه می‌دارد که کاربری با سطح userLevel اجازه‌ی

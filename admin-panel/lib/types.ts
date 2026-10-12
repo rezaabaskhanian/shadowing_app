@@ -1,6 +1,7 @@
 export type Speaker = string;
 export type DisplayType = "full" | "partial" | "none";
-export type Difficulty = "beginner" | "intermediate" | "advanced";
+// starter = «قدم اول» (پایه‌تر از مبتدی) — فقط برای صحنه‌ها.
+export type Difficulty = "starter" | "beginner" | "intermediate" | "advanced";
 
 // یک واژه‌ی دیالوگ همراه با معنی
 export interface WordInput {
@@ -521,6 +522,12 @@ export interface VideoClip {
   category: string;
   /** نام فیلمِ منبع (فقط برای source=movie). */
   movie_title: string;
+  /** اطلاعات داخلی منبع (فقط پنل؛ اپ نمی‌بیند). ۰ = ثبت‌نشده. */
+  movie_year?: number;
+  movie_start_ms?: number;
+  movie_end_ms?: number;
+  /** حاشیه‌ی قطع صدای ویدیو قبل و بعد از جمله‌ی کاربر در اپ (ms). */
+  mute_padding_ms: number;
   video_url: string;
   poster_url: string;
   level: VideoClipLevel;
@@ -632,4 +639,42 @@ export interface PodcastScript {
   description_fa: string;
   lines: { speaker: string; text: string; translation_fa: string }[];
   vocabulary: { word: string; meaning_fa: string }[];
+}
+
+// ---------- کتابخانه‌ی محتوا (فایل‌های JSON مرجع) ----------
+export type ResourceKind = "lesson" | "scene" | "podcast" | "vocabulary" | "other";
+
+export interface ContentResource {
+  id: string;
+  title: string;
+  kind: ResourceKind;
+  notes: string;
+  file_name: string;
+  size_bytes: number;
+  /** فقط در دریافت تکی (getResource) پر است. */
+  content?: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+// ---------- اصطلاحات ----------
+export interface Idiom {
+  id: string;
+  phrase: string;
+  meaning_fa: string;
+  explanation_fa: string;
+  example_en: string;
+  example_fa: string;
+  level: "" | "beginner" | "intermediate" | "advanced";
+  category: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type IdiomInput = Omit<Idiom, "id" | "created_at">;
+
+export interface IdiomImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
 }

@@ -7,12 +7,15 @@ import {
   deleteVideoClip,
   detectVideoLines,
   getVideoClip,
+  getVideoClipSettings,
   listVideoClips,
   saveVideoClip,
+  saveVideoClipSettings,
   uploadImage,
   uploadVideo,
 } from "@/lib/api";
 import { SCENE_CATEGORIES } from "@/lib/types";
+import { formatTimecode, parseTimecode, srtToLines } from "@/lib/srt";
 import type { VideoClip, VideoClipLevel, VideoClipLine, VideoClipQuestion } from "@/lib/types";
 
 const LEVELS: { id: VideoClipLevel; label: string }[] = [
@@ -23,12 +26,51 @@ const LEVELS: { id: VideoClipLevel; label: string }[] = [
 
 type Draft = Omit<VideoClip, "id"> & { id?: string };
 
+/** همان پیش‌فرضِ اپ (VideoClipScreen): ۰٫۲۵ ثانیه قبل و بعد از جمله. */
+const DEFAULT_MUTE_PADDING_MS = 250;
+const NUDGE_STEPS = [10, 50, 100, 250];
+/** پیش‌نمایش «مثل اپ»: این مقدار قبل و بعد از جمله هم پخش می‌شود تا قطع و وصل صدا شنیده شود. */
+const PREVIEW_CONTEXT_MS = 1500;
+
+/** فایل زیرنویس قدیمی معمولاً UTF-8 نیست؛ اگر UTF-8 معتبر نبود با windows-1252 خوانده می‌شود. */
+async function readSubtitleFile(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder("windows-1252").decode(buf);
+  }
+}
+
+/** ورودی زمان به شکل HH:MM:SS.mmm؛ مقدار فقط موقع خروج از فیلد ثبت می‌شود. */
+function TimecodeInput({ value, onChange, placeholder }: { value: number; onChange: (ms: number) => void; placeholder?: string }) {
+  const [text, setText] = useState(formatTimecode(value));
+  useEffect(() => setText(formatTimecode(value)), [value]);
+  return (
+    <input
+      dir="ltr"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        const ms = parseTimecode(text);
+        onChange(ms ?? 0);
+        setText(formatTimecode(ms ?? 0));
+      }}
+    />
+  );
+}
+
 const emptyDraft = (position = 0): Draft => ({
   title: "",
   description_fa: "",
   source: "flow",
   category: "",
   movie_title: "",
+  movie_year: 0,
+  movie_start_ms: 0,
+  movie_end_ms: 0,
+  mute_padding_ms: DEFAULT_MUTE_PADDING_MS,
   video_url: "",
   poster_url: "",
   level: "beginner",
@@ -60,6 +102,11 @@ export default function VideoClipsPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopAtRef = useRef<number | null>(null);
+  // پیش‌نمایش «مثل اپ»: بازه‌ای (ثانیه) که صدای ویدیو در آن قطع است.
+  const muteWindowRef = useRef<[number, number] | null>(null);
+  const [hideMovies, setHideMovies] = useState(false);
+  const [nudgeStep, setNudgeStep] = useState(50);
+  const srtRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     setLoading(true);
@@ -74,8 +121,21 @@ export default function VideoClipsPanel({
 
   useEffect(() => {
     load();
+    getVideoClipSettings()
+      .then((st) => setHideMovies(st.hide_movie_clips))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function toggleHideMovies(hide: boolean) {
+    try {
+      const st = await saveVideoClipSettings({ hide_movie_clips: hide });
+      setHideMovies(st.hide_movie_clips);
+      notify(hide ? "همه‌ی کلیپ‌های فیلم از اپ پنهان شدند" : "کلیپ‌های فیلم دوباره در اپ نمایش داده می‌شوند");
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -115,10 +175,81 @@ export default function VideoClipsPanel({
   function playSegment(l: VideoClipLine) {
     const v = videoRef.current;
     if (!v) return;
+    muteWindowRef.current = null;
+    v.muted = false;
     v.currentTime = l.start_ms / 1000;
     stopAtRef.current = l.end_ms / 1000;
     v.play();
   }
+
+  /**
+   * مثل اپ: کمی قبل و بعد از جمله پخش می‌شود و صدا دقیقاً در همان بازه‌ای قطع
+   * است که در اپ قطع می‌شود (جمله ± حاشیه). اگر تکه‌ای از صدای شخصیت شنیده شد،
+   * زمان یا حاشیه کم است.
+   */
+  function previewMuted(l: VideoClipLine) {
+    const v = videoRef.current;
+    if (!v || !draft) return;
+    const pad = draft.mute_padding_ms;
+    muteWindowRef.current = [(l.start_ms - pad) / 1000, (l.end_ms + pad) / 1000];
+    v.currentTime = Math.max(0, l.start_ms - pad - PREVIEW_CONTEXT_MS) / 1000;
+    stopAtRef.current = (l.end_ms + pad + PREVIEW_CONTEXT_MS) / 1000;
+    v.play();
+    // timeupdate فقط ~۴ بار در ثانیه است؛ برای قطع دقیق هر فریم چک می‌شود.
+    const tick = () => {
+      const win = muteWindowRef.current;
+      if (!win || v.paused) {
+        v.muted = false;
+        return;
+      }
+      v.muted = v.currentTime >= win[0] && v.currentTime <= win[1];
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  /** جابه‌جایی شروع/پایان یک دیالوگ؛ شروع از ۰ کمتر و پایان از شروع جلوتر نمی‌شود. */
+  function nudgeLine(i: number, startDelta: number, endDelta: number) {
+    if (!draft) return;
+    const l = draft.lines[i];
+    const start = Math.max(0, l.start_ms + startDelta);
+    const end = Math.max(start + 50, l.end_ms + endDelta);
+    updateLine(i, { start_ms: start, end_ms: end });
+  }
+
+  function nudgeAll(delta: number) {
+    if (!draft) return;
+    update({
+      lines: draft.lines.map((l) => {
+        const start = Math.max(0, l.start_ms + delta);
+        return { ...l, start_ms: start, end_ms: Math.max(start + 50, l.end_ms + delta) };
+      }),
+    });
+  }
+
+  const handleSrtFile = (file: File) =>
+    run("srt", async () => {
+      if (!draft) return;
+      const offsetMs = draft.source === "movie" ? draft.movie_start_ms || 0 : 0;
+      const clipDurationMs =
+        draft.duration_seconds > 0
+          ? draft.duration_seconds * 1000
+          : draft.movie_end_ms && draft.movie_end_ms > offsetMs
+          ? draft.movie_end_ms - offsetMs
+          : 0;
+      const lines = srtToLines(await readSubtitleFile(file), { offsetMs, clipDurationMs });
+      if (srtRef.current) srtRef.current.value = "";
+      if (lines.length === 0) {
+        throw new Error(
+          offsetMs
+            ? "هیچ زیرنویسی در بازه‌ی این صحنه پیدا نشد؛ «شروع صحنه در فیلم» را چک کن."
+            : "هیچ زیرنویسی پیدا نشد. اگر زیرنویس کل فیلم است، اول «شروع صحنه در فیلم» را وارد کن."
+        );
+      }
+      if (draft.lines.length > 0 && !confirm(`دیالوگ‌های فعلی با ${lines.length} دیالوگ زیرنویس جایگزین شوند؟`)) return;
+      update({ lines });
+      notify(`${lines.length} دیالوگ از زیرنویس وارد شد؛ گوینده‌ها را با «تکمیل با AI» یا دستی پر کن.`);
+    });
 
   const handleVideoFile = (file: File) =>
     run("upload", async () => {
@@ -201,6 +332,31 @@ export default function VideoClipsPanel({
             </button>
           )}
         </div>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 12,
+            padding: 10,
+            borderRadius: 8,
+            border: `1px solid ${hideMovies ? "var(--danger, #c0392b)" : "var(--border, #333)"}`,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={hideMovies}
+            onChange={(e) => toggleHideMovies(e.target.checked)}
+            style={{ width: "auto" }}
+          />
+          <span>
+            <b>پنهان کردن یکجای همه‌ی کلیپ‌های «تکه‌ای از فیلم»</b>
+            <span className="hint" style={{ display: "block", margin: 0 }}>
+              با روشن کردن این، همه‌ی کلیپ‌های فیلم فوراً از اپ پنهان می‌شوند و کلیپ‌های Google Flow می‌مانند. خود کلیپ‌ها پاک
+              نمی‌شوند و با خاموش کردنش برمی‌گردند.
+            </span>
+          </span>
+        </label>
       </div>
 
       {draft && (
@@ -256,6 +412,43 @@ export default function VideoClipsPanel({
             </div>
           </div>
 
+          {draft.source === "movie" && (
+            <div style={{ border: "1px dashed var(--border, #333)", borderRadius: 8, padding: 10, marginTop: 8 }}>
+              <div className="hint" style={{ margin: "0 0 6px" }}>
+                🔒 اطلاعات داخلی منبع — در اپ نمایش داده نمی‌شود؛ برای وقتی که گزارشی درباره‌ی این کلیپ رسید. «شروع صحنه»
+                برای جابه‌جا کردن زمان‌های زیرنویس کل فیلم هم استفاده می‌شود.
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ width: 100 }}>
+                  <label>سال فیلم</label>
+                  <input
+                    dir="ltr"
+                    type="number"
+                    value={draft.movie_year || ""}
+                    onChange={(e) => update({ movie_year: Number(e.target.value) || 0 })}
+                    placeholder="1994"
+                  />
+                </div>
+                <div style={{ width: 150 }}>
+                  <label>شروع صحنه در فیلم</label>
+                  <TimecodeInput
+                    value={draft.movie_start_ms || 0}
+                    onChange={(ms) => update({ movie_start_ms: ms })}
+                    placeholder="01:12:30.500"
+                  />
+                </div>
+                <div style={{ width: 150 }}>
+                  <label>پایان صحنه در فیلم</label>
+                  <TimecodeInput
+                    value={draft.movie_end_ms || 0}
+                    onChange={(ms) => update({ movie_end_ms: ms })}
+                    placeholder="01:13:05.000"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <label>توضیح فارسی (اختیاری — زمینه‌ی کلیپ)</label>
           <textarea rows={2} value={draft.description_fa} onChange={(e) => update({ description_fa: e.target.value })} />
 
@@ -279,7 +472,9 @@ export default function VideoClipsPanel({
                   onTimeUpdate={(e) => {
                     if (stopAtRef.current !== null && e.currentTarget.currentTime >= stopAtRef.current) {
                       stopAtRef.current = null;
+                      muteWindowRef.current = null;
                       e.currentTarget.pause();
+                      e.currentTarget.muted = false;
                     }
                   }}
                 />
@@ -305,6 +500,16 @@ export default function VideoClipsPanel({
               دیالوگ‌ها ({draft.lines.length}){speakers.length > 0 && ` — شخصیت‌ها: ${speakers.join("، ")}`}
             </h4>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <input
+                ref={srtRef}
+                type="file"
+                accept=".srt,application/x-subrip,text/plain"
+                style={{ display: "none" }}
+                onChange={(e) => e.target.files?.[0] && handleSrtFile(e.target.files[0])}
+              />
+              <button className="btn btn-ghost btn-sm" onClick={() => srtRef.current?.click()} disabled={!!busy}>
+                {busy === "srt" ? "در حال خواندن..." : "📄 ورود زیرنویس (.srt)"}
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={handleDetect} disabled={!!busy || !draft.video_url}>
                 {busy === "detect" ? "در حال تشخیص..." : "🎙 تشخیص خودکار دیالوگ‌ها"}
               </button>
@@ -317,9 +522,50 @@ export default function VideoClipsPanel({
             </div>
           </div>
           <p className="hint">
-            برای تنظیم دقیق زمان: ویدیو را روی لحظه‌ی موردنظر نگه دار و «⏱» کنار شروع/پایان را بزن. «▶» فقط همان دیالوگ را
-            پخش می‌کند تا ببینی درست بریده شده.
+            برای تنظیم دقیق زمان: ویدیو را روی لحظه‌ی موردنظر نگه دار و «⏱» کنار شروع/پایان را بزن، یا با «−/+» چند صدم
+            ثانیه جابه‌جا کن. «▶» فقط همان دیالوگ را پخش می‌کند؛ «🔇» مثل اپ پخش می‌کند (کمی قبل و بعد، با صدای قطع‌شده سر
+            جمله) — اگر تکه‌ای از صدای شخصیت شنیده شد، زمان را جابه‌جا کن یا حاشیه را بیشتر کن. زیرنویس رسمی فیلم معمولاً از
+            تشخیص خودکار دقیق‌تر است و متنش هم بی‌غلط است.
           </p>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 8 }}>
+            <div style={{ width: 170 }}>
+              <label>حاشیه‌ی قطع صدا (ms)</label>
+              <input
+                dir="ltr"
+                type="number"
+                min={0}
+                max={1000}
+                step={50}
+                value={draft.mute_padding_ms}
+                onChange={(e) => update({ mute_padding_ms: Math.min(1000, Math.max(0, Number(e.target.value) || 0)) })}
+              />
+            </div>
+            <span className="hint" style={{ margin: "0 0 8px", flex: "1 1 220px" }}>
+              صدای ویدیو این مقدار قبل و بعد از جمله‌ی کاربر هم قطع می‌شود (پیشنهاد: ۲۰۰ تا ۳۰۰).
+            </span>
+            <div>
+              <label>گام جابه‌جایی</label>
+              <select value={nudgeStep} onChange={(e) => setNudgeStep(Number(e.target.value))}>
+                {NUDGE_STEPS.map((n) => (
+                  <option key={n} value={n}>
+                    {n / 1000} ثانیه
+                  </option>
+                ))}
+              </select>
+            </div>
+            {draft.lines.length > 0 && (
+              <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 2 }}>
+                <span className="hint" style={{ margin: 0 }}>همه‌ی دیالوگ‌ها:</span>
+                <button className="btn btn-ghost btn-sm" onClick={() => nudgeAll(-nudgeStep)} title="همه زودتر">
+                  − زودتر
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => nudgeAll(nudgeStep)} title="همه دیرتر">
+                  + دیرتر
+                </button>
+              </div>
+            )}
+          </div>
 
           {draft.lines.length > 0 && (
             <div style={{ overflowX: "auto" }}>
@@ -346,25 +592,57 @@ export default function VideoClipsPanel({
                       <td style={{ padding: 4, minWidth: 180 }}>
                         <textarea rows={2} value={l.translation_fa} onChange={(e) => updateLine(i, { translation_fa: e.target.value })} />
                       </td>
-                      <td style={{ padding: 4, width: 110 }}>
+                      <td style={{ padding: 4, width: 150 }}>
                         <div style={{ display: "flex", gap: 4 }}>
                           <input dir="ltr" value={sec(l.start_ms)} onChange={(e) => updateLine(i, { start_ms: toMs(e.target.value) })} />
                           <button className="btn btn-ghost btn-sm" title="شروع = لحظه‌ی فعلی ویدیو" onClick={() => updateLine(i, { start_ms: nowMs() })}>
                             ⏱
                           </button>
                         </div>
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          <button className="btn btn-ghost btn-sm" title="شروع زودتر" onClick={() => nudgeLine(i, -nudgeStep, 0)}>
+                            −
+                          </button>
+                          <button className="btn btn-ghost btn-sm" title="شروع دیرتر" onClick={() => nudgeLine(i, nudgeStep, 0)}>
+                            +
+                          </button>
+                        </div>
                       </td>
-                      <td style={{ padding: 4, width: 110 }}>
+                      <td style={{ padding: 4, width: 150 }}>
                         <div style={{ display: "flex", gap: 4 }}>
                           <input dir="ltr" value={sec(l.end_ms)} onChange={(e) => updateLine(i, { end_ms: toMs(e.target.value) })} />
                           <button className="btn btn-ghost btn-sm" title="پایان = لحظه‌ی فعلی ویدیو" onClick={() => updateLine(i, { end_ms: nowMs() })}>
                             ⏱
                           </button>
                         </div>
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          <button className="btn btn-ghost btn-sm" title="پایان زودتر" onClick={() => nudgeLine(i, 0, -nudgeStep)}>
+                            −
+                          </button>
+                          <button className="btn btn-ghost btn-sm" title="پایان دیرتر" onClick={() => nudgeLine(i, 0, nudgeStep)}>
+                            +
+                          </button>
+                        </div>
                       </td>
                       <td style={{ padding: 4, whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: 2 }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => nudgeLine(i, -nudgeStep, -nudgeStep)} title="کل جمله زودتر">
+                            ⏪
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => nudgeLine(i, nudgeStep, nudgeStep)} title="کل جمله دیرتر">
+                            ⏩
+                          </button>
+                        </div>
                         <button className="btn btn-ghost btn-sm" onClick={() => playSegment(l)} title="پخش همین دیالوگ">
                           ▶
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => previewMuted(l)}
+                          disabled={!draft.video_url}
+                          title="پیش‌نمایش مثل اپ (صدا سر این جمله قطع می‌شود)"
+                        >
+                          🔇
                         </button>
                         <button
                           className="btn btn-ghost btn-sm"
@@ -464,7 +742,11 @@ export default function VideoClipsPanel({
                 <div>
                   <div style={{ fontWeight: 700 }}>{c.title}</div>
                   <div className="hint" style={{ margin: 0 }}>
-                    {c.source === "movie" ? `فیلم${c.movie_title ? ` (${c.movie_title})` : ""}` : "Flow"}
+                    {c.source === "movie"
+                      ? `فیلم${c.movie_title ? ` (${c.movie_title}${c.movie_year ? `، ${c.movie_year}` : ""})` : ""}${
+                          c.movie_start_ms ? ` @ ${formatTimecode(c.movie_start_ms)}` : ""
+                        }${hideMovies ? " · پنهان (سوئیچ سراسری)" : ""}`
+                      : "Flow"}
                     {c.category ? ` · ${SCENE_CATEGORIES.find((x) => x.value === c.category)?.label ?? c.category}` : ""} ·{" "}
                     {LEVELS.find((l) => l.id === c.level)?.label} ·{" "}
                     {c.duration_seconds} ثانیه · {c.speaker_count ?? 0} شخصیت · {c.questions.length} سؤال

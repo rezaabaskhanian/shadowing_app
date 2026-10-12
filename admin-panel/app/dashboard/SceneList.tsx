@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   API_BASE,
+  createScene,
   deleteScene,
   getScene,
   listScenes,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/api";
 import type { SceneResp } from "@/lib/types";
 import { SCENE_CATEGORIES, sceneCategoryLabel } from "@/lib/types";
+import { parseScenesJson, sceneJsonToPayload } from "@/lib/sceneJson";
 
 // فیلترهای لیست در مرورگر نگه داشته می‌شوند تا با رفتن به بخش دیگری از پنل
 // (یا فرم ویرایش) و برگشتن، دوباره به «همه» برنگردند.
@@ -27,6 +29,7 @@ function loadFilters(): { difficulty: string; category: string } {
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
+  starter: "قدم اول",
   beginner: "آسان",
   intermediate: "متوسط",
   advanced: "سخت",
@@ -49,6 +52,42 @@ export default function SceneList({
   const [reordering, setReordering] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  // وارد کردن گروهی: هر فایل یک صحنه یا آرایه‌ای از صحنه‌ها. صحنه‌ی بدون عکس
+  // پیش‌نویس ذخیره می‌شود؛ عکس را بعداً از «ویرایش» آپلود می‌کنی و نقاط همان
+  // جایی که در JSON آمده روی عکس می‌نشینند.
+  async function handleBulkImport(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setImporting(true);
+    let created = 0;
+    const failed: string[] = [];
+    for (const file of Array.from(files)) {
+      let scenes: unknown[];
+      try {
+        scenes = parseScenesJson(await file.text());
+      } catch {
+        failed.push(`${file.name}: JSON نامعتبر`);
+        continue;
+      }
+      for (const [i, raw] of scenes.entries()) {
+        const label = scenes.length > 1 ? `${file.name} #${i + 1}` : file.name;
+        try {
+          await createScene(sceneJsonToPayload(raw));
+          created++;
+        } catch (err: any) {
+          failed.push(`${label}: ${err.message}`);
+        }
+      }
+    }
+    setImporting(false);
+    if (importRef.current) importRef.current.value = "";
+    if (created) notify(`${created} صحنه ساخته شد ✅ — صحنه‌های بی‌عکس پیش‌نویس‌اند؛ عکسشان را از «ویرایش» آپلود کن.`, "ok");
+    if (failed.length) notify(`ساخته نشد — ${failed.join(" | ")}`, "err");
+    load();
+  }
 
   async function load() {
     setLoading(true);
@@ -244,6 +283,22 @@ export default function SceneList({
       <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0 }}>صحنه‌های ثبت‌شده</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json,application/json"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => handleBulkImport(e.target.files)}
+          />
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => importRef.current?.click()}
+            disabled={importing}
+            title="چند فایل JSON صحنه را با هم انتخاب کن؛ صحنه‌های بی‌عکس پیش‌نویس ساخته می‌شوند"
+          >
+            {importing ? "در حال ساخت..." : "📥 وارد کردن گروهی (JSON)"}
+          </button>
           <select
             value={difficultyFilter}
             onChange={(e) => setDifficultyFilter(e.target.value)}
@@ -419,6 +474,11 @@ export default function SceneList({
                 >
                   {lockBadge(s).text}
                 </span>
+                {!s.backgroundImageURL && (
+                  <span className="hint" style={{ color: "#f59e0b", fontWeight: 600 }}>
+                    📷 بدون عکس — از «ویرایش» آپلود کن
+                  </span>
+                )}
                 {s.category ? (
                   <span className="hint">🏷 {sceneCategoryLabel(s.category)}</span>
                 ) : (
@@ -485,10 +545,13 @@ export default function SceneList({
             <p className="hint">دسته‌بندی: {detail.category ? sceneCategoryLabel(detail.category) : "بدون دسته‌بندی"}</p>
 
             <div className="image-wrap" style={{ cursor: "default" }}>
-              <img
-                src={`${API_BASE}${detail.backgroundImageURL}`}
-                alt={detail.title}
-              />
+              {detail.backgroundImageURL ? (
+                <img src={`${API_BASE}${detail.backgroundImageURL}`} alt={detail.title} />
+              ) : (
+                <div className="hint" style={{ padding: 40, textAlign: "center" }}>
+                  📷 هنوز عکسی آپلود نشده
+                </div>
+              )}
               {(detail.hotspots || []).map((h, i) => (
                 <div
                   key={h.id}

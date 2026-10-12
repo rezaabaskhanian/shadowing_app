@@ -48,15 +48,38 @@ type UserClip = postgresvideoclip.UserClip
 type Line = postgresvideoclip.Line
 type Question = postgresvideoclip.Question
 
-type Service struct {
-	repo  repository
-	ai    aiservice.Service
-	store filestore.Store
-	groq  segmentTranscriber
+// settingsStore همان settingsservice — برای سوئیچِ سراسریِ «پنهان کردن کلیپ‌های فیلم».
+type settingsStore interface {
+	Get(key string) string
+	Set(ctx context.Context, key, value string) error
 }
 
-func New(repo repository, ai aiservice.Service, store filestore.Store, groq segmentTranscriber) *Service {
-	return &Service{repo: repo, ai: ai, store: store, groq: groq}
+// KeyHideMovieClips اگر "true" باشد همه‌ی کلیپ‌های «تکه‌ای از فیلم» از اپ
+// پنهان می‌شوند (کلیپ‌های Google Flow می‌مانند)؛ از پنل، تب «تمرین با ویدیو».
+const KeyHideMovieClips = "VIDEO_CLIPS_HIDE_MOVIE"
+
+// DefaultMutePaddingMs حاشیه‌ی پیش‌فرض قطع صدا قبل و بعد از جمله‌ی کاربر.
+const DefaultMutePaddingMs = 250
+
+type Service struct {
+	repo     repository
+	ai       aiservice.Service
+	store    filestore.Store
+	groq     segmentTranscriber
+	settings settingsStore
+}
+
+func New(repo repository, ai aiservice.Service, store filestore.Store, groq segmentTranscriber, settings settingsStore) *Service {
+	return &Service{repo: repo, ai: ai, store: store, groq: groq, settings: settings}
+}
+
+func (s *Service) movieClipsHidden() bool {
+	return s.settings != nil && s.settings.Get(KeyHideMovieClips) == "true"
+}
+
+// forApp اطلاعات داخلی منبع را از کلیپ برمی‌دارد؛ اپ لازمشان ندارد.
+func forApp(c *Clip) {
+	c.MovieYear, c.MovieStartMs, c.MovieEndMs = 0, 0, 0
 }
 
 func parseID(op richerror.Op, id string) error {
@@ -73,7 +96,20 @@ func (s *Service) ListClips(ctx context.Context, userID string) ([]UserClip, err
 	if err := parseID(op, userID); err != nil {
 		return nil, err
 	}
-	return s.repo.ListActiveForUser(ctx, userID)
+	list, err := s.repo.ListActiveForUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	hideMovies := s.movieClipsHidden()
+	out := make([]UserClip, 0, len(list))
+	for _, c := range list {
+		if hideMovies && c.Source == "movie" {
+			continue
+		}
+		forApp(&c.Clip)
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 // GetClip کلیپ با خطوطش برای اپ؛ کلیپ غیرفعال برای کاربر پیدا نمی‌شود.
@@ -86,9 +122,10 @@ func (s *Service) GetClip(ctx context.Context, id string) (Clip, error) {
 	if err != nil {
 		return Clip{}, err
 	}
-	if !c.IsActive {
+	if !c.IsActive || (c.Source == "movie" && s.movieClipsHidden()) {
 		return Clip{}, richerror.New(op).WithMessage("کلیپ پیدا نشد").WithKind(richerror.KindNotFound)
 	}
+	forApp(&c)
 	return c, nil
 }
 
@@ -159,6 +196,16 @@ func (s *Service) AdminSave(ctx context.Context, id string, c Clip) (Clip, error
 	c.MovieTitle = strings.TrimSpace(c.MovieTitle)
 	if c.Source != "movie" {
 		c.MovieTitle = ""
+		c.MovieYear, c.MovieStartMs, c.MovieEndMs = 0, 0, 0
+	}
+	if c.MovieYear != 0 && (c.MovieYear < 1880 || c.MovieYear > 2100) {
+		return invalid("سال فیلم درست نیست")
+	}
+	if c.MovieStartMs < 0 || c.MovieEndMs < 0 || (c.MovieEndMs > 0 && c.MovieEndMs <= c.MovieStartMs) {
+		return invalid("زمان شروع/پایان صحنه در فیلم درست نیست")
+	}
+	if c.MutePaddingMs < 0 || c.MutePaddingMs > 1000 {
+		return invalid("حاشیه‌ی قطع صدا باید بین ۰ تا ۱۰۰۰ میلی‌ثانیه باشد")
 	}
 
 	lines := make([]Line, 0, len(c.Lines))
@@ -215,6 +262,30 @@ func (s *Service) AdminSave(ctx context.Context, id string, c Clip) (Clip, error
 		return Clip{}, err
 	}
 	return s.repo.Get(ctx, savedID)
+}
+
+// Settings تنظیمات سراسری «تمرین با ویدیو» در پنل ادمین.
+type Settings struct {
+	HideMovieClips bool `json:"hide_movie_clips"`
+}
+
+func (s *Service) AdminGetSettings() Settings {
+	return Settings{HideMovieClips: s.movieClipsHidden()}
+}
+
+func (s *Service) AdminSaveSettings(ctx context.Context, st Settings) (Settings, error) {
+	const op = "videoclip.AdminSaveSettings"
+	if s.settings == nil {
+		return Settings{}, richerror.New(op).WithMessage("تنظیمات در دسترس نیست")
+	}
+	value := "false"
+	if st.HideMovieClips {
+		value = "true"
+	}
+	if err := s.settings.Set(ctx, KeyHideMovieClips, value); err != nil {
+		return Settings{}, richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره‌ی تنظیمات")
+	}
+	return s.AdminGetSettings(), nil
 }
 
 func (s *Service) AdminDelete(ctx context.Context, id string) error {

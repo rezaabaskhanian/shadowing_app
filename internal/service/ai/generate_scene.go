@@ -48,7 +48,7 @@ type GeneratedGrammarNote struct {
 type GeneratedScene struct {
 	Title       string                `json:"title"`
 	Description string                `json:"description"`
-	Difficulty  string                `json:"difficulty"` // beginner | intermediate | advanced
+	Difficulty  string                `json:"difficulty"` // starter | beginner | intermediate | advanced
 	ImagePrompt string                `json:"image_prompt"`
 	Hotspots    []GeneratedHotspot    `json:"hotspots"`
 	GrammarNote *GeneratedGrammarNote `json:"grammar_note,omitempty"`
@@ -79,7 +79,7 @@ Rules:
 {
   "title": string (short English title),
   "description": string (one short English sentence),
-  "difficulty": "beginner" | "intermediate" | "advanced",
+  "difficulty": "starter" | "beginner" | "intermediate" | "advanced",
   "image_prompt": string (a short English prompt to generate a cartoon-style background image of this place),
   "hotspots": [
     {

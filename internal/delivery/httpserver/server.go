@@ -18,6 +18,7 @@ import (
 	coursehandler "shadowing-backend/internal/delivery/httpserver/course"
 	landinghandler "shadowing-backend/internal/delivery/httpserver/landing"
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
+	libraryhandler "shadowing-backend/internal/delivery/httpserver/library"
 	missionhandler "shadowing-backend/internal/delivery/httpserver/mission"
 	podcasthandler "shadowing-backend/internal/delivery/httpserver/podcast"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
@@ -62,6 +63,7 @@ import (
 
 	"fmt"
 	courseservice "shadowing-backend/internal/service/course"
+	libraryservice "shadowing-backend/internal/service/library"
 	podcastservice "shadowing-backend/internal/service/podcast"
 	userservice "shadowing-backend/internal/service/user"
 	writingservice "shadowing-backend/internal/service/writing"
@@ -111,6 +113,7 @@ type Service struct {
 	podcastHandler       podcasthandler.Handler
 	courseHandler        coursehandler.Handler
 	writingHandler       writinghandler.Handler
+	libraryHandler       libraryhandler.Handler
 }
 
 func New(cfg config.Config, userSvc userservice.Service,
@@ -142,6 +145,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	writingSvc *writingservice.Service,
 	courseSvc *courseservice.Service,
 	podcastSvc *podcastservice.Service,
+	librarySvc *libraryservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -208,6 +212,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 		podcastHandler:       podcasthandler.New(podcastSvc, authSvc, authConfig),
 		courseHandler:        coursehandler.New(courseSvc, authSvc, authConfig),
 		writingHandler:       writinghandler.New(writingSvc, authSvc, authConfig),
+		libraryHandler:       libraryhandler.New(librarySvc, authSvc, authConfig),
 	}
 }
 
@@ -308,6 +313,9 @@ func (s Service) Server() {
 
 	// «تمرین نوشتن» (داستان کوتاه + تصحیح با AI) — ببینید writingservice.
 	s.writingHandler.SetWritingRoutes(e)
+
+	// «کتابخانه‌ی محتوا» و «اصطلاحات» پنل ادمین — ببینید libraryservice.
+	s.libraryHandler.SetLibraryRoutes(e)
 
 	// سرو استاتیک فایل‌های آپلودشده (تصاویر و صداها، مثلاً /uploads/xxx.png)
 	e.Static(uploadURLPath, uploadDir)

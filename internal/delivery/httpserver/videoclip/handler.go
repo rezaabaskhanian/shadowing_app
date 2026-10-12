@@ -36,6 +36,8 @@ func (h Handler) SetVideoClipRoutes(e *echo.Echo) {
 	admin.POST("/upload-video", h.AdminUploadVideo)
 	admin.POST("/detect-lines", h.AdminDetectLines)
 	admin.POST("/complete", h.AdminComplete)
+	admin.GET("/settings", h.AdminGetSettings)
+	admin.PUT("/settings", h.AdminSaveSettings)
 	admin.GET("/:id", h.AdminGet)
 	admin.PUT("/:id", h.AdminUpdate)
 	admin.DELETE("/:id", h.AdminDelete)
@@ -154,4 +156,18 @@ func (h Handler) AdminComplete(c echo.Context) error {
 	}
 	res, err := h.svc.AdminComplete(c.Request().Context(), req.Title, req.DescriptionFa, req.Level, req.Lines)
 	return respond(c, res, err)
+}
+
+// AdminGetSettings تنظیمات سراسری (مثل پنهان کردن یکجای کلیپ‌های فیلم).
+func (h Handler) AdminGetSettings(c echo.Context) error {
+	return c.JSON(http.StatusOK, h.svc.AdminGetSettings())
+}
+
+func (h Handler) AdminSaveSettings(c echo.Context) error {
+	var req videoclipservice.Settings
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "درخواست نامعتبر"})
+	}
+	st, err := h.svc.AdminSaveSettings(c.Request().Context(), req)
+	return respond(c, st, err)
 }
