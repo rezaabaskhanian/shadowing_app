@@ -26,7 +26,7 @@ func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 	default:
 		return "", richerror.New(op).
 			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 }
 
@@ -45,7 +45,7 @@ func toSpeaker(op richerror.Op, v string) (scene.SpeakerType, error) {
 	if v == "" {
 		return "", richerror.New(op).
 			WithMessage("نام گوینده الزامی است").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 	return scene.SpeakerType(v), nil
 }
@@ -62,7 +62,7 @@ func toDisplay(op richerror.Op, v string) (scene.DisplayType, error) {
 	default:
 		return "", richerror.New(op).
 			WithMessage("نوع نمایش نامعتبر است. مقادیر مجاز: full, partial, none").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 }
 

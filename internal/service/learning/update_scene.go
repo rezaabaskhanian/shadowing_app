@@ -18,19 +18,19 @@ func (s Service) UpdateScene(ctx context.Context, id string, req dto.CreateScene
 	if req.Title == "" {
 		return dto.Scene{}, richerror.New(op).
 			WithMessage("عنوان سناریو الزامی است").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 	// پیش‌نویس (مثلاً صحنه‌ای که از JSON وارد شده) می‌تواند فعلاً عکس نداشته
 	// باشد؛ فقط انتشار عکس لازم دارد.
 	if req.BackgroundImageURL == "" && req.IsPublished {
 		return dto.Scene{}, richerror.New(op).
 			WithMessage("برای انتشار صحنه، تصویر پس‌زمینه لازم است").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 	if len(req.Hotspots) == 0 {
 		return dto.Scene{}, richerror.New(op).
 			WithMessage("حداقل یک هات‌اسپات باید وجود داشته باشد").
-			WithKind(richerror.KindForbidden)
+			WithKind(richerror.KindInvalid)
 	}
 	if err := validateCategory(op, req.Category); err != nil {
 		return dto.Scene{}, err

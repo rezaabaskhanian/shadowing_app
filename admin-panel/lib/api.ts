@@ -85,7 +85,14 @@ async function authFetch(path: string, opts: RequestInit = {}): Promise<Response
 
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
 
+  // فقط وقتی واقعاً لاگین/نقش مشکل دارد خارج می‌شویم: 401، یا 403ِ میان‌افزارِ
+  // AdminOnly. خطاهای اعتبارسنجیِ سرویس‌ها که با "error":"forbidden" برمی‌گردند
+  // (مثلاً دیالوگِ بدون گوینده) باید فقط پیامشان نشان داده شود، نه خروج از پنل.
   if (res.status === 401 || res.status === 403) {
+    if (res.status === 403) {
+      const body = await res.clone().json().catch(() => ({}));
+      if (body?.error) return res;
+    }
     clearSession();
     if (typeof window !== "undefined") window.location.href = "/login";
     throw new Error("دسترسی نامعتبر است. لطفاً دوباره وارد شوید.");
