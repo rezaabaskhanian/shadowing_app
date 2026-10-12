@@ -42,9 +42,8 @@ func NewScene(title, description, bgImage string, difficulty DifficultyLevel, is
 	if title == "" {
 		return Scene{}, errors.New("title is required")
 	}
-	if bgImage == "" {
-		return Scene{}, errors.New("background image is required")
-	}
+	// عکس برای پیش‌نویس اختیاری است (مثلاً صحنه‌ای که از JSON وارد شده و
+	// عکسش بعداً آپلود می‌شود)؛ فقط انتشار عکس لازم دارد — ببینید Publish.
 
 	now := time.Now()
 
@@ -68,6 +67,9 @@ func NewScene(title, description, bgImage string, difficulty DifficultyLevel, is
 func (s *Scene) Publish() error {
 	if len(s.Hotspots) == 0 {
 		return errors.New("cannot publish scene without hotspots")
+	}
+	if s.BackgroundImageURL == "" {
+		return errors.New("cannot publish scene without background image")
 	}
 	s.Status = StatusPublished
 	s.UpdatedAt = time.Now()
