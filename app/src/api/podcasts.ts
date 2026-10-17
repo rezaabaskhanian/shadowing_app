@@ -25,6 +25,8 @@ export interface Podcast {
   duration_seconds: number;
   /** تصویرِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط؛ خالی = بدون عکس. */
   cover_url?: string;
+  /** عکس‌های اسلایدشوی هنگام پخش؛ from_line = جمله‌ای (از ۱) که عکس از آن دیده می‌شود، ۰ = خودکار. */
+  images?: { url: string; from_line: number }[];
   line_count: number;
   vocabulary: { word: string; meaning_fa: string }[];
   lines: PodcastLine[];

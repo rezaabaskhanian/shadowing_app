@@ -99,6 +99,7 @@ export const TopicListScreen: React.FC = () => {
                     <View style={styles.metaItem}>
                       <Clock size={13} color={COLORS.muted} />
                       <Text style={styles.metaText}>
+                        {topic.images?.length ? `🖼 ${t('pictureStoryBadge')} · ` : ''}
                         {t('topicSpeakingSeconds').replace('{s}', String(topic.duration_seconds))}
                       </Text>
                     </View>

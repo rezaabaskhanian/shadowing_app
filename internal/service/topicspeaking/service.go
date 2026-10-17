@@ -108,8 +108,12 @@ func (s *Service) Attempt(ctx context.Context, userID, topicID, audioPath string
 		return nil, richerror.New(op).WithErr(err).WithMessage("صدایت واضح شنیده نشد، دوباره امتحان کن").WithKind(richerror.KindInvalid)
 	}
 
+	captions := make([]string, len(topic.Images))
+	for i, img := range topic.Images {
+		captions[i] = img.Caption
+	}
 	review, err := s.ai.ReviewTopicSpeech(ctx, topic.Title, topic.PromptFa, topic.GuideQuestions, topic.UsefulPhrases,
-		topic.Level, durationSeconds, transcript)
+		captions, topic.Level, durationSeconds, transcript)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("بررسی صحبتت ناموفق بود، دوباره امتحان کن")
 	}
@@ -133,6 +137,16 @@ func (s *Service) Attempt(ctx context.Context, userID, topicID, audioPath string
 	if review.UsedPhrases == nil {
 		review.UsedPhrases = []string{}
 	}
+	// فقط شماره‌های معتبر عکس (از ۱)، بدون تکرار.
+	covered := make([]int, 0, len(review.PicturesCovered))
+	seen := map[int]bool{}
+	for _, n := range review.PicturesCovered {
+		if n >= 1 && n <= len(topic.Images) && !seen[n] {
+			seen[n] = true
+			covered = append(covered, n)
+		}
+	}
+	review.PicturesCovered = covered
 
 	words := len(strings.Fields(transcript))
 	res := &AttemptResult{
@@ -160,6 +174,9 @@ func (s *Service) AdminList(ctx context.Context) ([]Topic, error) {
 
 var validLevels = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
 
+// maxStoryImages سقف عکس‌های «داستان تصویری».
+const maxStoryImages = 6
+
 func clean(list []string) []string {
 	out := make([]string, 0, len(list))
 	for _, v := range list {
@@ -183,6 +200,18 @@ func (s *Service) AdminSave(ctx context.Context, id string, t Topic) (Topic, err
 	if !validLevels[t.Level] {
 		t.Level = "beginner"
 	}
+	images := make([]postgrestopicspeaking.StoryImage, 0, len(t.Images))
+	for _, img := range t.Images {
+		img.URL = strings.TrimSpace(img.URL)
+		img.Caption = strings.TrimSpace(img.Caption)
+		if img.URL != "" {
+			images = append(images, img)
+		}
+	}
+	if len(images) > maxStoryImages {
+		return Topic{}, richerror.New(op).WithMessage("حداکثر ۶ عکس برای داستان تصویری").WithKind(richerror.KindInvalid)
+	}
+	t.Images = images
 	if t.DurationSeconds < 30 || t.DurationSeconds > 120 {
 		return Topic{}, richerror.New(op).WithMessage("مدت صحبت باید بین ۳۰ تا ۱۲۰ ثانیه باشد").WithKind(richerror.KindInvalid)
 	}

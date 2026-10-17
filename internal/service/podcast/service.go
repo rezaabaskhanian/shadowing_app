@@ -96,6 +96,9 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Podcast, error) {
 	return s.repo.Get(ctx, id)
 }
 
+// maxPodcastImages سقف عکس‌های اسلایدشوی هر پادکست.
+const maxPodcastImages = 12
+
 var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
 
 func sameScript(a, b []Line) bool {
@@ -155,6 +158,20 @@ func (s *Service) AdminSave(ctx context.Context, id string, p Podcast) (Podcast,
 		}
 	}
 	p.Vocabulary = vocab
+	images := make([]postgrespodcast.Image, 0, len(p.Images))
+	for _, img := range p.Images {
+		if img.URL = strings.TrimSpace(img.URL); img.URL == "" {
+			continue
+		}
+		if img.FromLine < 0 {
+			img.FromLine = 0
+		}
+		images = append(images, img)
+	}
+	if len(images) > maxPodcastImages {
+		return invalid("حداکثر ۱۲ عکس برای هر پادکست")
+	}
+	p.Images = images
 	if p.Voices == nil {
 		p.Voices = map[string]string{}
 	}

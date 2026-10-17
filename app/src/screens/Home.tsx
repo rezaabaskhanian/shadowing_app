@@ -492,7 +492,10 @@ export const HomeScreen = () => {
         key: topic.id,
         title: topic.title,
         subtitle: topic.prompt_fa || undefined,
-        meta: `🎤 ${seconds(topic.duration_seconds)}${best(topic.attempts, topic.best_score)}`,
+        meta: `${topic.images?.length ? `🖼 ${t('pictureStoryBadge')} · ` : '🎤 '}${seconds(topic.duration_seconds)}${best(
+          topic.attempts,
+          topic.best_score
+        )}`,
         image: uriImage(topic.image_url),
         emoji: '🗣️',
         badge: contentBadge(topic.level),

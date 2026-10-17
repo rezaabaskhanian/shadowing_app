@@ -19,19 +19,27 @@ func New(conn *pgxpool.Pool) DB {
 	return DB{conn: conn}
 }
 
-// Topic یک موضوع «صحبت درباره‌ی یک موضوع» که ادمین ساخته.
+// StoryImage یکی از عکس‌های «داستان تصویری»؛ Caption توضیح کوتاه ادمین برای AI.
+type StoryImage struct {
+	URL     string `json:"url"`
+	Caption string `json:"caption"`
+}
+
+// Topic یک موضوع «صحبت درباره‌ی یک موضوع» که ادمین ساخته. اگر Images داشته
+// باشد «داستان تصویری» است: کاربر از روی عکس‌ها به ترتیب داستان می‌گوید.
 type Topic struct {
-	ID              string   `json:"id"`
-	Title           string   `json:"title"`
-	PromptFa        string   `json:"prompt_fa"`
-	GuideQuestions  []string `json:"guide_questions"`
-	UsefulPhrases   []string `json:"useful_phrases"`
-	Level           string   `json:"level"`
-	DurationSeconds int      `json:"duration_seconds"`
-	ImageURL        string   `json:"image_url"`
-	Position        int      `json:"position"`
-	IsActive        bool     `json:"is_active"`
-	CreatedAt       string   `json:"created_at"`
+	ID              string       `json:"id"`
+	Title           string       `json:"title"`
+	PromptFa        string       `json:"prompt_fa"`
+	GuideQuestions  []string     `json:"guide_questions"`
+	UsefulPhrases   []string     `json:"useful_phrases"`
+	Level           string       `json:"level"`
+	DurationSeconds int          `json:"duration_seconds"`
+	ImageURL        string       `json:"image_url"`
+	Images          []StoryImage `json:"images"`
+	Position        int          `json:"position"`
+	IsActive        bool         `json:"is_active"`
+	CreatedAt       string       `json:"created_at"`
 }
 
 // UserTopic موضوع به‌همراه خلاصه‌ی تلاش‌های همین کاربر (برای لیست اپ).
@@ -52,12 +60,26 @@ type Attempt struct {
 }
 
 const topicColumns = `id::text, title, prompt_fa, guide_questions, useful_phrases, level,
-	duration_seconds, image_url, position, is_active, created_at::text`
+	duration_seconds, image_url, position, is_active, created_at::text, images`
 
 func scanTopic(row pgx.Row, t *Topic, extra ...any) error {
+	var images []byte
 	dest := append([]any{&t.ID, &t.Title, &t.PromptFa, &t.GuideQuestions, &t.UsefulPhrases, &t.Level,
-		&t.DurationSeconds, &t.ImageURL, &t.Position, &t.IsActive, &t.CreatedAt}, extra...)
-	return row.Scan(dest...)
+		&t.DurationSeconds, &t.ImageURL, &t.Position, &t.IsActive, &t.CreatedAt, &images}, extra...)
+	if err := row.Scan(dest...); err != nil {
+		return err
+	}
+	t.Images = []StoryImage{}
+	_ = json.Unmarshal(images, &t.Images)
+	return nil
+}
+
+func imagesJSON(images []StoryImage) []byte {
+	if images == nil {
+		images = []StoryImage{}
+	}
+	b, _ := json.Marshal(images)
+	return b
 }
 
 // ListAll همه‌ی موضوع‌ها (فعال و غیرفعال) برای پنل ادمین.
@@ -135,10 +157,11 @@ func (r DB) Create(ctx context.Context, t Topic) (Topic, error) {
 	const op = "postgrestopicspeaking.Create"
 	var out Topic
 	err := scanTopic(r.conn.QueryRow(ctx, `
-		INSERT INTO speaking_topics (title, prompt_fa, guide_questions, useful_phrases, level, duration_seconds, position, is_active, image_url)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO speaking_topics (title, prompt_fa, guide_questions, useful_phrases, level, duration_seconds, position, is_active, image_url, images)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING `+topicColumns,
-		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL), &out)
+		t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL,
+		imagesJSON(t.Images)), &out)
 	if err != nil {
 		return Topic{}, richerror.New(op).WithErr(err).WithMessage("خطا در ساخت موضوع")
 	}
@@ -151,10 +174,11 @@ func (r DB) Update(ctx context.Context, t Topic) (Topic, error) {
 	err := scanTopic(r.conn.QueryRow(ctx, `
 		UPDATE speaking_topics
 		SET title = $2, prompt_fa = $3, guide_questions = $4, useful_phrases = $5, level = $6,
-			duration_seconds = $7, position = $8, is_active = $9, image_url = $10
+			duration_seconds = $7, position = $8, is_active = $9, image_url = $10, images = $11
 		WHERE id = $1::uuid
 		RETURNING `+topicColumns,
-		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL), &out)
+		t.ID, t.Title, t.PromptFa, nonNil(t.GuideQuestions), nonNil(t.UsefulPhrases), t.Level, t.DurationSeconds, t.Position, t.IsActive, t.ImageURL,
+		imagesJSON(t.Images)), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Topic{}, richerror.New(op).WithErr(err).WithMessage("موضوع پیدا نشد").WithKind(richerror.KindNotFound)
 	}

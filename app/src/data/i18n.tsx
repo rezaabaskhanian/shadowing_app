@@ -1089,6 +1089,13 @@ export const translations: Translations = {
   podcastFilterAll: { en: 'All', fa: 'همه' },
   podcastFilterLessons: { en: 'Lessons', fa: 'درسی' },
   podcastFilterFeatured: { en: 'Featured', fa: 'منتخب' },
+  pictureStoryBadge: { en: 'Picture story', fa: 'داستان تصویری' },
+  pictureStoryHint: {
+    en: 'Swipe through the pictures, then tell the story in order: what happens in each picture?',
+    fa: 'عکس‌ها را ورق بزن و بعد داستان را به ترتیب تعریف کن: در هر عکس چه اتفاقی می‌افتد؟',
+  },
+  pictureStoryCovered: { en: 'Pictures you covered: {i} of {n}', fa: 'عکس‌هایی که گفتی: {i} از {n}' },
+  pictureStoryBetter: { en: 'A better version of your story', fa: 'نسخه‌ی بهتر داستانت' },
   listenScenePodcast: { en: 'Listen to this scene\'s podcast', fa: 'پادکست همین صحنه را گوش بده' },
   myVersionTitle: { en: 'My version', fa: 'نسخه‌ی من' },
   myVersionButton: { en: 'Record my version', fa: 'نسخه‌ی خودم را بسازم' },

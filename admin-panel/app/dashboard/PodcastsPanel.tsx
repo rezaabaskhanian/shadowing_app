@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ImageField from "./ImageField";
+import SlideshowImagesField from "./SlideshowImagesField";
 import {
   API_BASE,
   deletePodcast,
@@ -52,6 +53,7 @@ const emptyDraft = (position = 0): Draft => ({
   image_url: "",
   speech_speed: 0,
   line_gap_ms: 0,
+  images: [],
   position,
   is_active: false,
   lines: [],
@@ -492,6 +494,12 @@ export default function PodcastsPanel({
             label="تصویر کارت (اختیاری — اگر خالی باشد و صحنه انتخاب شده باشد، تصویرِ همان صحنه نشان داده می‌شود)"
             value={draft.image_url || ""}
             onChange={(url) => update({ image_url: url })}
+            notify={notify}
+          />
+          <SlideshowImagesField
+            value={draft.images || []}
+            onChange={(images) => update({ images })}
+            lineCount={lines.length}
             notify={notify}
           />
           <label>توضیح فارسی (در این قسمت چه یاد می‌گیرد)</label>

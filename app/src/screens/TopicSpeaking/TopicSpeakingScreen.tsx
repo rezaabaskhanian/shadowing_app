@@ -16,6 +16,7 @@ import { submitTopicSpeaking, type SpeakingTopic, type TopicSpeakingResult } fro
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { track } from '../../services/analytics';
 import { RiseIn } from '../../components/RiseIn';
+import { StoryPictures } from './StoryPictures';
 
 type Phase = 'idle' | 'recording' | 'analyzing' | 'result' | 'error' | 'locked';
 type ActionCommand = 'none' | 'start_record' | 'stop_record';
@@ -48,6 +49,7 @@ export const TopicSpeakingScreen: React.FC = () => {
   const route = useRoute<any>();
   const topic: SpeakingTopic | undefined = route.params?.topic;
   const maxSeconds = topic?.duration_seconds ?? 60;
+  const storyImages = (topic?.images ?? []).filter((img) => !!img.url);
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [micError, setMicError] = useState<string | null>(null);
@@ -170,6 +172,15 @@ export const TopicSpeakingScreen: React.FC = () => {
 
         {(phase === 'idle' || phase === 'recording') && (
           <>
+            {storyImages.length > 0 && (
+              <View style={styles.storyBlock}>
+                <View style={styles.storyBadge}>
+                  <Text style={styles.storyBadgeText}>🖼 {t('pictureStoryBadge')}</Text>
+                </View>
+                <Text style={styles.storyHint}>{t('pictureStoryHint')}</Text>
+                <StoryPictures images={storyImages} horizontalPadding={SPACING.l} />
+              </View>
+            )}
             {topic.guide_questions.length > 0 && (
               <View style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingGuideTitle')}</Text>
@@ -248,6 +259,21 @@ export const TopicSpeakingScreen: React.FC = () => {
               </View>
             </RiseIn>
 
+            {storyImages.length > 0 && (
+              <RiseIn i={1} style={styles.card}>
+                <Text style={styles.cardLabel}>
+                  {t('pictureStoryCovered')
+                    .replace('{i}', String(result.pictures_covered?.length ?? 0))
+                    .replace('{n}', String(storyImages.length))}
+                </Text>
+                <StoryPictures
+                  images={storyImages}
+                  horizontalPadding={SPACING.l + SPACING.m}
+                  covered={result.pictures_covered ?? []}
+                />
+              </RiseIn>
+            )}
+
             {result.strengths_fa.length > 0 && (
               <RiseIn i={1} style={styles.card}>
                 <Text style={styles.cardLabel}>{t('topicSpeakingStrengths')}</Text>
@@ -306,7 +332,9 @@ export const TopicSpeakingScreen: React.FC = () => {
 
             {!!result.improved_version && (
               <RiseIn i={5} style={styles.card}>
-                <Text style={styles.cardLabel}>{t('topicSpeakingImproved')}</Text>
+                <Text style={styles.cardLabel}>
+                  {t(storyImages.length > 0 ? 'pictureStoryBetter' : 'topicSpeakingImproved')}
+                </Text>
                 <Text style={styles.paragraph}>{result.improved_version}</Text>
               </RiseIn>
             )}
@@ -371,6 +399,27 @@ export const TopicSpeakingScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  storyBlock: {
+    gap: SPACING.s,
+  },
+  storyBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  storyBadgeText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+  },
+  storyHint: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    lineHeight: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

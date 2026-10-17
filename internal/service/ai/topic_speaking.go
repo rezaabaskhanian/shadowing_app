@@ -29,7 +29,9 @@ type TopicSpeechReview struct {
 	BetterPhrases   []TopicSpeechPhrase  `json:"better_phrases"`
 	UsedPhrases     []string             `json:"used_phrases"`
 	ImprovedVersion string               `json:"improved_version"`
-	Usage           TokenUsage           `json:"-"`
+	// PicturesCovered شماره‌ی عکس‌هایی (از ۱) که کاربر در داستانش گفته؛ فقط داستان تصویری.
+	PicturesCovered []int      `json:"pictures_covered"`
+	Usage           TokenUsage `json:"-"`
 }
 
 const reviewTopicSpeechPrompt = `You are a warm, encouraging English speaking coach for Persian-speaking learners in a speaking-practice app.
@@ -44,15 +46,23 @@ Review what they said:
 - better_phrases: up to 4 suggestions to sound more natural or use richer vocabulary/structures: a simple phrase they used ("instead_of", copied from the transcript), a better alternative ("try"), and a short Persian note on when to use it. Prefer the suggested phrases of the topic when they fit.
 - used_phrases: which of the suggested phrases (exact strings from the given list) they actually used. Empty list if none or no list was given.
 - improved_version: their talk rewritten as natural, correct spoken English, keeping THEIR ideas and roughly their length, at a level just slightly above theirs (do not add new ideas). Empty string if the transcript is empty.
+- pictures_covered: ONLY when "pictures" is given (a picture story). The learner had to tell a story from these pictures IN ORDER; each item is the admin's short description of one picture (picture 1 = first item). List the numbers (1-based) of the pictures their story actually describes. Otherwise an empty list.
+
+When "pictures" is given (picture story):
+- on_topic = "yes" only if the story covers all pictures in a sensible order, "partial" if some are missing or out of order.
+- In summary_fa mention which pictures were missing, if any (e.g. "تصویر ۳ را جا انداختی").
+- Prefer better_phrases that help storytelling: past tense and sequence words (First, Then, After that, Suddenly, In the end).
+- improved_version: a better version of THEIR story that covers every picture in order (you may add the missing pictures briefly).
 
 Rules:
 - Output ONLY a single valid JSON object. No markdown, no code fences.
 - Schema:
-{"on_topic": string, "score": number, "summary_fa": string, "strengths_fa": [string], "mistakes": [{"original": string, "corrected": string, "explanation_fa": string}], "better_phrases": [{"instead_of": string, "try": string, "note_fa": string}], "used_phrases": [string], "improved_version": string}`
+{"on_topic": string, "score": number, "summary_fa": string, "strengths_fa": [string], "mistakes": [{"original": string, "corrected": string, "explanation_fa": string}], "better_phrases": [{"instead_of": string, "try": string, "note_fa": string}], "used_phrases": [string], "improved_version": string, "pictures_covered": [number]}`
 
 // ReviewTopicSpeech صحبت کاربر درباره‌ی یک موضوع را بررسی می‌کند.
-func (s Service) ReviewTopicSpeech(ctx context.Context, title, promptFa string, guideQuestions, usefulPhrases []string, level string, durationSeconds int, transcript string) (TopicSpeechReview, error) {
-	input, _ := json.Marshal(map[string]any{
+// pictures توضیح کوتاه هر عکسِ «داستان تصویری» (به ترتیب)؛ خالی = موضوع عادی.
+func (s Service) ReviewTopicSpeech(ctx context.Context, title, promptFa string, guideQuestions, usefulPhrases, pictures []string, level string, durationSeconds int, transcript string) (TopicSpeechReview, error) {
+	payload := map[string]any{
 		"topic":             title,
 		"instruction_fa":    promptFa,
 		"guide_questions":   guideQuestions,
@@ -60,7 +70,11 @@ func (s Service) ReviewTopicSpeech(ctx context.Context, title, promptFa string, 
 		"level":             level,
 		"spoke_seconds":     durationSeconds,
 		"transcript":        strings.TrimSpace(transcript),
-	})
+	}
+	if len(pictures) > 0 {
+		payload["pictures"] = pictures
+	}
+	input, _ := json.Marshal(payload)
 	var out TopicSpeechReview
 	usage, err := s.completeJSON(ctx, "aiservice.ReviewTopicSpeech", reviewTopicSpeechPrompt, string(input), &out)
 	out.Usage = usage

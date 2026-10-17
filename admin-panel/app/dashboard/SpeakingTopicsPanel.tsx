@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ImageField from "./ImageField";
+import StoryImagesField, { type StoryImage } from "./StoryImagesField";
 import {
   deleteSpeakingTopic,
   listSpeakingTopics,
@@ -29,6 +30,7 @@ type Draft = {
   position: number;
   is_active: boolean;
   image_url: string;
+  images: StoryImage[];
 };
 
 const emptyDraft = (position = 0): Draft => ({
@@ -41,6 +43,7 @@ const emptyDraft = (position = 0): Draft => ({
   position,
   is_active: true,
   image_url: "",
+  images: [],
 });
 
 const lines = (text: string) =>
@@ -94,6 +97,7 @@ export default function SpeakingTopicsPanel({
       position: t.position,
       is_active: t.is_active,
       image_url: t.image_url || "",
+      images: t.images || [],
     });
     setIdea("");
   }
@@ -133,6 +137,7 @@ export default function SpeakingTopicsPanel({
         position: draft.position,
         is_active: draft.is_active,
         image_url: draft.image_url,
+        images: draft.images,
       });
       notify("موضوع ذخیره شد");
       setDraft(null);
@@ -240,6 +245,8 @@ export default function SpeakingTopicsPanel({
 
           <ImageField value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} notify={notify} />
 
+          <StoryImagesField value={draft.images} onChange={(images) => setDraft({ ...draft, images })} notify={notify} />
+
           <label>توضیح فارسی برای کاربر (درباره‌ی چه بگوید)</label>
           <textarea
             rows={2}
@@ -319,7 +326,8 @@ export default function SpeakingTopicsPanel({
                   </div>
                   <div className="hint" style={{ margin: 0 }}>
                     {levelLabel(t.level)} · {t.duration_seconds} ثانیه · {t.guide_questions.length} سؤال ·{" "}
-                    {t.useful_phrases.length} عبارت{t.is_active ? "" : " · غیرفعال"}
+                    {t.useful_phrases.length} عبارت{(t.images?.length ?? 0) > 0 ? ` · 🖼 داستان تصویری (${t.images!.length} عکس)` : ""}
+                    {t.is_active ? "" : " · غیرفعال"}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>

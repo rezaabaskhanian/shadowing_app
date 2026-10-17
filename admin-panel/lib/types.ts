@@ -485,6 +485,8 @@ export interface SpeakingTopic {
   position: number;
   is_active: boolean;
   created_at?: string;
+  /** عکس‌های «داستان تصویری» به ترتیب؛ خالی = موضوع عادی. */
+  images?: { url: string; caption: string }[];
 }
 
 export interface SpeakingTopicSuggestion {
@@ -628,6 +630,8 @@ export interface Podcast {
   /** سرعت گفتار TTS (۰٫۷ تا ۱٫۲) و مکث بین جمله‌ها؛ ۰ = پیش‌فرض سطح. */
   speech_speed: number;
   line_gap_ms: number;
+  /** عکس‌های اسلایدشوی هنگام پخش؛ from_line = شماره‌ی جمله (از ۱)، ۰ = خودکار. */
+  images: { url: string; from_line: number }[];
   audio_url: string;
   audio_status: "none" | "generating" | "ready" | "failed";
   audio_error: string;

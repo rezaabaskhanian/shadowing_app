@@ -17,6 +17,8 @@ export interface SpeakingTopic {
   duration_seconds: number;
   /** تصویرِ کارت (از پنل ادمین)؛ خالی = کارت بدون عکس. */
   image_url?: string;
+  /** «داستان تصویری»: کاربر از روی این عکس‌ها (به ترتیب) داستان می‌گوید؛ خالی = موضوع عادی. */
+  images?: { url: string; caption: string }[];
   attempts: number;
   best_score: number;
 }
@@ -46,6 +48,8 @@ export interface TopicSpeakingResult {
   better_phrases: TopicSpeechPhrase[];
   used_phrases: string[];
   improved_version: string;
+  /** شماره‌ی عکس‌هایی (از ۱) که در داستان گفته شد؛ فقط داستان تصویری. */
+  pictures_covered?: number[];
 }
 
 export async function getSpeakingTopics(): Promise<SpeakingTopic[]> {

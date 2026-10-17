@@ -16,6 +16,7 @@ import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { track } from '../../services/analytics';
 import { formatDuration } from './PodcastListScreen';
 import { KaraokeText } from '../../components/KaraokeText';
+import { Slideshow, slideStarts } from '../../components/Slideshow';
 
 const RATES = [0.5, 0.75, 1, 1.25];
 const PODCAST_TRACK_ID = 'podcast';
@@ -227,6 +228,13 @@ export const PodcastScreen: React.FC = () => {
     );
   }
 
+  // اسلایدشو: عکسِ فعال = آخرین عکسی که شروعش (جمله) قبل از جمله‌ی در حال پخش است.
+  const slideImages = (podcast.images || []).filter((img) => !!img.url);
+  const currentLine =
+    activeIdx >= 0 ? activeIdx : lines.reduce((last, l, i) => (l.start_ms <= positionMs ? i : last), 0);
+  const starts = slideStarts(slideImages, lines.length);
+  const activeSlide = starts.reduce((cur, s) => (s.start <= currentLine ? s.index : cur), starts[0]?.index ?? 0);
+
   const durationMs = Math.max(1, podcast.duration_seconds * 1000);
   const progress = Math.min(1, positionMs / durationMs);
 
@@ -247,8 +255,17 @@ export const PodcastScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* تصویرِ پادکست (یا صحنه‌ی مرتبط)؛ بدون تصویر چیزی جایش نمی‌آید. */}
-        {!!podcast.cover_url && (
-          <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
+        {slideImages.length > 0 ? (
+          <Slideshow
+            uris={slideImages.map((img) => absUrl(img.url))}
+            activeIndex={activeSlide}
+            playing={playing}
+            style={styles.cover}
+          />
+        ) : (
+          !!podcast.cover_url && (
+            <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
+          )
         )}
         {!!podcast.description_fa && <Text style={styles.desc}>{podcast.description_fa}</Text>}
 
