@@ -59,6 +59,7 @@ import { CourseLessonScreen } from '../screens/Course/CourseLessonScreen';
 import { PathHomeScreen } from '../screens/Path/PathHomeScreen';
 import { PathWeakLinesScreen } from '../screens/Path/PathWeakLinesScreen';
 import { PathCheckpointScreen } from '../screens/Path/PathCheckpointScreen';
+import { PathDictationScreen } from '../screens/Path/PathDictationScreen';
 import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
@@ -88,6 +89,7 @@ const FreshWriting = freshPerOpen(WritingScreen);
 const FreshCourseLesson = freshPerOpen(CourseLessonScreen);
 const FreshPathWeakLines = freshPerOpen(PathWeakLinesScreen);
 const FreshPathCheckpoint = freshPerOpen(PathCheckpointScreen);
+const FreshPathDictation = freshPerOpen(PathDictationScreen);
 const FreshPodcast = freshPerOpen(PodcastScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 
@@ -361,6 +363,7 @@ export const AppNavigator = () => {
       <Tab.Screen name="PathHome" component={PathHomeScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PathWeakLines" component={FreshPathWeakLines} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PathCheckpoint" component={FreshPathCheckpoint} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PathDictation" component={FreshPathDictation} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />

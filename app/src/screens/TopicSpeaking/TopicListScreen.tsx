@@ -11,6 +11,7 @@ import { useLanguage } from '../../data/i18n';
 import { getSpeakingTopics, type SpeakingTopic, type TopicLevel } from '../../api/topicSpeaking';
 
 const LEVEL_META: Record<TopicLevel, { labelKey: string; bg: string }> = {
+  starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
   beginner: { labelKey: 'levelBeginner', bg: COLORS.levelBeginnerBg },
   intermediate: { labelKey: 'levelIntermediate', bg: COLORS.levelIntermediateBg },
   advanced: { labelKey: 'levelAdvanced', bg: COLORS.levelAdvancedBg },

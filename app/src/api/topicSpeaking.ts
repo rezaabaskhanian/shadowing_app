@@ -5,7 +5,7 @@ import { authFetch, jsonOrThrow } from './client';
  * صحبت می‌کند و AI صحبتش را بررسی می‌کند (بک‌اند: topicspeakingservice).
  */
 
-export type TopicLevel = 'beginner' | 'intermediate' | 'advanced';
+export type TopicLevel = 'starter' | 'beginner' | 'intermediate' | 'advanced';
 
 export interface SpeakingTopic {
   id: string;

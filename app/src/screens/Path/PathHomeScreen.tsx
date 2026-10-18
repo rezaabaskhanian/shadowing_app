@@ -8,11 +8,13 @@ import {
   ChevronDown,
   ChevronUp,
   Film,
+  Brain,
   Flag,
   Headphones,
   Layers,
   Lock,
   Mic,
+  PenLine,
   Repeat,
   X,
 } from 'lucide-react-native';
@@ -23,6 +25,7 @@ import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { completePathItem, getPath, type LearningPath, type PathItem, type PathWeek } from '../../api/path';
 import { track } from '../../services/analytics';
+import { getSpeakingTopics } from '../../api/topicSpeaking';
 
 const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   scene: BookOpen,
@@ -32,6 +35,8 @@ const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: str
   leitner_review: Layers,
   weak_lines: Repeat,
   checkpoint: Flag,
+  habit_mission: Brain,
+  dictation: PenLine,
 };
 
 /** هفته‌ای که الان باید رویش کار کرد: اولین هفته‌ی بازِ تمام‌نشده (یا آخرین هفته). */
@@ -75,7 +80,7 @@ export const PathHomeScreen: React.FC = () => {
     track('path_item_opened', item.kind);
     // قدم‌های اختیاری با باز کردن تمام‌شده حساب می‌شوند؛ صحنه از پیشرفت خودِ صحنه،
     // جمله‌های سخت و Checkpoint از پایان صفحه‌ی خودشان ثبت می‌شوند.
-    const markOnOpen = !['scene', 'weak_lines', 'checkpoint'].includes(item.kind);
+    const markOnOpen = !['scene', 'weak_lines', 'checkpoint', 'dictation'].includes(item.kind);
     if (markOnOpen && !item.done) completePathItem(week.id, item.key).catch(() => {});
 
     switch (item.kind) {
@@ -89,16 +94,32 @@ export const PathHomeScreen: React.FC = () => {
         navigation.navigate('VideoClip', { clipId: item.ref_id, openedAt: Date.now() });
         break;
       case 'speaking_topic':
-        navigation.navigate('TopicList');
+        // موضوع مشخصِ این قدم مستقیم باز می‌شود؛ اگر پیدا نشد (مثلاً غیرفعال است) فهرست موضوع‌ها.
+        getSpeakingTopics()
+          .then((topics) => {
+            const topic = topics.find((tp) => tp.id === item.ref_id);
+            if (topic) navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() });
+            else navigation.navigate('TopicList');
+          })
+          .catch(() => navigation.navigate('TopicList'));
+        break;
+      case 'habit_mission':
+        navigation.navigate('LanguageHabit');
         break;
       case 'leitner_review':
         navigation.navigate('Leitner');
         break;
+      case 'dictation':
       case 'weak_lines': {
         const sceneIds = week.sessions.flatMap((s) =>
           s.items.filter((i) => i.kind === 'scene' && i.ref_id).map((i) => i.ref_id as string)
         );
-        navigation.navigate('PathWeakLines', { weekId: week.id, itemKey: item.key, sceneIds, openedAt: Date.now() });
+        navigation.navigate(item.kind === 'dictation' ? 'PathDictation' : 'PathWeakLines', {
+          weekId: week.id,
+          itemKey: item.key,
+          sceneIds,
+          openedAt: Date.now(),
+        });
         break;
       }
       case 'checkpoint':

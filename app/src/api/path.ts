@@ -12,7 +12,9 @@ export type PathItemKind =
   | 'speaking_topic'
   | 'leitner_review'
   | 'weak_lines'
-  | 'checkpoint';
+  | 'checkpoint'
+  | 'habit_mission'
+  | 'dictation';
 
 export interface PathItem {
   key: string;
