@@ -30,6 +30,7 @@ type repository interface {
 	GetWeek(ctx context.Context, id string) (postgrespath.Week, error)
 	UpsertPath(ctx context.Context, p postgrespath.Path) (string, error)
 	SetCheckpoint(ctx context.Context, weekID string, checkpoint json.RawMessage) error
+	SetActive(ctx context.Context, level string, active bool) error
 	DoneItems(ctx context.Context, userID string, weekIDs []string) (map[string]map[string]bool, error)
 	CompletedScenes(ctx context.Context, userID string, sceneIDs []string) (map[string]bool, error)
 	MarkItem(ctx context.Context, userID, weekID, key string) error
@@ -364,6 +365,11 @@ func (s *Service) AdminPaths(ctx context.Context) ([]Path, error) {
 
 func (s *Service) AdminPath(ctx context.Context, level string) (Path, error) {
 	return s.repo.GetPathByLevel(ctx, strings.TrimSpace(level))
+}
+
+// AdminSetActive مسیر یک سطح را در اپ نشان می‌دهد یا پنهان می‌کند.
+func (s *Service) AdminSetActive(ctx context.Context, level string, active bool) error {
+	return s.repo.SetActive(ctx, strings.TrimSpace(level), active)
 }
 
 // AdminSavePath کل مسیر یک سطح را (از JSON) ذخیره می‌کند. کلید قدم‌هایی که کلید

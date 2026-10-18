@@ -36,6 +36,7 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	admin.GET("", h.AdminPaths)
 	admin.GET("/:level", h.AdminPath)
 	admin.PUT("/:level", h.AdminSavePath)
+	admin.PUT("/:level/active", h.AdminSetActive)
 	admin.POST("/:level/checkpoint-audio", h.AdminCheckpointAudio)
 }
 
@@ -130,6 +131,17 @@ func (h Handler) AdminSavePath(c echo.Context) error {
 	req.Level = c.Param("level")
 	p, err := h.svc.AdminSavePath(c.Request().Context(), req)
 	return respond(c, p, err)
+}
+
+func (h Handler) AdminSetActive(c echo.Context) error {
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	err := h.svc.AdminSetActive(c.Request().Context(), c.Param("level"), req.IsActive)
+	return respond(c, echo.Map{"is_active": req.IsActive}, err)
 }
 
 func (h Handler) AdminCheckpointAudio(c echo.Context) error {

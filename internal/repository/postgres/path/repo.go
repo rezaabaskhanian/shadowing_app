@@ -215,6 +215,19 @@ func (r DB) SetCheckpoint(ctx context.Context, weekID string, checkpoint json.Ra
 	return nil
 }
 
+// SetActive مسیر یک سطح را برای کاربرها فعال یا غیرفعال می‌کند.
+func (r DB) SetActive(ctx context.Context, level string, active bool) error {
+	const op = "postgrespath.SetActive"
+	tag, err := r.conn.Exec(ctx, `UPDATE learning_paths SET is_active = $2, updated_at = now() WHERE level = $1`, level, active)
+	if err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("مسیر پیدا نشد").WithKind(richerror.KindNotFound)
+	}
+	return nil
+}
+
 // DoneItems کلید قدم‌های تمام‌شده‌ی کاربر، به تفکیک هفته.
 func (r DB) DoneItems(ctx context.Context, userID string, weekIDs []string) (map[string]map[string]bool, error) {
 	const op = "postgrespath.DoneItems"
