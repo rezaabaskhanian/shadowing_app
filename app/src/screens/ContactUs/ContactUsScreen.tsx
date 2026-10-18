@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -9,13 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Copy, Mail } from 'lucide-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { ArrowLeft, CheckCircle2, Copy, Mail, MessageCircleReply } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
-import { createFeedback } from '../../api/feedback';
+import { createFeedback, getMyReplies, type SupportReply } from '../../api/feedback';
 
 const SUPPORT_EMAIL = 'rezaabaskhanian1367kash@gmail.com';
 
@@ -30,6 +30,17 @@ export const ContactUsScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [replies, setReplies] = useState<SupportReply[]>([]);
+
+  // جواب‌های ادمین (از ربات تلگرام/بله یا پنل) هر بار که صفحه باز می‌شود؛ اگر
+  // نوتیف جواب نرسیده باشد، کاربر اینجا می‌بیندش.
+  useFocusEffect(
+    useCallback(() => {
+      getMyReplies()
+        .then(setReplies)
+        .catch(() => {});
+    }, [])
+  );
 
   const handleCopy = () => {
     // بدون افزودن وابستگی جدید (مثل clipboard) کپی واقعی ممکن نیست؛ فعلاً
@@ -65,6 +76,27 @@ export const ContactUsScreen = () => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>{t('contactUsTitle')}</Text>
         <Text style={styles.sub}>{t('contactUsSub')}</Text>
+
+        {replies.length > 0 && (
+          <View style={styles.repliesBox}>
+            <Text style={styles.sectionTitle}>{t('supportRepliesTitle')}</Text>
+            {replies.map((r) => (
+              <View key={r.id} style={styles.replyCard}>
+                <View style={styles.replyHeader}>
+                  <MessageCircleReply color={COLORS.primary} size={16} />
+                  <Text style={styles.replyKind}>{t(`supportReplyKind_${r.kind}`)}</Text>
+                  <Text style={styles.replyDate}>{new Date(r.created_at).toLocaleDateString('fa-IR')}</Text>
+                </View>
+                {!!r.original && (
+                  <Text style={styles.replyOriginal} numberOfLines={3}>
+                    «{r.original}»
+                  </Text>
+                )}
+                <Text style={styles.replyText}>{r.reply}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={[styles.iconWrap, { backgroundColor: COLORS.infoLight }]}>
@@ -135,6 +167,46 @@ export const ContactUsScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  repliesBox: {
+    marginBottom: 20,
+  },
+  replyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  replyKind: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    flex: 1,
+  },
+  replyDate: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+  },
+  replyOriginal: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  replyText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 15,
+    lineHeight: 24,
+  },
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,

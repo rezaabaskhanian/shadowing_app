@@ -16,6 +16,7 @@ import {
   Mic,
   PenLine,
   Repeat,
+  Sparkles,
   X,
 } from 'lucide-react-native';
 
@@ -37,6 +38,7 @@ const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: str
   checkpoint: Flag,
   habit_mission: Brain,
   dictation: PenLine,
+  self_intro: Sparkles,
 };
 
 /** هفته‌ای که الان باید رویش کار کرد: اولین هفته‌ی بازِ تمام‌نشده (یا آخرین هفته). */
@@ -80,7 +82,7 @@ export const PathHomeScreen: React.FC = () => {
     track('path_item_opened', item.kind);
     // قدم‌های اختیاری با باز کردن تمام‌شده حساب می‌شوند؛ صحنه از پیشرفت خودِ صحنه،
     // جمله‌های سخت و Checkpoint از پایان صفحه‌ی خودشان ثبت می‌شوند.
-    const markOnOpen = !['scene', 'weak_lines', 'checkpoint', 'dictation'].includes(item.kind);
+    const markOnOpen = !['scene', 'weak_lines', 'checkpoint', 'dictation', 'self_intro'].includes(item.kind);
     if (markOnOpen && !item.done) completePathItem(week.id, item.key).catch(() => {});
 
     switch (item.kind) {
@@ -105,6 +107,16 @@ export const PathHomeScreen: React.FC = () => {
         break;
       case 'habit_mission':
         navigation.navigate('LanguageHabit');
+        break;
+      case 'self_intro':
+        // کلیدی که با after تمام شود ضبط «بعد» و مقایسه است؛ بقیه ضبط «قبل».
+        navigation.navigate('PathSelfIntro', {
+          weekId: week.id,
+          itemKey: item.key,
+          level,
+          stage: item.key.endsWith('after') ? 'after' : 'before',
+          openedAt: Date.now(),
+        });
         break;
       case 'leitner_review':
         navigation.navigate('Leitner');

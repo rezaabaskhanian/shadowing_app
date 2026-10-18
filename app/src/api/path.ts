@@ -14,7 +14,8 @@ export type PathItemKind =
   | 'weak_lines'
   | 'checkpoint'
   | 'habit_mission'
-  | 'dictation';
+  | 'dictation'
+  | 'self_intro';
 
 export interface PathItem {
   key: string;
@@ -89,6 +90,41 @@ export async function completePathItem(weekId: string, key: string): Promise<voi
     method: 'POST',
   });
   await jsonOrThrow(res);
+}
+
+// ---------- قبل و بعد ----------
+
+export type SelfIntroStage = 'before' | 'after';
+
+/** آمار یک ضبط «قبل» یا «بعد»؛ خودِ صدا فقط روی گوشی است. */
+export interface SelfIntro {
+  stage: SelfIntroStage;
+  transcript: string;
+  duration_seconds: number;
+  word_count: number;
+  unique_words: number;
+  created_at: string;
+}
+
+export type SelfIntros = Partial<Record<SelfIntroStage, SelfIntro>>;
+
+export async function getSelfIntros(level: string): Promise<SelfIntros> {
+  const res = await authFetch(`/v1/paths/${encodeURIComponent(level)}/self-intro`, { method: 'GET' });
+  return ((await jsonOrThrow(res)) as SelfIntros) || {};
+}
+
+export async function saveSelfIntro(
+  level: string,
+  stage: SelfIntroStage,
+  transcript: string,
+  durationSeconds: number
+): Promise<SelfIntros> {
+  const res = await authFetch(`/v1/paths/${encodeURIComponent(level)}/self-intro/${stage}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transcript, duration_seconds: Math.round(durationSeconds) }),
+  });
+  return ((await jsonOrThrow(res)) as SelfIntros) || {};
 }
 
 // ---------- Checkpoint ----------

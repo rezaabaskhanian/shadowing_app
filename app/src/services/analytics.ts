@@ -31,6 +31,7 @@ export type AnalyticsEvent =
   | 'course_lesson_completed'
   | 'path_item_opened'
   | 'checkpoint_done'
+  | 'path_self_intro'
   | 'podcast_played'
   | 'podcast_my_version_started'
   | 'podcast_my_version_played'
