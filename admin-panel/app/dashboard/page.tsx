@@ -24,6 +24,7 @@ import CoursePanel from "./CoursePanel";
 import PodcastsPanel from "./PodcastsPanel";
 import ResourcesPanel from "./ResourcesPanel";
 import IdiomsPanel from "./IdiomsPanel";
+import LearningPathsPanel from "./LearningPathsPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -46,6 +47,7 @@ type Tab =
   | "course"
   | "podcasts"
   | "idioms"
+  | "paths"
   | "resources";
 
 export default function DashboardPage() {
@@ -183,6 +185,12 @@ export default function DashboardPage() {
             🌱 قدم اول
           </button>
           <button
+            className={`sidebar-link ${tab === "paths" ? "active" : ""}`}
+            onClick={() => setTab("paths")}
+          >
+            🧭 مسیرهای آموزشی
+          </button>
+          <button
             className={`sidebar-link ${tab === "podcasts" ? "active" : ""}`}
             onClick={() => setTab("podcasts")}
           >
@@ -306,6 +314,7 @@ export default function DashboardPage() {
         {tab === "course" && <CoursePanel notify={notify} />}
         {tab === "podcasts" && <PodcastsPanel notify={notify} />}
         {tab === "idioms" && <IdiomsPanel notify={notify} />}
+        {tab === "paths" && <LearningPathsPanel notify={notify} />}
         {tab === "resources" && <ResourcesPanel notify={notify} />}
       </main>
 

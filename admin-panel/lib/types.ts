@@ -710,3 +710,32 @@ export interface PodcastLevelPreset {
   speech_speed: number;
   line_gap_ms: number;
 }
+
+// ---------- مسیر آموزشی ----------
+export interface LearningPathItem {
+  key: string;
+  kind: "scene" | "podcast" | "video_clip" | "speaking_topic" | "leitner_review" | "weak_lines" | "checkpoint";
+  ref_id?: string;
+  title?: string;
+  required: boolean;
+}
+
+export interface LearningPathWeek {
+  id: string;
+  position: number;
+  title_fa: string;
+  is_free: boolean;
+  sessions: { no: number; title_fa: string; items: LearningPathItem[] }[];
+  checkpoint: { listening?: { dialogue?: { text: string; audio_url?: string }[] } } | null;
+}
+
+export interface LearningPath {
+  id: string;
+  level: string;
+  title_fa: string;
+  description_fa: string;
+  goal_fa: string;
+  position: number;
+  is_active: boolean;
+  weeks?: LearningPathWeek[];
+}

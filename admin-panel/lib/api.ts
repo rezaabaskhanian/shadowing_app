@@ -1,4 +1,5 @@
 import type {
+  LearningPath,
   PodcastLevelPreset,
   ContentResource,
   Idiom,
@@ -1010,4 +1011,19 @@ export async function importIdioms(items: Partial<IdiomInput>[], overwrite: bool
 
 export async function deleteIdioms(ids: string[]): Promise<void> {
   await jsonOrThrow(await authFetch("/v1/admin/idioms/delete", jsonBody("POST", { ids })));
+}
+
+// ---------- مسیر آموزشی ----------
+export async function listLearningPaths(): Promise<LearningPath[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/paths", { method: "GET" }))) || [];
+}
+
+export async function getLearningPath(level: string): Promise<LearningPath> {
+  return jsonOrThrow(await authFetch(`/v1/admin/paths/${encodeURIComponent(level)}`, { method: "GET" }));
+}
+
+export async function setLearningPathActive(level: string, isActive: boolean): Promise<void> {
+  await jsonOrThrow(
+    await authFetch(`/v1/admin/paths/${encodeURIComponent(level)}/active`, jsonBody("PUT", { is_active: isActive }))
+  );
 }
