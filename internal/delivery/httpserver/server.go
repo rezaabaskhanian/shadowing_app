@@ -33,6 +33,7 @@ import (
 
 	// adminservice "shadowing-backend/internal/service/admin"
 
+	adminbotservice "shadowing-backend/internal/service/adminbot"
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
@@ -150,6 +151,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	podcastSvc *podcastservice.Service,
 	librarySvc *libraryservice.Service,
 	pathSvc *pathservice.Service,
+	adminBot *adminbotservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -189,6 +191,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			feedbackSvc,
 			authSvc, authConfig, store,
 			verbSvc,
+			adminBot,
 		),
 
 		verbHandler: verbhandler.New(verbSvc, authSvc, authConfig, uploadDir),

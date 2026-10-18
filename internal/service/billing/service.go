@@ -4,16 +4,24 @@ import (
 	"context"
 	"fmt"
 
+	"shadowing-backend/internal/pkg/adminnotice"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 )
 
 type Service struct {
 	cafebazaar      *CafeBazaarClient
 	subscriptionSvc subscriptionservice.Service
+	notifier        adminnotice.Notifier
 }
 
 func New(cafebazaar *CafeBazaarClient, subscriptionSvc subscriptionservice.Service) Service {
-	return Service{cafebazaar: cafebazaar, subscriptionSvc: subscriptionSvc}
+	return Service{cafebazaar: cafebazaar, subscriptionSvc: subscriptionSvc, notifier: adminnotice.Nop{}}
+}
+
+// WithNotifier هر خرید تازه را به ربات ادمین خبر می‌دهد.
+func (s Service) WithNotifier(n adminnotice.Notifier) Service {
+	s.notifier = n
+	return s
 }
 
 // Enabled یعنی اتصال به کافه‌بازار پیکربندی شده (env سرور پر شده).
@@ -58,5 +66,18 @@ func (s Service) VerifyAndGrant(ctx context.Context, userID, productID, purchase
 	// قیمت خرید واقعی کافه‌بازاری از قبل نزد خودِ کافه‌بازار نهایی شده (همان
 	// price_toman پلن، که باید با قیمت واقعی SKU یکی باشد) و قابل تخفیف نیست؛
 	// امتیاز درخواستی به‌جای تخفیف نقدی، به روز اضافه تبدیل می‌شود.
-	return s.subscriptionSvc.GrantWithBonusDays(ctx, userID, plan, pointsToRedeem, "cafebazaar", purchaseToken)
+	if err := s.subscriptionSvc.GrantWithBonusDays(ctx, userID, plan, pointsToRedeem, "cafebazaar", purchaseToken); err != nil {
+		return err
+	}
+	body := fmt.Sprintf("پلن: %s (%d روز)\nمبلغ: %s", plan.Name, plan.DurationDays, adminnotice.Toman(plan.PriceToman))
+	if pointsToRedeem > 0 {
+		body += fmt.Sprintf("\nامتیاز خرج‌شده: %d", pointsToRedeem)
+	}
+	if s.notifier == nil {
+		return nil
+	}
+	s.notifier.Notify(adminnotice.Notice{
+		Kind: adminnotice.KindSubscription, Section: "💳 خرید اشتراک", Body: body, UserID: userID, RefID: plan.ID,
+	})
+	return nil
 }

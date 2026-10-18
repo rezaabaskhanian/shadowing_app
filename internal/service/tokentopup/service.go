@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 
+	"shadowing-backend/internal/pkg/adminnotice"
 	billingservice "shadowing-backend/internal/service/billing"
 
 	postgretokentopup "shadowing-backend/internal/repository/postgres/tokentopup"
@@ -35,6 +36,13 @@ type Service struct {
 	repo       repository
 	cafebazaar *billingservice.CafeBazaarClient
 	access     AccessGranter
+	notifier   adminnotice.Notifier
+}
+
+// WithNotifier هر خرید تازه‌ی توکن را به ربات ادمین خبر می‌دهد.
+func (s Service) WithNotifier(n adminnotice.Notifier) Service {
+	s.notifier = n
+	return s
 }
 
 func New(repo repository, cafebazaar *billingservice.CafeBazaarClient, access AccessGranter) Service {
@@ -93,5 +101,15 @@ func (s Service) VerifyAndGrant(ctx context.Context, userID, productID, purchase
 		return err
 	}
 
-	return s.access.AddCredit(ctx, userID, plan.Tokens)
+	if err := s.access.AddCredit(ctx, userID, plan.Tokens); err != nil {
+		return err
+	}
+	if s.notifier != nil {
+		s.notifier.Notify(adminnotice.Notice{
+			Kind: adminnotice.KindTopup, Section: "🪙 خرید توکن",
+			Body:   fmt.Sprintf("پلن: %s\nتوکن: %d\nمبلغ: %s", plan.Name, plan.Tokens, adminnotice.Toman(plan.PriceToman)),
+			UserID: userID, RefID: plan.ID,
+		})
+	}
+	return nil
 }

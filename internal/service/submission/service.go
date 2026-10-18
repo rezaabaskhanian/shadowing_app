@@ -2,7 +2,9 @@ package submissionservice
 
 import (
 	"context"
+	"strings"
 
+	"shadowing-backend/internal/pkg/adminnotice"
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 )
 
@@ -21,18 +23,42 @@ type repository interface {
 }
 
 type Service struct {
-	repo repository
+	repo     repository
+	notifier adminnotice.Notifier
 }
 
 func New(repo repository) Service {
-	return Service{repo: repo}
+	return Service{repo: repo, notifier: adminnotice.Nop{}}
+}
+
+// WithNotifier پیشنهادهای تازه را به ربات ادمین هم خبر می‌دهد.
+func (s Service) WithNotifier(n adminnotice.Notifier) Service {
+	s.notifier = n
+	return s
 }
 
 type DialogueLine = postgressubmission.DialogueLine
 type Submission = postgressubmission.Submission
 
 func (s Service) Create(ctx context.Context, userID, imageURL, situationText string, dialogues []DialogueLine) (Submission, error) {
-	return s.repo.Create(ctx, userID, imageURL, situationText, dialogues)
+	sub, err := s.repo.Create(ctx, userID, imageURL, situationText, dialogues)
+	if err != nil {
+		return sub, err
+	}
+	var b strings.Builder
+	b.WriteString("موقعیت: " + strings.TrimSpace(situationText))
+	for _, d := range dialogues {
+		b.WriteString("\n• " + strings.TrimSpace(d.Speaker) + ": " + strings.TrimSpace(d.Text))
+	}
+	if imageURL != "" {
+		b.WriteString("\n🖼 تصویر هم فرستاده")
+	}
+	b.WriteString("\n\nبرای بررسی: پنل ← صف بررسی صحنه‌ها")
+	s.notifier.Notify(adminnotice.Notice{
+		Kind: adminnotice.KindSubmission, Section: "📝 پیشنهاد صحنه (منتظر بررسی)",
+		Body: b.String(), UserID: userID, RefID: sub.ID,
+	})
+	return sub, nil
 }
 
 func (s Service) ListMine(ctx context.Context, userID string) ([]Submission, error) {

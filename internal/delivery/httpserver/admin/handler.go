@@ -3,6 +3,7 @@ package adminhandler
 import (
 	"context"
 	"shadowing-backend/internal/pkg/filestore"
+	adminbotservice "shadowing-backend/internal/service/adminbot"
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	assessmentservice "shadowing-backend/internal/service/assessment"
@@ -48,6 +49,8 @@ type Handler struct {
 	// verbSvc بعد از ساخت/ویرایش هر صحنه جمله‌های تازه‌اش را برای افعال
 	// چندمعنایی جست‌وجو می‌کند (به صف بررسی ادمین اضافه می‌شوند).
 	verbSvc sceneVerbScanner
+	// adminBot ربات اعلان تلگرام/بله (پیام آزمایشی از پنل).
+	adminBot *adminbotservice.Service
 }
 
 type sceneVerbScanner interface {
@@ -82,6 +85,7 @@ func New(
 	authConfig authservice.Config,
 	store filestore.Store,
 	verbSvc sceneVerbScanner,
+	adminBot *adminbotservice.Service,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -103,5 +107,6 @@ func New(
 		authConfig:         authConfig,
 		store:              store,
 		verbSvc:            verbSvc,
+		adminBot:           adminBot,
 	}
 }

@@ -51,6 +51,7 @@ import (
 
 	"context"
 
+	adminbotservice "shadowing-backend/internal/service/adminbot"
 	aiservice "shadowing-backend/internal/service/ai"
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	aiconversationservice "shadowing-backend/internal/service/aiconversation"
@@ -175,11 +176,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot)
 
 	server.Server()
 
@@ -249,7 +250,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service, *pathservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service, *pathservice.Service, *adminbotservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -353,7 +354,16 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	topicSuggestionSvc := topicsuggestionservice.New(topicSuggestionRepo)
 
 	feedbackRepo := postgresfeedback.New(MyPostgresgresRepo.DB)
-	feedbackSvc := feedbackservice.New(feedbackRepo)
+	feedbackSvc := feedbackservice.New(feedbackRepo).WithPusher(notificationSvc)
+
+	// ربات اعلان ادمین: هر تعامل کاربر با ادمین (پیشنهاد و انتقاد، پیشنهاد
+	// صحنه/موضوع، خرید) به تلگرام/بله می‌رود و Reply ادمین در ربات با نوتیف به
+	// همان کاربر برمی‌گردد — ببینید adminbotservice. بدون توکن کاری نمی‌کند.
+	adminBot := adminbotservice.New(settingsSvc, UserRepo, feedbackSvc)
+	feedbackSvc = feedbackSvc.WithNotifier(adminBot)
+	submissionSvc = submissionSvc.WithNotifier(adminBot)
+	topicSuggestionSvc = topicSuggestionSvc.WithNotifier(adminBot)
+	go adminBot.StartPolling(context.Background())
 
 	habitRepo := posthabit.New(MyPostgresgresRepo.DB)
 	habitSvc := habitservice.New(habitRepo, progressSvc, getEnv("WHISPER_URL", ""))
@@ -372,7 +382,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 		getEnv("CAFEBAZAAR_PACKAGE_NAME", ""),
 		getEnv("CAFEBAZAAR_API_SECRET", ""),
 	)
-	billingSvc := billingservice.New(cafebazaarClient, subscriptionSvc)
+	billingSvc := billingservice.New(cafebazaarClient, subscriptionSvc).WithNotifier(adminBot)
 	if billingSvc.Enabled() {
 		fmt.Println("cafebazaar billing: configured")
 	} else {
@@ -383,7 +393,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// استفاده می‌کند (endpointِ اعتبارسنجیِ خریدِ تک‌باره برای هر دو یکی است)،
 	// فقط گرنتش فرق دارد — به‌جای روزِ اشتراک، مستقیم اعتبار توکن اضافه می‌کند.
 	tokenTopupRepo := postgretokentopup.New(MyPostgresgresRepo.DB)
-	tokenTopupSvc := tokentopupservice.New(tokenTopupRepo, cafebazaarClient, aiAccessSvc)
+	tokenTopupSvc := tokentopupservice.New(tokenTopupRepo, cafebazaarClient, aiAccessSvc).WithNotifier(adminBot)
 
 	assessmentItemRepo := postgresassessment.NewItemRepository(MyPostgresgresRepo.DB)
 	assessmentProfileRepo := postgresassessment.NewProfileRepository(MyPostgresgresRepo.DB)
@@ -438,5 +448,5 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot
 }

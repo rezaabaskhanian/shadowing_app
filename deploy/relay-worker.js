@@ -15,6 +15,7 @@ const ALLOWED_HOSTS = new Set([
   "api.deepseek.com",
   "api.openai.com",
   "ipinfo.io",
+  "api.telegram.org", // ربات اعلان‌های ادمین (adminbotservice)
 ]);
 
 export default {

@@ -107,6 +107,18 @@ func (s Service) Broadcast(ctx context.Context, title, body, createdBy string) (
 	return sent, nil
 }
 
+// SendToUser یک نوتیف اختصاصی به همه‌ی دستگاه‌های یک کاربر می‌فرستد (مثلاً جواب پشتیبانی).
+func (s Service) SendToUser(ctx context.Context, userID, title, body string) (int, error) {
+	if !s.push.Enabled() {
+		return 0, nil
+	}
+	tokens, err := s.repo.TokensForUser(ctx, userID)
+	if err != nil || len(tokens) == 0 {
+		return 0, err
+	}
+	return s.push.SendToTokens(ctx, tokens, title, body)
+}
+
 // SendStreakReminders به کاربرانی که یادآوری استریک را روشن کرده‌اند و امروز
 // هنوز تمرین نکرده‌اند (ولی استریکشان هنوز نشکسته) پوش یادآوری می‌فرستد.
 // از یک اجرای روزانه‌ی زمان‌بندی‌شده (cmd/main.go) صدا زده می‌شود.

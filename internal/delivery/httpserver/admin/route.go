@@ -60,6 +60,8 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 
 	// پیشنهادات و انتقادات کاربران (درج اپ موبایل)
 	g.GET("/feedbacks", h.ListFeedbacks)
+	g.POST("/feedbacks/:id/reply", h.ReplyFeedback)
+	g.POST("/bot/test", h.TestAdminBot)
 
 	// بررسی پیشنهادهای موضوع کاربران
 	g.GET("/topic-suggestions", h.ListTopicSuggestions)

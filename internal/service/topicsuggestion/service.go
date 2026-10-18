@@ -3,6 +3,7 @@ package topicsuggestionservice
 import (
 	"context"
 
+	"shadowing-backend/internal/pkg/adminnotice"
 	posttopicsuggestion "shadowing-backend/internal/repository/postgres/topicsuggestion"
 )
 
@@ -20,17 +21,32 @@ type repository interface {
 }
 
 type Service struct {
-	repo repository
+	repo     repository
+	notifier adminnotice.Notifier
 }
 
 func New(repo repository) Service {
-	return Service{repo: repo}
+	return Service{repo: repo, notifier: adminnotice.Nop{}}
+}
+
+// WithNotifier پیشنهادهای تازه را به ربات ادمین هم خبر می‌دهد.
+func (s Service) WithNotifier(n adminnotice.Notifier) Service {
+	s.notifier = n
+	return s
 }
 
 type TopicSuggestion = posttopicsuggestion.TopicSuggestion
 
 func (s Service) Create(ctx context.Context, userID, topicText string) (TopicSuggestion, error) {
-	return s.repo.Create(ctx, userID, topicText)
+	sug, err := s.repo.Create(ctx, userID, topicText)
+	if err != nil {
+		return sug, err
+	}
+	s.notifier.Notify(adminnotice.Notice{
+		Kind: adminnotice.KindTopic, Section: "💡 پیشنهاد موضوع صحنه (منتظر بررسی)",
+		Body: topicText + "\n\nبرای بررسی: پنل ← پیشنهادهای موضوع", UserID: userID, RefID: sug.ID,
+	})
+	return sug, nil
 }
 
 func (s Service) ListMine(ctx context.Context, userID string) ([]TopicSuggestion, error) {

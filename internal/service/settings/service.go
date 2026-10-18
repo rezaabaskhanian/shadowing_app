@@ -32,6 +32,11 @@ const (
 	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
 	KeyAIDailyTokenLimit   = "AI_DAILY_TOKEN_LIMIT"
 	KeyAITokenPricing      = "AI_TOKEN_PRICING"
+	// ربات اعلان‌های ادمین (تلگرام از رله/پراکسی، بله مستقیم) — ببینید adminbotservice.
+	KeyTelegramBotToken = "TELEGRAM_BOT_TOKEN"
+	KeyTelegramChatID   = "TELEGRAM_CHAT_ID"
+	KeyBaleBotToken     = "BALE_BOT_TOKEN"
+	KeyBaleChatID       = "BALE_CHAT_ID"
 )
 
 // AllowedKeys برای اعتبارسنجی درخواست‌های به‌روزرسانی از پنل ادمین استفاده می‌شود.
@@ -58,6 +63,10 @@ var AllowedKeys = map[string]bool{
 	KeyFCMServiceAccount:   true,
 	KeyAIDailyTokenLimit:   true,
 	KeyAITokenPricing:      true,
+	KeyTelegramBotToken:    true,
+	KeyTelegramChatID:      true,
+	KeyBaleBotToken:        true,
+	KeyBaleChatID:          true,
 }
 
 type repository interface {

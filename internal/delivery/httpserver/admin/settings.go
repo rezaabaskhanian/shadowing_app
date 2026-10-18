@@ -46,6 +46,10 @@ type settingsResponse struct {
 	Groq               settingItem `json:"groq_api_key"`
 	GroqSTTModel       string      `json:"groq_stt_model"`
 	FCMKey             settingItem `json:"fcm_service_account_json"`
+	TelegramBotToken   settingItem `json:"telegram_bot_token"`
+	TelegramChatID     string      `json:"telegram_chat_id"`
+	BaleBotToken       settingItem `json:"bale_bot_token"`
+	BaleChatID         string      `json:"bale_chat_id"`
 }
 
 // GetSettings وضعیت فعلی تنظیمات را برمی‌گرداند؛ خودِ کلیدها هیچ‌وقت کامل نمایش
@@ -83,6 +87,10 @@ func (h Handler) GetSettings(c echo.Context) error {
 		Groq:               get(settingsservice.KeyGroqAPIKey),
 		GroqSTTModel:       s.Get(settingsservice.KeyGroqSTTModel),
 		FCMKey:             get(settingsservice.KeyFCMServiceAccount),
+		TelegramBotToken:   get(settingsservice.KeyTelegramBotToken),
+		TelegramChatID:     s.Get(settingsservice.KeyTelegramChatID),
+		BaleBotToken:       get(settingsservice.KeyBaleBotToken),
+		BaleChatID:         s.Get(settingsservice.KeyBaleChatID),
 	})
 }
 
