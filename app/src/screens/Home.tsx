@@ -62,6 +62,8 @@ import { getPodcasts, type Podcast } from '../api/podcasts';
 import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
 import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
+import { getPaths, type PathSummary } from '../api/path';
+import { PathHomeCard } from './Path/PathHomeCard';
 import { formatDuration } from './Podcast/PodcastListScreen';
 
 // هر بخشِ محتوایی در خانه فقط چند موردِ اول را در یک شبکه‌ی ناهمگون (مستطیل +
@@ -132,6 +134,7 @@ export const HomeScreen = () => {
   const [topics, setTopics] = React.useState<SpeakingTopic[]>([]);
   const [prompts, setPrompts] = React.useState<WritingPrompt[]>([]);
   const [courseLessons, setCourseLessons] = React.useState<CourseLesson[]>([]);
+  const [paths, setPaths] = React.useState<PathSummary[]>([]);
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
@@ -150,6 +153,9 @@ export const HomeScreen = () => {
       getCourse()
         .then((units) => active && setCourseLessons(upcomingLessons(units.flatMap((u) => u.lessons))))
         .catch(() => active && setCourseLessons([]));
+      getPaths()
+        .then((list) => active && setPaths(list))
+        .catch(() => active && setPaths([]));
       return () => {
         active = false;
       };
@@ -442,6 +448,10 @@ export const HomeScreen = () => {
     }),
   };
 
+  // مسیری که کاربر شروع کرده؛ وگرنه برای مبتدی‌ها مسیر starter به‌عنوان دعوت.
+  const homePath =
+    paths.find((p) => p.started) || (isBeginner ? paths.find((p) => p.level === 'starter') : undefined);
+
   const allHomeSections: HomeSection[] = [
     ...(isBeginner ? [courseSection] : []),
     worldsSection,
@@ -606,6 +616,14 @@ export const HomeScreen = () => {
           totalXP={totalXP}
           levelName={levelName}
         />
+
+        {/* مسیر آموزشی: «جلسه‌ی بعدی من» برای کسی که شروع کرده، و دعوت به شروع برای مبتدی‌ها */}
+        {homePath && (
+          <PathHomeCard
+            path={homePath}
+            onPress={() => navigation.navigate('PathHome', { level: homePath.level })}
+          />
+        )}
 
         {/* TODAY'S SHADOWING PROGRESS CARD */}
         <View style={styles.progressCard}>

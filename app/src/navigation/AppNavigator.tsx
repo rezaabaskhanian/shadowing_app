@@ -56,6 +56,9 @@ import { WritingListScreen } from '../screens/Writing/WritingListScreen';
 import { WritingScreen } from '../screens/Writing/WritingScreen';
 import { CourseHomeScreen } from '../screens/Course/CourseHomeScreen';
 import { CourseLessonScreen } from '../screens/Course/CourseLessonScreen';
+import { PathHomeScreen } from '../screens/Path/PathHomeScreen';
+import { PathWeakLinesScreen } from '../screens/Path/PathWeakLinesScreen';
+import { PathCheckpointScreen } from '../screens/Path/PathCheckpointScreen';
 import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
@@ -83,6 +86,8 @@ const FreshTopicSpeaking = freshPerOpen(TopicSpeakingScreen);
 const FreshVideoClip = freshPerOpen(VideoClipScreen);
 const FreshWriting = freshPerOpen(WritingScreen);
 const FreshCourseLesson = freshPerOpen(CourseLessonScreen);
+const FreshPathWeakLines = freshPerOpen(PathWeakLinesScreen);
+const FreshPathCheckpoint = freshPerOpen(PathCheckpointScreen);
 const FreshPodcast = freshPerOpen(PodcastScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 
@@ -113,6 +118,9 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'Writing',
   'CourseHome',
   'CourseLesson',
+  'PathHome',
+  'PathWeakLines',
+  'PathCheckpoint',
   'PodcastList',
   'Podcast',
   'PodcastMyVersion',
@@ -350,6 +358,9 @@ export const AppNavigator = () => {
       <Tab.Screen name="Writing" component={FreshWriting} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="CourseHome" component={CourseHomeScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="CourseLesson" component={FreshCourseLesson} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PathHome" component={PathHomeScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PathWeakLines" component={FreshPathWeakLines} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PathCheckpoint" component={FreshPathCheckpoint} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />

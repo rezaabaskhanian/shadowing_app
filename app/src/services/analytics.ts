@@ -29,6 +29,8 @@ export type AnalyticsEvent =
   | 'video_clip_performed'
   | 'writing_submitted'
   | 'course_lesson_completed'
+  | 'path_item_opened'
+  | 'checkpoint_done'
   | 'podcast_played'
   | 'podcast_my_version_started'
   | 'podcast_my_version_played'
