@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
@@ -129,6 +130,30 @@ type lineEdit struct {
 	Translation string `json:"translation" jsonschema:"new Persian translation"`
 	Words       []obj  `json:"words,omitempty" jsonschema:"new vocab chips [{word, meaning}]; omitted = keep current"`
 	Phrases     []obj  `json:"phrases,omitempty" jsonschema:"new phrase chips [{phrase, meaning}]; omitted = keep current"`
+}
+
+type savePathArgs struct {
+	Level    string `json:"level" jsonschema:"path level, e.g. starter"`
+	FilePath string `json:"file_path" jsonschema:"absolute path of a local JSON file with the full path: {title_fa, description_fa, goal_fa, position, weeks:[{position,title_fa,goal_fa,can_do,is_free,sessions:[{no,title_fa,items:[{key,kind,ref_id,title,required}]}],checkpoint:{...}}]}"`
+}
+
+type checkpointAudioArgs struct {
+	Level  string            `json:"level"`
+	Voices map[string]string `json:"voices,omitempty" jsonschema:"dialogue speaker → voice_id, e.g. {\"A\":\"Kore\",\"B\":\"Puck\"}"`
+}
+
+type hotspotLayout struct {
+	Order int     `json:"order" jsonschema:"hotspot order, 1-based"`
+	X     float64 `json:"x" jsonschema:"x position in percent (0-100) of image width"`
+	Y     float64 `json:"y" jsonschema:"y position in percent (0-100) of image height"`
+	Name  string  `json:"name,omitempty" jsonschema:"new hotspot name; empty = keep"`
+}
+
+type sceneLayoutArgs struct {
+	ID                 string          `json:"id" jsonschema:"scene id"`
+	BackgroundImageURL string          `json:"background_image_url,omitempty" jsonschema:"uploaded image url (upload_image); empty = keep"`
+	Hotspots           []hotspotLayout `json:"hotspots,omitempty"`
+	AllowPublished     bool            `json:"allow_published,omitempty" jsonschema:"required for published scenes (saving regenerates dialogue ids)"`
 }
 
 type editLinesArgs struct {
@@ -353,6 +378,108 @@ func registerTools(s *mcp.Server, c *client) {
 				return nil, nil, fmt.Errorf("saving the edited lines failed: %w", err)
 			}
 			return fillSceneAudio(ctx, c, fillAudioArgs{ID: in.ID, Voices: in.Voices, DefaultVoice: in.DefaultVoice, Speed: in.Speed})
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "set_scene_layout",
+		Description: "Set a scene's background image and/or hotspot positions (percent of the image) and names, keeping all dialogues and audio. " +
+			"Refuses published scenes unless allow_published=true."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in sceneLayoutArgs) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			var current obj
+			if err := c.getInto(ctx, "/v1/admin/scenes/"+id, &current); err != nil {
+				return nil, nil, err
+			}
+			published := str(current, "status") == "published"
+			if published && !in.AllowPublished {
+				return nil, nil, errors.New("scene is published: saving regenerates dialogue ids and wipes users' per-dialogue progress; pass allow_published=true if intended")
+			}
+			payload := sceneEditPayload(current)
+			if in.BackgroundImageURL != "" {
+				payload["background_image_url"] = in.BackgroundImageURL
+			}
+			hotspots := payload["hotspots"].([]obj)
+			for _, l := range in.Hotspots {
+				if l.Order < 1 || l.Order > len(hotspots) {
+					return nil, nil, fmt.Errorf("hotspot %d out of range", l.Order)
+				}
+				if l.X < 0 || l.X > 100 || l.Y < 0 || l.Y > 100 {
+					return nil, nil, fmt.Errorf("hotspot %d: x/y must be 0-100", l.Order)
+				}
+				h := hotspots[l.Order-1]
+				h["x_position"], h["y_position"] = l.X, l.Y
+				if l.Name != "" {
+					h["name"] = l.Name
+				}
+			}
+			payload["is_published"] = published
+			if _, err := c.sendJSON(ctx, http.MethodPut, "/v1/admin/scenes/"+id, payload); err != nil {
+				return nil, nil, err
+			}
+			var after obj
+			if err := c.getInto(ctx, "/v1/admin/scenes/"+id, &after); err != nil {
+				return nil, nil, err
+			}
+			return jsonResult(sceneSummary(after))
+		})
+
+	// ---- مسیر آموزشی ----
+	mcp.AddTool(s, &mcp.Tool{Name: "get_learning_path", Annotations: ro,
+		Description: "Get a learning path (weeks, sessions, items and checkpoint content) by level, as the admin sees it."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in savePathArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/paths/"+url.PathEscape(in.Level)))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_learning_path",
+		Description: "Create or update a whole learning path for one level from a local JSON file. Weeks are matched by position so user progress is kept. " +
+			"A new path is saved inactive; an existing path keeps its active state (publish it in the panel)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in savePathArgs) (*mcp.CallToolResult, any, error) {
+			if strings.TrimSpace(in.Level) == "" || strings.TrimSpace(in.FilePath) == "" {
+				return nil, nil, errors.New("level and file_path are required")
+			}
+			raw, err := os.ReadFile(in.FilePath)
+			if err != nil {
+				return nil, nil, err
+			}
+			var payload obj
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				return nil, nil, fmt.Errorf("file is not valid JSON: %w", err)
+			}
+			active := false
+			var current obj
+			if err := c.getInto(ctx, "/v1/admin/paths/"+url.PathEscape(in.Level), &current); err == nil {
+				active, _ = current["is_active"].(bool)
+			}
+			payload["is_active"] = active
+			payload["level"] = in.Level
+			out, err := c.sendJSON(ctx, http.MethodPut, "/v1/admin/paths/"+url.PathEscape(in.Level), payload)
+			if err != nil {
+				return nil, nil, err
+			}
+			var saved obj
+			if err := json.Unmarshal(out, &saved); err != nil {
+				return rawResult(out, nil)
+			}
+			weeks := anyList(saved["weeks"])
+			summary := obj{"id": saved["id"], "level": saved["level"], "is_active": saved["is_active"], "weeks": len(weeks)}
+			var list []obj
+			for _, w := range weeks {
+				items := 0
+				for _, se := range anyList(w["sessions"]) {
+					items += len(anyList(se["items"]))
+				}
+				list = append(list, obj{"position": w["position"], "title_fa": w["title_fa"], "sessions": len(anyList(w["sessions"])), "items": items})
+			}
+			summary["week_list"] = list
+			return jsonResult(summary)
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "generate_checkpoint_audio",
+		Description: "Generate TTS for every checkpoint listening line (all weeks of a path) that has no audio_url yet. Safe to re-run."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in checkpointAudioArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/paths/"+url.PathEscape(in.Level)+"/checkpoint-audio", obj{"voices": in.Voices}))
 		})
 
 	// ---- صدا و آپلود ----
