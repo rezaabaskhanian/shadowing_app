@@ -39,7 +39,7 @@ The learner was given a topic and spoke about it for 1-2 minutes. You get the to
 
 Review what they said:
 - on_topic: did they talk about the topic? "yes", "partial" (drifted or very short), or "no".
-- score: 0-100 overall speaking-content score for THEIR level (beginner is judged more gently): staying on topic, enough content, grammar, vocabulary range. An empty or unintelligible transcript is 0.
+- score: 0-100 overall speaking-content score for THEIR level (beginner is judged more gently, starter most gently): staying on topic, enough content, grammar, vocabulary range. An empty or unintelligible transcript is 0.
 - summary_fa: 1-2 short, encouraging Persian sentences: overall impression and the single most important next step.
 - strengths_fa: up to 3 short Persian bullet points of what they did well.
 - mistakes: up to 5 of the MOST important real grammar/word-choice mistakes, each with the learner's original phrase (copied from the transcript), the corrected phrase, and a short Persian explanation of the rule (like a kind teacher, e.g. "برای کاری که دیروز تمام شده از گذشته‌ی ساده استفاده کن: went"). Skip fillers, hesitations, and recognition artifacts. Empty list if there are no real mistakes.
@@ -47,6 +47,12 @@ Review what they said:
 - used_phrases: which of the suggested phrases (exact strings from the given list) they actually used. Empty list if none or no list was given.
 - improved_version: their talk rewritten as natural, correct spoken English, keeping THEIR ideas and roughly their length, at a level just slightly above theirs (do not add new ideas). Empty string if the transcript is empty.
 - pictures_covered: ONLY when "pictures" is given (a picture story). The learner had to tell a story from these pictures IN ORDER; each item is the admin's short description of one picture (picture 1 = first item). List the numbers (1-based) of the pictures their story actually describes. Otherwise an empty list.
+
+When level is "starter" (absolute beginner, first 8 weeks, speaks in very short sentences of 3-6 words for about 30 seconds):
+- A few short correct sentences that answer the guide questions deserve a high score (80+). Do not expect connectors, past tense or long answers.
+- mistakes: at most 3, only basic ones (am/is/are, a/an, word order, missing verb). Explanations in very simple Persian.
+- better_phrases: at most 2, taken from the suggested phrases when possible.
+- improved_version: keep their ideas in very short, simple present-tense sentences; never more advanced than the suggested phrases.
 
 When "pictures" is given (picture story):
 - on_topic = "yes" only if the story covers all pictures in a sensible order, "partial" if some are missing or out of order.
@@ -102,7 +108,7 @@ Rules:
   "guide_questions": [string] (4-6 short, simple English questions that help them keep talking, ordered like a story),
   "useful_phrases": [string] (4-6 English phrases or sentence structures useful for this topic at this level, e.g. "Last summer, I went to ...", "The best part was ...")
 }
-- Match vocabulary and grammar to the level: beginner = very simple present/past, short sentences.`
+- Match vocabulary and grammar to the level: starter = only very common words, present simple, sentences of 3-6 words, 3 guide questions; beginner = very simple present/past, short sentences.`
 
 // SuggestSpeakingTopic از یک ایده‌ی کوتاه، محتوای کامل یک موضوع را پیشنهاد می‌دهد.
 func (s Service) SuggestSpeakingTopic(ctx context.Context, idea, level string) (SpeakingTopicSuggestion, error) {

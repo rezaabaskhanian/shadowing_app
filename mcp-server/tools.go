@@ -208,7 +208,7 @@ type updateArgs struct {
 
 type suggestTopicArgs struct {
 	Idea  string `json:"idea"`
-	Level string `json:"level" jsonschema:"beginner | intermediate | advanced"`
+	Level string `json:"level" jsonschema:"starter | beginner | intermediate | advanced"`
 }
 
 type topicArgs struct {

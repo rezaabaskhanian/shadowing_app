@@ -44,6 +44,8 @@ type Session = postgrespath.Session
 type Item = postgrespath.Item
 
 // انواع قدم. scene/podcast/video_clip/speaking_topic به ref_id نیاز دارند.
+// habit_mission = ماموریت «از حفظ بگو» (بخش عادت زبانی)؛ dictation = دیکته و
+// نوشتن از روی فارسی با جمله‌های صحنه‌های همان هفته.
 const (
 	KindScene         = "scene"
 	KindPodcast       = "podcast"
@@ -52,11 +54,13 @@ const (
 	KindLeitner       = "leitner_review"
 	KindWeakLines     = "weak_lines"
 	KindCheckpoint    = "checkpoint"
+	KindHabitMission  = "habit_mission"
+	KindDictation     = "dictation"
 )
 
 var validKinds = map[string]bool{
 	KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true,
-	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true,
+	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true,
 }
 
 var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true}

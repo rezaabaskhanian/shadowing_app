@@ -172,7 +172,7 @@ func (s *Service) AdminList(ctx context.Context) ([]Topic, error) {
 	return s.repo.ListAll(ctx)
 }
 
-var validLevels = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
+var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
 
 // maxStoryImages سقف عکس‌های «داستان تصویری».
 const maxStoryImages = 6
