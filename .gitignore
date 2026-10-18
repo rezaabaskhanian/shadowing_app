@@ -8,6 +8,7 @@
 
 # باینری‌های build
 /main
+/mcp-server/lingoflow-mcp
 
 # فایل محیطی
 .env

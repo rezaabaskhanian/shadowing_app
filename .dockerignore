@@ -7,6 +7,7 @@ app
 admin-panel
 landing
 whisper-service
+mcp-server
 deploy
 scripts
 uploads
