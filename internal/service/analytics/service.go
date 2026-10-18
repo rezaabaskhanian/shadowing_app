@@ -25,6 +25,7 @@ const (
 	EventShadowRecorded      = "shadow_recorded"
 	EventSceneCompleted      = "scene_completed"
 	EventPaywallViewed       = "paywall_viewed"
+	EventPaywallTapped       = "paywall_tapped"
 	EventPurchaseCompleted   = "purchase_completed"
 	EventAIConversationStart = "ai_conversation_started"
 	EventTopicSpeakingDone   = "topic_speaking_submitted"
@@ -46,7 +47,7 @@ var validEvents = map[string]bool{
 	EventAppOpen: true, EventScreenView: true,
 	EventOnboardingCompleted: true, EventSignedIn: true, EventPlacementCompleted: true,
 	EventSceneOpened: true, EventShadowRecorded: true, EventSceneCompleted: true,
-	EventPaywallViewed: true, EventPurchaseCompleted: true,
+	EventPaywallViewed: true, EventPaywallTapped: true, EventPurchaseCompleted: true,
 	EventAIConversationStart: true, EventFreeSpeechSubmitted: true, EventTopicSpeakingDone: true,
 	EventVideoClipOpened: true, EventVideoClipQuizDone: true, EventVideoClipPerformed: true,
 	EventWritingSubmitted: true, EventCourseLessonDone: true, EventPodcastPlayed: true,
@@ -66,6 +67,13 @@ var FunnelSteps = []string{
 	EventPurchaseCompleted,
 }
 
+// قیف‌های هر قابلیت؛ درصدها نسبت به قدم اول، روی همه‌ی دستگاه‌های فعال این بازه.
+var (
+	PurchaseFunnelSteps  = []string{EventPaywallViewed, EventPaywallTapped, EventPurchaseCompleted}
+	VideoClipFunnelSteps = []string{EventVideoClipOpened, EventVideoClipQuizDone, EventVideoClipPerformed}
+	PodcastFunnelSteps   = []string{EventPodcastPlayed, EventPodcastMyVersionStarted, EventPodcastMyVersionPlayed}
+)
+
 // maxFieldLen سقف طول هر فیلد متنی؛ اندپوینت عمومی است و نباید بشود با آن
 // رشته‌های بزرگ در دیتابیس نوشت.
 const maxFieldLen = 64
@@ -80,6 +88,7 @@ type repository interface {
 	Screens(ctx context.Context, days int) ([]postgresappevent.ScreenRow, error)
 	Events(ctx context.Context, days int) ([]postgresappevent.EventRow, error)
 	Funnel(ctx context.Context, days int, steps []string) ([]postgresappevent.FunnelRow, error)
+	WindowFunnel(ctx context.Context, days int, steps []string) ([]postgresappevent.FunnelRow, error)
 }
 
 type Service struct {
@@ -141,6 +150,8 @@ type DailyStats struct {
 	ActiveDevices int64  `json:"active_devices"`
 	NewDevices    int64  `json:"new_devices"`
 	ActiveUsers   int64  `json:"active_users"`
+	Shadows       int64  `json:"shadows"`
+	Shadowers     int64  `json:"shadowers"`
 }
 
 // CohortStats ماندگاری کاربران جدید یک نسخه. D1Eligible/D7Eligible فقط
@@ -148,10 +159,12 @@ type DailyStats struct {
 type CohortStats struct {
 	AppVersion string `json:"app_version"`
 	NewDevices int64  `json:"new_devices"`
-	D1Eligible int64  `json:"d1_eligible"`
-	D1Retained int64  `json:"d1_retained"`
-	D7Eligible int64  `json:"d7_eligible"`
-	D7Retained int64  `json:"d7_retained"`
+	// ShadowDay0 چند تا از این نصب‌ها روز اول در صحنه صدا ضبط کردند.
+	ShadowDay0 int64 `json:"shadow_day0"`
+	D1Eligible int64 `json:"d1_eligible"`
+	D1Retained int64 `json:"d1_retained"`
+	D7Eligible int64 `json:"d7_eligible"`
+	D7Retained int64 `json:"d7_retained"`
 }
 
 type ScreenStats struct {
@@ -178,6 +191,13 @@ type Summary struct {
 	Screens  []ScreenStats `json:"screens"`
 	Events   []EventStats  `json:"events"`
 	Funnel   []FunnelStep  `json:"funnel"`
+	// Shadowers / NonShadowers: ماندگاری نصب‌هایی که روز اول صدا ضبط کردند در
+	// برابر بقیه — جواب مستقیم «آیا تمرین روز اول کاربر را نگه می‌دارد؟».
+	Shadowers    CohortStats  `json:"shadowers"`
+	NonShadowers CohortStats  `json:"non_shadowers"`
+	Purchase     []FunnelStep `json:"purchase"`
+	VideoClip    []FunnelStep `json:"video_clip"`
+	Podcast      []FunnelStep `json:"podcast"`
 }
 
 const (
@@ -214,6 +234,14 @@ func (s Service) Summary(ctx context.Context, days int) (Summary, error) {
 	if err != nil {
 		return Summary{}, richerror.New(op).WithErr(err)
 	}
+	windowFunnels := make([][]FunnelStep, 0, 3)
+	for _, steps := range [][]string{PurchaseFunnelSteps, VideoClipFunnelSteps, PodcastFunnelSteps} {
+		rows, err := s.repo.WindowFunnel(ctx, days, steps)
+		if err != nil {
+			return Summary{}, richerror.New(op).WithErr(err)
+		}
+		windowFunnels = append(windowFunnels, toFunnel(rows))
+	}
 
 	res := Summary{
 		Days:     days,
@@ -221,17 +249,32 @@ func (s Service) Summary(ctx context.Context, days int) (Summary, error) {
 		Versions: make([]CohortStats, 0, len(cohorts)),
 		Screens:  make([]ScreenStats, 0, len(screens)),
 		Events:   make([]EventStats, 0, len(events)),
-		Funnel:   make([]FunnelStep, 0, len(funnel)),
+		Funnel:   toFunnel(funnel),
+
+		Purchase:  windowFunnels[0],
+		VideoClip: windowFunnels[1],
+		Podcast:   windowFunnels[2],
 	}
 	for _, r := range daily {
 		res.Daily = append(res.Daily, DailyStats(r))
 	}
+	// ردیف‌های repo به ازای (نسخه، ضبط روز اول) هستند؛ اینجا یک بار به ازای
+	// نسخه و یک بار به ازای «ضبط کرد / نکرد» جمعشان می‌کنیم. ترتیب نسخه‌ها از
+	// ORDER BY همان کوئری می‌آید.
+	byVersion := map[string]int{}
 	for _, r := range cohorts {
-		res.Versions = append(res.Versions, CohortStats{
-			AppVersion: r.AppVersion, NewDevices: r.Devices,
-			D1Eligible: r.D1Eligible, D1Retained: r.D1Retained,
-			D7Eligible: r.D7Eligible, D7Retained: r.D7Retained,
-		})
+		i, ok := byVersion[r.AppVersion]
+		if !ok {
+			i = len(res.Versions)
+			byVersion[r.AppVersion] = i
+			res.Versions = append(res.Versions, CohortStats{AppVersion: r.AppVersion})
+		}
+		addCohort(&res.Versions[i], r)
+		if r.ShadowDay0 {
+			addCohort(&res.Shadowers, r)
+		} else {
+			addCohort(&res.NonShadowers, r)
+		}
 	}
 	for _, r := range screens {
 		res.Screens = append(res.Screens, ScreenStats(r))
@@ -239,8 +282,24 @@ func (s Service) Summary(ctx context.Context, days int) (Summary, error) {
 	for _, r := range events {
 		res.Events = append(res.Events, EventStats(r))
 	}
-	for _, r := range funnel {
-		res.Funnel = append(res.Funnel, FunnelStep(r))
-	}
 	return res, nil
+}
+
+func addCohort(dst *CohortStats, r postgresappevent.CohortRow) {
+	dst.NewDevices += r.Devices
+	if r.ShadowDay0 {
+		dst.ShadowDay0 += r.Devices
+	}
+	dst.D1Eligible += r.D1Eligible
+	dst.D1Retained += r.D1Retained
+	dst.D7Eligible += r.D7Eligible
+	dst.D7Retained += r.D7Retained
+}
+
+func toFunnel(rows []postgresappevent.FunnelRow) []FunnelStep {
+	out := make([]FunnelStep, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, FunnelStep(r))
+	}
+	return out
 }

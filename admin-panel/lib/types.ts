@@ -450,11 +450,14 @@ export interface AnalyticsDaily {
   active_devices: number;
   new_devices: number;
   active_users: number;
+  shadows: number;
+  shadowers: number;
 }
 
 export interface AnalyticsCohort {
   app_version: string;
   new_devices: number;
+  shadow_day0: number;
   d1_eligible: number;
   d1_retained: number;
   d7_eligible: number;
@@ -467,7 +470,17 @@ export interface AnalyticsSummary {
   versions: AnalyticsCohort[];
   screens: { screen: string; views: number; devices: number }[];
   events: { event: string; count: number; devices: number }[];
-  funnel: { event: string; devices: number }[];
+  funnel: AnalyticsFunnelStep[];
+  shadowers: AnalyticsCohort;
+  non_shadowers: AnalyticsCohort;
+  purchase: AnalyticsFunnelStep[];
+  video_clip: AnalyticsFunnelStep[];
+  podcast: AnalyticsFunnelStep[];
+}
+
+export interface AnalyticsFunnelStep {
+  event: string;
+  devices: number;
 }
 
 // ---------- صحبت درباره‌ی یک موضوع ----------

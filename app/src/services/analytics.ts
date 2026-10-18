@@ -19,6 +19,7 @@ export type AnalyticsEvent =
   | 'shadow_recorded'
   | 'scene_completed'
   | 'paywall_viewed'
+  | 'paywall_tapped'
   | 'purchase_completed'
   | 'ai_conversation_started'
   | 'free_speech_submitted'

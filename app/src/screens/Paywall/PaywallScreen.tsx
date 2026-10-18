@@ -61,6 +61,7 @@ export const PaywallScreen = () => {
 
   const handleBuy = async () => {
     if (!selectedPlan || !selectedPlan.product_id) return;
+    track('paywall_tapped', selectedPlan.product_id);
     setPhase('buying');
     setErrorDetail(null);
     try {

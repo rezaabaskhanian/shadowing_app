@@ -33,10 +33,14 @@ type DailyRow struct {
 	ActiveDevices int64
 	NewDevices    int64
 	ActiveUsers   int64
+	Shadows       int64
+	Shadowers     int64
 }
 
 type CohortRow struct {
 	AppVersion string
+	// ShadowDay0 یعنی این دستگاه‌ها روز اول (روز نصب) حداقل یک بار در صحنه صدا ضبط کردند.
+	ShadowDay0 bool
 	Devices    int64
 	D1Eligible int64
 	D1Retained int64
@@ -100,7 +104,9 @@ func (d DB) Daily(ctx context.Context, days int) ([]DailyRow, error) {
 			(SELECT COUNT(*) FROM ev WHERE ev.d = s.d AND ev.event = 'app_open'),
 			(SELECT COUNT(DISTINCT device_id) FROM ev WHERE ev.d = s.d),
 			(SELECT COUNT(*) FROM first_seen f WHERE f.d = s.d),
-			(SELECT COUNT(DISTINCT user_id) FROM ev WHERE ev.d = s.d AND ev.user_id IS NOT NULL)
+			(SELECT COUNT(DISTINCT user_id) FROM ev WHERE ev.d = s.d AND ev.user_id IS NOT NULL),
+			(SELECT COUNT(*) FROM ev WHERE ev.d = s.d AND ev.event = 'shadow_recorded'),
+			(SELECT COUNT(DISTINCT device_id) FROM ev WHERE ev.d = s.d AND ev.event = 'shadow_recorded')
 		FROM (
 			SELECT generate_series((SELECT d FROM today) - ($1::int - 1), (SELECT d FROM today), '1 day')::date AS d
 		) AS s
@@ -114,7 +120,7 @@ func (d DB) Daily(ctx context.Context, days int) ([]DailyRow, error) {
 	for rows.Next() {
 		var r DailyRow
 		var day time.Time
-		if err := rows.Scan(&day, &r.Opens, &r.ActiveDevices, &r.NewDevices, &r.ActiveUsers); err != nil {
+		if err := rows.Scan(&day, &r.Opens, &r.ActiveDevices, &r.NewDevices, &r.ActiveUsers, &r.Shadows, &r.Shadowers); err != nil {
 			return nil, richerror.New(op).WithErr(err)
 		}
 		r.Date = day.Format("2006-01-02")
@@ -124,7 +130,7 @@ func (d DB) Daily(ctx context.Context, days int) ([]DailyRow, error) {
 }
 
 // Cohorts دستگاه‌هایی را که اولین بار در `days` روز اخیر دیده شده‌اند به تفکیک
-// نسخه‌ی اپِ اولین رویداد گروه می‌کند و ماندگاری روز ۱ و ۷ را می‌شمارد (هر
+// نسخه‌ی اپِ اولین رویداد و اینکه روز اول صدا ضبط کردند یا نه گروه می‌کند و ماندگاری روز ۱ و ۷ را می‌شمارد (هر
 // رویدادی در آن روز = برگشته). هر کوهورت فقط وقتی در مخرج D1/D7 حساب می‌شود
 // که آن روزش واقعاً رسیده باشد.
 func (d DB) Cohorts(ctx context.Context, days int) ([]CohortRow, error) {
@@ -141,6 +147,12 @@ func (d DB) Cohorts(ctx context.Context, days int) ([]CohortRow, error) {
 			SELECT f.device_id, f.d, f.app_version,
 				EXISTS (
 					SELECT 1 FROM app_events e
+					WHERE e.device_id = f.device_id AND e.event = 'shadow_recorded'
+						AND e.created_at >= f.d::timestamp AT TIME ZONE `+tz+`
+						AND e.created_at < (f.d + 1)::timestamp AT TIME ZONE `+tz+`
+				) AS shadow_day0,
+				EXISTS (
+					SELECT 1 FROM app_events e
 					WHERE e.device_id = f.device_id
 						AND e.created_at >= (f.d + 1)::timestamp AT TIME ZONE `+tz+`
 						AND e.created_at < (f.d + 2)::timestamp AT TIME ZONE `+tz+`
@@ -154,14 +166,14 @@ func (d DB) Cohorts(ctx context.Context, days int) ([]CohortRow, error) {
 			FROM first_seen f
 			WHERE f.d > (SELECT d FROM today) - $1::int
 		)
-		SELECT app_version,
+		SELECT app_version, shadow_day0,
 			COUNT(*),
 			COUNT(*) FILTER (WHERE d <= (SELECT d FROM today) - 1),
 			COUNT(*) FILTER (WHERE d <= (SELECT d FROM today) - 1 AND ret1),
 			COUNT(*) FILTER (WHERE d <= (SELECT d FROM today) - 7),
 			COUNT(*) FILTER (WHERE d <= (SELECT d FROM today) - 7 AND ret7)
 		FROM cohort
-		GROUP BY app_version
+		GROUP BY app_version, shadow_day0
 		ORDER BY app_version DESC`, days)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("failed to query cohorts")
@@ -171,7 +183,7 @@ func (d DB) Cohorts(ctx context.Context, days int) ([]CohortRow, error) {
 	out := make([]CohortRow, 0)
 	for rows.Next() {
 		var r CohortRow
-		if err := rows.Scan(&r.AppVersion, &r.Devices, &r.D1Eligible, &r.D1Retained, &r.D7Eligible, &r.D7Retained); err != nil {
+		if err := rows.Scan(&r.AppVersion, &r.ShadowDay0, &r.Devices, &r.D1Eligible, &r.D1Retained, &r.D7Eligible, &r.D7Retained); err != nil {
 			return nil, richerror.New(op).WithErr(err)
 		}
 		out = append(out, r)
@@ -249,6 +261,38 @@ func (d DB) Funnel(ctx context.Context, days int, steps []string) ([]FunnelRow, 
 		ORDER BY s.ord`, days, steps)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("failed to query funnel")
+	}
+	defer rows.Close()
+
+	out := make([]FunnelRow, 0, len(steps))
+	for rows.Next() {
+		var r FunnelRow
+		if err := rows.Scan(&r.Event, &r.Devices); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// WindowFunnel دستگاه‌های یکتایی که در `days` روز اخیر هر کدام از رویدادهای
+// `steps` را زده‌اند (همه‌ی دستگاه‌ها، نه فقط نصب‌های جدید) — برای قیف‌های
+// یک قابلیت مثل خرید یا کلیپ ویدیویی که درصدشان نسبت به قدم اول است.
+func (d DB) WindowFunnel(ctx context.Context, days int, steps []string) ([]FunnelRow, error) {
+	const op = "postgresappevent.WindowFunnel"
+	rows, err := d.conn.Query(ctx, `
+		WITH ev AS (
+			SELECT event, COUNT(DISTINCT device_id) AS devices
+			FROM app_events
+			WHERE event = ANY($2::text[]) AND created_at >= `+sinceDays+`
+			GROUP BY event
+		)
+		SELECT s.event, COALESCE(ev.devices, 0)
+		FROM unnest($2::text[]) WITH ORDINALITY AS s(event, ord)
+		LEFT JOIN ev ON ev.event = s.event
+		ORDER BY s.ord`, days, steps)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to query window funnel")
 	}
 	defer rows.Close()
 

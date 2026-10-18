@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAnalyticsSummary } from "@/lib/api";
-import type { AnalyticsCohort, AnalyticsSummary } from "@/lib/types";
+import type { AnalyticsCohort, AnalyticsFunnelStep, AnalyticsSummary } from "@/lib/types";
 
 const RANGES = [7, 30, 90];
 
@@ -53,6 +53,7 @@ const EVENT_LABELS: Record<string, string> = {
   shadow_recorded: "ضبط صدا در صحنه",
   scene_completed: "تمام کردن صحنه",
   paywall_viewed: "دیدن صفحه‌ی خرید",
+  paywall_tapped: "زدن دکمه‌ی خرید",
   purchase_completed: "خرید اشتراک",
   ai_conversation_started: "شروع گفتگو با AI",
   free_speech_submitted: "ارسال صحبت آزاد",
@@ -63,6 +64,8 @@ const EVENT_LABELS: Record<string, string> = {
   writing_submitted: "ارسال متن برای تصحیح",
   course_lesson_completed: "تمام کردن درس دوره‌ی مبتدی",
   podcast_played: "پخش پادکست",
+  podcast_my_version_started: "شروع ضبط «نسخه‌ی من» پادکست",
+  podcast_my_version_played: "پخش «نسخه‌ی من» پادکست",
   token_topup_viewed: "دیدن صفحه‌ی خرید توکن",
   token_topup_purchased: "خرید توکن",
 };
@@ -85,13 +88,14 @@ function Stat({ label, value }: { label: string; value: number | string | undefi
   );
 }
 
-function CohortTable({ rows }: { rows: AnalyticsCohort[] }) {
+function CohortTable({ rows, first = "نسخه" }: { rows: { label: string; c: AnalyticsCohort }[]; first?: string }) {
   return (
     <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
       <thead>
         <tr>
-          <th style={th}>نسخه</th>
+          <th style={th}>{first}</th>
           <th style={th}>نصب جدید</th>
+          <th style={th}>روز اول صدا ضبط کرد</th>
           <th style={th}>برگشت روز ۱</th>
           <th style={th}>برگشت روز ۷</th>
         </tr>
@@ -99,13 +103,14 @@ function CohortTable({ rows }: { rows: AnalyticsCohort[] }) {
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td style={td} colSpan={4}>هنوز داده‌ای نیست</td>
+            <td style={td} colSpan={5}>هنوز داده‌ای نیست</td>
           </tr>
         ) : (
-          rows.map((c) => (
-            <tr key={c.app_version}>
-              <td style={td}>{c.app_version || "نامشخص"}</td>
+          rows.map(({ label, c }) => (
+            <tr key={label}>
+              <td style={td}>{label}</td>
               <td style={td}>{c.new_devices}</td>
+              <td style={td}>{pct(c.shadow_day0, c.new_devices)}</td>
               <td style={td}>{pct(c.d1_retained, c.d1_eligible)}</td>
               <td style={td}>{pct(c.d7_retained, c.d7_eligible)}</td>
             </tr>
@@ -113,6 +118,28 @@ function CohortTable({ rows }: { rows: AnalyticsCohort[] }) {
         )}
       </tbody>
     </table>
+  );
+}
+
+/** قیف یک قابلیت به شکل کارت‌های کنار هم؛ درصد هر قدم نسبت به قدم اول. */
+function FeatureFunnel({ title, hint, steps }: { title: string; hint: string; steps: AnalyticsFunnelStep[] }) {
+  const top = steps[0]?.devices ?? 0;
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>{title}</h3>
+      <p className="hint" style={{ marginTop: 0 }}>{hint}</p>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {steps.map((s, i) => (
+          <div key={s.event} className="card" style={{ flex: "1 1 160px", margin: 0 }}>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{EVENT_LABELS[s.event] ?? s.event}</div>
+            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 6 }}>{s.devices}</div>
+            {i > 0 && top > 0 ? (
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{Math.round((s.devices / top) * 100)}٪</div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -171,6 +198,7 @@ export default function AnalyticsPanel({
             <Stat label="دستگاه فعال امروز" value={today?.active_devices} />
             <Stat label="نصب جدید امروز" value={today?.new_devices} />
             <Stat label="کاربر واردشده‌ی فعال امروز" value={today?.active_users} />
+            <Stat label="صدای ضبط‌شده در صحنه امروز" value={today?.shadows} />
             <Stat label={`نصب جدید در ${days} روز`} value={data.daily.reduce((n, d) => n + d.new_devices, 0)} />
           </div>
 
@@ -204,8 +232,39 @@ export default function AnalyticsPanel({
             <p className="hint" style={{ marginTop: 0 }}>
               نصب‌های جدید این بازه بر اساس نسخه‌ی اولین اجرا. «برگشت روز ۱» یعنی فردای نصب دوباره اپ را باز کرد.
             </p>
-            <CohortTable rows={data.versions} />
+            <CohortTable rows={data.versions.map((c) => ({ label: c.app_version || "نامشخص", c }))} />
           </div>
+
+          <div className="card">
+            <h3 style={{ marginTop: 0 }}>اثر تمرین روز اول روی ماندگاری</h3>
+            <p className="hint" style={{ marginTop: 0 }}>
+              نصب‌هایی که روز اول حداقل یک بار در صحنه صدا ضبط کردند در برابر بقیه. اگر گروه اول خیلی بیشتر برمی‌گردد،
+              باید کاربر جدید را زودتر به اولین ضبط رساند.
+            </p>
+            <CohortTable
+              first="گروه"
+              rows={[
+                { label: "روز اول صدا ضبط کردند", c: data.shadowers },
+                { label: "روز اول صدا ضبط نکردند", c: data.non_shadowers },
+              ]}
+            />
+          </div>
+
+          <FeatureFunnel
+            title="قیف خرید اشتراک"
+            hint="دستگاه‌های یکتای این بازه؛ درصدها نسبت به کسانی است که صفحه‌ی خرید را دیدند."
+            steps={data.purchase}
+          />
+          <FeatureFunnel
+            title="قیف کلیپ ویدیویی"
+            hint="از کسانی که کلیپ را باز کردند، چند نفر سؤال‌های فهم را جواب دادند و نقش را اجرا کردند."
+            steps={data.video_clip}
+          />
+          <FeatureFunnel
+            title="قیف پادکست"
+            hint="از کسانی که پادکست را پخش کردند، چند نفر «نسخه‌ی من» را ضبط و پخش کردند."
+            steps={data.podcast}
+          />
 
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <div className="card" style={{ flex: "1 1 360px" }}>
@@ -276,6 +335,8 @@ export default function AnalyticsPanel({
                     <th style={th}>دستگاه فعال</th>
                     <th style={th}>نصب جدید</th>
                     <th style={th}>کاربر واردشده</th>
+                    <th style={th}>ضبط صدا در صحنه</th>
+                    <th style={th}>دستگاه‌هایی که ضبط کردند</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -286,6 +347,8 @@ export default function AnalyticsPanel({
                       <td style={td}>{d.active_devices}</td>
                       <td style={td}>{d.new_devices}</td>
                       <td style={td}>{d.active_users}</td>
+                      <td style={td}>{d.shadows}</td>
+                      <td style={td}>{d.shadowers}</td>
                     </tr>
                   ))}
                 </tbody>
