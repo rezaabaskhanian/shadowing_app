@@ -91,6 +91,10 @@ services:
       # پراکسی خروجی برای دور زدن بلاک جغرافیایی Gemini/Anthropic/ElevenLabs از IP ایران؛
       # به سایدکار xray (سرویس بالا) وصل می‌شود. لینک vless از پنل ادمین (تب تنظیمات) ست می‌شود.
       AI_OUTBOUND_PROXY: socks5://xray:1080
+      # جایگزین پراکسی: رله‌ی Cloudflare Worker (deploy/relay-worker.js). اگر در .env
+      # ست شود، به جای xray استفاده می‌شود؛ خالی = همان پراکسی بالا.
+      AI_RELAY_URL: ${AI_RELAY_URL:-}
+      AI_RELAY_KEY: ${AI_RELAY_KEY:-}
       XRAY_CONFIG_PATH: /xray-config/config.json
     volumes:
       - uploads_data:/root/uploads
