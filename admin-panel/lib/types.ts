@@ -484,7 +484,7 @@ export interface AnalyticsFunnelStep {
 }
 
 // ---------- صحبت درباره‌ی یک موضوع ----------
-export type SpeakingTopicLevel = "beginner" | "intermediate" | "advanced";
+export type SpeakingTopicLevel = "starter" | "beginner" | "intermediate" | "advanced";
 
 export interface SpeakingTopic {
   id: string;

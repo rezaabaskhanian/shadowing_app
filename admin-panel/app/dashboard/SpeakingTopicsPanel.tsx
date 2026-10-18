@@ -12,6 +12,7 @@ import {
 import type { SpeakingTopic, SpeakingTopicLevel } from "@/lib/types";
 
 const LEVELS: { id: SpeakingTopicLevel; label: string }[] = [
+  { id: "starter", label: "قدم اول" },
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },
