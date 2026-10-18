@@ -127,8 +127,9 @@ export default function SettingsPanel({
   }
 
   async function handleConnectProxy() {
-    if (!proxyLink.trim().startsWith("vless://")) {
-      notify("لینک باید با vless:// شروع شود", "err");
+    const link = proxyLink.trim();
+    if (!link.startsWith("vless://") && !link.startsWith("ss://")) {
+      notify("لینک باید با vless:// یا ss:// شروع شود", "err");
       return;
     }
     setProxyConnecting(true);
@@ -292,13 +293,13 @@ export default function SettingsPanel({
         <h2 style={{ marginTop: 0 }}>🌐 اتصال پراکسی خروجی (برای Gemini/Anthropic/ElevenLabs)</h2>
         <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
           چون سرور ایرانه، این سرویس‌ها مستقیم بلاک می‌کنن. لینک{" "}
-          <code>vless://...</code> رو اینجا بچسبون و «اتصال» رو بزن — چند ثانیه طول
+          <code>vless://...</code> یا <code>ss://...</code> رو اینجا بچسبون و «اتصال» رو بزن — چند ثانیه طول
           می‌کشه تا وصل بشه، بعدش وضعیت پایین نشون داده می‌شه.
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input
             dir="ltr"
-            placeholder="vless://..."
+            placeholder="vless://... یا ss://..."
             value={proxyLink}
             onChange={(e) => setProxyLink(e.target.value)}
             style={{ flex: 1, minWidth: 240, fontFamily: "monospace", fontSize: 12 }}

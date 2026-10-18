@@ -171,3 +171,51 @@ func TestParseVlessLink_RejectsIncomplete(t *testing.T) {
 		t.Fatal("expected error for incomplete link")
 	}
 }
+
+func TestParseShadowsocksLink_SIP002(t *testing.T) {
+	// base64("aes-128-gcm:secret")
+	cfg, err := parseProxyLink("ss://YWVzLTEyOC1nY206c2VjcmV0@1.2.3.4:443#name", 1080)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ob := cfg.Outbounds[0]
+	if ob.Protocol != "shadowsocks" {
+		t.Fatalf("protocol = %q", ob.Protocol)
+	}
+	srv := ob.Settings["servers"].([]map[string]any)[0]
+	if srv["address"] != "1.2.3.4" || srv["port"] != 443 || srv["method"] != "aes-128-gcm" || srv["password"] != "secret" {
+		t.Fatalf("server = %#v", srv)
+	}
+	if cfg.Inbounds[0].Port != 1080 {
+		t.Fatalf("socks port = %d", cfg.Inbounds[0].Port)
+	}
+}
+
+func TestParseShadowsocksLink_PlainUserinfo(t *testing.T) {
+	cfg, err := parseProxyLink("ss://chacha20-ietf-poly1305:p%40ss@example.com:8388", 1080)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	srv := cfg.Outbounds[0].Settings["servers"].([]map[string]any)[0]
+	if srv["method"] != "chacha20-ietf-poly1305" || srv["password"] != "p@ss" || srv["address"] != "example.com" {
+		t.Fatalf("server = %#v", srv)
+	}
+}
+
+func TestParseShadowsocksLink_Legacy(t *testing.T) {
+	// base64("aes-256-gcm:pw@5.6.7.8:8443")
+	cfg, err := parseProxyLink("ss://YWVzLTI1Ni1nY206cHdANS42LjcuODo4NDQz#x", 1080)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	srv := cfg.Outbounds[0].Settings["servers"].([]map[string]any)[0]
+	if srv["address"] != "5.6.7.8" || srv["port"] != 8443 || srv["password"] != "pw" {
+		t.Fatalf("server = %#v", srv)
+	}
+}
+
+func TestParseShadowsocksLink_RejectsPlugin(t *testing.T) {
+	if _, err := parseProxyLink("ss://YWVzLTEyOC1nY206c2VjcmV0@1.2.3.4:443/?plugin=obfs-local", 1080); err == nil {
+		t.Fatal("expected error for plugin link")
+	}
+}

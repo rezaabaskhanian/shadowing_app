@@ -69,7 +69,7 @@ func (s Service) CurrentLink() string {
 func (s Service) Connect(ctx context.Context, link string) (Status, error) {
 	const op = "proxyservice.Connect"
 
-	cfg, err := parseVlessLink(link, s.socksPort)
+	cfg, err := parseProxyLink(link, s.socksPort)
 	if err != nil {
 		return Status{}, richerror.New(op).WithErr(err).WithMessage(err.Error())
 	}
