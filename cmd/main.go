@@ -27,6 +27,7 @@ import (
 	postgreslibrary "shadowing-backend/internal/repository/postgres/library"
 	postgresnotification "shadowing-backend/internal/repository/postgres/notification"
 	postgresotp "shadowing-backend/internal/repository/postgres/otp"
+	postgrespath "shadowing-backend/internal/repository/postgres/path"
 	postgrespodcast "shadowing-backend/internal/repository/postgres/podcast"
 	postgresachievement "shadowing-backend/internal/repository/postgres/progress/achievement"
 	postgresactivity "shadowing-backend/internal/repository/postgres/progress/activity"
@@ -82,6 +83,7 @@ import (
 
 	courseservice "shadowing-backend/internal/service/course"
 	libraryservice "shadowing-backend/internal/service/library"
+	pathservice "shadowing-backend/internal/service/path"
 	podcastservice "shadowing-backend/internal/service/podcast"
 	ttsservice "shadowing-backend/internal/service/tts"
 	userservice "shadowing-backend/internal/service/user"
@@ -173,11 +175,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc)
 
 	server.Server()
 
@@ -247,7 +249,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service, *pathservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -426,6 +428,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
 	courseSvc := courseservice.New(postgrescourse.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)
+	pathSvc := pathservice.New(postgrespath.New(MyPostgresgresRepo.DB), ttsservice.New(settingsSvc), store)
 
 	// «تمرین نوشتن» (داستان کوتاه + تصحیح با AI) — ببینید writingservice.
 	writingSvc := writingservice.New(postgreswriting.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), aiAccessSvc)
@@ -435,5 +438,5 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc
 }

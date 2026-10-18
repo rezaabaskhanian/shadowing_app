@@ -20,6 +20,7 @@ import (
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	libraryhandler "shadowing-backend/internal/delivery/httpserver/library"
 	missionhandler "shadowing-backend/internal/delivery/httpserver/mission"
+	pathhandler "shadowing-backend/internal/delivery/httpserver/path"
 	podcasthandler "shadowing-backend/internal/delivery/httpserver/podcast"
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
@@ -64,6 +65,7 @@ import (
 	"fmt"
 	courseservice "shadowing-backend/internal/service/course"
 	libraryservice "shadowing-backend/internal/service/library"
+	pathservice "shadowing-backend/internal/service/path"
 	podcastservice "shadowing-backend/internal/service/podcast"
 	userservice "shadowing-backend/internal/service/user"
 	writingservice "shadowing-backend/internal/service/writing"
@@ -112,6 +114,7 @@ type Service struct {
 	videoClipHandler     videocliphandler.Handler
 	podcastHandler       podcasthandler.Handler
 	courseHandler        coursehandler.Handler
+	pathHandler          pathhandler.Handler
 	writingHandler       writinghandler.Handler
 	libraryHandler       libraryhandler.Handler
 }
@@ -146,6 +149,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	courseSvc *courseservice.Service,
 	podcastSvc *podcastservice.Service,
 	librarySvc *libraryservice.Service,
+	pathSvc *pathservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -211,6 +215,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 		videoClipHandler:     videocliphandler.New(videoClipSvc, authSvc, authConfig),
 		podcastHandler:       podcasthandler.New(podcastSvc, authSvc, authConfig),
 		courseHandler:        coursehandler.New(courseSvc, authSvc, authConfig),
+		pathHandler:          pathhandler.New(pathSvc, authSvc, authConfig),
 		writingHandler:       writinghandler.New(writingSvc, authSvc, authConfig),
 		libraryHandler:       libraryhandler.New(librarySvc, authSvc, authConfig),
 	}
@@ -310,6 +315,9 @@ func (s Service) Server() {
 
 	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
 	s.courseHandler.SetCourseRoutes(e)
+
+	// «مسیر آموزشی» اختیاری هفتگی + Checkpoint — ببینید pathservice.
+	s.pathHandler.SetPathRoutes(e)
 
 	// «تمرین نوشتن» (داستان کوتاه + تصحیح با AI) — ببینید writingservice.
 	s.writingHandler.SetWritingRoutes(e)

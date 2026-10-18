@@ -26,6 +26,9 @@ const SCREEN_LABELS: Record<string, string> = {
   Writing: "نوشتن داستان",
   CourseHome: "دوره‌ی مبتدی",
   CourseLesson: "درس دوره‌ی مبتدی",
+  PathHome: "مسیر آموزشی",
+  PathWeakLines: "جمله‌های سخت (مسیر)",
+  PathCheckpoint: "Checkpoint هفته",
   PodcastList: "پادکست‌ها",
   Podcast: "پخش پادکست",
   LanguageHabit: "عادت زبانی",
@@ -68,6 +71,8 @@ const EVENT_LABELS: Record<string, string> = {
   podcast_my_version_played: "پخش «نسخه‌ی من» پادکست",
   token_topup_viewed: "دیدن صفحه‌ی خرید توکن",
   token_topup_purchased: "خرید توکن",
+  path_item_opened: "باز کردن قدم مسیر آموزشی",
+  checkpoint_done: "دادن Checkpoint هفته",
 };
 
 /** «۴۲٪ (۲۱ از ۵۰)» — یا خط تیره وقتی هنوز کسی به آن روز نرسیده. */

@@ -41,6 +41,9 @@ const (
 	EventFreeSpeechSubmitted     = "free_speech_submitted"
 	EventTokenTopupViewed        = "token_topup_viewed"
 	EventTokenTopupPurchased     = "token_topup_purchased"
+	// مسیر آموزشی: باز کردن یک قدم (target = نوع قدم) و ثبت Checkpoint هفته.
+	EventPathItemOpened = "path_item_opened"
+	EventCheckpointDone = "checkpoint_done"
 )
 
 var validEvents = map[string]bool{
@@ -53,6 +56,7 @@ var validEvents = map[string]bool{
 	EventWritingSubmitted: true, EventCourseLessonDone: true, EventPodcastPlayed: true,
 	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,
 	EventTokenTopupViewed: true, EventTokenTopupPurchased: true,
+	EventPathItemOpened: true, EventCheckpointDone: true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.
