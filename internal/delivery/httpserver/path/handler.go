@@ -28,6 +28,8 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	app := e.Group("/v1/paths", auth)
 	app.GET("", h.Paths)
 	app.GET("/:level", h.Path)
+	app.GET("/:level/self-intro", h.SelfIntros)
+	app.PUT("/:level/self-intro/:stage", h.SaveSelfIntro)
 	app.POST("/weeks/:id/items/:key/complete", h.CompleteItem)
 	app.GET("/weeks/:id/checkpoint", h.Checkpoint)
 	app.POST("/weeks/:id/checkpoint", h.SubmitCheckpoint)
@@ -108,6 +110,31 @@ func (h Handler) SubmitCheckpoint(c echo.Context) error {
 		return badRequest(c)
 	}
 	res, err := h.svc.SubmitCheckpoint(c.Request().Context(), uid, c.Param("id"), req.Scores)
+	return respond(c, res, err)
+}
+
+func (h Handler) SelfIntros(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	res, err := h.svc.SelfIntros(c.Request().Context(), uid, c.Param("level"))
+	return respond(c, res, err)
+}
+
+func (h Handler) SaveSelfIntro(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	var req struct {
+		Transcript      string `json:"transcript"`
+		DurationSeconds int    `json:"duration_seconds"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	res, err := h.svc.SaveSelfIntro(c.Request().Context(), uid, c.Param("level"), c.Param("stage"), req.Transcript, req.DurationSeconds)
 	return respond(c, res, err)
 }
 

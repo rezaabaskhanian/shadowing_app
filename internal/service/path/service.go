@@ -31,6 +31,8 @@ type repository interface {
 	UpsertPath(ctx context.Context, p postgrespath.Path) (string, error)
 	SetCheckpoint(ctx context.Context, weekID string, checkpoint json.RawMessage) error
 	SetActive(ctx context.Context, level string, active bool) error
+	SaveSelfIntro(ctx context.Context, userID, level string, in postgrespath.SelfIntro) error
+	SelfIntros(ctx context.Context, userID, level string) (map[string]postgrespath.SelfIntro, error)
 	DoneItems(ctx context.Context, userID string, weekIDs []string) (map[string]map[string]bool, error)
 	CompletedScenes(ctx context.Context, userID string, sceneIDs []string) (map[string]bool, error)
 	MarkItem(ctx context.Context, userID, weekID, key string) error
@@ -45,7 +47,8 @@ type Item = postgrespath.Item
 
 // انواع قدم. scene/podcast/video_clip/speaking_topic به ref_id نیاز دارند.
 // habit_mission = ماموریت «از حفظ بگو» (بخش عادت زبانی)؛ dictation = دیکته و
-// نوشتن از روی فارسی با جمله‌های صحنه‌های همان هفته.
+// نوشتن از روی فارسی با جمله‌های صحنه‌های همان هفته؛ self_intro = ضبط «قبل»
+// (هفته‌ی اول) یا «بعد» و مقایسه (هفته‌ی آخر) — کلیدی که با after تمام شود «بعد» است.
 const (
 	KindScene         = "scene"
 	KindPodcast       = "podcast"
@@ -56,11 +59,12 @@ const (
 	KindCheckpoint    = "checkpoint"
 	KindHabitMission  = "habit_mission"
 	KindDictation     = "dictation"
+	KindSelfIntro     = "self_intro"
 )
 
 var validKinds = map[string]bool{
 	KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true,
-	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true,
+	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true,
 }
 
 var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true}
@@ -496,4 +500,56 @@ func (s *Service) saveCheckpoint(ctx context.Context, weekID string, cp map[stri
 		return err
 	}
 	return s.repo.SetCheckpoint(ctx, weekID, b)
+}
+
+type SelfIntro = postgrespath.SelfIntro
+
+// maxSelfIntroSeconds سقف طول ضبط «قبل و بعد».
+const maxSelfIntroSeconds = 120
+
+var selfIntroStages = map[string]bool{"before": true, "after": true}
+
+// SaveSelfIntro متن رونویسی‌شده‌ی ضبط «قبل» یا «بعد» را با آمارش ذخیره می‌کند.
+// تعداد کلمه‌ها همین‌جا از روی متن شمرده می‌شود، نه از روی ورودی اپ.
+func (s *Service) SaveSelfIntro(ctx context.Context, userID, level, stage, transcript string, durationSeconds int) (map[string]SelfIntro, error) {
+	const op = "path.SaveSelfIntro"
+	level = strings.TrimSpace(level)
+	if !selfIntroStages[stage] {
+		return nil, invalid(op, "مرحله باید before یا after باشد")
+	}
+	if _, err := s.repo.GetPathByLevel(ctx, level); err != nil {
+		return nil, err
+	}
+	transcript = strings.TrimSpace(transcript)
+	if len([]rune(transcript)) > 3000 {
+		return nil, invalid(op, "متن خیلی طولانی است")
+	}
+	durationSeconds = min(max(durationSeconds, 0), maxSelfIntroSeconds)
+	words, unique := countWords(transcript)
+	if err := s.repo.SaveSelfIntro(ctx, userID, level, SelfIntro{
+		Stage: stage, Transcript: transcript, DurationSeconds: durationSeconds, WordCount: words, UniqueWords: unique,
+	}); err != nil {
+		return nil, err
+	}
+	return s.repo.SelfIntros(ctx, userID, level)
+}
+
+func (s *Service) SelfIntros(ctx context.Context, userID, level string) (map[string]SelfIntro, error) {
+	return s.repo.SelfIntros(ctx, userID, strings.TrimSpace(level))
+}
+
+// countWords کلمه‌های انگلیسی متن و تعداد کلمه‌های متفاوت (بدون حساسیت به حروف).
+func countWords(text string) (total, unique int) {
+	seen := map[string]bool{}
+	for _, w := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '\'')
+	}) {
+		w = strings.Trim(w, "'")
+		if w == "" {
+			continue
+		}
+		total++
+		seen[w] = true
+	}
+	return total, len(seen)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"shadowing-backend/internal/pkg/richerror"
 
@@ -321,6 +322,51 @@ func (r DB) BestCheckpoints(ctx context.Context, userID string, weekIDs []string
 			return nil, richerror.New(op).WithErr(err)
 		}
 		out[id] = best
+	}
+	return out, rows.Err()
+}
+
+// SelfIntro آمار یک ضبط «قبل» یا «بعد» (خودِ صدا روی گوشی کاربر است).
+type SelfIntro struct {
+	Stage           string    `json:"stage"`
+	Transcript      string    `json:"transcript"`
+	DurationSeconds int       `json:"duration_seconds"`
+	WordCount       int       `json:"word_count"`
+	UniqueWords     int       `json:"unique_words"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+func (r DB) SaveSelfIntro(ctx context.Context, userID, level string, in SelfIntro) error {
+	const op = "postgrespath.SaveSelfIntro"
+	if _, err := r.conn.Exec(ctx, `
+		INSERT INTO user_self_intros (user_id, level, stage, transcript, duration_seconds, word_count, unique_words)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (user_id, level, stage) DO UPDATE SET transcript = EXCLUDED.transcript,
+			duration_seconds = EXCLUDED.duration_seconds, word_count = EXCLUDED.word_count,
+			unique_words = EXCLUDED.unique_words, created_at = now()`,
+		userID, level, in.Stage, in.Transcript, in.DurationSeconds, in.WordCount, in.UniqueWords); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	return nil
+}
+
+// SelfIntros ضبط‌های «قبل» و «بعد» کاربر در یک سطح، به تفکیک مرحله.
+func (r DB) SelfIntros(ctx context.Context, userID, level string) (map[string]SelfIntro, error) {
+	const op = "postgrespath.SelfIntros"
+	rows, err := r.conn.Query(ctx, `
+		SELECT stage, transcript, duration_seconds, word_count, unique_words, created_at
+		FROM user_self_intros WHERE user_id = $1 AND level = $2`, userID, level)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+	out := map[string]SelfIntro{}
+	for rows.Next() {
+		var s SelfIntro
+		if err := rows.Scan(&s.Stage, &s.Transcript, &s.DurationSeconds, &s.WordCount, &s.UniqueWords, &s.CreatedAt); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		out[s.Stage] = s
 	}
 	return out, rows.Err()
 }

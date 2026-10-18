@@ -55,3 +55,13 @@ func TestApplyProgress_CheckpointAnyScoreUnlocksNextWeek(t *testing.T) {
 		t.Fatal("checkpoint content must not be sent in the path view")
 	}
 }
+
+func TestCountWords(t *testing.T) {
+	total, unique := countWords("Hi! My name is Sara. I'm from Iran, and my sister is twelve.")
+	if total != 13 || unique != 11 {
+		t.Fatalf("got total=%d unique=%d, want 13 and 11", total, unique)
+	}
+	if total, unique := countWords(""); total != 0 || unique != 0 {
+		t.Fatalf("empty: got %d %d", total, unique)
+	}
+}

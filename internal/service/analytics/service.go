@@ -44,6 +44,7 @@ const (
 	// مسیر آموزشی: باز کردن یک قدم (target = نوع قدم) و ثبت Checkpoint هفته.
 	EventPathItemOpened = "path_item_opened"
 	EventCheckpointDone = "checkpoint_done"
+	EventPathSelfIntro  = "path_self_intro"
 )
 
 var validEvents = map[string]bool{
@@ -56,7 +57,7 @@ var validEvents = map[string]bool{
 	EventWritingSubmitted: true, EventCourseLessonDone: true, EventPodcastPlayed: true,
 	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,
 	EventTokenTopupViewed: true, EventTokenTopupPurchased: true,
-	EventPathItemOpened: true, EventCheckpointDone: true,
+	EventPathItemOpened: true, EventCheckpointDone: true, EventPathSelfIntro: true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.
