@@ -73,6 +73,7 @@ const EVENT_LABELS: Record<string, string> = {
   token_topup_purchased: "خرید توکن",
   path_item_opened: "باز کردن قدم مسیر آموزشی",
   checkpoint_done: "دادن Checkpoint هفته",
+  path_self_intro: "ضبط «قبل و بعد» مسیر",
 };
 
 /** «۴۲٪ (۲۱ از ۵۰)» — یا خط تیره وقتی هنوز کسی به آن روز نرسیده. */

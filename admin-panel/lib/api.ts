@@ -375,6 +375,16 @@ export async function updateUserRole(userID: string, role: "admin" | "user") {
 }
 
 // ---------- پیشنهادات و انتقادات کاربران (درج اپ موبایل) ----------
+export async function replyFeedback(id: string, reply: string): Promise<{ pushed: number }> {
+  return jsonOrThrow(await authFetch(`/v1/admin/feedbacks/${id}/reply`, jsonBody("POST", { reply })));
+}
+
+/** پیام آزمایشی به ربات‌های تلگرام/بله؛ نتیجه‌ی هر ربات جدا. */
+export async function testAdminBot(): Promise<Record<string, string>> {
+  const data = await jsonOrThrow(await authFetch("/v1/admin/bot/test", { method: "POST" }));
+  return (data?.results || {}) as Record<string, string>;
+}
+
 export async function listFeedbacks(): Promise<Feedback[]> {
   const res = await authFetch("/v1/admin/feedbacks", { method: "GET" });
   const data = await jsonOrThrow(res);

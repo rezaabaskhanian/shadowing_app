@@ -168,6 +168,10 @@ export interface SettingsResp {
   groq_api_key: SettingItem;
   groq_stt_model: string;
   fcm_service_account_json: SettingItem;
+  telegram_bot_token: SettingItem;
+  telegram_chat_id: string;
+  bale_bot_token: SettingItem;
+  bale_chat_id: string;
 }
 
 // ---------- نوتیفیکیشن‌ها ----------
@@ -350,6 +354,8 @@ export interface Feedback {
   created_at: string;
   user_nickname: string;
   user_phone: string;
+  /** آخرین جواب ادمین (از ربات یا پنل). */
+  last_reply?: string;
 }
 
 // ---------- آیتم‌های تست تعیین سطح (intro/situational/shadow) ----------

@@ -8,6 +8,7 @@ import {
   getName,
   getProxyStatus,
   getSettings,
+  testAdminBot,
   updateSetting,
 } from "@/lib/api";
 import type { ProxyStatus } from "@/lib/api";
@@ -74,6 +75,16 @@ const FIELDS: { key: string; label: string; hint?: string }[] = [
     label: "کلید سرویس Firebase (FCM، برای نوتیفیکیشن Push)",
     hint: "کل محتوای فایل JSON کلید سرویس Firebase را اینجا جای‌گذاری کن",
   },
+];
+
+// ربات اعلان‌های ادمین: هر تعامل کاربر (پیشنهاد و انتقاد، پیشنهاد صحنه/موضوع،
+// خرید) به تلگرام و/یا بله می‌آید؛ Reply روی پیام در ربات، جواب را با نوتیف به
+// همان کاربر می‌فرستد.
+const BOT_FIELDS: { key: string; label: string; hint: string; secret: boolean }[] = [
+  { key: "TELEGRAM_BOT_TOKEN", label: "توکن ربات تلگرام", hint: "از @BotFather بگیر، مثل 123456:ABC...", secret: true },
+  { key: "TELEGRAM_CHAT_ID", label: "شناسه‌ی چت تلگرام", hint: "به ربات /id بفرست تا شناسه را بدهد", secret: false },
+  { key: "BALE_BOT_TOKEN", label: "توکن ربات بله", hint: "از @botfather در بله بگیر", secret: true },
+  { key: "BALE_CHAT_ID", label: "شناسه‌ی چت بله", hint: "به ربات بله /id بفرست تا شناسه را بدهد", secret: false },
 ];
 
 export default function SettingsPanel({
@@ -225,6 +236,10 @@ export default function SettingsPanel({
       ELEVENLABS_VOICE_ID: settings.elevenlabs_voice_id,
       GROQ_API_KEY: settings.groq_api_key,
       FCM_SERVICE_ACCOUNT_JSON: settings.fcm_service_account_json,
+      TELEGRAM_BOT_TOKEN: settings.telegram_bot_token,
+      BALE_BOT_TOKEN: settings.bale_bot_token,
+      TELEGRAM_CHAT_ID: { set: !!settings.telegram_chat_id, masked: settings.telegram_chat_id || "" },
+      BALE_CHAT_ID: { set: !!settings.bale_chat_id, masked: settings.bale_chat_id || "" },
     };
     return map[key];
   };
@@ -443,6 +458,69 @@ export default function SettingsPanel({
             )}
           </>
         )}
+      </div>
+
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>🤖 ربات اعلان‌ها (تلگرام و بله)</h2>
+        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13, lineHeight: 1.8 }}>
+          پیشنهاد و انتقاد، پیشنهاد صحنه و موضوع، و خرید اشتراک یا توکن همان لحظه به ربات می‌آید و می‌گوید از کدام بخش
+          است. برای جواب دادن، در ربات روی پیام کاربر <b>Reply</b> بزن؛ جوابت با نوتیف به گوشی همان کاربر می‌رسد و در
+          صفحه‌ی «پیشنهاد و انتقاد» اپ هم دیده می‌شود.
+          <br />
+          راه‌اندازی: ربات بساز ← توکن را اینجا ذخیره کن ← به ربات <code>/id</code> بفرست ← شناسه‌ای که می‌دهد را ذخیره
+          کن ← «ارسال پیام آزمایشی». تلگرام از سرور ایران فیلتر است و از رله‌ی Cloudflare می‌رود (باید{" "}
+          <code>api.telegram.org</code> در Worker مجاز باشد)؛ بله مستقیم وصل می‌شود.
+        </p>
+        {BOT_FIELDS.map((f) => {
+          const item = itemFor(f.key);
+          return (
+            <div key={f.key} style={{ marginBottom: 12 }}>
+              <label>
+                {f.label}{" "}
+                {item &&
+                  (item.set ? (
+                    <span style={{ color: "var(--success)", fontSize: 12 }}>✓ ست‌شده ({item.masked})</span>
+                  ) : (
+                    <span style={{ color: "var(--danger, #ef4444)", fontSize: 12 }}>ست نشده</span>
+                  ))}
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  dir="ltr"
+                  type={f.secret ? "password" : "text"}
+                  placeholder={f.hint}
+                  value={inputs[f.key] ?? ""}
+                  onChange={(e) => setInputs((s) => ({ ...s, [f.key]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveField(f.key);
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <button className="btn btn-sm" onClick={() => saveField(f.key)} disabled={saving === f.key}>
+                  {saving === f.key ? "..." : "ذخیره"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        <button
+          className="btn btn-sm btn-ghost"
+          disabled={saving === "bot-test"}
+          onClick={async () => {
+            setSaving("bot-test");
+            try {
+              const res = await testAdminBot();
+              const lines = Object.entries(res).map(([k, v]) => `${k === "telegram" ? "تلگرام" : "بله"}: ${v}`);
+              notify(lines.join(" · ") || "هیچ رباتی تنظیم نشده", "ok");
+            } catch (err: any) {
+              notify(err.message, "err");
+            } finally {
+              setSaving(null);
+            }
+          }}
+        >
+          {saving === "bot-test" ? "..." : "📨 ارسال پیام آزمایشی"}
+        </button>
       </div>
 
       <div className="card">
