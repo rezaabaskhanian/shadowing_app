@@ -716,6 +716,30 @@ func registerTools(s *mcp.Server, c *client) {
 			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/writing-prompts", payload))
 		})
 
+	mcp.AddTool(s, &mcp.Tool{Name: "update_writing_prompt", Description: "Change some fields of a writing prompt (partial). is_active is never changed."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in updateArgs) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			var list []obj
+			if err := c.getInto(ctx, "/v1/admin/writing-prompts", &list); err != nil {
+				return nil, nil, err
+			}
+			var current obj
+			for _, t := range list {
+				if fmt.Sprint(t["id"]) == in.ID {
+					current = t
+				}
+			}
+			if current == nil {
+				return nil, nil, fmt.Errorf("writing prompt %s not found", in.ID)
+			}
+			payload := merge(current, in.Fields)
+			payload["is_active"] = boolField(current, "is_active")
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/writing-prompts/"+id, payload))
+		})
+
 	mcp.AddTool(s, &mcp.Tool{Name: "update_speaking_topic", Description: "Change some fields of a speaking topic (partial). is_active is never changed."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in updateArgs) (*mcp.CallToolResult, any, error) {
 			id, err := pathID(in.ID)
@@ -1027,9 +1051,10 @@ func fillSceneAudio(ctx context.Context, c *client, in fillAudioArgs) (*mcp.Call
 		return jsonResult(report)
 	}
 
-	// چند درخواست TTS هم‌زمان؛ کمتر از ظرفیت سرور تا provider محدودمان نکند.
+	// چند درخواست TTS هم‌زمان؛ پلن فعلی ElevenLabs حداکثر ۳ درخواست موازی می‌پذیرد
+	// (بیشترش 429 می‌گیرد)، پس ۲ تا تا برای بقیه‌ی سرور هم جا بماند.
 	errs := make([]error, len(jobs))
-	sem := make(chan struct{}, 4)
+	sem := make(chan struct{}, 2)
 	var wg sync.WaitGroup
 	for i, j := range jobs {
 		wg.Add(1)
