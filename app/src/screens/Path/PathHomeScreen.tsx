@@ -80,6 +80,10 @@ export const PathHomeScreen: React.FC = () => {
 
   const weeks = path?.weeks || [];
   const weeksDone = weeks.filter((w) => w.done).length;
+  // بازه‌ی سطح مسیر از اولین و آخرین هفته‌ای که برچسب CEFR دارد.
+  const cefrWeeks = weeks.filter((w) => !!w.cefr);
+  const cefrFrom = cefrWeeks[0]?.cefr;
+  const cefrTo = cefrWeeks[cefrWeeks.length - 1]?.cefr;
 
   const openItem = (week: PathWeek, item: PathItem) => {
     track('path_item_opened', item.kind);
@@ -185,6 +189,15 @@ export const PathHomeScreen: React.FC = () => {
           <View style={styles.header}>
             <Text style={styles.headerEmoji}>🧭</Text>
             <Text style={styles.headerTitle}>{path.title_fa}</Text>
+            {!!cefrFrom && !!cefrTo && (
+              <View style={styles.cefrRange}>
+                <Text style={styles.cefrRangeText}>
+                  {cefrFrom === cefrTo
+                    ? cefrFrom
+                    : t('pathCefrRange').replace('{from}', cefrFrom).replace('{to}', cefrTo)}
+                </Text>
+              </View>
+            )}
             {!!path.goal_fa && <Text style={styles.headerGoal}>{path.goal_fa}</Text>}
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${weeks.length ? (weeksDone / weeks.length) * 100 : 0}%` }]} />
@@ -196,6 +209,8 @@ export const PathHomeScreen: React.FC = () => {
 
           {weeks.map((week, wi) => {
             const open = openWeek === wi;
+            // پایان یک سطح: این هفته تمام شده و هفته‌ی بعد سطح دیگری دارد (یا آخرین هفته است).
+            const levelDone = !!week.cefr && week.done && weeks[wi + 1]?.cefr !== week.cefr;
             return (
               <View key={week.id} style={[styles.weekCard, !week.unlocked && styles.dim]}>
                 <TouchableOpacity
@@ -213,10 +228,17 @@ export const PathHomeScreen: React.FC = () => {
                     )}
                   </View>
                   <View style={styles.flex}>
-                    <Text style={styles.weekLabel}>
-                      {t('pathWeekN').replace('{n}', String(week.position))}
-                      {week.is_free ? `  ·  ${t('pathFree')}` : ''}
-                    </Text>
+                    <View style={styles.weekLabelRow}>
+                      <Text style={styles.weekLabel}>
+                        {t('pathWeekN').replace('{n}', String(week.position))}
+                        {week.is_free ? `  ·  ${t('pathFree')}` : ''}
+                      </Text>
+                      {!!week.cefr && (
+                        <View style={styles.cefrChip}>
+                          <Text style={styles.cefrChipText}>{week.cefr}</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.weekTitle}>{week.title_fa}</Text>
                     {week.best_score !== undefined && (
                       <Text style={styles.weekScore}>
@@ -226,6 +248,14 @@ export const PathHomeScreen: React.FC = () => {
                   </View>
                   {open ? <ChevronUp size={18} color={COLORS.muted} /> : <ChevronDown size={18} color={COLORS.muted} />}
                 </TouchableOpacity>
+
+                {levelDone && (
+                  <View style={styles.milestone}>
+                    <Text style={styles.milestoneText}>
+                      {t('pathCefrMilestone').replace('{cefr}', week.cefr as string)}
+                    </Text>
+                  </View>
+                )}
 
                 {open && (
                   <View style={styles.weekBody}>
@@ -321,6 +351,28 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', backgroundColor: COLORS.success, borderRadius: BORDER_RADIUS.full },
   progressText: { ...TEXT_STYLES.labelMd, color: COLORS.muted },
+  cefrRange: {
+    paddingHorizontal: SPACING.s,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.primaryLight,
+  },
+  cefrRangeText: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
+  weekLabelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  cefrChip: {
+    paddingHorizontal: 6,
+    borderRadius: BORDER_RADIUS.s,
+    backgroundColor: COLORS.primaryLight,
+  },
+  cefrChipText: { ...TEXT_STYLES.labelSm, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
+  milestone: {
+    marginHorizontal: SPACING.m,
+    marginBottom: SPACING.s,
+    padding: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.successLight,
+  },
+  milestoneText: { ...TEXT_STYLES.bodyMd, color: COLORS.success, fontFamily: FONT_FAMILY.semiBold, textAlign: 'center' },
   weekCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,

@@ -742,6 +742,7 @@ export interface LearningPathWeek {
   position: number;
   title_fa: string;
   is_free: boolean;
+  cefr?: string;
   sessions: { no: number; title_fa: string; items: LearningPathItem[] }[];
   checkpoint: { listening?: { dialogue?: { text: string; audio_url?: string }[] } } | null;
 }

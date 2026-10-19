@@ -1065,6 +1065,11 @@ export const translations: Translations = {
   pathKind_dictation: { en: 'Dictation & writing', fa: 'دیکته و نوشتن' },
   pathKind_self_intro: { en: 'Before & after', fa: 'قبل و بعد' },
   pathKind_writing: { en: 'Writing', fa: 'تمرین نوشتن' },
+  pathCefrRange: { en: 'Level {from} → {to}', fa: 'سطح {from} ← {to}' },
+  pathCefrMilestone: {
+    en: '🎉 You finished {cefr} (approx. level)',
+    fa: '🎉 سطح {cefr} را کامل کردی (معادل تقریبی)',
+  },
   pathSelfIntroBeforeTitle: { en: 'My “before” recording', fa: 'ضبط «قبل» من' },
   pathSelfIntroAfterTitle: { en: 'Before & after', fa: 'قبل و بعد' },
   pathSelfIntroPrompt: { en: 'Introduce yourself in English.', fa: 'خودت را به انگلیسی معرفی کن.' },

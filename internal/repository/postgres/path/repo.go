@@ -53,6 +53,8 @@ type Week struct {
 	Sessions   []Session       `json:"sessions"`
 	Checkpoint json.RawMessage `json:"checkpoint,omitempty"`
 	IsFree     bool            `json:"is_free"`
+	// Cefr سطح تقریبی CEFR این هفته (A1، A2، …)؛ خالی = بدون برچسب.
+	Cefr string `json:"cefr,omitempty"`
 
 	// فقط در نمای کاربر پر می‌شوند.
 	Unlocked       bool `json:"unlocked"`
@@ -112,7 +114,7 @@ func (r DB) GetPathByLevel(ctx context.Context, level string) (Path, error) {
 		return Path{}, richerror.New(op).WithErr(err)
 	}
 	rows, err := r.conn.Query(ctx, `
-		SELECT id::text, path_id::text, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free
+		SELECT id::text, path_id::text, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free, cefr
 		FROM path_weeks WHERE path_id = $1 ORDER BY position`, p.ID)
 	if err != nil {
 		return Path{}, richerror.New(op).WithErr(err)
@@ -131,7 +133,7 @@ func (r DB) GetPathByLevel(ctx context.Context, level string) (Path, error) {
 func (r DB) GetWeek(ctx context.Context, id string) (Week, error) {
 	const op = "postgrespath.GetWeek"
 	row := r.conn.QueryRow(ctx, `
-		SELECT id::text, path_id::text, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free
+		SELECT id::text, path_id::text, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free, cefr
 		FROM path_weeks WHERE id = $1`, id)
 	w, err := scanWeek(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -146,7 +148,7 @@ func (r DB) GetWeek(ctx context.Context, id string) (Week, error) {
 func scanWeek(row pgx.Row) (Week, error) {
 	var w Week
 	var canDo, sessions, checkpoint []byte
-	if err := row.Scan(&w.ID, &w.PathID, &w.Position, &w.TitleFa, &w.GoalFa, &canDo, &sessions, &checkpoint, &w.IsFree); err != nil {
+	if err := row.Scan(&w.ID, &w.PathID, &w.Position, &w.TitleFa, &w.GoalFa, &canDo, &sessions, &checkpoint, &w.IsFree, &w.Cefr); err != nil {
 		return Week{}, err
 	}
 	if err := json.Unmarshal(canDo, &w.CanDo); err != nil {
@@ -190,11 +192,12 @@ func (r DB) UpsertPath(ctx context.Context, p Path) (string, error) {
 			checkpoint = json.RawMessage("{}")
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO path_weeks (path_id, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			INSERT INTO path_weeks (path_id, position, title_fa, goal_fa, can_do, sessions, checkpoint, is_free, cefr)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT (path_id, position) DO UPDATE SET title_fa = EXCLUDED.title_fa, goal_fa = EXCLUDED.goal_fa,
-				can_do = EXCLUDED.can_do, sessions = EXCLUDED.sessions, checkpoint = EXCLUDED.checkpoint, is_free = EXCLUDED.is_free`,
-			id, w.Position, w.TitleFa, w.GoalFa, canDo, sessions, []byte(checkpoint), w.IsFree); err != nil {
+				can_do = EXCLUDED.can_do, sessions = EXCLUDED.sessions, checkpoint = EXCLUDED.checkpoint, is_free = EXCLUDED.is_free,
+				cefr = EXCLUDED.cefr`,
+			id, w.Position, w.TitleFa, w.GoalFa, canDo, sessions, []byte(checkpoint), w.IsFree, w.Cefr); err != nil {
 			return "", richerror.New(op).WithErr(err)
 		}
 		positions = append(positions, w.Position)

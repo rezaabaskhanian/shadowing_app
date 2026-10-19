@@ -69,6 +69,9 @@ var validKinds = map[string]bool{
 	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true, KindWriting: true,
 }
 
+// validCefr سطح‌هایی که برای برچسب هفته پذیرفته می‌شوند.
+var validCefr = map[string]bool{"PRE-A1": true, "A1": true, "A2": true, "B1": true, "B2": true, "C1": true, "C2": true}
+
 var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true}
 
 // مهارت‌های Checkpoint؛ نمره‌ی کل میانگین همین‌هاست (هر کدام که فرستاده شده).
@@ -403,6 +406,10 @@ func (s *Service) AdminSavePath(ctx context.Context, p Path) (Path, error) {
 		}
 		if w.CanDo == nil {
 			w.CanDo = []string{}
+		}
+		w.Cefr = strings.ToUpper(strings.TrimSpace(w.Cefr))
+		if w.Cefr != "" && !validCefr[w.Cefr] {
+			return Path{}, invalid(op, fmt.Sprintf("هفته‌ی %d: سطح CEFR نامعتبر %q (PRE-A1، A1 … C2)", w.Position, w.Cefr))
 		}
 		if len(w.Checkpoint) > 0 && !json.Valid(w.Checkpoint) {
 			return Path{}, invalid(op, fmt.Sprintf("Checkpoint هفته‌ی %d JSON معتبر نیست", w.Position))

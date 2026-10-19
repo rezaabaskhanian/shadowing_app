@@ -45,6 +45,8 @@ export interface PathWeek {
   can_do: string[];
   sessions: PathSession[];
   is_free: boolean;
+  /** سطح تقریبی CEFR هفته (A1، A2، …)؛ نبودنش یعنی برچسب نشان داده نشود. */
+  cefr?: string;
   unlocked: boolean;
   done: boolean;
   checkpoint_done: boolean;
