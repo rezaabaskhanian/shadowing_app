@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getLearningPath, listLearningPaths, listPodcasts, listScenes, setLearningPathActive } from "@/lib/api";
+import {
+  getLearningPath,
+  listLearningPaths,
+  listPodcasts,
+  listScenes,
+  listSpeakingTopics,
+  listWritingPrompts,
+  setLearningPathActive,
+} from "@/lib/api";
 import type { LearningPath } from "@/lib/types";
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -47,9 +55,17 @@ export default function LearningPathsPanel({
   async function runCheck(level: string): Promise<Check | null> {
     setBusy(level);
     try {
-      const [path, scenes, podcasts] = await Promise.all([getLearningPath(level), listScenes(), listPodcasts()]);
+      const [path, scenes, podcasts, topics, writings] = await Promise.all([
+        getLearningPath(level),
+        listScenes(),
+        listPodcasts(),
+        listSpeakingTopics(),
+        listWritingPrompts(),
+      ]);
       const sceneStatus = new Map(scenes.map((s) => [s.id, s.status]));
       const podcastActive = new Map(podcasts.map((p) => [p.id, p.is_active]));
+      const topicActive = new Map(topics.map((t) => [t.id, t.is_active]));
+      const writingActive = new Map(writings.map((t) => [t.id, t.is_active]));
       const check: Check = { weeks: 0, sessions: 0, items: 0, problems: [] };
       for (const w of path.weeks ?? []) {
         check.weeks++;
@@ -67,6 +83,12 @@ export default function LearningPathsPanel({
               const active = podcastActive.get(it.ref_id);
               if (active === undefined) check.problems.push(`${where}: پادکست «${it.title ?? it.ref_id}» پیدا نشد`);
               else if (!active) check.problems.push(`${where}: پادکست «${it.title ?? ""}» غیرفعال است`);
+            }
+            if ((it.kind === "speaking_topic" || it.kind === "writing") && it.ref_id) {
+              const label = it.kind === "writing" ? "موضوع نوشتن" : "موضوع صحبت";
+              const active = (it.kind === "writing" ? writingActive : topicActive).get(it.ref_id);
+              if (active === undefined) check.problems.push(`${where}: ${label} «${it.title ?? it.ref_id}» پیدا نشد`);
+              else if (!active) check.problems.push(`${where}: ${label} «${it.title ?? ""}» غیرفعال است`);
             }
           }
         }

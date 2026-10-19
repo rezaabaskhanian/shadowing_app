@@ -720,7 +720,18 @@ export interface PodcastLevelPreset {
 // ---------- مسیر آموزشی ----------
 export interface LearningPathItem {
   key: string;
-  kind: "scene" | "podcast" | "video_clip" | "speaking_topic" | "leitner_review" | "weak_lines" | "checkpoint";
+  kind:
+    | "scene"
+    | "podcast"
+    | "video_clip"
+    | "speaking_topic"
+    | "writing"
+    | "leitner_review"
+    | "weak_lines"
+    | "checkpoint"
+    | "habit_mission"
+    | "dictation"
+    | "self_intro";
   ref_id?: string;
   title?: string;
   required: boolean;
