@@ -23,6 +23,8 @@ type Repository interface {
 	// می‌کند — برای مرتب‌سازی سریع از لیست ادمین، بدون نیاز به ارسال کل
 	// هات‌اسپات‌ها/دیالوگ‌ها.
 	UpdateOrder(ctx context.Context, id string, order int) error
+	// UpdateDifficulty فقط سطح یک صحنه را به‌روز می‌کند (دیالوگ‌ها دست نمی‌خورند).
+	UpdateDifficulty(ctx context.Context, id, difficulty string) error
 	// ShiftOrdersFrom ترتیب همه‌ی صحنه‌های با order >= from (به‌جز exceptID)
 	// را یکی جلو می‌برد تا برای درج یک صحنه در همان جایگاه جا باز شود.
 	ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error

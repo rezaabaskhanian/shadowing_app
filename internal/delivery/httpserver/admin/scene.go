@@ -94,6 +94,28 @@ func (h Handler) UpdateSceneOrder(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "ترتیب صحنه به‌روزرسانی شد"})
 }
 
+// UpdateSceneDifficulty فقط سطح یک صحنه را عوض می‌کند — برای جابه‌جایی صحنه
+// بین سطح‌ها بدون از بین رفتن پیشرفت کاربرها.
+func (h Handler) UpdateSceneDifficulty(c echo.Context) error {
+	sceneID := c.Param("sceneID")
+
+	var req struct {
+		Difficulty string `json:"difficulty"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":   "invalid_request",
+			"message": "درخواست نامعتبر است",
+		})
+	}
+
+	if err := h.learningSvc.UpdateSceneDifficulty(c.Request().Context(), sceneID, req.Difficulty); err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "سطح صحنه به‌روزرسانی شد"})
+}
+
 // DeleteScene یک صحنه را حذف می‌کند.
 func (h Handler) DeleteScene(c echo.Context) error {
 	sceneID := c.Param("sceneID")

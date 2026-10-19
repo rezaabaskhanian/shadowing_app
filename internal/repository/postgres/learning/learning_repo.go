@@ -526,6 +526,23 @@ func (r DB) UpdateOrder(ctx context.Context, id string, order int) error {
 	return nil
 }
 
+// UpdateDifficulty فقط سطح یک صحنه را عوض می‌کند — بدون لمس هات‌اسپات‌ها و
+// دیالوگ‌ها، تا شناسه‌ی دیالوگ‌ها و پیشرفت کاربرها حفظ شود.
+func (r DB) UpdateDifficulty(ctx context.Context, id, difficulty string) error {
+	const op = "postgres.UpdateSceneDifficulty"
+
+	query := `UPDATE scenes SET difficulty = $1, updated_at = now() WHERE id = $2`
+	result, err := r.conn.Exec(ctx, query, difficulty, id)
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update scene difficulty")
+	}
+	if result.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+	}
+
+	return nil
+}
+
 // ShiftOrdersFrom implements [learningservice.Repository].
 func (r DB) ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error {
 	const op = "postgres.ShiftSceneOrdersFrom"
