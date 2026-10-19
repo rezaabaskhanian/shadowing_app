@@ -114,6 +114,11 @@ type updateSceneArgs struct {
 	Scene obj    `json:"scene" jsonschema:"full scene payload (same shape as create_scene_draft); the publish state is kept as it is"`
 }
 
+type sceneDifficultyArgs struct {
+	ID         string `json:"id" jsonschema:"scene id"`
+	Difficulty string `json:"difficulty" jsonschema:"starter | beginner | intermediate | advanced"`
+}
+
 type fillAudioArgs struct {
 	ID           string            `json:"id" jsonschema:"scene id"`
 	Voices       map[string]string `json:"voices,omitempty" jsonschema:"speaker name → voice_id"`
@@ -213,6 +218,10 @@ type suggestTopicArgs struct {
 
 type topicArgs struct {
 	Topic obj `json:"topic" jsonschema:"speaking topic: title, prompt_fa, guide_questions[], useful_phrases[], level, duration_seconds, image_url, images[{url,caption}] (picture story)"`
+}
+
+type writingPromptArgs struct {
+	Prompt obj `json:"prompt" jsonschema:"writing prompt: title, prompt_fa, guide_questions[], useful_phrases[], level (beginner | intermediate | advanced), min_words, max_words, image_url"`
 }
 
 type detectLinesArgs struct {
@@ -318,6 +327,17 @@ func registerTools(s *mcp.Server, c *client) {
 			}
 			payload := merge(in.Scene, obj{"is_published": str(current, "status") == "published"})
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/scenes/"+id, payload))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "set_scene_difficulty",
+		Description: "Move a scene to another level (starter | beginner | intermediate | advanced). Only the level changes: " +
+			"dialogues, audio, dialogue ids and users' progress are kept, and the publish state is not touched."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in sceneDifficultyArgs) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPatch, "/v1/admin/scenes/"+id+"/difficulty", obj{"difficulty": in.Difficulty}))
 		})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "fill_scene_audio",
@@ -673,6 +693,27 @@ func registerTools(s *mcp.Server, c *client) {
 			payload := merge(in.Topic, obj{"is_active": false})
 			delete(payload, "id")
 			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/speaking-topics", payload))
+		})
+
+	// ---- تمرین نوشتن ----
+	mcp.AddTool(s, &mcp.Tool{Name: "list_writing_prompts", Annotations: ro, Description: "List writing prompts (the AI-corrected writing practice topics)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/writing-prompts"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "suggest_writing_prompt", Description: "AI suggestion for a writing prompt (prompt, guide questions, useful phrases). Saves nothing."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in suggestTopicArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/writing-prompts/suggest", obj{"idea": in.Idea, "level": in.Level}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "create_writing_prompt_draft", Description: "Create a writing prompt as inactive (hidden from the app)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in writingPromptArgs) (*mcp.CallToolResult, any, error) {
+			if in.Prompt == nil {
+				return nil, nil, errors.New("prompt is required")
+			}
+			payload := merge(in.Prompt, obj{"is_active": false})
+			delete(payload, "id")
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/writing-prompts", payload))
 		})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "update_speaking_topic", Description: "Change some fields of a speaking topic (partial). is_active is never changed."},
