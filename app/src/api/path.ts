@@ -10,6 +10,7 @@ export type PathItemKind =
   | 'podcast'
   | 'video_clip'
   | 'speaking_topic'
+  | 'writing'
   | 'leitner_review'
   | 'weak_lines'
   | 'checkpoint'

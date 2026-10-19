@@ -45,7 +45,7 @@ type Week = postgrespath.Week
 type Session = postgrespath.Session
 type Item = postgrespath.Item
 
-// انواع قدم. scene/podcast/video_clip/speaking_topic به ref_id نیاز دارند.
+// انواع قدم. scene/podcast/video_clip/speaking_topic/writing به ref_id نیاز دارند.
 // habit_mission = ماموریت «از حفظ بگو» (بخش عادت زبانی)؛ dictation = دیکته و
 // نوشتن از روی فارسی با جمله‌های صحنه‌های همان هفته؛ self_intro = ضبط «قبل»
 // (هفته‌ی اول) یا «بعد» و مقایسه (هفته‌ی آخر) — کلیدی که با after تمام شود «بعد» است.
@@ -60,14 +60,16 @@ const (
 	KindHabitMission  = "habit_mission"
 	KindDictation     = "dictation"
 	KindSelfIntro     = "self_intro"
+	// KindWriting یک موضوع «تمرین نوشتن» که AI تصحیحش می‌کند (ref_id = writing prompt).
+	KindWriting = "writing"
 )
 
 var validKinds = map[string]bool{
 	KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true,
-	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true,
+	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true, KindWriting: true,
 }
 
-var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true}
+var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true}
 
 // مهارت‌های Checkpoint؛ نمره‌ی کل میانگین همین‌هاست (هر کدام که فرستاده شده).
 var skills = []string{"vocabulary", "grammar", "listening", "speaking", "real_life"}

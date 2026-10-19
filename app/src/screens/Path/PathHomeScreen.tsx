@@ -14,6 +14,7 @@ import {
   Layers,
   Lock,
   Mic,
+  NotebookPen,
   PenLine,
   Repeat,
   Sparkles,
@@ -27,6 +28,7 @@ import { useLanguage } from '../../data/i18n';
 import { completePathItem, getPath, type LearningPath, type PathItem, type PathWeek } from '../../api/path';
 import { track } from '../../services/analytics';
 import { getSpeakingTopics } from '../../api/topicSpeaking';
+import { getWritingPrompts } from '../../api/writing';
 
 const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   scene: BookOpen,
@@ -39,6 +41,7 @@ const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: str
   habit_mission: Brain,
   dictation: PenLine,
   self_intro: Sparkles,
+  writing: NotebookPen,
 };
 
 /** هفته‌ای که الان باید رویش کار کرد: اولین هفته‌ی بازِ تمام‌نشده (یا آخرین هفته). */
@@ -104,6 +107,16 @@ export const PathHomeScreen: React.FC = () => {
             else navigation.navigate('TopicList');
           })
           .catch(() => navigation.navigate('TopicList'));
+        break;
+      case 'writing':
+        // مثل موضوع صحبت: همان موضوع نوشتن مستقیم باز می‌شود، وگرنه فهرست موضوع‌ها.
+        getWritingPrompts()
+          .then((prompts) => {
+            const prompt = prompts.find((p) => p.id === item.ref_id);
+            if (prompt) navigation.navigate('Writing', { prompt, openedAt: Date.now() });
+            else navigation.navigate('WritingList');
+          })
+          .catch(() => navigation.navigate('WritingList'));
         break;
       case 'habit_mission':
         navigation.navigate('LanguageHabit');

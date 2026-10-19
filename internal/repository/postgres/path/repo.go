@@ -21,7 +21,7 @@ func New(conn *pgxpool.Pool) DB {
 }
 
 // Item یک قدم از یک جلسه: ارجاع به محتوای موجود (scene/podcast/video_clip/
-// speaking_topic) یا یک قدم بدون ارجاع (leitner_review/weak_lines/checkpoint).
+// speaking_topic/writing) یا یک قدم بدون ارجاع (leitner_review/weak_lines/checkpoint).
 type Item struct {
 	Key      string `json:"key"`
 	Kind     string `json:"kind"`

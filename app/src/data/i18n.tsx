@@ -1064,6 +1064,7 @@ export const translations: Translations = {
   pathKind_habit_mission: { en: 'Say it from memory', fa: 'ماموریت از حفظ' },
   pathKind_dictation: { en: 'Dictation & writing', fa: 'دیکته و نوشتن' },
   pathKind_self_intro: { en: 'Before & after', fa: 'قبل و بعد' },
+  pathKind_writing: { en: 'Writing', fa: 'تمرین نوشتن' },
   pathSelfIntroBeforeTitle: { en: 'My “before” recording', fa: 'ضبط «قبل» من' },
   pathSelfIntroAfterTitle: { en: 'Before & after', fa: 'قبل و بعد' },
   pathSelfIntroPrompt: { en: 'Introduce yourself in English.', fa: 'خودت را به انگلیسی معرفی کن.' },
