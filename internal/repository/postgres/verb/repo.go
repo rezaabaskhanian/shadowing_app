@@ -26,7 +26,9 @@ type Meaning struct {
 	ExplanationFa    string    `json:"explanation_fa"`
 	FallbackExample  string    `json:"fallback_example"`
 	PracticePromptFa string    `json:"practice_prompt_fa"`
-	SortOrder        int       `json:"sort_order"`
+	// سطح CEFR معنا (A1…C1)؛ خالی یعنی تعیین نشده.
+	Level     string `json:"level"`
+	SortOrder int    `json:"sort_order"`
 }
 
 // Occurrence یک جمله از یک درس که فعل در آن آمده. DialogueID/AudioURL از
@@ -147,11 +149,11 @@ func (d DB) DeleteVerb(ctx context.Context, id uuid.UUID) error {
 
 // ---------- معناها ----------
 
-const meaningColumns = `id, verb_id, meaning_fa, explanation_fa, fallback_example, practice_prompt_fa, sort_order`
+const meaningColumns = `id, verb_id, meaning_fa, explanation_fa, fallback_example, practice_prompt_fa, level, sort_order`
 
 func scanMeaning(row pgx.Row) (Meaning, error) {
 	var m Meaning
-	err := row.Scan(&m.ID, &m.VerbID, &m.MeaningFa, &m.ExplanationFa, &m.FallbackExample, &m.PracticePromptFa, &m.SortOrder)
+	err := row.Scan(&m.ID, &m.VerbID, &m.MeaningFa, &m.ExplanationFa, &m.FallbackExample, &m.PracticePromptFa, &m.Level, &m.SortOrder)
 	return m, err
 }
 
@@ -188,9 +190,9 @@ func (d DB) GetMeaning(ctx context.Context, id uuid.UUID) (Meaning, error) {
 func (d DB) CreateMeaning(ctx context.Context, m Meaning) (Meaning, error) {
 	const op = "postgresverb.CreateMeaning"
 	created, err := scanMeaning(d.conn.QueryRow(ctx, `
-		INSERT INTO verb_meanings (verb_id, meaning_fa, explanation_fa, fallback_example, practice_prompt_fa, sort_order)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING `+meaningColumns,
-		m.VerbID, m.MeaningFa, m.ExplanationFa, m.FallbackExample, m.PracticePromptFa, m.SortOrder))
+		INSERT INTO verb_meanings (verb_id, meaning_fa, explanation_fa, fallback_example, practice_prompt_fa, level, sort_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING `+meaningColumns,
+		m.VerbID, m.MeaningFa, m.ExplanationFa, m.FallbackExample, m.PracticePromptFa, m.Level, m.SortOrder))
 	if err != nil {
 		return Meaning{}, richerror.New(op).WithErr(err)
 	}
@@ -201,8 +203,8 @@ func (d DB) UpdateMeaning(ctx context.Context, m Meaning) error {
 	const op = "postgresverb.UpdateMeaning"
 	_, err := d.conn.Exec(ctx, `
 		UPDATE verb_meanings SET meaning_fa = $2, explanation_fa = $3, fallback_example = $4,
-			practice_prompt_fa = $5, sort_order = $6, updated_at = now()
-		WHERE id = $1`, m.ID, m.MeaningFa, m.ExplanationFa, m.FallbackExample, m.PracticePromptFa, m.SortOrder)
+			practice_prompt_fa = $5, level = $6, sort_order = $7, updated_at = now()
+		WHERE id = $1`, m.ID, m.MeaningFa, m.ExplanationFa, m.FallbackExample, m.PracticePromptFa, m.Level, m.SortOrder)
 	if err != nil {
 		return richerror.New(op).WithErr(err)
 	}

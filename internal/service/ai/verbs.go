@@ -14,6 +14,8 @@ type VerbMeaningSuggestion struct {
 	ExplanationFa    string `json:"explanation_fa"`
 	Example          string `json:"example"`
 	PracticePromptFa string `json:"practice_prompt_fa"`
+	// سطح CEFR تقریبی این معنا (A1…C1) طبق English Vocabulary Profile
+	Level string `json:"level"`
 }
 
 const suggestVerbMeaningsPrompt = `You help build an English-learning app for Persian speakers. Given one common English verb, list its most useful distinct meanings for everyday spoken English (6 to 10), including its most common phrasal verbs as separate meanings (e.g. for "get": "get up", "get over").
@@ -25,7 +27,8 @@ Rules:
   "meaning_fa": string (short Persian meaning, 1-4 words, e.g. "رسیدن"),
   "explanation_fa": string (one short Persian sentence explaining when this meaning is used; for a phrasal verb, name it, e.g. "get over: از چیزی عبور کردن / خوب شدن"),
   "example": string (one natural, short English example sentence using this meaning),
-  "practice_prompt_fa": string (a short Persian situation that makes the learner produce this meaning in one spoken sentence, written as an instruction, e.g. "به دوستت بگو ساعت چند به فرودگاه رسیدی.")
+  "practice_prompt_fa": string (a short Persian situation that makes the learner produce this meaning in one spoken sentence, written as an instruction, e.g. "به دوستت بگو ساعت چند به فرودگاه رسیدی."),
+  "level": string (the CEFR level at which learners usually meet this meaning, following the English Vocabulary Profile: "A1", "A2", "B1", "B2" or "C1")
 }]}
 - Order meanings from most to least common.`
 

@@ -6,9 +6,12 @@ import type { Idiom, IdiomInput } from "@/lib/types";
 
 const LEVELS: { id: IdiomInput["level"]; label: string }[] = [
   { id: "", label: "بدون سطح" },
-  { id: "beginner", label: "مبتدی" },
-  { id: "intermediate", label: "متوسط" },
-  { id: "advanced", label: "پیشرفته" },
+  { id: "A1", label: "A1" },
+  { id: "A2", label: "A2" },
+  { id: "B1", label: "B1" },
+  { id: "B2", label: "B2" },
+  { id: "C1", label: "C1" },
+  { id: "C2", label: "C2" },
 ];
 
 const levelLabel = (l: string) => LEVELS.find((x) => x.id === l)?.label ?? l;
@@ -33,7 +36,7 @@ const JSON_SAMPLE = `[
     "explanation_fa": "شروع صحبت در جمعی که هنوز با هم راحت نیستند",
     "example_en": "He told a joke to break the ice.",
     "example_fa": "یه جوک گفت تا یخ جمع بشکنه.",
-    "level": "intermediate",
+    "level": "B1",
     "category": "social"
   }
 ]`;
@@ -85,7 +88,7 @@ function parseJsonIdioms(text: string): Partial<IdiomInput>[] {
       explanation_fa: pick(o, "explanation_fa", "explanation", "description", "usage", "note", "notes"),
       example_en: exEn,
       example_fa: exFa,
-      level: pick(o, "level").toLowerCase() as IdiomInput["level"],
+      level: pick(o, "level").toUpperCase() as IdiomInput["level"],
       category: pick(o, "category", "topic", "tag"),
     };
   });

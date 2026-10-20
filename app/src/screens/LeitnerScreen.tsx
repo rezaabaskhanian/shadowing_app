@@ -9,7 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { BookOpen, Check, Clock, Layers, Sparkles, Trash2, X } from 'lucide-react-native';
+import { BookOpen, Check, Clock, Layers, MessageCircle, Sparkles, Trash2, X } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { SHADOWS } from '../theme/elevation';
@@ -17,6 +17,7 @@ import { ProgressRing } from '../components/ProgressRing';
 import { useVocab, MAX_LEVEL, isDue, dueLabel, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { VerbList } from '../components/VerbList';
+import { IdiomList } from '../components/IdiomList';
 import { useFeedbackPop } from '../components/FeedbackPop';
 import { Celebration } from '../components/Celebration';
 
@@ -35,7 +36,9 @@ export const LeitnerScreen = () => {
   const { t, language } = useLanguage();
   const [dueOnly, setDueOnly] = useState(true);
   // تب سوم «افعال»: به‌جای کارت‌های لایتنر لیست افعال چندمعنایی نشان داده می‌شود.
-  const [showVerbs, setShowVerbs] = useState(false);
+  // تب‌های کنار جعبه‌ی لغت: افعال چندمعنایی و اصطلاحات
+  const [extraTab, setExtraTab] = useState<'verbs' | 'idioms' | null>(null);
+  const showVerbs = extraTab !== null;
   const [index, setIndex] = useState(0);
   // بالای نوارِ پایینِ شناورِ تب‌ها
   const feedback = useFeedbackPop(80);
@@ -92,7 +95,7 @@ export const LeitnerScreen = () => {
           <TouchableOpacity
             style={[styles.filterTab, !showVerbs && dueOnly && styles.filterTabActive]}
             onPress={() => {
-              setShowVerbs(false);
+              setExtraTab(null);
               setDueOnly(true);
             }}
             activeOpacity={0.8}
@@ -106,7 +109,7 @@ export const LeitnerScreen = () => {
           <TouchableOpacity
             style={[styles.filterTab, !showVerbs && !dueOnly && styles.filterTabActiveGreen]}
             onPress={() => {
-              setShowVerbs(false);
+              setExtraTab(null);
               setDueOnly(false);
             }}
             activeOpacity={0.8}
@@ -118,17 +121,28 @@ export const LeitnerScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterTab, showVerbs && styles.filterTabActive]}
-            onPress={() => setShowVerbs(true)}
+            style={[styles.filterTab, extraTab === 'verbs' && styles.filterTabActive]}
+            onPress={() => setExtraTab('verbs')}
             activeOpacity={0.8}
           >
-            <Layers size={14} color={showVerbs ? COLORS.white : COLORS.primary} />
-            <Text style={[styles.filterTabText, showVerbs && styles.filterTabTextActive]}>{t('verbsTab')}</Text>
+            <Layers size={14} color={extraTab === 'verbs' ? COLORS.white : COLORS.primary} />
+            <Text style={[styles.filterTabText, extraTab === 'verbs' && styles.filterTabTextActive]}>{t('verbsTab')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterTab, extraTab === 'idioms' && styles.filterTabActive]}
+            onPress={() => setExtraTab('idioms')}
+            activeOpacity={0.8}
+          >
+            <MessageCircle size={14} color={extraTab === 'idioms' ? COLORS.white : COLORS.primary} />
+            <Text style={[styles.filterTabText, extraTab === 'idioms' && styles.filterTabTextActive]}>{t('idiomsTab')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Body */}
-        {showVerbs ? (
+        {extraTab === 'idioms' ? (
+          <IdiomList />
+        ) : showVerbs ? (
           <VerbList />
         ) : box.length === 0 ? (
           <EmptyState
@@ -386,7 +400,7 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 6,
     marginBottom: 20,
   },
   filterTab: {
@@ -396,7 +410,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: 4,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,

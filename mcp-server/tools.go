@@ -185,8 +185,32 @@ type resourceArgs struct {
 	Content  any    `json:"content,omitempty" jsonschema:"the JSON content; optional on update"`
 }
 
+type verbArgs struct {
+	ID        string   `json:"id,omitempty" jsonschema:"set to update an existing verb; empty creates a new (unpublished) one"`
+	Lemma     string   `json:"lemma" jsonschema:"base form, e.g. get"`
+	Forms     []string `json:"forms,omitempty" jsonschema:"all inflected forms searched in dialogues, e.g. [get, gets, got, gotten, getting]"`
+	SortOrder int      `json:"sort_order,omitempty"`
+}
+
+type verbMeaningArgs struct {
+	VerbID           string `json:"verb_id" jsonschema:"the verb this meaning belongs to"`
+	MeaningID        string `json:"meaning_id,omitempty" jsonschema:"set to update an existing meaning; empty creates a new one"`
+	MeaningFa        string `json:"meaning_fa" jsonschema:"short Persian meaning, 1–4 words; for a phrasal verb name it in explanation_fa"`
+	ExplanationFa    string `json:"explanation_fa,omitempty"`
+	FallbackExample  string `json:"fallback_example,omitempty" jsonschema:"English example shown until a lesson sentence is approved"`
+	PracticePromptFa string `json:"practice_prompt_fa,omitempty" jsonschema:"Persian situation for the spoken practice"`
+	Level            string `json:"level,omitempty" jsonschema:"CEFR level of this meaning (English Vocabulary Profile): A1 | A2 | B1 | B2 | C1 | C2"`
+	SortOrder        int    `json:"sort_order,omitempty"`
+}
+
+type reviewOccurrenceArgs struct {
+	ID        string `json:"id" jsonschema:"occurrence id (from get_verb)"`
+	Status    string `json:"status" jsonschema:"approved | rejected | suggested"`
+	MeaningID string `json:"meaning_id,omitempty" jsonschema:"meaning to attach (required when approving)"`
+}
+
 type importIdiomsArgs struct {
-	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level, category}"`
+	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
 }
 
@@ -579,6 +603,88 @@ func registerTools(s *mcp.Server, c *client) {
 				return nil, nil, errors.New("items is empty")
 			}
 			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/idioms/import", obj{"items": in.Items, "overwrite": in.Overwrite}))
+		})
+
+	// ---- افعال چندمعنایی ----
+	mcp.AddTool(s, &mcp.Tool{Name: "list_verbs", Annotations: ro, Description: "List polysemous verbs with meaning and lesson-sentence counts."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/verbs"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "get_verb", Annotations: ro, Description: "Get one verb with its meanings (incl. CEFR level) and the lesson sentences found for it (suggested/approved/rejected)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in idArg) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.get(ctx, "/v1/admin/verbs/"+id))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_verb", Description: "Create a verb (unpublished) or update its lemma/forms/order. The publish state is never changed; the admin publishes in the panel."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in verbArgs) (*mcp.CallToolResult, any, error) {
+			payload := obj{"lemma": in.Lemma, "forms": in.Forms, "sort_order": in.SortOrder, "is_published": false}
+			if in.ID == "" {
+				return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/verbs", payload))
+			}
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			var cur struct {
+				Verb obj `json:"verb"`
+			}
+			if err := c.getInto(ctx, "/v1/admin/verbs/"+id, &cur); err != nil {
+				return nil, nil, err
+			}
+			payload["is_published"] = cur.Verb["is_published"]
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/"+id, payload))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_verb_meaning", Description: "Create or update one meaning of a verb (Persian meaning, explanation, fallback example, practice prompt, CEFR level)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in verbMeaningArgs) (*mcp.CallToolResult, any, error) {
+			payload := obj{
+				"meaning_fa": in.MeaningFa, "explanation_fa": in.ExplanationFa, "fallback_example": in.FallbackExample,
+				"practice_prompt_fa": in.PracticePromptFa, "level": in.Level, "sort_order": in.SortOrder,
+			}
+			if in.MeaningID != "" {
+				mid, err := pathID(in.MeaningID)
+				if err != nil {
+					return nil, nil, err
+				}
+				return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/meanings/"+mid, payload))
+			}
+			vid, err := pathID(in.VerbID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/verbs/"+vid+"/meanings", payload))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "suggest_verb_meanings", Annotations: ro, Description: "AI-suggested meanings for a verb (with CEFR level). Nothing is saved; use save_verb_meaning."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in idArg) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/verbs/"+id+"/suggest-meanings", obj{}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "scan_verb", Description: "Search all lesson dialogues for the verb's forms and let AI guess the meaning of each sentence (results are 'suggested'; review with review_verb_occurrence)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in idArg) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/verbs/"+id+"/scan", obj{}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "review_verb_occurrence", Description: "Approve (with a meaning), reject or reset one lesson sentence found for a verb."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in reviewOccurrenceArgs) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/occurrences/"+id, obj{"status": in.Status, "meaning_id": in.MeaningID}))
 		})
 
 	// ---- پادکست ----

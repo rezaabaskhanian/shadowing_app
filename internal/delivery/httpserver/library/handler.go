@@ -40,6 +40,14 @@ func (h Handler) SetLibraryRoutes(e *echo.Echo) {
 	idioms.POST("/delete", h.DeleteIdioms)
 	idioms.PUT("/:id", h.UpdateIdiom)
 	idioms.DELETE("/:id", h.DeleteIdiom)
+
+	// اپ: اصطلاح‌های فعال
+	e.GET("/v1/idioms", h.ListActiveIdioms, auth)
+}
+
+func (h Handler) ListActiveIdioms(c echo.Context) error {
+	list, err := h.svc.ListActiveIdioms(c.Request().Context())
+	return respond(c, list, err)
 }
 
 func respond(c echo.Context, data any, err error) error {

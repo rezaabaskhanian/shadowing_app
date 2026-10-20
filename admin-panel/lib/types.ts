@@ -421,6 +421,8 @@ export interface VerbMeaning {
   explanation_fa: string;
   fallback_example: string;
   practice_prompt_fa: string;
+  /** سطح CEFR معنا (A1…C1)؛ خالی = تعیین نشده */
+  level: string;
   sort_order: number;
 }
 
@@ -447,6 +449,7 @@ export interface VerbMeaningSuggestion {
   explanation_fa: string;
   example: string;
   practice_prompt_fa: string;
+  level?: string;
 }
 
 // ---------- آمار اپ (آنالیتیکس) ----------
@@ -693,7 +696,8 @@ export interface Idiom {
   explanation_fa: string;
   example_en: string;
   example_fa: string;
-  level: "" | "beginner" | "intermediate" | "advanced";
+  /** سطح CEFR؛ خالی = بدون سطح */
+  level: "" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   category: string;
   is_active: boolean;
   created_at: string;

@@ -45,6 +45,8 @@ const (
 	EventPathItemOpened = "path_item_opened"
 	EventCheckpointDone = "checkpoint_done"
 	EventPathSelfIntro  = "path_self_intro"
+	// انتخاب نقطه‌ی شروع مسیر (target = test / manual / continue).
+	EventPathStartChoice = "path_start_choice"
 )
 
 var validEvents = map[string]bool{
@@ -58,6 +60,7 @@ var validEvents = map[string]bool{
 	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,
 	EventTokenTopupViewed: true, EventTokenTopupPurchased: true,
 	EventPathItemOpened: true, EventCheckpointDone: true, EventPathSelfIntro: true,
+	EventPathStartChoice: true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.

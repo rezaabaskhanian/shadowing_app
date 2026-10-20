@@ -45,8 +45,10 @@ import {
   getAssessmentTest,
   getMyLevel,
   getSpeakingProfile,
+  setMyLevel,
   type AssessmentItem,
   type MyLevel,
+  type SceneLevel,
   type SpeakingProfile,
 } from '../api/assessment';
 import { getTodaysMission, type TodaysMission } from '../api/mission';
@@ -64,6 +66,8 @@ import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
 import { getPaths, type PathSummary } from '../api/path';
 import { PathHomeCard } from './Path/PathHomeCard';
+import { PathStartSheet } from './Path/PathStartSheet';
+import { track } from '../services/analytics';
 import { formatDuration } from './Podcast/PodcastListScreen';
 
 // هر بخشِ محتوایی در خانه فقط چند موردِ اول را در یک شبکه‌ی ناهمگون (مستطیل +
@@ -171,8 +175,10 @@ export const HomeScreen = () => {
   // نیاز دارند.
   const [placementItems, setPlacementItems] = React.useState<AssessmentItem[] | null>(null);
   const [speakingProfile, setSpeakingProfile] = React.useState<SpeakingProfile | null>(null);
-  const [placementCtaDismissed, setPlacementCtaDismissed] = React.useState(false);
   const [placementModalVisible, setPlacementModalVisible] = React.useState(false);
+  // انتخاب نقطه‌ی شروع مسیر؛ اگر از اینجا به تست رفت، بعد از تست مستقیم وارد مسیر می‌شود.
+  const [pathStartVisible, setPathStartVisible] = React.useState(false);
+  const startPathAfterTest = React.useRef(false);
 
   const refreshPlacementState = React.useCallback(() => {
     let active = true;
@@ -450,9 +456,37 @@ export const HomeScreen = () => {
     }),
   };
 
-  // مسیری که کاربر شروع کرده؛ وگرنه برای مبتدی‌ها مسیر starter به‌عنوان دعوت.
+  // مسیری که کاربر شروع کرده؛ وگرنه مسیر سطح خودش (یا اولین مسیر) به‌عنوان دعوت.
   const homePath =
-    paths.find((p) => p.started) || (isBeginner ? paths.find((p) => p.level === 'starter') : undefined);
+    paths.find((p) => p.started) ||
+    paths.find((p) => p.level === myLevel?.scene_level) ||
+    paths.find((p) => p.level === 'starter') ||
+    paths[0];
+  const pathLevels = paths.map((p) => p.level);
+
+  /** نزدیک‌ترین مسیر موجود هم‌سطح یا پایین‌تر از سطح کاربر. */
+  const pathLevelFor = (level: string): string | undefined => {
+    const order = ['starter', 'beginner', 'intermediate', 'advanced', 'proficient'];
+    for (let i = order.indexOf(level); i >= 0; i--) {
+      if (pathLevels.includes(order[i])) return order[i];
+    }
+    return pathLevels[0];
+  };
+
+  const startPath = async (level: SceneLevel, manual: boolean) => {
+    if (manual) {
+      try {
+        const updated = await setMyLevel(level);
+        setMyLevelState(updated);
+        reloadScenes();
+      } catch {
+        // ذخیره‌ی سطح نشد؛ مسیر را باز هم باز می‌کنیم.
+      }
+    }
+    track('path_start_choice', manual ? 'manual' : 'continue');
+    setPathStartVisible(false);
+    navigation.navigate('PathHome', { level });
+  };
 
   const allHomeSections: HomeSection[] = [
     ...(isBeginner ? [courseSection] : []),
@@ -623,7 +657,11 @@ export const HomeScreen = () => {
         {homePath && (
           <PathHomeCard
             path={homePath}
-            onPress={() => navigation.navigate('PathHome', { level: homePath.level })}
+            onPress={() =>
+              homePath.started
+                ? navigation.navigate('PathHome', { level: homePath.level })
+                : setPathStartVisible(true)
+            }
           />
         )}
 
@@ -659,31 +697,6 @@ export const HomeScreen = () => {
             </View>
           </View>
         </View>
-
-        {/* PLACEMENT TEST CTA — فقط اگر ادمین محتوا ساخته و کاربر هنوز پروفایل ندارد؛
-            بعد از داشتنِ پروفایل، راه بازگشت به تست فقط از Drawer است (برای گرفتنِ
-            دوباره)، نه این کارت که مخصوصِ «هنوز نداده‌ای» است. */}
-        {placementItems && !speakingProfile && !placementCtaDismissed && (
-          <TouchableOpacity
-            style={styles.placementCtaCard}
-            activeOpacity={0.85}
-            onPress={() => setPlacementModalVisible(true)}
-          >
-            <View style={styles.placementCtaIconCircle}>
-              <Mic size={20} color={COLORS.primary} />
-            </View>
-            <View style={styles.placementCtaTextContainer}>
-              <Text style={styles.placementCtaTitle}>{t('placementCtaTitle')}</Text>
-              <Text style={styles.placementCtaSub}>{t('placementCtaSub')}</Text>
-            </View>
-            <TouchableOpacity
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => setPlacementCtaDismissed(true)}
-            >
-              <X size={18} color={COLORS.muted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
 
         {pendingVerb && (
           <TouchableOpacity
@@ -854,6 +867,24 @@ export const HomeScreen = () => {
         <View style={{ height: 90 }} />
       </ScrollView>
 
+      <PathStartSheet
+        visible={pathStartVisible}
+        onClose={() => setPathStartVisible(false)}
+        pathLevels={pathLevels}
+        myLevel={myLevel}
+        onTakeTest={
+          placementItems
+            ? () => {
+                track('path_start_choice', 'test');
+                startPathAfterTest.current = true;
+                setPathStartVisible(false);
+                setPlacementModalVisible(true);
+              }
+            : null
+        }
+        onStart={startPath}
+      />
+
       <Modal
         visible={placementModalVisible}
         animationType="slide"
@@ -861,9 +892,26 @@ export const HomeScreen = () => {
       >
         <PlacementTestFlow
           items={placementItems}
-          onSkip={() => setPlacementModalVisible(false)}
-          onDone={() => {
+          onSkip={() => {
             setPlacementModalVisible(false);
+            // از تست صرف‌نظر کرد؛ دوباره گزینه‌های شروع مسیر را نشان بده.
+            if (startPathAfterTest.current) {
+              startPathAfterTest.current = false;
+              setPathStartVisible(true);
+            }
+          }}
+          onDone={() => {
+            track('placement_completed');
+            setPlacementModalVisible(false);
+            if (startPathAfterTest.current) {
+              startPathAfterTest.current = false;
+              getMyLevel()
+                .then((l) => {
+                  const level = pathLevelFor(l.scene_level);
+                  if (level) navigation.navigate('PathHome', { level });
+                })
+                .catch(() => {});
+            }
             // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
             // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
             // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).

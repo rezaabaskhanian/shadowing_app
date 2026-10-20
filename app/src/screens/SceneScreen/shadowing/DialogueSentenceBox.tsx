@@ -114,7 +114,12 @@ export const DialogueSentenceBox: React.FC<{
 
     {/* اصطلاح/عبارت‌های همین جمله — فقط اگر ادمین چیزی گذاشته باشد؛ خالی = هیچ نمایشی */}
     {activeStepIndex !== 2 && (
-      <DialoguePhrases phrases={currentDialogue.phrases} accentColor={accentColor} t={t} />
+      <DialoguePhrases
+        phrases={currentDialogue.phrases}
+        sentence={currentDialogue.dialogue}
+        accentColor={accentColor}
+        t={t}
+      />
     )}
 
     {/* فعل چندمعنایی این جمله (مثلاً «get این‌جا یعنی رسیدن») — به صفحه‌ی فعل می‌رود */}

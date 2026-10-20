@@ -46,7 +46,12 @@ const (
 )
 
 var validKinds = map[string]bool{"lesson": true, "scene": true, "podcast": true, "vocabulary": true, "other": true}
-var validLevels = map[string]bool{"": true, "beginner": true, "intermediate": true, "advanced": true}
+
+// سطح اصطلاح به CEFR (A1…C1، طبق English Vocabulary Profile). نام‌های قدیمی
+// (beginner/intermediate/advanced) هنگام ذخیره به نزدیک‌ترین سطح CEFR برمی‌گردند.
+var validLevels = map[string]bool{"": true, "A1": true, "A2": true, "B1": true, "B2": true, "C1": true, "C2": true}
+
+var legacyIdiomLevels = map[string]string{"STARTER": "A1", "BEGINNER": "A2", "INTERMEDIATE": "B1", "ADVANCED": "B2", "PROFICIENT": "C1"}
 
 func parseID(op richerror.Op, id string) error {
 	if _, err := uuid.Parse(id); err != nil {
@@ -125,7 +130,10 @@ func normalizeIdiom(i Idiom) Idiom {
 	i.ExplanationFa = strings.TrimSpace(i.ExplanationFa)
 	i.ExampleEn = strings.TrimSpace(i.ExampleEn)
 	i.ExampleFa = strings.TrimSpace(i.ExampleFa)
-	i.Level = strings.ToLower(strings.TrimSpace(i.Level))
+	i.Level = strings.ToUpper(strings.TrimSpace(i.Level))
+	if l, ok := legacyIdiomLevels[i.Level]; ok {
+		i.Level = l
+	}
 	i.Category = strings.TrimSpace(i.Category)
 	if !validLevels[i.Level] {
 		i.Level = ""
@@ -135,6 +143,22 @@ func normalizeIdiom(i Idiom) Idiom {
 
 func (s *Service) ListIdioms(ctx context.Context) ([]Idiom, error) {
 	return s.repo.ListIdioms(ctx)
+}
+
+// ListActiveIdioms اصطلاح‌های فعال برای اپ (پیدا کردن خودکار در جمله‌های درس‌ها
+// و تب «اصطلاحات» لایتنر).
+func (s *Service) ListActiveIdioms(ctx context.Context) ([]Idiom, error) {
+	all, err := s.repo.ListIdioms(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Idiom, 0, len(all))
+	for _, i := range all {
+		if i.IsActive {
+			out = append(out, i)
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) SaveIdiom(ctx context.Context, id string, i Idiom) (Idiom, error) {

@@ -20,6 +20,7 @@ const EMPTY_MEANING: Partial<VerbMeaning> = {
   explanation_fa: "",
   fallback_example: "",
   practice_prompt_fa: "",
+  level: "",
   sort_order: 0,
 };
 
@@ -229,7 +230,7 @@ function VerbEditor({
             {suggestions.map((s, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
                 <div style={{ flex: 1 }}>
-                  <b>{s.meaning_fa}</b> — {s.explanation_fa}
+                  <b>{s.meaning_fa}</b> {s.level && <span className="badge">{s.level}</span>} — {s.explanation_fa}
                   <div className="hint" dir="ltr" style={{ textAlign: "left" }}>
                     {s.example}
                   </div>
@@ -244,6 +245,7 @@ function VerbEditor({
                         explanation_fa: s.explanation_fa,
                         fallback_example: s.example,
                         practice_prompt_fa: s.practice_prompt_fa,
+                        level: s.level || "",
                         sort_order: meanings.length,
                       });
                       setSuggestions((prev) => prev.filter((_, j) => j !== i));
@@ -276,6 +278,7 @@ function VerbEditor({
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <div>
                 <b>{m.meaning_fa}</b>{" "}
+                {m.level ? <span className="badge">{m.level}</span> : <span className="hint">بدون سطح ⚠️</span>}{" "}
                 <span className="hint">
                   — {approvedPerMeaning(m.id)} جمله‌ی تأییدشده
                   {approvedPerMeaning(m.id) === 0 && " ⚠️"}
@@ -455,6 +458,15 @@ function MeaningForm({
       <input value={m.fallback_example || ""} onChange={set("fallback_example")} dir="ltr" />
       <label>موقعیت تمرین صوتی (فارسی؛ مثلاً «به دوستت بگو سرما خورده‌ای.»)</label>
       <input value={m.practice_prompt_fa || ""} onChange={set("practice_prompt_fa")} />
+      <label>سطح CEFR این معنا (طبق English Vocabulary Profile)</label>
+      <select value={m.level || ""} onChange={(e) => setM({ ...m, level: e.target.value })}>
+        <option value="">تعیین نشده</option>
+        {["A1", "A2", "B1", "B2", "C1", "C2"].map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <button className="btn btn-sm" disabled={busy || !m.meaning_fa?.trim()} onClick={() => onSave(m)}>
           ذخیره‌ی معنا

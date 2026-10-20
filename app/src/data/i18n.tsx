@@ -858,6 +858,14 @@ export const translations: Translations = {
 
   // ---- Polysemous verbs ----
   verbsTab: { en: 'Verbs', fa: 'افعال' },
+  idiomsTab: { en: 'Idioms', fa: 'اصطلاحات' },
+  idiomsIntro: {
+    en: 'Common idioms and expressions, ordered by level. Tap + to review one in your Leitner box.',
+    fa: 'اصطلاح‌ها و عبارت‌های پرکاربرد، به ترتیب سطح. با + هر کدام را به لایتنر ببر تا مرورش کنی.',
+  },
+  idiomsEmpty: { en: 'No idioms yet.', fa: 'هنوز اصطلاحی اضافه نشده.' },
+  idiomsMyLevel: { en: 'your level', fa: 'سطح تو' },
+  idiomsShowAll: { en: 'Show all levels', fa: 'نمایش همه‌ی سطح‌ها' },
   verbsIntro: {
     en: 'Common verbs with many meanings — each meaning comes with a real sentence from your lessons.',
     fa: 'فعل‌های پرکاربردی که چند معنا دارند — هر معنا با یک جمله‌ی واقعی از درس‌ها.',
@@ -1120,6 +1128,21 @@ export const translations: Translations = {
   pathNextSession: { en: 'My next session', fa: 'جلسه‌ی بعدی من' },
   pathAllDone: { en: 'Path complete! 🎉', fa: 'مسیر تمام شد! 🎉' },
   pathStartCta: { en: 'Start the step-by-step path', fa: 'مسیر قدم‌به‌قدم را شروع کن' },
+  pathStartCtaSub: {
+    en: 'Week by week, with a checkpoint at the end of each week.',
+    fa: 'هفته به هفته، با یک Checkpoint آخر هر هفته.',
+  },
+  pathStartSheetTitle: { en: 'Where should we start?', fa: 'از کجا شروع کنیم؟' },
+  pathStartSheetSub: {
+    en: 'So the path is neither too easy nor too hard for you.',
+    fa: 'تا مسیر نه برایت خیلی آسان باشد نه خیلی سخت.',
+  },
+  pathStartContinue: { en: 'Continue at my level: {level}', fa: 'ادامه با سطح فعلی‌ام: {level}' },
+  pathStartTest: { en: 'Take the placement test', fa: 'تست تعیین سطح' },
+  pathStartTestSub: { en: 'About 3 minutes, by speaking', fa: 'حدود ۳ دقیقه، با صحبت کردن' },
+  pathStartPick: { en: 'I’ll choose my level', fa: 'خودم سطحم را انتخاب می‌کنم' },
+  pathStartFromScratch: { en: 'Start from the very beginning', fa: 'از اول شروع می‌کنم' },
+  pathStartBack: { en: 'Back', fa: 'برگشت' },
   pathWeakInstruction: {
     en: 'Read the Persian and say it in English — no peeking!',
     fa: 'فارسی را بخوان و خودت انگلیسی‌اش را بگو، بدون نگاه کردن به متن!',

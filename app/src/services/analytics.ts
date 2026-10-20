@@ -30,6 +30,7 @@ export type AnalyticsEvent =
   | 'writing_submitted'
   | 'course_lesson_completed'
   | 'path_item_opened'
+  | 'path_start_choice'
   | 'checkpoint_done'
   | 'path_self_intro'
   | 'podcast_played'

@@ -35,7 +35,7 @@ const (
 	DifficultyIntermediate DifficultyLevel = "intermediate"
 	DifficultyAdvanced     DifficultyLevel = "advanced"
 	// DifficultyProficient «حرفه‌ای» (C1): بالاتر از advanced.
-	DifficultyProficient   DifficultyLevel = "proficient"
+	DifficultyProficient DifficultyLevel = "proficient"
 )
 
 type SceneStatus string

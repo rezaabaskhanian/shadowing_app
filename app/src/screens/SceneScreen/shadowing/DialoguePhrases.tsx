@@ -1,30 +1,62 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { Check, Plus } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import type { PhraseEntry } from '../../../data/scenarios';
+import { listIdioms, matchIdioms } from '../../../api/idioms';
+import { useVocab } from '../../../data/VocabContext';
+
+export const idiomKeys = { list: ['idioms'] as const };
 
 /**
- * اصطلاح/عبارت‌های (idiom / phrase) همین جمله را نشان می‌دهد. اختیاری است:
- * اگر ادمین چیزی نگذاشته باشد هیچ‌چیز (حتی عنوان) رندر نمی‌شود.
+ * اصطلاح/عبارت‌های همین جمله: هم آن‌هایی که ادمین برای جمله گذاشته، هم
+ * اصطلاح‌های کتابخانه که خودکار در متن جمله پیدا می‌شوند. هر کدام با یک لمس
+ * به لایتنر می‌رود. اگر هیچ‌کدام نباشد هیچ‌چیز (حتی عنوان) رندر نمی‌شود.
  */
 export const DialoguePhrases: React.FC<{
   phrases?: PhraseEntry[];
+  sentence?: string;
   accentColor: string;
   t: (key: string) => string;
-}> = ({ phrases, accentColor, t }) => {
-  if (!phrases || phrases.length === 0) return null;
+}> = ({ phrases, sentence, accentColor, t }) => {
+  const { has, add } = useVocab();
+  const { data: idioms } = useQuery({ queryKey: idiomKeys.list, queryFn: listIdioms, staleTime: 60 * 60 * 1000 });
+
+  const items: PhraseEntry[] = [...(phrases || [])];
+  if (sentence && idioms?.length) {
+    for (const i of matchIdioms(sentence, idioms)) {
+      if (!items.some((p) => p.phrase.toLowerCase() === i.phrase.toLowerCase())) {
+        items.push({ phrase: i.phrase, meaning: i.meaning_fa });
+      }
+    }
+  }
+  if (items.length === 0) return null;
 
   return (
     <View style={styles.block}>
       <Text style={[styles.title, { color: accentColor }]}>{t('dialoguePhrasesTitle')}</Text>
-      {phrases.map((p, idx) => (
-        <View key={`${p.phrase}-${idx}`} style={[styles.row, idx > 0 && styles.rowBorder]}>
-          <Text style={styles.phrase}>{p.phrase}</Text>
-          {!!p.meaning && <Text style={styles.meaning}>{p.meaning}</Text>}
-        </View>
-      ))}
+      {items.map((p, idx) => {
+        const saved = has(p.phrase);
+        return (
+          <View key={`${p.phrase}-${idx}`} style={[styles.row, idx > 0 && styles.rowBorder]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.phrase}>{p.phrase}</Text>
+              {!!p.meaning && <Text style={styles.meaning}>{p.meaning}</Text>}
+            </View>
+            <TouchableOpacity
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              disabled={saved}
+              onPress={() => add({ word: p.phrase, meaning: p.meaning })}
+              accessibilityLabel={t('addToLeitner')}
+            >
+              {saved ? <Check size={18} color={COLORS.success} /> : <Plus size={18} color={accentColor} />}
+            </TouchableOpacity>
+          </View>
+        );
+      })}
     </View>
   );
 };
@@ -46,8 +78,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingVertical: 4,
-    gap: 2,
   },
   rowBorder: {
     borderTopWidth: 1,

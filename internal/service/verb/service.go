@@ -175,6 +175,12 @@ func (s *Service) AdminSaveMeaning(ctx context.Context, verbID, meaningID string
 	if m.MeaningFa == "" {
 		return postgresverb.Meaning{}, richerror.New(op).WithMessage("معنای فارسی الزامی است").WithKind(richerror.KindInvalid)
 	}
+	m.Level = strings.ToUpper(strings.TrimSpace(m.Level))
+	switch m.Level {
+	case "", "A1", "A2", "B1", "B2", "C1", "C2":
+	default:
+		return postgresverb.Meaning{}, richerror.New(op).WithMessage("سطح باید A1 تا C2 یا خالی باشد").WithKind(richerror.KindInvalid)
+	}
 	if meaningID == "" {
 		vid, err := parseID(op, verbID)
 		if err != nil {
@@ -426,6 +432,7 @@ type MeaningView struct {
 	ExplanationFa      string    `json:"explanation_fa"`
 	PracticePromptFa   string    `json:"practice_prompt_fa"`
 	FallbackExample    string    `json:"fallback_example"`
+	Level              string    `json:"level"`
 	Examples           []Example `json:"examples"`
 	Seen               bool      `json:"seen"`
 	RecognitionCorrect int       `json:"recognition_correct"`
@@ -484,7 +491,7 @@ func (s *Service) GetVerb(ctx context.Context, userID, verbID string) (*VerbView
 		p := progress[m.ID]
 		view.Meanings = append(view.Meanings, MeaningView{
 			ID: m.ID.String(), MeaningFa: m.MeaningFa, ExplanationFa: m.ExplanationFa,
-			PracticePromptFa: m.PracticePromptFa, FallbackExample: m.FallbackExample,
+			PracticePromptFa: m.PracticePromptFa, FallbackExample: m.FallbackExample, Level: m.Level,
 			Examples: nonNil(byMeaning[m.ID]), Seen: p.SeenAt != nil,
 			RecognitionCorrect: p.RecognitionCorrect, RecognitionTarget: recognitionTarget,
 			SpokenOK: p.SpokenOK, InLeitner: p.LeitnerLevel > 0, Learned: isLearned(p),
@@ -500,6 +507,7 @@ type SceneTag struct {
 	Lemma      string `json:"lemma"`
 	MeaningID  string `json:"meaning_id"`
 	MeaningFa  string `json:"meaning_fa"`
+	Level      string `json:"level"`
 	// OtherMeaningCount تعداد بقیه‌ی معناهای این فعل (برای «N معنای دیگر»)
 	OtherMeaningCount int `json:"other_meaning_count"`
 }
@@ -538,7 +546,7 @@ func (s *Service) SceneTags(ctx context.Context, sceneID string) ([]SceneTag, er
 		}
 		for _, m := range meanings[o.VerbID] {
 			if m.ID == *o.MeaningID {
-				tag.MeaningFa = m.MeaningFa
+				tag.MeaningFa, tag.Level = m.MeaningFa, m.Level
 			}
 		}
 		out = append(out, tag)
