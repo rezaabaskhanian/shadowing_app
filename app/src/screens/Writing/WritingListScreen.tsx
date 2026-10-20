@@ -14,6 +14,7 @@ const LEVEL_META: Record<WritingLevel, { labelKey: string; bg: string }> = {
   beginner: { labelKey: 'levelBeginner', bg: COLORS.levelBeginnerBg },
   intermediate: { labelKey: 'levelIntermediate', bg: COLORS.levelIntermediateBg },
   advanced: { labelKey: 'levelAdvanced', bg: COLORS.levelAdvancedBg },
+  proficient: { labelKey: 'levelProficient', bg: COLORS.levelProficientBg },
 };
 
 /**

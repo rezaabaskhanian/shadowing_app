@@ -96,7 +96,7 @@ type sourceArg struct {
 
 type generateSceneArgs struct {
 	Prompt       string `json:"prompt" jsonschema:"what the scene is about (any language)"`
-	Difficulty   string `json:"difficulty" jsonschema:"starter | beginner | intermediate | advanced"`
+	Difficulty   string `json:"difficulty" jsonschema:"starter | beginner | intermediate | advanced | proficient"`
 	GrammarTopic string `json:"grammar_topic,omitempty" jsonschema:"optional grammar point to practise"`
 }
 
@@ -116,7 +116,7 @@ type updateSceneArgs struct {
 
 type sceneDifficultyArgs struct {
 	ID         string `json:"id" jsonschema:"scene id"`
-	Difficulty string `json:"difficulty" jsonschema:"starter | beginner | intermediate | advanced"`
+	Difficulty string `json:"difficulty" jsonschema:"starter | beginner | intermediate | advanced | proficient"`
 }
 
 type fillAudioArgs struct {
@@ -194,7 +194,7 @@ type podcastScriptArgs struct {
 	Topic               string `json:"topic,omitempty"`
 	Scene               string `json:"scene,omitempty" jsonschema:"setting/situation of the conversation"`
 	Source              string `json:"source,omitempty" jsonschema:"source text (e.g. a library resource's content) to base the script on"`
-	Level               string `json:"level" jsonschema:"starter | beginner | intermediate | advanced"`
+	Level               string `json:"level" jsonschema:"starter | beginner | intermediate | advanced | proficient"`
 	Kind                string `json:"kind,omitempty" jsonschema:"lesson (default) | featured"`
 	MaxWordsPerSentence int    `json:"max_words_per_sentence,omitempty" jsonschema:"0 = level preset"`
 	MinLines            int    `json:"min_lines,omitempty" jsonschema:"0 = level preset"`
@@ -213,7 +213,7 @@ type updateArgs struct {
 
 type suggestTopicArgs struct {
 	Idea  string `json:"idea"`
-	Level string `json:"level" jsonschema:"starter | beginner | intermediate | advanced"`
+	Level string `json:"level" jsonschema:"starter | beginner | intermediate | advanced | proficient"`
 }
 
 type topicArgs struct {
@@ -221,7 +221,7 @@ type topicArgs struct {
 }
 
 type writingPromptArgs struct {
-	Prompt obj `json:"prompt" jsonschema:"writing prompt: title, prompt_fa, guide_questions[], useful_phrases[], level (beginner | intermediate | advanced), min_words, max_words, image_url"`
+	Prompt obj `json:"prompt" jsonschema:"writing prompt: title, prompt_fa, guide_questions[], useful_phrases[], level (beginner | intermediate | advanced | proficient), min_words, max_words, image_url"`
 }
 
 type detectLinesArgs struct {
@@ -330,7 +330,7 @@ func registerTools(s *mcp.Server, c *client) {
 		})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "set_scene_difficulty",
-		Description: "Move a scene to another level (starter | beginner | intermediate | advanced). Only the level changes: " +
+		Description: "Move a scene to another level (starter | beginner | intermediate | advanced | proficient). Only the level changes: " +
 			"dialogues, audio, dialogue ids and users' progress are kept, and the publish state is not touched."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in sceneDifficultyArgs) (*mcp.CallToolResult, any, error) {
 			id, err := pathID(in.ID)

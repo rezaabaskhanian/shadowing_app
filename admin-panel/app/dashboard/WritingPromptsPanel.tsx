@@ -9,6 +9,7 @@ const LEVELS: { id: SpeakingTopicLevel; label: string }[] = [
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },
+  { id: "proficient", label: "حرفه‌ای (C1)" },
 ];
 
 

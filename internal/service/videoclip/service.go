@@ -166,7 +166,7 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Clip, error) {
 }
 
 var (
-	validLevels  = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
+	validLevels  = map[string]bool{"beginner": true, "intermediate": true, "advanced": true, "proficient": true}
 	validSources = map[string]bool{"flow": true, "movie": true}
 	// همان دسته‌های صحنه‌ها (app: SCENE_CATEGORY_LABEL_KEY)؛ خالی = بدون دسته.
 	validCategories = map[string]bool{"migration": true, "career": true, "education": true, "daily": true, "travel": true, "social": true}

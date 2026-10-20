@@ -23,6 +23,7 @@ const LEVEL_META: Record<ClipLevel, { labelKey: string; bg: string }> = {
   beginner: { labelKey: 'levelBeginner', bg: COLORS.levelBeginnerBg },
   intermediate: { labelKey: 'levelIntermediate', bg: COLORS.levelIntermediateBg },
   advanced: { labelKey: 'levelAdvanced', bg: COLORS.levelAdvancedBg },
+  proficient: { labelKey: 'levelProficient', bg: COLORS.levelProficientBg },
 };
 
 /** لیست کلیپ‌های «تمرین با ویدیو»؛ ورودی از منوی کناری. */

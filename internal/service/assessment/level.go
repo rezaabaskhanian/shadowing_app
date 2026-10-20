@@ -18,7 +18,7 @@ type LevelOverrideRepository interface {
 	Clear(ctx context.Context, userID uuid.UUID) error
 }
 
-var validSceneLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
+var validSceneLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true, "proficient": true}
 
 // testSceneLevel سطح صحنه‌ی حاصل از تست تعیین سطح؛ رشته‌ی خالی اگر تست نداده.
 func (s *Service) testSceneLevel(ctx context.Context, uid uuid.UUID) (string, error) {
@@ -83,7 +83,7 @@ func (s *Service) SetLevel(ctx context.Context, userID, sceneLevel string) (*dto
 	if sceneLevel == "" {
 		err = s.overrides.Clear(ctx, uid)
 	} else if !validSceneLevels[sceneLevel] {
-		return nil, richerror.New(op).WithMessage("سطح نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced").WithKind(richerror.KindInvalid)
+		return nil, richerror.New(op).WithMessage("سطح نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced, proficient").WithKind(richerror.KindInvalid)
 	} else {
 		err = s.overrides.Set(ctx, uid, sceneLevel)
 	}

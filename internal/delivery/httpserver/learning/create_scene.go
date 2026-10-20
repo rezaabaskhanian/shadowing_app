@@ -50,11 +50,12 @@ func (h Handler) CreateScene(c echo.Context) error {
 		"beginner":     true,
 		"intermediate": true,
 		"advanced":     true,
+		"proficient":   true,
 	}
 	if !validDifficulties[req.Difficulty] {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_difficulty",
-			"message": "سطح زبان‌آموز باید یکی از مقادیر starter, beginner, intermediate, advanced باشد",
+			"message": "سطح زبان‌آموز باید یکی از مقادیر starter, beginner, intermediate, advanced, proficient باشد",
 		})
 	}
 

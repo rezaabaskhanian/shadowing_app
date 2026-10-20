@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import { SCENE_CATEGORIES } from "./types";
 
-const DIFFICULTIES: Difficulty[] = ["starter", "beginner", "intermediate", "advanced"];
+const DIFFICULTIES: Difficulty[] = ["starter", "beginner", "intermediate", "advanced", "proficient"];
 const DISPLAY_TYPES: DisplayType[] = ["full", "partial", "none"];
 
 type Obj = Record<string, unknown>;

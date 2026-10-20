@@ -23,9 +23,11 @@ func toDifficulty(op richerror.Op, v string) (scene.DifficultyLevel, error) {
 		return scene.DifficultyIntermediate, nil
 	case "advanced":
 		return scene.DifficultyAdvanced, nil
+	case "proficient":
+		return scene.DifficultyProficient, nil
 	default:
 		return "", richerror.New(op).
-			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced").
+			WithMessage("سطح زبان‌آموز نامعتبر است. مقادیر مجاز: starter, beginner, intermediate, advanced, proficient").
 			WithKind(richerror.KindInvalid)
 	}
 }

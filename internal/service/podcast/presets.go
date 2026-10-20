@@ -22,13 +22,14 @@ type LevelPreset struct {
 	LineGapMs           int     `json:"line_gap_ms"`
 }
 
-var Levels = []string{"starter", "beginner", "intermediate", "advanced"}
+var Levels = []string{"starter", "beginner", "intermediate", "advanced", "proficient"}
 
 var DefaultLevelPresets = map[string]LevelPreset{
 	"starter":      {MaxWordsPerSentence: 6, MinLines: 8, MaxLines: 10, NewVocab: 3, SpeechSpeed: 0.8, LineGapMs: 1500},
 	"beginner":     {MaxWordsPerSentence: 10, MinLines: 12, MaxLines: 16, NewVocab: 5, SpeechSpeed: 0.9, LineGapMs: 1000},
 	"intermediate": {MaxWordsPerSentence: 15, MinLines: 18, MaxLines: 22, NewVocab: 8, SpeechSpeed: 1, LineGapMs: 500},
 	"advanced":     {MaxWordsPerSentence: 0, MinLines: 24, MaxLines: 30, NewVocab: 10, SpeechSpeed: 1, LineGapMs: 300},
+	"proficient":   {MaxWordsPerSentence: 0, MinLines: 28, MaxLines: 34, NewVocab: 12, SpeechSpeed: 1, LineGapMs: 250},
 }
 
 type settingsStore interface {

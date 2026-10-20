@@ -11,6 +11,7 @@ export const LEVEL_LABEL_KEY: Record<string, string> = {
   Beginner: 'levelBeginner',
   Intermediate: 'levelIntermediate',
   Advanced: 'levelAdvanced',
+  Proficient: 'levelProficient',
 };
 
 interface SceneListCardProps {

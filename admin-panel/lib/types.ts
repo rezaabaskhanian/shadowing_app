@@ -1,7 +1,7 @@
 export type Speaker = string;
 export type DisplayType = "full" | "partial" | "none";
 // starter = «قدم اول» (پایه‌تر از مبتدی) — فقط برای صحنه‌ها.
-export type Difficulty = "starter" | "beginner" | "intermediate" | "advanced";
+export type Difficulty = "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
 
 // یک واژه‌ی دیالوگ همراه با معنی
 export interface WordInput {
@@ -490,7 +490,7 @@ export interface AnalyticsFunnelStep {
 }
 
 // ---------- صحبت درباره‌ی یک موضوع ----------
-export type SpeakingTopicLevel = "starter" | "beginner" | "intermediate" | "advanced";
+export type SpeakingTopicLevel = "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
 
 export interface SpeakingTopic {
   id: string;
@@ -516,7 +516,7 @@ export interface SpeakingTopicSuggestion {
 }
 
 // ---------- تمرین با ویدیو ----------
-export type VideoClipLevel = "beginner" | "intermediate" | "advanced";
+export type VideoClipLevel = "beginner" | "intermediate" | "advanced" | "proficient";
 
 export interface VideoClipLine {
   id?: string;
@@ -640,7 +640,7 @@ export interface Podcast {
   id: string;
   title: string;
   description_fa: string;
-  level: "starter" | "beginner" | "intermediate" | "advanced";
+  level: "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
   /** lesson = درسی (صحنه/موضوع درس‌ها)، featured = منتخب (موضوع آزاد و جذاب). */
   kind: "lesson" | "featured";
   scene_id: string;

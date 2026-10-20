@@ -71,8 +71,9 @@ const SCENE_LEVELS: { id: SceneLevel; labelKey: string }[] = [
   { id: 'beginner', labelKey: 'levelBeginner' },
   { id: 'intermediate', labelKey: 'levelIntermediate' },
   { id: 'advanced', labelKey: 'levelAdvanced' },
+  { id: 'proficient', labelKey: 'levelProficient' },
 ];
-const SCENE_LEVEL_RANK: Record<string, number> = { starter: 0, beginner: 1, intermediate: 2, advanced: 3 };
+const SCENE_LEVEL_RANK: Record<string, number> = { starter: 0, beginner: 1, intermediate: 2, advanced: 3, proficient: 4 };
 
 // کشوی کناری (راست) شامل خلاصه کاربر، عادت زبانی، راهنما و خروج از حساب.
 export const AppDrawer = ({

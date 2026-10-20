@@ -76,6 +76,7 @@ const CONTENT_LEVEL_BG: Record<string, string> = {
   beginner: COLORS.levelBeginnerBg,
   intermediate: COLORS.levelIntermediateBg,
   advanced: COLORS.levelAdvancedBg,
+  proficient: COLORS.levelProficientBg,
 };
 
 const LEVEL_LABEL_KEY: Record<string, string> = {
@@ -83,6 +84,7 @@ const LEVEL_LABEL_KEY: Record<string, string> = {
   beginner: 'levelBeginner',
   intermediate: 'levelIntermediate',
   advanced: 'levelAdvanced',
+  proficient: 'levelProficient',
 };
 
 /** درس‌های بعدیِ دوره: از اولین درسِ تمام‌نشده به بعد (درس‌های بدون کارت حذف). */

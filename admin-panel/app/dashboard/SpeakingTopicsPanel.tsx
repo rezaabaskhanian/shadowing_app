@@ -16,9 +16,10 @@ const LEVELS: { id: SpeakingTopicLevel; label: string }[] = [
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },
+  { id: "proficient", label: "حرفه‌ای (C1)" },
 ];
 
-const DURATIONS = [30, 45, 60, 90, 120];
+const DURATIONS = [30, 45, 60, 90, 120, 150, 180];
 
 type Draft = {
   id?: string;

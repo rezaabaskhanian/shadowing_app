@@ -6,7 +6,7 @@ import type { TopicSpeechMistake, TopicSpeechPhrase } from './topicSpeaking';
  * می‌نویسد و AI آن را تصحیح می‌کند (بک‌اند: writingservice).
  */
 
-export type WritingLevel = 'beginner' | 'intermediate' | 'advanced';
+export type WritingLevel = 'beginner' | 'intermediate' | 'advanced' | 'proficient';
 
 export interface WritingPrompt {
   id: string;

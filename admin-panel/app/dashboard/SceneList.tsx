@@ -29,10 +29,11 @@ function loadFilters(): { difficulty: string; category: string } {
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
-  starter: "قدم اول",
-  beginner: "آسان",
-  intermediate: "متوسط",
-  advanced: "سخت",
+  starter: "قدم اول (A1)",
+  beginner: "مبتدی (A2)",
+  intermediate: "متوسط (B1)",
+  advanced: "پیشرفته (B2)",
+  proficient: "حرفه‌ای (C1)",
 };
 
 export default function SceneList({

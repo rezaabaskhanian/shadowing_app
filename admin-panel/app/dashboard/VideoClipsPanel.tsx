@@ -22,6 +22,7 @@ const LEVELS: { id: VideoClipLevel; label: string }[] = [
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },
+  { id: "proficient", label: "حرفه‌ای (C1)" },
 ];
 
 type Draft = Omit<VideoClip, "id"> & { id?: string };

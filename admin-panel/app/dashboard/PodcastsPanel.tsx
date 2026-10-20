@@ -29,6 +29,7 @@ const LEVELS = [
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },
+  { id: "proficient", label: "حرفه‌ای (C1)" },
 ] as const;
 
 const STATUS_LABELS: Record<Podcast["audio_status"], string> = {

@@ -17,6 +17,7 @@ const LEVEL_LABELS: Record<string, string> = {
   beginner: "مبتدی",
   intermediate: "متوسط",
   advanced: "پیشرفته",
+  proficient: "حرفه‌ای (C1)",
 };
 
 type Check = { weeks: number; sessions: number; items: number; problems: string[] };

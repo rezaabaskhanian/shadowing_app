@@ -172,7 +172,7 @@ func (s *Service) AdminList(ctx context.Context) ([]Topic, error) {
 	return s.repo.ListAll(ctx)
 }
 
-var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
+var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true, "proficient": true}
 
 // maxStoryImages سقف عکس‌های «داستان تصویری».
 const maxStoryImages = 6
@@ -212,8 +212,9 @@ func (s *Service) AdminSave(ctx context.Context, id string, t Topic) (Topic, err
 		return Topic{}, richerror.New(op).WithMessage("حداکثر ۶ عکس برای داستان تصویری").WithKind(richerror.KindInvalid)
 	}
 	t.Images = images
-	if t.DurationSeconds < 30 || t.DurationSeconds > 120 {
-		return Topic{}, richerror.New(op).WithMessage("مدت صحبت باید بین ۳۰ تا ۱۲۰ ثانیه باشد").WithKind(richerror.KindInvalid)
+	// تا ۱۸۰ ثانیه برای صحبت طولانی سطح proficient (C1).
+	if t.DurationSeconds < 30 || t.DurationSeconds > 180 {
+		return Topic{}, richerror.New(op).WithMessage("مدت صحبت باید بین ۳۰ تا ۱۸۰ ثانیه باشد").WithKind(richerror.KindInvalid)
 	}
 	if id == "" {
 		return s.repo.Create(ctx, t)

@@ -62,6 +62,7 @@ export const translations: Translations = {
   levelBeginner: { en: 'Beginner', fa: 'مبتدی' },
   levelIntermediate: { en: 'Intermediate', fa: 'متوسط' },
   levelAdvanced: { en: 'Advanced', fa: 'پیشرفته' },
+  levelProficient: { en: 'Proficient', fa: 'حرفه‌ای' },
   knewIt: { en: 'Knew it', fa: 'بلد بودم' },
   leitnerFeedbackKnew: { en: 'Nice! 🎉', fa: 'آفرین! 🎉' },
   leitnerFeedbackKnewSub: { en: '“{word}” moved up to level {level}', fa: '«{word}» رفت سطح {level}' },

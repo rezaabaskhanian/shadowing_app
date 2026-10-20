@@ -137,7 +137,7 @@ func (s *Service) AdminList(ctx context.Context) ([]Prompt, error) {
 	return s.repo.ListAll(ctx)
 }
 
-var validLevels = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
+var validLevels = map[string]bool{"beginner": true, "intermediate": true, "advanced": true, "proficient": true}
 
 func clean(list []string) []string {
 	out := make([]string, 0, len(list))

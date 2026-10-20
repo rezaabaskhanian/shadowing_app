@@ -5,7 +5,7 @@ import { authFetch, jsonOrThrow } from './client';
  * فیلم‌های معروف) با دیالوگ‌های زمان‌بندی‌شده (بک‌اند: videoclipservice).
  */
 
-export type ClipLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ClipLevel = 'beginner' | 'intermediate' | 'advanced' | 'proficient';
 
 export interface VideoClipLine {
   id?: string;

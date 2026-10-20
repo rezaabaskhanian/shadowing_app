@@ -993,6 +993,7 @@ export default function SceneCreator({
               <option value="beginner">مبتدی</option>
               <option value="intermediate">متوسط</option>
               <option value="advanced">پیشرفته</option>
+              <option value="proficient">حرفه‌ای (C1)</option>
             </select>
           </div>
         </div>

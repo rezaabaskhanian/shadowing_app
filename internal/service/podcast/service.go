@@ -99,7 +99,7 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Podcast, error) {
 // maxPodcastImages سقف عکس‌های اسلایدشوی هر پادکست.
 const maxPodcastImages = 12
 
-var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true}
+var validLevels = map[string]bool{"starter": true, "beginner": true, "intermediate": true, "advanced": true, "proficient": true}
 
 func sameScript(a, b []Line) bool {
 	if len(a) != len(b) {

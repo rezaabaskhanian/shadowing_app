@@ -84,6 +84,8 @@ export function difficultyToLevel(d?: string): string {
       return 'Intermediate';
     case 'advanced':
       return 'Advanced';
+    case 'proficient':
+      return 'Proficient';
     default:
       return 'Beginner';
   }

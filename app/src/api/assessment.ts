@@ -116,7 +116,7 @@ export async function getSpeakingProfile(): Promise<SpeakingProfile | null> {
   return (await jsonOrThrow(res)) as SpeakingProfile;
 }
 
-export type SceneLevel = 'starter' | 'beginner' | 'intermediate' | 'advanced';
+export type SceneLevel = 'starter' | 'beginner' | 'intermediate' | 'advanced' | 'proficient';
 
 /** سطح مؤثر کاربر: انتخاب دستی، وگرنه نتیجه‌ی تست، وگرنه مبتدی. */
 export interface MyLevel {

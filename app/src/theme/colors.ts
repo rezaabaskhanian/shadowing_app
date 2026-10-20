@@ -53,6 +53,7 @@ export const COLORS = {
   levelBeginnerBg: '#006e4b',     // سبز — شروع
   levelIntermediateBg: '#0b5cad', // آبی — در مسیر
   levelAdvancedBg: '#3525cd',     // نیلی — تسلط
+  levelProficientBg: '#6b21a8',   // بنفش — حرفه‌ای (C1)
 
   // A/B compare — «صدای اصلی» در برابر «صدای خودت».
   // این هم محور مستقلی است و توکن خودش را دارد تا از استریک قرض نگیرد.

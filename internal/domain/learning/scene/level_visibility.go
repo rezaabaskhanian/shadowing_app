@@ -9,6 +9,7 @@ var difficultyRank = map[DifficultyLevel]int{
 	DifficultyBeginner:     1,
 	DifficultyIntermediate: 2,
 	DifficultyAdvanced:     3,
+	DifficultyProficient:   4,
 }
 
 // FilterByLevel صحنه‌هایی را نگه می‌دارد که کاربری با سطح userLevel اجازه‌ی
