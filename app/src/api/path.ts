@@ -16,7 +16,9 @@ export type PathItemKind =
   | 'checkpoint'
   | 'habit_mission'
   | 'dictation'
-  | 'self_intro';
+  | 'self_intro'
+  | 'verb'
+  | 'idioms';
 
 export interface PathItem {
   key: string;

@@ -232,6 +232,11 @@ type assessmentItemsArgs struct {
 	Items []assessmentItemArgs `json:"items" jsonschema:"items to create (no id) or update (with id), at most 150"`
 }
 
+type goalPackArgs struct {
+	Goal  string `json:"goal" jsonschema:"travel | migration | study | work"`
+	Items []obj  `json:"items,omitempty" jsonschema:"save only: the WHOLE pack in order: {position, priority 1-3 (1 = most urgent), title_fa, title_en, scene_ids:[scene uuids, one per level]}; replaces the existing pack"`
+}
+
 type importIdiomsArgs struct {
 	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
@@ -755,6 +760,17 @@ func registerTools(s *mcp.Server, c *client) {
 				ok++
 			}
 			return jsonResult(obj{"ok": ok, "failed": failed})
+		})
+
+	// ---- بسته‌های مسیر هدف‌محور ----
+	mcp.AddTool(s, &mcp.Tool{Name: "get_goal_pack", Annotations: ro, Description: "Get the situations of a goal pack (travel | migration | study | work) with their scene ids."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalPackArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_goal_pack", Description: "Replace a goal pack (travel | migration | study | work) with the given ordered situations. Scenes are the existing published scenes; an empty scene_ids means the situation still needs content."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalPackArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal), obj{"items": in.Items}))
 		})
 
 	// ---- تست تعیین سطح ----

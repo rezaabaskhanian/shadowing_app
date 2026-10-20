@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { BookOpen, Check, Clock, Layers, MessageCircle, Sparkles, Trash2, X } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -39,6 +40,16 @@ export const LeitnerScreen = () => {
   // تب‌های کنار جعبه‌ی لغت: افعال چندمعنایی و اصطلاحات
   const [extraTab, setExtraTab] = useState<'verbs' | 'idioms' | null>(null);
   const showVerbs = extraTab !== null;
+  // ورود مستقیم به تب اصطلاحات (از قدم «اصطلاح‌های این هفته» در مسیر)
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const initialTab = route.params?.initialTab;
+  useEffect(() => {
+    if (initialTab === 'idioms' || initialTab === 'verbs') {
+      setExtraTab(initialTab);
+      navigation.setParams({ initialTab: undefined });
+    }
+  }, [initialTab, navigation]);
   const [index, setIndex] = useState(0);
   // بالای نوارِ پایینِ شناورِ تب‌ها
   const feedback = useFeedbackPop(80);

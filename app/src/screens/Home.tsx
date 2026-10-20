@@ -25,7 +25,9 @@ import {
   Radio,
   Repeat,
   Sparkles,
+  Flag,
   Sprout,
+  TrendingUp,
   X,
   Zap,
   Layers,
@@ -63,7 +65,8 @@ import { getPendingVerbPractice, type VerbPending } from '../api/verbs';
 import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
 import { absUrl } from '../api/config';
 import { getVideoClips, type VideoClipListItem } from '../api/videoClips';
-import { getPodcasts, type Podcast } from '../api/podcasts';
+import { getGoalPlan, type GoalPlanView } from '../api/goalPlan';
+import { getPodcasts, featuredForLevel, type Podcast } from '../api/podcasts';
 import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
 import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
@@ -186,6 +189,27 @@ export const HomeScreen = () => {
   const [pathStartVisible, setPathStartVisible] = React.useState(false);
   const startPathAfterTest = React.useRef(false);
 
+  // بعد از ۲۸ روز از آخرین تست، پیشنهاد تست دوباره (پیشرفت قابل‌دیدن)
+  const retestDue = React.useMemo(() => {
+    if (!speakingProfile?.assessed_at || !(placementItems || placementV2)) return false;
+    const ageDays = (Date.now() - new Date(speakingProfile.assessed_at).getTime()) / 86400000;
+    return ageDays >= 28;
+  }, [speakingProfile, placementItems, placementV2]);
+
+  // برنامه‌ی هدف‌محور (کارت «برنامه‌ی من»)
+  const [goalPlan, setGoalPlan] = React.useState<GoalPlanView | null>(null);
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      getGoalPlan()
+        .then((p) => active && setGoalPlan(p))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   const refreshPlacementState = React.useCallback(() => {
     let active = true;
     getAssessmentTestV2()
@@ -198,21 +222,18 @@ export const HomeScreen = () => {
     getAssessmentTest()
       .then((items) => {
         if (!active) return;
-        if (!items || items.length === 0) {
-          setPlacementItems(null);
-          setSpeakingProfile(null);
-          return;
-        }
-        setPlacementItems(items);
-        return getSpeakingProfile().then((profile) => {
-          if (active) setSpeakingProfile(profile);
-        });
+        setPlacementItems(!items || items.length === 0 ? null : items);
       })
       .catch(() => {
-        if (active) {
-          setPlacementItems(null);
-          setSpeakingProfile(null);
-        }
+        if (active) setPlacementItems(null);
+      });
+    // پروفایل مستقل از محتوای نسخه‌ی ۱ خوانده می‌شود (تاریخ آخرین تست برای کارت تست دوباره)
+    getSpeakingProfile()
+      .then((profile) => {
+        if (active) setSpeakingProfile(profile);
+      })
+      .catch(() => {
+        if (active) setSpeakingProfile(null);
       });
     return () => {
       active = false;
@@ -391,7 +412,9 @@ export const HomeScreen = () => {
 
   // پادکست‌ها دو بخشِ جدا دارند: درسی (درباره‌ی صحنه/موضوعِ درس‌ها) و منتخب (موضوعِ آزاد).
   const lessonPodcasts = podcasts.filter((p) => p.kind !== 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
-  const featuredPodcasts = podcasts.filter((p) => p.kind === 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const featuredPodcasts = featuredForLevel(podcasts, myLevel?.scene_level)
+    .filter((p) => p.kind === 'featured')
+    .slice(0, HOME_SECTION_PREVIEW_COUNT);
   const podcastItems = (list: Podcast[], emoji: string): BentoItem[] =>
     list.map((p) => ({
       key: p.id,
@@ -741,6 +764,47 @@ export const HomeScreen = () => {
             </View>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.placementCtaCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('GoalPlan')}
+        >
+          <View style={styles.placementCtaIconCircle}>
+            <Flag size={20} color={COLORS.primary} />
+          </View>
+          <View style={styles.placementCtaTextContainer}>
+            <Text style={styles.placementCtaTitle}>
+              {goalPlan ? t('goalPlanTitle') : t('goalPlanHomeTitle')}
+            </Text>
+            <Text style={styles.placementCtaSub}>
+              {goalPlan
+                ? t('goalPlanReadyOf')
+                    .replace('{a}', String(goalPlan.ready))
+                    .replace('{b}', String(goalPlan.in_plan_count))
+                : t('goalPlanHomeSub')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {retestDue && (
+          <TouchableOpacity
+            style={styles.placementCtaCard}
+            activeOpacity={0.85}
+            onPress={() => {
+              track('retest_card_tap');
+              setPlacementModalVisible(true);
+            }}
+          >
+            <View style={styles.placementCtaIconCircle}>
+              <TrendingUp size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.placementCtaTextContainer}>
+              <Text style={styles.placementCtaTitle}>{t('retestCardTitle')}</Text>
+              <Text style={styles.placementCtaSub}>{t('retestCardSub')}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {pendingVerb && (
           <TouchableOpacity

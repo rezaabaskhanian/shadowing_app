@@ -9,7 +9,8 @@ import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
-import { getPodcasts, type Podcast } from '../../api/podcasts';
+import { getPodcasts, featuredForLevel, type Podcast } from '../../api/podcasts';
+import { getMyLevel } from '../../api/assessment';
 
 const LEVEL_META: Record<string, { labelKey: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
@@ -39,16 +40,23 @@ export const PodcastListScreen: React.FC = () => {
     if (route.params?.kind) setKind(route.params.kind);
   }, [route.params?.kind]);
   const hasFeatured = !!allPodcasts?.some((p) => p.kind === 'featured');
+  // منتخب‌ها پیش‌فرض فقط سطح کاربر و یک سطح بالاتر؛ «همه‌ی سطح‌ها» بقیه را باز می‌کند.
+  const [myLevel, setMyLevel] = useState<string | null>(null);
+  const [allLevels, setAllLevels] = useState(false);
+  const scoped = allPodcasts && !allLevels ? featuredForLevel(allPodcasts, myLevel) : allPodcasts;
   const podcasts =
-    allPodcasts && kind !== 'all'
-      ? allPodcasts.filter((p) => (p.kind === 'featured' ? 'featured' : 'lesson') === kind)
-      : allPodcasts;
+    scoped && kind !== 'all'
+      ? scoped.filter((p) => (p.kind === 'featured' ? 'featured' : 'lesson') === kind)
+      : scoped;
 
   const load = useCallback(() => {
     setError(false);
     getPodcasts()
       .then(setPodcasts)
       .catch(() => setError(true));
+    getMyLevel()
+      .then((l) => setMyLevel(l.scene_level))
+      .catch(() => {});
   }, []);
 
   useFocusEffect(load);
@@ -82,6 +90,12 @@ export const PodcastListScreen: React.FC = () => {
             </TouchableOpacity>
           ))}
         </View>
+      )}
+
+      {hasFeatured && kind !== 'lesson' && !!myLevel && (
+        <TouchableOpacity onPress={() => setAllLevels((v) => !v)} activeOpacity={0.8} style={{ alignSelf: 'center', paddingVertical: SPACING.xs }}>
+          <Text style={styles.linkText}>{allLevels ? t('podcastMyLevelsOnly') : t('podcastAllLevels')}</Text>
+        </TouchableOpacity>
       )}
 
       {podcasts === null && !error && (

@@ -34,6 +34,15 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	app.GET("/weeks/:id/checkpoint", h.Checkpoint)
 	app.POST("/weeks/:id/checkpoint", h.SubmitCheckpoint)
 
+	goal := e.Group("/v1/goal-plan", auth)
+	goal.GET("", h.GoalPlan)
+	goal.PUT("", h.SaveGoalPlan)
+	goal.DELETE("", h.DeleteGoalPlan)
+
+	adminGoal := e.Group("/v1/admin/goal-packs", auth, middlware.AdminOnly)
+	adminGoal.GET("/:goal", h.AdminGoalPack)
+	adminGoal.PUT("/:goal", h.AdminSaveGoalPack)
+
 	admin := e.Group("/v1/admin/paths", auth, middlware.AdminOnly)
 	admin.GET("", h.AdminPaths)
 	admin.GET("/:level", h.AdminPath)
@@ -181,4 +190,59 @@ func (h Handler) AdminCheckpointAudio(c echo.Context) error {
 		return c.JSON(http.StatusBadGateway, echo.Map{"message": err.Error(), "made": made})
 	}
 	return respond(c, echo.Map{"made": made}, err)
+}
+
+// ---------- مسیر هدف‌محور ----------
+
+// GoalPlan برنامه‌ی کاربر؛ بدون برنامه {"plan": null}.
+func (h Handler) GoalPlan(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	v, err := h.svc.GoalPlan(c.Request().Context(), uid)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+	if v == nil {
+		return c.JSON(http.StatusOK, echo.Map{"plan": nil})
+	}
+	return c.JSON(http.StatusOK, v)
+}
+
+func (h Handler) SaveGoalPlan(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	var req pathservice.SaveGoalPlanInput
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	v, err := h.svc.SaveGoalPlan(c.Request().Context(), uid, req)
+	return respond(c, v, err)
+}
+
+func (h Handler) DeleteGoalPlan(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	return respond(c, echo.Map{"ok": true}, h.svc.DeleteGoalPlan(c.Request().Context(), uid))
+}
+
+func (h Handler) AdminGoalPack(c echo.Context) error {
+	items, err := h.svc.AdminGoalPack(c.Request().Context(), c.Param("goal"))
+	return respond(c, echo.Map{"items": items}, err)
+}
+
+func (h Handler) AdminSaveGoalPack(c echo.Context) error {
+	var req struct {
+		Items []pathservice.GoalSituation `json:"items"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	err := h.svc.AdminSaveGoalPack(c.Request().Context(), c.Param("goal"), req.Items)
+	return respond(c, echo.Map{"ok": true, "count": len(req.Items)}, err)
 }

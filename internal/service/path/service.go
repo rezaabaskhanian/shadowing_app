@@ -38,6 +38,12 @@ type repository interface {
 	MarkItem(ctx context.Context, userID, weekID, key string) error
 	SaveCheckpointResult(ctx context.Context, userID, weekID string, scores map[string]int, total int) error
 	BestCheckpoints(ctx context.Context, userID string, weekIDs []string) (map[string]int, error)
+	GoalPack(ctx context.Context, goal string) ([]postgrespath.GoalSituation, error)
+	SaveGoalPack(ctx context.Context, goal string, items []postgrespath.GoalSituation) error
+	GetGoalPlan(ctx context.Context, userID string) (*postgrespath.GoalPlan, error)
+	SaveGoalPlan(ctx context.Context, userID string, p postgrespath.GoalPlan) error
+	DeleteGoalPlan(ctx context.Context, userID string) error
+	SceneInfos(ctx context.Context, sceneIDs []string) (map[string]postgrespath.SceneInfo, error)
 }
 
 type Path = postgrespath.Path
@@ -45,7 +51,7 @@ type Week = postgrespath.Week
 type Session = postgrespath.Session
 type Item = postgrespath.Item
 
-// انواع قدم. scene/podcast/video_clip/speaking_topic/writing به ref_id نیاز دارند.
+// انواع قدم. scene/podcast/video_clip/speaking_topic/writing/verb به ref_id نیاز دارند.
 // habit_mission = ماموریت «از حفظ بگو» (بخش عادت زبانی)؛ dictation = دیکته و
 // نوشتن از روی فارسی با جمله‌های صحنه‌های همان هفته؛ self_intro = ضبط «قبل»
 // (هفته‌ی اول) یا «بعد» و مقایسه (هفته‌ی آخر) — کلیدی که با after تمام شود «بعد» است.
@@ -62,17 +68,22 @@ const (
 	KindSelfIntro     = "self_intro"
 	// KindWriting یک موضوع «تمرین نوشتن» که AI تصحیحش می‌کند (ref_id = writing prompt).
 	KindWriting = "writing"
+	// KindVerb فعل چندمعنایی این هفته (ref_id = verb id)؛ KindIdioms اصطلاح‌های
+	// سطح همین هفته (مرور در تب «اصطلاحات» لایتنر، بدون ref).
+	KindVerb   = "verb"
+	KindIdioms = "idioms"
 )
 
 var validKinds = map[string]bool{
 	KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true,
 	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true, KindWriting: true,
+	KindVerb: true, KindIdioms: true,
 }
 
 // validCefr سطح‌هایی که برای برچسب هفته پذیرفته می‌شوند.
 var validCefr = map[string]bool{"PRE-A1": true, "A1": true, "A2": true, "B1": true, "B2": true, "C1": true, "C2": true}
 
-var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true}
+var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true, KindVerb: true}
 
 // مهارت‌های Checkpoint؛ نمره‌ی کل میانگین همین‌هاست (هر کدام که فرستاده شده).
 var skills = []string{"vocabulary", "grammar", "listening", "speaking", "real_life"}

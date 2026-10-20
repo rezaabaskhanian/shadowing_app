@@ -746,7 +746,9 @@ export interface LearningPathItem {
     | "checkpoint"
     | "habit_mission"
     | "dictation"
-    | "self_intro";
+    | "self_intro"
+    | "verb"
+    | "idioms";
   ref_id?: string;
   title?: string;
   required: boolean;

@@ -13,12 +13,14 @@ import {
   Headphones,
   Layers,
   Lock,
+  MessageCircle,
   Mic,
   NotebookPen,
   PenLine,
   Repeat,
   Sparkles,
   X,
+  Zap,
 } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
@@ -42,6 +44,8 @@ const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: str
   dictation: PenLine,
   self_intro: Sparkles,
   writing: NotebookPen,
+  verb: Zap,
+  idioms: MessageCircle,
 };
 
 /** هفته‌ای که الان باید رویش کار کرد: اولین هفته‌ی بازِ تمام‌نشده (یا آخرین هفته). */
@@ -137,6 +141,12 @@ export const PathHomeScreen: React.FC = () => {
         break;
       case 'leitner_review':
         navigation.navigate('Leitner');
+        break;
+      case 'verb':
+        navigation.navigate('VerbQuiz', { verbId: item.ref_id });
+        break;
+      case 'idioms':
+        navigation.navigate('Leitner', { initialTab: 'idioms' });
         break;
       case 'dictation':
       case 'weak_lines': {

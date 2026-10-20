@@ -41,3 +41,17 @@ export async function getPodcast(id: string): Promise<Podcast> {
   const res = await authFetch(`/v1/podcasts/${id}`, { method: 'GET' });
   return (await jsonOrThrow(res)) as Podcast;
 }
+
+const LEVEL_ORDER: Podcast['level'][] = ['starter', 'beginner', 'intermediate', 'advanced', 'proficient'];
+
+/**
+ * پادکست‌های منتخب برای سطح کاربر و یک سطح بالاتر (مثل اصطلاحات در لایتنر)؛
+ * پادکست درسی دست نمی‌خورد. اگر چیزی برای این سطح‌ها نبود، همه برمی‌گردد.
+ */
+export function featuredForLevel(list: Podcast[], level?: string | null): Podcast[] {
+  const i = LEVEL_ORDER.indexOf(level as Podcast['level']);
+  if (i < 0) return list;
+  const allowed = new Set(LEVEL_ORDER.slice(i, i + 2));
+  const mine = list.filter((p) => p.kind !== 'featured' || allowed.has(p.level));
+  return mine.some((p) => p.kind === 'featured') || !list.some((p) => p.kind === 'featured') ? mine : list;
+}

@@ -47,6 +47,11 @@ const (
 	EventPathSelfIntro  = "path_self_intro"
 	// انتخاب نقطه‌ی شروع مسیر (target = test / manual / continue).
 	EventPathStartChoice = "path_start_choice"
+	// ضربه روی کارت «تست دوباره» (۲۸ روز بعد از آخرین تست).
+	EventRetestCardTap = "retest_card_tap"
+	// مسیر هدف‌محور: ساخته شدن برنامه (target = goal) و باز کردن یک موقعیت.
+	EventGoalPlanCreated   = "goal_plan_created"
+	EventGoalSituationOpen = "goal_situation_open"
 )
 
 var validEvents = map[string]bool{
@@ -60,7 +65,10 @@ var validEvents = map[string]bool{
 	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,
 	EventTokenTopupViewed: true, EventTokenTopupPurchased: true,
 	EventPathItemOpened: true, EventCheckpointDone: true, EventPathSelfIntro: true,
-	EventPathStartChoice: true,
+	EventPathStartChoice:   true,
+	EventRetestCardTap:     true,
+	EventGoalPlanCreated:   true,
+	EventGoalSituationOpen: true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.
