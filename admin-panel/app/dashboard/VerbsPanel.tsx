@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  deleteVerb,
   deleteVerbMeaning,
   getVerb,
   listVerbs,
@@ -109,7 +110,17 @@ export default function VerbsPanel({ notify }: { notify: Notify }) {
       </div>
 
       {detail ? (
-        <VerbEditor detail={detail} notify={notify} busy={busy} setBusy={setBusy} onChanged={refresh} />
+        <VerbEditor
+          detail={detail}
+          notify={notify}
+          busy={busy}
+          setBusy={setBusy}
+          onChanged={refresh}
+          onDeleted={async () => {
+            setSelectedId(null);
+            await loadList();
+          }}
+        />
       ) : (
         <div className="card hint">یک فعل را از لیست انتخاب کن.</div>
       )}
@@ -123,12 +134,14 @@ function VerbEditor({
   busy,
   setBusy,
   onChanged,
+  onDeleted,
 }: {
   detail: VerbDetail;
   notify: Notify;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onChanged: () => Promise<void>;
+  onDeleted: () => Promise<void>;
 }) {
   const { verb, meanings, occurrences } = detail;
   const [forms, setForms] = useState(verb.forms.join(", "));
@@ -197,6 +210,26 @@ function VerbEditor({
             onClick={() => saveVerbInfo(!verb.is_published)}
           >
             {verb.is_published ? "برگرداندن به پیش‌نویس" : "انتشار در اپ"}
+          </button>
+          <button
+            className="btn btn-sm btn-ghost"
+            style={{ color: "#ef4444", marginInlineStart: "auto" }}
+            disabled={busy}
+            onClick={async () => {
+              if (!confirm(`فعل «${verb.lemma}» با همه‌ی معناها و جمله‌هایش حذف شود؟ این کار برگشت‌پذیر نیست.`)) return;
+              setBusy(true);
+              try {
+                await deleteVerb(verb.id);
+                notify("فعل حذف شد", "ok");
+                await onDeleted();
+              } catch (e: any) {
+                notify(e.message, "err");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            حذف فعل
           </button>
         </div>
         <p className="hint" style={{ marginBottom: 0 }}>
