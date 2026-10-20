@@ -12,6 +12,10 @@ import { useLanguage } from '../../data/i18n';
 interface PlacementTestIntroScreenProps {
   onStart: () => void;
   onSkip: () => void;
+  /** متن سه بولت؛ پیش‌فرض متن‌های نسخه‌ی ۱ */
+  bullets?: string[];
+  /** متن زمان تقریبی؛ پیش‌فرض نسخه‌ی ۱ */
+  timeEstimate?: string;
 }
 
 const ICON_CIRCLE_SIZE = 96;
@@ -31,11 +35,13 @@ const BULLET_META = [
 export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> = ({
   onStart,
   onSkip,
+  bullets: customBullets,
+  timeEstimate,
 }) => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
-  const bullets = [
+  const bullets = customBullets ?? [
     t('placementIntroBullet1'),
     t('placementIntroBullet2'),
     t('placementIntroBullet3'),
@@ -67,7 +73,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
 
         <View style={styles.timePill}>
           <Clock size={14} color={COLORS.textSecondary} />
-          <Text style={styles.timePillText}>{t('placementIntroTimeEstimate')}</Text>
+          <Text style={styles.timePillText}>{timeEstimate ?? t('placementIntroTimeEstimate')}</Text>
         </View>
 
         <View style={styles.bulletList}>

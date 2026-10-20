@@ -31,5 +31,9 @@ func (s *Service) GetProfile(ctx context.Context, userID string) (*dto.GetProfil
 		FluencyScore:       profile.FluencyScore,
 		IsEstimated:        profile.IsEstimated,
 		AssessedAt:         profile.AssessedAt.Format("2006-01-02T15:04:05Z07:00"),
+		TestVersion:        profile.TestVersion,
+		ComprehensionLevel: string(profile.ComprehensionLevel),
+		SpeakingLevel:      string(profile.SpeakingLevel),
+		VocabSize:          profile.VocabSize,
 	}, nil
 }

@@ -359,7 +359,7 @@ export interface Feedback {
 }
 
 // ---------- آیتم‌های تست تعیین سطح (intro/situational/shadow) ----------
-export type AssessmentItemKind = "shadow" | "free_speech";
+export type AssessmentItemKind = "shadow" | "free_speech" | "vocab_yesno" | "listen_choice" | "imitation";
 export type AssessmentItemCategory = "intro" | "situational";
 
 export interface AssessmentItem {
@@ -370,6 +370,12 @@ export interface AssessmentItem {
   target_text?: string; // فقط برای kind=shadow
   audio_url?: string; // فقط برای kind=shadow
   difficulty?: Difficulty;
+  // تست نسخه‌ی ۲
+  cefr?: string;
+  band?: number;
+  is_pseudo?: boolean;
+  options?: string[];
+  correct_index?: number;
   is_active: boolean;
   created_at: string;
 }
@@ -381,6 +387,11 @@ export interface AssessmentItemPayload {
   target_text: string;
   audio_url: string;
   difficulty: Difficulty | "";
+  cefr: string;
+  band: number;
+  is_pseudo: boolean;
+  options: string[];
+  correct_index: number;
   is_active: boolean;
 }
 

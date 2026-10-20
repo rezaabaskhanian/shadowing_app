@@ -140,3 +140,105 @@ export async function setMyLevel(sceneLevel: SceneLevel | ''): Promise<MyLevel> 
   });
   return (await jsonOrThrow(res)) as MyLevel;
 }
+
+// ============================================================
+// تست نسخه‌ی ۲: لغت (بله/خیر) + شنیدن (۳ گزینه) + تکرار جمله‌ی بلندشونده
+// (+ معرفی خود اختیاری). سند: document_placement/placement_design.md
+// ============================================================
+
+export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+export const CEFR_LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+export interface VocabTestItem {
+  id: string;
+  word: string;
+  /** لایه‌ی بسامدی ۱ تا ۵؛ برای کلمه‌ی ساختگی صفر */
+  band: number;
+  /** ۱ = دور اول؛ ۲ = فقط اگر کاربر لایه‌ی ۳ را خوب بداند */
+  stage: number;
+}
+
+export interface ListenTestItem {
+  id: string;
+  cefr: CefrLevel;
+  audio_url: string;
+  prompt: string;
+  options: string[];
+  /** برای تصمیم تطبیقی در اپ؛ نمره‌ی نهایی روی سرور حساب می‌شود. */
+  correct_index: number;
+}
+
+export interface ImitationTestItem {
+  id: string;
+  cefr: CefrLevel;
+  audio_url: string;
+}
+
+export interface AssessmentTestV2 {
+  vocab: VocabTestItem[];
+  listening: ListenTestItem[];
+  imitation: ImitationTestItem[];
+  intro?: AssessmentItem;
+}
+
+export interface ImitationResult {
+  item_id: string;
+  cefr: CefrLevel;
+  accuracy: number;
+  passed: boolean;
+  transcript: string;
+}
+
+export interface SubmitAssessmentV2Result {
+  /** سطح شروع مسیر */
+  level: CefrLevel;
+  scene_level: SceneLevel;
+  comprehension_level: CefrLevel;
+  speaking_level: CefrLevel | '';
+  listening_level: CefrLevel;
+  vocab_level: CefrLevel;
+  vocab_size: number;
+  vocab_valid: boolean;
+  speaking_measured: boolean;
+  imitation: ImitationResult[];
+  intro?: ItemResult;
+  previous?: {
+    level: string;
+    comprehension_level: string;
+    speaking_level: string;
+    vocab_size: number;
+    assessed_at: string;
+  };
+}
+
+/** آیتم‌های تست نسخه‌ی ۲؛ `null` اگر محتوای آن هنوز در پنل ساخته نشده (۴۰۴). */
+export async function getAssessmentTestV2(): Promise<AssessmentTestV2 | null> {
+  const res = await authFetch('/v1/assessment/v2/test', { method: 'GET' });
+  if (res.status === 404) return null;
+  return (await jsonOrThrow(res)) as AssessmentTestV2;
+}
+
+export interface SubmitAssessmentV2Payload {
+  vocab: { item_id: string; known: boolean }[];
+  listening: { item_id: string; choice: number }[];
+  /** جمله‌های تکرار و (اختیاری) معرفی خود */
+  recordings: SubmitAssessmentItem[];
+}
+
+export async function submitAssessmentV2(payload: SubmitAssessmentV2Payload): Promise<SubmitAssessmentV2Result> {
+  const form = new FormData();
+  form.append('answers', JSON.stringify({ vocab: payload.vocab, listening: payload.listening }));
+  payload.recordings.forEach((item, i) => {
+    const mimeType = item.mimeType || 'audio/m4a';
+    const uri = item.filePath.startsWith('file://') ? item.filePath : `file://${item.filePath}`;
+    form.append(`audio_${i}`, {
+      uri,
+      name: `recording_${i}.${extensionForMime(mimeType)}`,
+      type: mimeType,
+    } as any);
+    form.append(`item_id_${i}`, item.itemId);
+    form.append(`duration_${i}`, String(Math.max(1, Math.round(item.duration))));
+  });
+  const res = await authFetch('/v1/assessment/v2/submit', { method: 'POST', body: form });
+  return (await jsonOrThrow(res)) as SubmitAssessmentV2Result;
+}

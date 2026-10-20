@@ -19,17 +19,22 @@ func ScoreToLevel(avgOverallScore float64) Level {
 	}
 }
 
-// SceneDifficulty سطح گفتاری را به سطح دشواری صحنه‌ها ("beginner" /
-// "intermediate" / "advanced") نگاشت می‌کند؛ نبودِ سطح یا سطح ناشناخته مبتدی
-// حساب می‌شود. ماموریت امروز و فیلتر نمایش صحنه‌ها هر دو از همین استفاده
+// SceneDifficulty سطح گفتاری را به سطح دشواری صحنه‌ها نگاشت می‌کند، یک به یک
+// با مسیرهای آموزشی: A1=starter، A2=beginner، B1=intermediate، B2=advanced،
+// C1=proficient. نبودِ سطح یا سطح ناشناخته مبتدی (beginner) حساب می‌شود، مثل
+// پیش‌فرض GetLevel. ماموریت امروز و فیلتر نمایش صحنه‌ها هر دو از همین استفاده
 // می‌کنند تا تعریف «سطح کاربر» در کل اپ یکی باشد.
 func SceneDifficulty(level Level) string {
 	switch level {
+	case LevelA1:
+		return "starter"
 	case LevelB1:
 		return "intermediate"
-	case LevelB2, LevelC1:
+	case LevelB2:
 		return "advanced"
-	default: // A1، A2 یا نامشخص
+	case LevelC1:
+		return "proficient"
+	default: // A2 یا نامشخص
 		return "beginner"
 	}
 }

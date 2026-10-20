@@ -822,6 +822,62 @@ export const translations: Translations = {
   },
   placementRetryBtn: { en: 'Try again', fa: 'تلاش دوباره' },
 
+  // تست تعیین سطح نسخه‌ی ۲
+  placementV2IntroBullet1: { en: 'Words: tap the ones you know', fa: 'لغت: کلمه‌هایی که بلدی را مشخص کن' },
+  placementV2IntroBullet2: { en: 'Listening: hear a sentence and pick its meaning', fa: 'شنیدن: یک جمله گوش بده و معنی‌اش را انتخاب کن' },
+  placementV2IntroBullet3: { en: 'Speaking: repeat sentences that get longer', fa: 'صحبت: جمله‌هایی را که کم‌کم بلندتر می‌شوند تکرار کن' },
+  placementV2IntroTime: { en: '~4-5 minutes', fa: '~۴ تا ۵ دقیقه' },
+  placementV2VocabKicker: { en: 'Part 1 of 3 · Words', fa: 'بخش ۱ از ۳ · لغت' },
+  placementV2VocabHint: {
+    en: 'Do you know what this word means? Be honest — some words are made up.',
+    fa: 'معنی این کلمه را می‌دانی؟ صادق باش؛ بعضی از کلمه‌ها ساختگی‌اند.',
+  },
+  placementV2VocabYes: { en: 'I know it', fa: 'می‌دانم' },
+  placementV2VocabNo: { en: "I don't know", fa: 'نمی‌دانم' },
+  placementV2ListenKicker: { en: 'Part 2 of 3 · Listening', fa: 'بخش ۲ از ۳ · شنیدن' },
+  placementV2ListenStep: { en: 'Step {current} of {total}', fa: 'مرحله‌ی {current} از {total}' },
+  placementV2ListenPrompt: { en: 'What does this sentence mean?', fa: 'این جمله یعنی چه؟' },
+  placementV2PlaysLeft: { en: 'Tap to listen ({n} left)', fa: 'برای شنیدن بزن ({n} بار باقی مانده)' },
+  placementV2Playing: { en: 'Playing…', fa: 'در حال پخش...' },
+  placementV2ImitationPrompt: {
+    en: 'Part 3 of 3 · Listen once, then repeat the whole sentence',
+    fa: 'بخش ۳ از ۳ · یک بار گوش بده، بعد کل جمله را تکرار کن',
+  },
+  placementV2PlayedOnce: { en: 'Played — now repeat it', fa: 'پخش شد؛ حالا تکرارش کن' },
+  placementV2SkipHard: { en: 'Too hard — skip', fa: 'سخت بود، رد شو' },
+  placementV2SkipOptional: { en: 'Skip (optional)', fa: 'رد شدن (اختیاری)' },
+  placementV2ResultTitle: { en: 'Your English level', fa: 'سطح انگلیسی تو' },
+  placementV2Comprehension: { en: 'Understanding', fa: 'فهمیدن' },
+  placementV2Speaking: { en: 'Speaking', fa: 'صحبت' },
+  placementV2VocabSize: { en: 'You know about {n} English words', fa: 'حدود {n} کلمه‌ی انگلیسی بلدی' },
+  placementV2Progress: {
+    en: 'Since your last test: {before} → {after} words, {prevLevel} → {level}',
+    fa: 'از تست قبلی: {before} ← {after} کلمه، {prevLevel} ← {level}',
+  },
+  placementV2StartAt: { en: 'Your path starts at', fa: 'مسیرت از اینجا شروع می‌شود' },
+  placementV2WhyComprehension: {
+    en: 'This level matches what you can understand, so almost every word will be familiar.',
+    fa: 'این سطح با چیزی که می‌فهمی جور است، پس تقریباً همه‌ی کلمه‌ها برایت آشنا خواهند بود.',
+  },
+  placementV2WhySpeaking: {
+    en: 'You understand more than you can say yet, so we start one level lower to build your speaking.',
+    fa: 'بیشتر از آنچه می‌توانی بگویی می‌فهمی، برای همین یک سطح پایین‌تر شروع می‌کنیم تا صحبتت قوی شود.',
+  },
+  placementV2SpeakingUnmeasured: {
+    en: "We couldn't check your speaking this time, so the level is based on understanding.",
+    fa: 'این بار نشد صحبتت را بسنجیم، برای همین سطح بر اساس فهمیدن است.',
+  },
+  placementV2VocabInvalid: {
+    en: 'Some made-up words were marked as known, so the word part was not used.',
+    fa: 'چند کلمه‌ی ساختگی را «می‌دانم» زدی، برای همین بخش لغت در نتیجه حساب نشد.',
+  },
+  placementV2IntroFeedback: { en: 'A better way to say it:', fa: 'بهتر است این‌طور بگویی:' },
+  placementV2RetestNote: {
+    en: 'Take the test again in 4 weeks to see your progress.',
+    fa: '۴ هفته‌ی دیگر دوباره تست بده تا پیشرفتت را ببینی.',
+  },
+  placementV2StartPathBtn: { en: 'Start my path', fa: 'شروع مسیر' },
+
   placementResultTitle: { en: 'Your speaking level', fa: 'سطح گفتاری شما' },
   placementResultEstimatedNote: {
     en: 'This is a rough estimate.',

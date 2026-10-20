@@ -21,12 +21,17 @@ type ItemRepository interface {
 	RandomActive(ctx context.Context, kind assessment.Kind, category assessment.Category) (*assessment.AssessmentItem, error)
 	// RandomActiveShadow - یک آیتم shadow فعال و تصادفی از یک سطح دشواری مشخص
 	RandomActiveShadow(ctx context.Context, difficulty assessment.Difficulty) (*assessment.AssessmentItem, error)
+	// ListActiveByKinds - کل استخر فعالِ چند kind (تست نسخه‌ی ۲)
+	ListActiveByKinds(ctx context.Context, kinds []assessment.Kind) ([]assessment.AssessmentItem, error)
 }
 
 // ProfileRepository - پروفایل گفتاری هر کاربر (upsert، بدون نسخه‌بندی)
 type ProfileRepository interface {
 	Upsert(ctx context.Context, profile *assessment.SpeakingProfile) error
 	GetByUser(ctx context.Context, userID uuid.UUID) (*assessment.SpeakingProfile, error)
+	// تاریخچه‌ی نتیجه‌ها برای مقایسه‌ی تست دوباره
+	InsertResult(ctx context.Context, profile *assessment.SpeakingProfile, imitationAccuracy float64) error
+	LastResult(ctx context.Context, userID uuid.UUID) (*assessment.PlacementResult, error)
 }
 
 // SubmissionLogRepository - لاگ متنی هر آیتم ارسالی (بدون صدا)

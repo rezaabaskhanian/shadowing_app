@@ -22,6 +22,10 @@ func (s *Service) CreateItem(ctx context.Context, req dto.CreateItemRequest) (dt
 	if err != nil {
 		return dto.ItemAdminDTO{}, richerror.New(op).WithErr(err).WithKind(richerror.KindInvalid)
 	}
+	applyV2Fields(item, req.CEFR, req.Band, req.IsPseudo, req.Options, req.CorrectIndex)
+	if err := item.ValidateV2(); err != nil {
+		return dto.ItemAdminDTO{}, richerror.New(op).WithErr(err).WithKind(richerror.KindInvalid)
+	}
 
 	if err := s.items.Create(ctx, item); err != nil {
 		return dto.ItemAdminDTO{}, richerror.New(op).WithErr(err)
@@ -43,6 +47,10 @@ func (s *Service) UpdateItem(ctx context.Context, id string, req dto.UpdateItemR
 		req.PromptText, req.TargetText, req.AudioURL, assessment.Difficulty(req.Difficulty),
 	)
 	if err != nil {
+		return dto.ItemAdminDTO{}, richerror.New(op).WithErr(err).WithKind(richerror.KindInvalid)
+	}
+	applyV2Fields(item, req.CEFR, req.Band, req.IsPseudo, req.Options, req.CorrectIndex)
+	if err := item.ValidateV2(); err != nil {
 		return dto.ItemAdminDTO{}, richerror.New(op).WithErr(err).WithKind(richerror.KindInvalid)
 	}
 	item.ID = itemID
@@ -87,14 +95,38 @@ func (s *Service) ListItems(ctx context.Context) (dto.ListItemsResponse, error) 
 
 func toItemAdminDTO(it *assessment.AssessmentItem) dto.ItemAdminDTO {
 	return dto.ItemAdminDTO{
-		ID:         it.ID.String(),
-		Kind:       string(it.Kind),
-		Category:   string(it.Category),
-		PromptText: it.PromptText,
-		TargetText: it.TargetText,
-		AudioURL:   it.AudioURL,
-		Difficulty: string(it.Difficulty),
-		IsActive:   it.IsActive,
-		CreatedAt:  it.CreatedAt.Format(time.RFC3339),
+		ID:           it.ID.String(),
+		Kind:         string(it.Kind),
+		Category:     string(it.Category),
+		PromptText:   it.PromptText,
+		TargetText:   it.TargetText,
+		AudioURL:     it.AudioURL,
+		Difficulty:   string(it.Difficulty),
+		CEFR:         string(it.CEFR),
+		Band:         it.Band,
+		IsPseudo:     it.IsPseudo,
+		Options:      it.Options,
+		CorrectIndex: it.CorrectIndex,
+		IsActive:     it.IsActive,
+		CreatedAt:    it.CreatedAt.Format(time.RFC3339),
+	}
+}
+
+// applyV2Fields فیلدهای نسخه‌ی ۲ را روی آیتم می‌گذارد؛ هر kind فقط فیلدهای
+// خودش را نگه می‌دارد تا داده‌ی بی‌معنا در پایگاه‌داده نماند.
+func applyV2Fields(it *assessment.AssessmentItem, cefr string, band int, isPseudo bool, options []string, correct int) {
+	switch it.Kind {
+	case assessment.KindVocabYesNo:
+		it.IsPseudo = isPseudo
+		it.Band = band
+		if isPseudo && band == 0 {
+			it.Band = 1 // کلمه‌ی ساختگی لایه ندارد؛ فقط برای گذشتن از قید ۱..۵
+		}
+	case assessment.KindListenChoice:
+		it.CEFR = assessment.Level(cefr)
+		it.Options = options
+		it.CorrectIndex = correct
+	case assessment.KindImitation:
+		it.CEFR = assessment.Level(cefr)
 	}
 }

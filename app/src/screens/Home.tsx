@@ -43,16 +43,19 @@ import { useAuth } from '../data/AuthContext';
 import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
 import {
   getAssessmentTest,
+  getAssessmentTestV2,
   getMyLevel,
   getSpeakingProfile,
   setMyLevel,
   type AssessmentItem,
+  type AssessmentTestV2,
   type MyLevel,
   type SceneLevel,
   type SpeakingProfile,
 } from '../api/assessment';
 import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
+import { PlacementV2Flow } from './PlacementTest/PlacementV2Flow';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
@@ -174,6 +177,9 @@ export const HomeScreen = () => {
   // ردیفِ Drawer (برای گرفتنِ دوباره‌ی تست حتی بعد از داشتنِ پروفایل) به این
   // نیاز دارند.
   const [placementItems, setPlacementItems] = React.useState<AssessmentItem[] | null>(null);
+  // تست نسخه‌ی ۲ (لغت + شنیدن + تکرار)؛ اگر محتوایش در پنل آماده باشد جای
+  // نسخه‌ی ۱ را می‌گیرد، وگرنه null و همان نسخه‌ی ۱ اجرا می‌شود.
+  const [placementV2, setPlacementV2] = React.useState<AssessmentTestV2 | null>(null);
   const [speakingProfile, setSpeakingProfile] = React.useState<SpeakingProfile | null>(null);
   const [placementModalVisible, setPlacementModalVisible] = React.useState(false);
   // انتخاب نقطه‌ی شروع مسیر؛ اگر از اینجا به تست رفت، بعد از تست مستقیم وارد مسیر می‌شود.
@@ -182,6 +188,13 @@ export const HomeScreen = () => {
 
   const refreshPlacementState = React.useCallback(() => {
     let active = true;
+    getAssessmentTestV2()
+      .then((test) => {
+        if (active) setPlacementV2(test);
+      })
+      .catch(() => {
+        if (active) setPlacementV2(null);
+      });
     getAssessmentTest()
       .then((items) => {
         if (!active) return;
@@ -585,6 +598,37 @@ export const HomeScreen = () => {
       : `, ${user.nickname}`
     : '';
 
+  // مشترک بین فلوی نسخه‌ی ۱ و ۲
+  const placementFlowHandlers = {
+    onSkip: () => {
+      setPlacementModalVisible(false);
+      // از تست صرف‌نظر کرد؛ دوباره گزینه‌های شروع مسیر را نشان بده.
+      if (startPathAfterTest.current) {
+        startPathAfterTest.current = false;
+        setPathStartVisible(true);
+      }
+    },
+    onDone: () => {
+      track('placement_completed');
+      setPlacementModalVisible(false);
+      if (startPathAfterTest.current) {
+        startPathAfterTest.current = false;
+        getMyLevel()
+          .then((l) => {
+            const level = pathLevelFor(l.scene_level);
+            if (level) navigation.navigate('PathHome', { level });
+          })
+          .catch(() => {});
+      }
+      // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
+      // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
+      // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).
+      refreshPlacementState();
+      refreshMyLevel();
+      reloadScenes();
+    },
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -632,7 +676,7 @@ export const HomeScreen = () => {
         <AppDrawer
           visible={drawerVisible}
           onClose={() => setDrawerVisible(false)}
-          onOpenPlacementTest={placementItems ? () => setPlacementModalVisible(true) : undefined}
+          onOpenPlacementTest={placementItems || placementV2 ? () => setPlacementModalVisible(true) : undefined}
           speakingLevel={speakingProfile?.level}
           myLevel={myLevel}
           onLevelChange={(level) => {
@@ -873,7 +917,7 @@ export const HomeScreen = () => {
         pathLevels={pathLevels}
         myLevel={myLevel}
         onTakeTest={
-          placementItems
+          placementItems || placementV2
             ? () => {
                 track('path_start_choice', 'test');
                 startPathAfterTest.current = true;
@@ -890,36 +934,11 @@ export const HomeScreen = () => {
         animationType="slide"
         onRequestClose={() => setPlacementModalVisible(false)}
       >
-        <PlacementTestFlow
-          items={placementItems}
-          onSkip={() => {
-            setPlacementModalVisible(false);
-            // از تست صرف‌نظر کرد؛ دوباره گزینه‌های شروع مسیر را نشان بده.
-            if (startPathAfterTest.current) {
-              startPathAfterTest.current = false;
-              setPathStartVisible(true);
-            }
-          }}
-          onDone={() => {
-            track('placement_completed');
-            setPlacementModalVisible(false);
-            if (startPathAfterTest.current) {
-              startPathAfterTest.current = false;
-              getMyLevel()
-                .then((l) => {
-                  const level = pathLevelFor(l.scene_level);
-                  if (level) navigation.navigate('PathHome', { level });
-                })
-                .catch(() => {});
-            }
-            // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
-            // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
-            // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).
-            refreshPlacementState();
-            refreshMyLevel();
-            reloadScenes();
-          }}
-        />
+        {placementV2 ? (
+          <PlacementV2Flow test={placementV2} {...placementFlowHandlers} />
+        ) : (
+          <PlacementTestFlow items={placementItems} {...placementFlowHandlers} />
+        )}
       </Modal>
     </View>
   );

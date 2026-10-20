@@ -21,13 +21,25 @@ const emptyForm: AssessmentItemPayload = {
   target_text: "",
   audio_url: "",
   difficulty: "",
+  cefr: "",
+  band: 1,
+  is_pseudo: false,
+  options: [],
+  correct_index: 0,
   is_active: true,
 };
 
 const kindLabel: Record<string, string> = {
   free_speech: "پاسخ آزاد",
-  shadow: "Shadow (تکرار جمله)",
+  shadow: "Shadow (تکرار جمله، نسخه‌ی ۱)",
+  vocab_yesno: "لغت بله/خیر (v2)",
+  listen_choice: "شنیدن چندگزینه‌ای (v2)",
+  imitation: "تکرار جمله‌ی بلندشونده (v2)",
 };
+
+const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1"];
+// کدام kind جمله‌ی هدف و صدا دارد
+const hasAudio = (k: string) => k === "shadow" || k === "listen_choice" || k === "imitation";
 const categoryLabel: Record<string, string> = {
   intro: "معرفی خود",
   situational: "موقعیت",
@@ -48,6 +60,7 @@ export default function AssessmentPanel({
   const [voiceId, setVoiceId] = useState("");
   const [speed, setSpeed] = useState(0);
   const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [kindFilter, setKindFilter] = useState<string>("all");
 
   async function load() {
     setLoading(true);
@@ -77,6 +90,11 @@ export default function AssessmentPanel({
       target_text: it.target_text || "",
       audio_url: it.audio_url || "",
       difficulty: it.difficulty || "",
+      cefr: it.cefr || "",
+      band: it.band || 1,
+      is_pseudo: !!it.is_pseudo,
+      options: it.options || [],
+      correct_index: it.correct_index ?? 0,
       is_active: it.is_active,
     });
   }
@@ -120,8 +138,16 @@ export default function AssessmentPanel({
       notify("متن سوال/دستور را وارد کن", "err");
       return;
     }
-    if (form.kind === "shadow" && (!form.target_text.trim() || !form.audio_url)) {
-      notify("برای Shadow، هم جمله‌ی هدف و هم صدای مرجع الزامی است", "err");
+    if (hasAudio(form.kind) && (!form.target_text.trim() || !form.audio_url)) {
+      notify("برای این نوع، هم جمله‌ی هدف و هم صدای مرجع الزامی است", "err");
+      return;
+    }
+    if ((form.kind === "listen_choice" || form.kind === "imitation") && !form.cefr) {
+      notify("سطح CEFR را انتخاب کن", "err");
+      return;
+    }
+    if (form.kind === "listen_choice" && form.options.filter((o) => o.trim()).length < 2) {
+      notify("دست‌کم دو گزینه لازم است", "err");
       return;
     }
 
@@ -130,8 +156,9 @@ export default function AssessmentPanel({
       const payload: AssessmentItemPayload = {
         ...form,
         prompt_text: form.prompt_text.trim(),
-        target_text: form.kind === "shadow" ? form.target_text.trim() : "",
-        audio_url: form.kind === "shadow" ? form.audio_url : "",
+        target_text: hasAudio(form.kind) ? form.target_text.trim() : "",
+        audio_url: hasAudio(form.kind) ? form.audio_url : "",
+        options: form.options.map((o) => o.trim()).filter(Boolean),
       };
       if (editingId) {
         await updateAssessmentItem(editingId, payload);
@@ -169,10 +196,11 @@ export default function AssessmentPanel({
   return (
     <div>
       <p className="hint" style={{ maxWidth: 640 }}>
-        این آیتم‌ها برای «تست تعیین سطح» اپ استفاده می‌شوند: هر بار یک «معرفی
-        خود» و یک «موقعیت» به‌صورت رندوم از این لیست انتخاب می‌شوند (بدون
-        نمره‌ی عددی، فقط رونویسی + بررسی ربط با هوش مصنوعی)، و یک «Shadow»
-        رندوم که نمره‌ی واقعی تلفظ می‌گیرد و سطح کاربر را می‌سازد.
+        نسخه‌ی ۱ (اپ‌های قدیمی): «معرفی خود»، «موقعیت» و «Shadow». نسخه‌ی ۲:
+        «لغت بله/خیر» (۱۲ کلمه در هر لایه‌ی بسامدی + ۲۰ کلمه‌ی ساختگی)،
+        «شنیدن چندگزینه‌ای» (۳ جمله در هر سطح CEFR) و «تکرار جمله‌ی بلندشونده»
+        (یکی در هر سطح). سطح شروع = فهمیدن (لغت + شنیدن)؛ «معرفی خود» در نسخه‌ی
+        ۲ اختیاری است و فقط بازخورد می‌دهد.
       </p>
 
       <div className="card" style={{ borderColor: "var(--primary)" }}>
@@ -187,8 +215,51 @@ export default function AssessmentPanel({
               style={{ flex: 1 }}
             >
               <option value="free_speech">پاسخ آزاد (free_speech)</option>
-              <option value="shadow">Shadow (تکرار جمله)</option>
+              <option value="shadow">Shadow (تکرار جمله، نسخه‌ی ۱)</option>
+              <option value="vocab_yesno">لغت بله/خیر (v2)</option>
+              <option value="listen_choice">شنیدن چندگزینه‌ای (v2)</option>
+              <option value="imitation">تکرار جمله‌ی بلندشونده (v2)</option>
             </select>
+
+            {form.kind === "vocab_yesno" && (
+              <>
+                <select
+                  value={form.band}
+                  onChange={(e) => setForm((f) => ({ ...f, band: Number(e.target.value) }))}
+                  style={{ flex: 1 }}
+                  disabled={form.is_pseudo}
+                >
+                  {[1, 2, 3, 4, 5].map((b) => (
+                    <option key={b} value={b}>
+                      لایه‌ی {b} ({(b - 1) * 1000 + 1} تا {b * 1000})
+                    </option>
+                  ))}
+                </select>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.is_pseudo}
+                    onChange={(e) => setForm((f) => ({ ...f, is_pseudo: e.target.checked }))}
+                  />
+                  کلمه‌ی ساختگی
+                </label>
+              </>
+            )}
+
+            {(form.kind === "listen_choice" || form.kind === "imitation") && (
+              <select
+                value={form.cefr}
+                onChange={(e) => setForm((f) => ({ ...f, cefr: e.target.value }))}
+                style={{ flex: 1 }}
+              >
+                <option value="">سطح CEFR</option>
+                {CEFR_LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {form.kind === "free_speech" && (
               <select
@@ -206,6 +277,7 @@ export default function AssessmentPanel({
               </select>
             )}
 
+            {(form.kind === "shadow" || form.kind === "free_speech") && (
             <select
               value={form.difficulty}
               onChange={(e) =>
@@ -221,11 +293,16 @@ export default function AssessmentPanel({
               <option value="intermediate">متوسط</option>
               <option value="advanced">پیشرفته</option>
             </select>
+            )}
           </div>
 
           <textarea
             placeholder={
-              form.kind === "shadow"
+              form.kind === "vocab_yesno"
+                ? "کلمه‌ی انگلیسی، مثلاً: borrow"
+                : form.kind === "listen_choice"
+                ? "سؤال نمایش‌داده‌شده، مثلاً: این جمله یعنی چه؟"
+                : form.kind === "shadow" || form.kind === "imitation"
                 ? "دستور نمایش‌داده‌شده، مثلاً: به این جمله گوش کن و تکرارش کن"
                 : "سوال/دستور، مثلاً: خودت را معرفی کن"
             }
@@ -234,10 +311,31 @@ export default function AssessmentPanel({
             onChange={(e) => setForm((f) => ({ ...f, prompt_text: e.target.value }))}
           />
 
-          {form.kind === "shadow" && (
+          {form.kind === "listen_choice" && (
+            <div>
+              <label>گزینه‌ها (هر خط یک گزینه؛ گزینه‌ی درست را از لیست پایین انتخاب کن)</label>
+              <textarea
+                rows={3}
+                value={form.options.join("\n")}
+                onChange={(e) => setForm((f) => ({ ...f, options: e.target.value.split("\n") }))}
+              />
+              <select
+                value={form.correct_index}
+                onChange={(e) => setForm((f) => ({ ...f, correct_index: Number(e.target.value) }))}
+              >
+                {form.options.map((o, i) => (
+                  <option key={i} value={i}>
+                    ✓ {i + 1}. {o}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {hasAudio(form.kind) && (
             <>
               <textarea
-                placeholder="جمله‌ی هدف انگلیسی (همان چیزی که کاربر باید تکرار کند)"
+                placeholder="جمله‌ی هدف انگلیسی (به کاربر نمایش داده نمی‌شود؛ فقط صدایش پخش می‌شود)"
                 rows={2}
                 value={form.target_text}
                 onChange={(e) => setForm((f) => ({ ...f, target_text: e.target.value }))}
@@ -312,16 +410,30 @@ export default function AssessmentPanel({
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "12px 0" }}>
+        {["all", "free_speech", "shadow", "vocab_yesno", "listen_choice", "imitation"].map((k) => (
+          <button
+            key={k}
+            className={`btn btn-sm ${kindFilter === k ? "" : "btn-ghost"}`}
+            onClick={() => setKindFilter(k)}
+          >
+            {k === "all" ? "همه" : kindLabel[k]} ({k === "all" ? items.length : items.filter((i) => i.kind === k).length})
+          </button>
+        ))}
+      </div>
+
       {items.length === 0 ? (
         <p className="hint">هنوز آیتمی ساخته نشده.</p>
       ) : (
-        items.map((it) => (
+        items.filter((it) => kindFilter === "all" || it.kind === kindFilter).map((it) => (
           <div key={it.id} className="card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
               <div>
                 <h3 style={{ margin: 0 }}>
                   {kindLabel[it.kind] || it.kind}
                   {it.kind === "free_speech" && ` · ${categoryLabel[it.category] || it.category}`}
+                  {it.cefr && ` · ${it.cefr}`}
+                  {it.kind === "vocab_yesno" && (it.is_pseudo ? " · ساختگی" : ` · لایه‌ی ${it.band}`)}
                   {!it.is_active && (
                     <span style={{ opacity: 0.5, fontSize: 12 }}> (غیرفعال)</span>
                   )}
@@ -329,7 +441,17 @@ export default function AssessmentPanel({
                 <p style={{ margin: "4px 0 0", opacity: 0.8, fontSize: 13, whiteSpace: "pre-wrap" }}>
                   {it.prompt_text}
                 </p>
-                {it.kind === "shadow" && it.target_text && (
+                {it.kind === "listen_choice" && it.options && (
+                  <ol style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.8 }}>
+                    {it.options.map((o, i) => (
+                      <li key={i} style={{ fontWeight: i === it.correct_index ? 700 : 400 }}>
+                        {i === it.correct_index ? "✓ " : ""}
+                        {o}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {it.target_text && (
                   <p style={{ margin: "4px 0 0", opacity: 0.6, fontSize: 12 }}>
                     🎯 {it.target_text}
                   </p>

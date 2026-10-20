@@ -16,6 +16,15 @@ type SpeakingProfile struct {
 	PronunciationScore float64
 	FluencyScore       float64
 	IsEstimated        bool
+	// نسخه‌ی ۲ (TestVersion=2): Level = سطح شروع مسیر؛ بقیه‌ی فیلدها نتیجه‌ی
+	// دوبخشی فهمیدن/صحبت. برای پروفایل‌های قدیمی خالی‌اند.
+	TestVersion        int
+	ComprehensionLevel Level
+	SpeakingLevel      Level
+	ListeningLevel     Level
+	VocabLevel         Level
+	VocabSize          int
+	VocabValid         bool
 	AssessedAt         time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -41,4 +50,13 @@ func NewSpeakingProfile(userID uuid.UUID, overall, pronunciation, fluency float6
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}, nil
+}
+
+// PlacementResult یک ردیف تاریخچه‌ی نتیجه‌ها (برای مقایسه‌ی «قبل / بعد»).
+type PlacementResult struct {
+	Level              Level
+	ComprehensionLevel Level
+	SpeakingLevel      Level
+	VocabSize          int
+	AssessedAt         time.Time
 }

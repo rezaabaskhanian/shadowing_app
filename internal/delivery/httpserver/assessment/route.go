@@ -16,4 +16,8 @@ func (h Handler) SetAssessmentRoutes(e *echo.Echo) {
 	group.GET("/level", h.GetLevel, middlware.Auth(h.authSvc, h.authConfig))
 	group.PUT("/level", h.SetLevel, middlware.Auth(h.authSvc, h.authConfig))
 
+	// نسخه‌ی ۲ (لغت + شنیدن + تکرار)؛ نسخه‌ی ۱ برای اپ‌های قدیمی می‌ماند.
+	group.GET("/v2/test", h.GetTestV2, middlware.Auth(h.authSvc, h.authConfig))
+	group.POST("/v2/submit", h.SubmitTestV2, middlware.Auth(h.authSvc, h.authConfig))
+
 }

@@ -213,6 +213,25 @@ type reviewOccurrencesArgs struct {
 	Items []reviewOccurrenceArgs `json:"items" jsonschema:"up to 200 reviews: {id, status, meaning_id}"`
 }
 
+type assessmentItemArgs struct {
+	ID           string   `json:"id,omitempty" jsonschema:"set to update an existing item; empty creates a new one"`
+	Kind         string   `json:"kind" jsonschema:"vocab_yesno | listen_choice | imitation | free_speech | shadow"`
+	Category     string   `json:"category,omitempty" jsonschema:"free_speech only: intro | situational"`
+	PromptText   string   `json:"prompt_text" jsonschema:"vocab: the word; listen_choice: the question shown (Persian); imitation: short instruction"`
+	TargetText   string   `json:"target_text,omitempty" jsonschema:"listen_choice / imitation: the English sentence (never shown to the user)"`
+	AudioURL     string   `json:"audio_url,omitempty" jsonschema:"listen_choice / imitation: audio of target_text (generate_audio)"`
+	CEFR         string   `json:"cefr,omitempty" jsonschema:"listen_choice / imitation: A1 | A2 | B1 | B2 | C1"`
+	Band         int      `json:"band,omitempty" jsonschema:"vocab_yesno: frequency band 1..5 (1 = most frequent 1000 words)"`
+	IsPseudo     bool     `json:"is_pseudo,omitempty" jsonschema:"vocab_yesno: true for a made-up word"`
+	Options      []string `json:"options,omitempty" jsonschema:"listen_choice: answer options (Persian)"`
+	CorrectIndex int      `json:"correct_index,omitempty" jsonschema:"listen_choice: index of the right option"`
+	IsActive     *bool    `json:"is_active,omitempty" jsonschema:"update only; default true"`
+}
+
+type assessmentItemsArgs struct {
+	Items []assessmentItemArgs `json:"items" jsonschema:"items to create (no id) or update (with id), at most 150"`
+}
+
 type importIdiomsArgs struct {
 	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
@@ -731,6 +750,48 @@ func registerTools(s *mcp.Server, c *client) {
 				}
 				if err != nil {
 					failed = append(failed, obj{"id": it.ID, "error": err.Error()})
+					continue
+				}
+				ok++
+			}
+			return jsonResult(obj{"ok": ok, "failed": failed})
+		})
+
+	// ---- تست تعیین سطح ----
+	mcp.AddTool(s, &mcp.Tool{Name: "list_assessment_items", Annotations: ro, Description: "List all placement-test items (v1: shadow/free_speech, v2: vocab_yesno/listen_choice/imitation)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/assessment-items"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_assessment_items", Description: "Create or update placement-test items in one call. Returns how many succeeded and the errors."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in assessmentItemsArgs) (*mcp.CallToolResult, any, error) {
+			if len(in.Items) > 150 {
+				return nil, nil, fmt.Errorf("at most 150 items per call, got %d", len(in.Items))
+			}
+			ok := 0
+			var failed []obj
+			for _, it := range in.Items {
+				active := true
+				if it.IsActive != nil {
+					active = *it.IsActive
+				}
+				body := obj{
+					"kind": it.Kind, "category": it.Category, "prompt_text": it.PromptText,
+					"target_text": it.TargetText, "audio_url": it.AudioURL, "cefr": it.CEFR,
+					"band": it.Band, "is_pseudo": it.IsPseudo, "options": it.Options,
+					"correct_index": it.CorrectIndex, "is_active": active,
+				}
+				var err error
+				if it.ID == "" {
+					_, err = c.sendJSON(ctx, http.MethodPost, "/v1/admin/assessment-items", body)
+				} else {
+					var id string
+					if id, err = pathID(it.ID); err == nil {
+						_, err = c.sendJSON(ctx, http.MethodPut, "/v1/admin/assessment-items/"+id, body)
+					}
+				}
+				if err != nil {
+					failed = append(failed, obj{"prompt_text": it.PromptText, "error": err.Error()})
 					continue
 				}
 				ok++

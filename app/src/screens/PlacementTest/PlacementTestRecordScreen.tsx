@@ -19,7 +19,20 @@ import {
 
 interface PlacementTestRecordScreenProps {
   items: AssessmentItem[];
-  onSubmitted: (result: SubmitAssessmentResult) => void;
+  /** نسخه‌ی ۱: خود این صفحه ضبط‌ها را می‌فرستد. */
+  onSubmitted?: (result: SubmitAssessmentResult) => void;
+  /**
+   * نسخه‌ی ۲: به‌جای ارسال، ضبط‌ها به کالر برگردانده می‌شوند تا همراه بقیه‌ی
+   * بخش‌های تست یک‌جا فرستاده شوند.
+   */
+  onCollected?: (answers: SubmitAssessmentItem[]) => void;
+  /** دکمه‌ی «سخت بود، رد شو» (نسخه‌ی ۲: جمله‌ی تکرار یا معرفی اختیاری). */
+  allowSkip?: boolean;
+  /**
+   * سقف دفعه‌های پخش صدای نمونه در هر آیتم (نسخه‌ی ۲: یک بار، چون تکرار
+   * جمله فقط وقتی سطح را درست می‌سنجد که جمله یک بار شنیده شود). صفر = بی‌سقف.
+   */
+  maxReferencePlays?: number;
 }
 
 /** سقفِ طولِ هر ضبطِ تست تعیین سطح؛ رسیدن به آن ضبط را خودکار متوقف می‌کند. */
@@ -44,6 +57,9 @@ const KIND_META = {
 export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps> = ({
   items,
   onSubmitted,
+  onCollected,
+  allowSkip = false,
+  maxReferencePlays = 0,
 }) => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -80,6 +96,8 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
   // دوباره‌ی دکمه هم درست نمی‌شود). با ست‌کردن uri فقط در لحظه‌ی فشردن دکمه،
   // صف‌بندی و دستورِ پخش در یک افکت واحد اتفاق می‌افتند، نه دو افکتِ مسابقه‌ای.
   const [activeReferenceUri, setActiveReferenceUri] = useState<string | null>(null);
+  const [referencePlays, setReferencePlays] = useState(0);
+  const playsLeft = maxReferencePlays > 0 ? Math.max(0, maxReferencePlays - referencePlays) : Infinity;
 
   const currentItem = items[currentIndex];
   const kindMeta = KIND_META[currentItem?.kind ?? 'shadow'];
@@ -163,12 +181,14 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
 
   const handlePlayReference = useCallback(() => {
     if (currentItem.kind !== 'shadow') return;
+    if (playsLeft <= 0) return;
+    setReferencePlays((n) => n + 1);
     // uri و دستور پخش را با هم، در یک تیک، ست می‌کنیم — نه اینکه uri از قبل
     // (موقع ورود به آیتم) ست شده باشد و دستور پخش بعداً جداگانه برسد.
     setActiveReferenceUri(absUrl(currentItem.audio_url));
     bumpAndSet('play_original');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentItem]);
+  }, [currentItem, playsLeft]);
 
   const handlePlayRecording = useCallback(() => {
     bumpAndSet('play_recording');
@@ -220,11 +240,35 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
     setSubmitPhase('submitting');
     try {
       const result = await submitAssessment(allAnswers);
-      onSubmitted(result);
+      onSubmitted?.(result);
     } catch {
       setSubmitPhase('submit_error');
     }
   }, [onSubmitted]);
+
+  const advance = useCallback(
+    (nextAnswers: SubmitAssessmentItem[]) => {
+      setAnswers(nextAnswers);
+      if (currentIndex + 1 < items.length) {
+        setCurrentIndex((i) => i + 1);
+        setItemPhase('idle');
+        setRecordedPath(null);
+        setRecordedMime(undefined);
+        setRecordedDuration(0);
+        setMicError(null);
+        setActionCommand('none');
+        setActiveReferenceUri(null);
+        setReferencePlays(0);
+      } else if (onCollected) {
+        onCollected(nextAnswers);
+      } else {
+        submit(nextAnswers);
+      }
+    },
+    [currentIndex, items.length, onCollected, submit]
+  );
+
+  const handleSkip = useCallback(() => advance(answers), [advance, answers]);
 
   const handleConfirm = useCallback(() => {
     if (!recordedPath) return;
@@ -235,6 +279,10 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
       duration: recordedDuration,
     };
     const nextAnswers = [...answers, entry];
+    if (onCollected) {
+      advance(nextAnswers);
+      return;
+    }
     setAnswers(nextAnswers);
 
     if (currentIndex + 1 < items.length) {
@@ -249,7 +297,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
     } else {
       submit(nextAnswers);
     }
-  }, [answers, currentIndex, currentItem, items.length, recordedDuration, recordedMime, recordedPath, submit]);
+  }, [advance, answers, currentIndex, currentItem, items.length, onCollected, recordedDuration, recordedMime, recordedPath, submit]);
 
   const handleRetry = useCallback(() => {
     if (finalAnswers) submit(finalAnswers);
@@ -329,12 +377,14 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
                 style={styles.playRefBtn}
                 onPress={handlePlayReference}
                 activeOpacity={0.8}
-                disabled={playbackState === 'loading'}
+                disabled={playbackState === 'loading' || playsLeft <= 0}
               >
                 <Volume2 size={18} color={COLORS.primary} />
                 <Text style={styles.playRefBtnText}>
                   {playbackState === 'playing'
                     ? t('placementRecordingLabel')
+                    : playsLeft <= 0
+                    ? t('placementV2PlayedOnce')
                     : t('placementPlayReference')}
                 </Text>
               </TouchableOpacity>
@@ -414,6 +464,13 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
           </View>
 
           <View style={styles.footer}>
+            {allowSkip && itemPhase !== 'recording' && (
+              <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.8}>
+                <Text style={styles.skipBtnText}>
+                  {currentItem.kind === 'free_speech' ? t('placementV2SkipOptional') : t('placementV2SkipHard')}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.confirmBtn, !recordedPath && styles.confirmBtnDisabled]}
               onPress={handleConfirm}
@@ -596,6 +653,15 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: SPACING.s,
+  },
+  skipBtn: {
+    alignItems: 'center',
+    paddingVertical: SPACING.s,
+  },
+  skipBtnText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 14,
   },
   confirmBtn: {
     backgroundColor: COLORS.primary,
