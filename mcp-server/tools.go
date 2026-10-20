@@ -195,7 +195,7 @@ type verbArgs struct {
 type verbMeaningArgs struct {
 	VerbID           string `json:"verb_id" jsonschema:"the verb this meaning belongs to"`
 	MeaningID        string `json:"meaning_id,omitempty" jsonschema:"set to update an existing meaning; empty creates a new one"`
-	MeaningFa        string `json:"meaning_fa" jsonschema:"short Persian meaning, 1–4 words; for a phrasal verb name it in explanation_fa"`
+	MeaningFa        string `json:"meaning_fa,omitempty" jsonschema:"short Persian meaning, 1–4 words (required for a new meaning; on update, empty fields keep their current value)"`
 	ExplanationFa    string `json:"explanation_fa,omitempty"`
 	FallbackExample  string `json:"fallback_example,omitempty" jsonschema:"English example shown until a lesson sentence is approved"`
 	PracticePromptFa string `json:"practice_prompt_fa,omitempty" jsonschema:"Persian situation for the spoken practice"`
@@ -207,6 +207,10 @@ type reviewOccurrenceArgs struct {
 	ID        string `json:"id" jsonschema:"occurrence id (from get_verb)"`
 	Status    string `json:"status" jsonschema:"approved | rejected | suggested"`
 	MeaningID string `json:"meaning_id,omitempty" jsonschema:"meaning to attach (required when approving)"`
+}
+
+type reviewOccurrencesArgs struct {
+	Items []reviewOccurrenceArgs `json:"items" jsonschema:"up to 200 reviews: {id, status, meaning_id}"`
 }
 
 type importIdiomsArgs struct {
@@ -640,7 +644,7 @@ func registerTools(s *mcp.Server, c *client) {
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/"+id, payload))
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "save_verb_meaning", Description: "Create or update one meaning of a verb (Persian meaning, explanation, fallback example, practice prompt, CEFR level)."},
+	mcp.AddTool(s, &mcp.Tool{Name: "save_verb_meaning", Description: "Create or update one meaning of a verb (Persian meaning, explanation, fallback example, practice prompt, CEFR level). On update only the fields you pass change."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in verbMeaningArgs) (*mcp.CallToolResult, any, error) {
 			payload := obj{
 				"meaning_fa": in.MeaningFa, "explanation_fa": in.ExplanationFa, "fallback_example": in.FallbackExample,
@@ -650,6 +654,32 @@ func registerTools(s *mcp.Server, c *client) {
 				mid, err := pathID(in.MeaningID)
 				if err != nil {
 					return nil, nil, err
+				}
+				// به‌روزرسانی جزئی: فیلدهایی که فرستاده نشده‌اند از مقدار فعلی معنا پر می‌شوند،
+				// چون API همه‌ی فیلدها را با هم بازنویسی می‌کند.
+				vid, err := pathID(in.VerbID)
+				if err != nil {
+					return nil, nil, err
+				}
+				var cur struct {
+					Meanings []obj `json:"meanings"`
+				}
+				if err := c.getInto(ctx, "/v1/admin/verbs/"+vid, &cur); err != nil {
+					return nil, nil, err
+				}
+				var old obj
+				for _, m := range cur.Meanings {
+					if m["id"] == in.MeaningID {
+						old = m
+					}
+				}
+				if old == nil {
+					return nil, nil, errors.New("meaning not found in this verb")
+				}
+				for k, v := range payload {
+					if v == "" || (k == "sort_order" && in.SortOrder == 0) {
+						payload[k] = old[k]
+					}
 				}
 				return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/meanings/"+mid, payload))
 			}
@@ -685,6 +715,27 @@ func registerTools(s *mcp.Server, c *client) {
 				return nil, nil, err
 			}
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/occurrences/"+id, obj{"status": in.Status, "meaning_id": in.MeaningID}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "review_verb_occurrences", Description: "Review many lesson sentences in one call (same fields as review_verb_occurrence). Returns how many succeeded and the errors."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in reviewOccurrencesArgs) (*mcp.CallToolResult, any, error) {
+			if len(in.Items) > 200 {
+				return nil, nil, fmt.Errorf("at most 200 items per call, got %d", len(in.Items))
+			}
+			ok := 0
+			var failed []obj
+			for _, it := range in.Items {
+				id, err := pathID(it.ID)
+				if err == nil {
+					_, err = c.sendJSON(ctx, http.MethodPut, "/v1/admin/verbs/occurrences/"+id, obj{"status": it.Status, "meaning_id": it.MeaningID})
+				}
+				if err != nil {
+					failed = append(failed, obj{"id": it.ID, "error": err.Error()})
+					continue
+				}
+				ok++
+			}
+			return jsonResult(obj{"ok": ok, "failed": failed})
 		})
 
 	// ---- پادکست ----
