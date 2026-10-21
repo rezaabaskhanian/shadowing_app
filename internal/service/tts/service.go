@@ -12,6 +12,7 @@ const (
 	ProviderElevenLabs = "elevenlabs"
 	ProviderGemini     = "gemini"
 	ProviderOpenRouter = "openrouter"
+	ProviderGroq       = "groq"
 )
 
 // Voice یک صدای در دسترس را نشان می‌دهد (برای انتخاب مرد/زن در پنل).
@@ -37,7 +38,7 @@ type provider interface {
 	listVoices(ctx context.Context) ([]Voice, error)
 }
 
-// Service بین providerهای TTS (ElevenLabs / Gemini / OpenRouter) بر اساس تنظیم TTS_PROVIDER
+// Service بین providerهای TTS (ElevenLabs / Gemini / OpenRouter / Groq) بر اساس تنظیم TTS_PROVIDER
 // سوییچ می‌کند. مقدار در لحظه‌ی هر درخواست از settings خوانده می‌شود تا تغییر
 // آن از پنل ادمین بدون ری‌استارت سرور اعمال شود.
 type Service struct {
@@ -45,6 +46,7 @@ type Service struct {
 	elevenLabs provider
 	gemini     provider
 	openRouter provider
+	groq       provider
 }
 
 func New(settings *settingsservice.Service) Service {
@@ -53,6 +55,7 @@ func New(settings *settingsservice.Service) Service {
 		elevenLabs: newElevenLabsProvider(settings),
 		gemini:     newGeminiProvider(settings),
 		openRouter: newOpenRouterProvider(settings),
+		groq:       newGroqProvider(settings),
 	}
 }
 
@@ -64,6 +67,8 @@ func (s Service) ProviderName() string {
 		return ProviderGemini
 	case ProviderOpenRouter:
 		return ProviderOpenRouter
+	case ProviderGroq:
+		return ProviderGroq
 	default:
 		return ProviderElevenLabs
 	}
@@ -75,6 +80,8 @@ func (s Service) active() provider {
 		return s.gemini
 	case ProviderOpenRouter:
 		return s.openRouter
+	case ProviderGroq:
+		return s.groq
 	default:
 		return s.elevenLabs
 	}

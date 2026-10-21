@@ -29,6 +29,7 @@ const (
 	KeyOpenRouterTTSModel  = "OPENROUTER_TTS_MODEL"
 	KeyGroqAPIKey          = "GROQ_API_KEY"
 	KeyGroqSTTModel        = "GROQ_STT_MODEL"
+	KeyGroqTTSModel        = "GROQ_TTS_MODEL"
 	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
 	KeyAIDailyTokenLimit   = "AI_DAILY_TOKEN_LIMIT"
 	KeyAITokenPricing      = "AI_TOKEN_PRICING"
@@ -59,6 +60,7 @@ var AllowedKeys = map[string]bool{
 	KeyGeminiTTSVoice:      true,
 	KeyOpenRouterTTSModel:  true,
 	KeyGroqAPIKey:          true,
+	KeyGroqTTSModel:        true,
 	KeyGroqSTTModel:        true,
 	KeyFCMServiceAccount:   true,
 	KeyAIDailyTokenLimit:   true,

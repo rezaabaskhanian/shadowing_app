@@ -94,7 +94,7 @@ export default function SettingsPanel({
 }) {
   const [settings, setSettings] = useState<SettingsResp | null>(null);
   const [provider, setProvider] = useState<"anthropic" | "gemini" | "deepseek" | "openrouter">("anthropic");
-  const [ttsProvider, setTTSProvider] = useState<"elevenlabs" | "gemini" | "openrouter">("elevenlabs");
+  const [ttsProvider, setTTSProvider] = useState<"elevenlabs" | "gemini" | "openrouter" | "groq">("elevenlabs");
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,7 +163,7 @@ export default function SettingsPanel({
       setSettings(s);
       setProvider((s.ai_provider as "anthropic" | "gemini" | "deepseek" | "openrouter") || "anthropic");
       setTTSProvider(
-        s.tts_provider === "gemini" || s.tts_provider === "openrouter" ? s.tts_provider : "elevenlabs"
+        s.tts_provider === "gemini" || s.tts_provider === "openrouter" || s.tts_provider === "groq" ? s.tts_provider : "elevenlabs"
       );
     } catch (err: any) {
       notify(err.message, "err");
@@ -192,7 +192,7 @@ export default function SettingsPanel({
     }
   }
 
-  async function saveTTSProvider(next: "elevenlabs" | "gemini" | "openrouter") {
+  async function saveTTSProvider(next: "elevenlabs" | "gemini" | "openrouter" | "groq") {
     setTTSProvider(next);
     setSaving("TTS_PROVIDER");
     try {
@@ -409,7 +409,18 @@ export default function SettingsPanel({
           >
             OpenRouter
           </button>
+          <button
+            className={`btn ${ttsProvider === "groq" ? "" : "btn-ghost"}`}
+            onClick={() => saveTTSProvider("groq")}
+            disabled={saving === "TTS_PROVIDER"}
+          >
+            Groq (Orpheus)
+          </button>
         </div>
+        <p style={{ marginBottom: 0, opacity: 0.75, fontSize: 12 }}>
+          Groq از همان «کلید Groq» تشخیص گفتار استفاده می‌کند (۶ صدای انگلیسی: autumn/diana/hannah و austin/daniel/troy).
+          صداهای Gemini مثل Kore و Puck خودکار به یک صدای هم‌جنس نگاشت می‌شوند.
+        </p>
       </div>
 
       <div className="card">
