@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mic, Headphones, MessageCircle, TrendingUp, Clock } from 'lucide-react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
@@ -23,9 +23,9 @@ const ICON_CIRCLE_SIZE = 96;
 /** هر بولت آیکن و رنگ خودش را دارد تا سه مرحله‌ی فلو (گوش‌دادن، گفتار آزاد،
  * نتیجه) با یک نگاه از هم متمایز باشند، نه سه ردیف یک‌شکل با تیک سبز. */
 const BULLET_META = [
-  { Icon: Headphones, color: COLORS.primary, bg: COLORS.primaryLight },
-  { Icon: MessageCircle, color: COLORS.info, bg: COLORS.infoLight },
-  { Icon: TrendingUp, color: COLORS.secondary, bg: COLORS.secondaryLight },
+  { Icon: Headphones, color: COLORS.primary },
+  { Icon: MessageCircle, color: COLORS.audioMine },
+  { Icon: TrendingUp, color: COLORS.pink },
 ];
 
 /**
@@ -50,6 +50,10 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.xl, paddingBottom: insets.bottom + SPACING.l }]}>
       <View style={styles.content}>
+        {/* هاله‌های رنگی پشت آیکن تا صفحه‌ی شروع خالی و بی‌روح نباشد. */}
+        <View style={styles.halo}>
+          <View style={[styles.haloRing, styles.haloOuter]} />
+          <View style={[styles.haloRing, styles.haloInner]} />
         <View style={styles.iconCircle}>
           <Svg width={ICON_CIRCLE_SIZE} height={ICON_CIRCLE_SIZE} style={StyleSheet.absoluteFill}>
             <Defs>
@@ -67,6 +71,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
           </Svg>
           <Mic size={38} color={COLORS.white} />
         </View>
+        </View>
 
         <Text style={styles.title}>{t('placementIntroTitle')}</Text>
         <Text style={styles.body}>{t('placementIntroBody')}</Text>
@@ -78,13 +83,17 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
 
         <View style={styles.bulletList}>
           {bullets.map((bullet, index) => {
-            const { Icon, color, bg } = BULLET_META[index];
+            const { Icon, color } = BULLET_META[index % BULLET_META.length];
             return (
-              <View key={index} style={styles.bulletRow}>
-                <View style={[styles.bulletIconWrap, { backgroundColor: bg }]}>
-                  <Icon size={18} color={color} />
+              <View
+                key={index}
+                style={[styles.bulletRow, { backgroundColor: hexToRgba(color, 0.08), borderColor: hexToRgba(color, 0.25) }]}
+              >
+                <View style={[styles.bulletIconWrap, { backgroundColor: color }]}>
+                  <Icon size={18} color={COLORS.white} />
                 </View>
                 <Text style={styles.bulletText}>{bullet}</Text>
+                <Text style={[styles.stepNum, { color }]}>{index + 1}</Text>
               </View>
             );
           })}
@@ -120,7 +129,6 @@ const styles = StyleSheet.create({
     borderRadius: ICON_CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.l,
     shadowColor: COLORS.primaryDark,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.28,
@@ -153,20 +161,42 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.labelSm,
     color: COLORS.textSecondary,
   },
+  halo: {
+    width: ICON_CIRCLE_SIZE + 64,
+    height: ICON_CIRCLE_SIZE + 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.s,
+  },
+  haloRing: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  haloOuter: {
+    width: ICON_CIRCLE_SIZE + 64,
+    height: ICON_CIRCLE_SIZE + 64,
+    backgroundColor: hexToRgba(COLORS.pink, 0.08),
+  },
+  haloInner: {
+    width: ICON_CIRCLE_SIZE + 30,
+    height: ICON_CIRCLE_SIZE + 30,
+    backgroundColor: hexToRgba(COLORS.primary, 0.12),
+  },
   bulletList: {
     alignSelf: 'stretch',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    gap: SPACING.m,
-    ...SHADOWS.level1,
+    gap: SPACING.s,
   },
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    padding: SPACING.m,
+  },
+  stepNum: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
   },
   bulletIconWrap: {
     width: 36,

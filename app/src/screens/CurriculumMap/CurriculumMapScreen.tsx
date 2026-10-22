@@ -187,15 +187,19 @@ export const CurriculumMapScreen = () => {
             />
           ))}
 
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={pathHeight}>
-            {nodeItems.slice(1).map((item, i) => {
+          {/* هر تکه‌ی مسیر یه Svg کوچیکِ جدا دارد، نه یک Svg به ارتفاع کل نقشه:
+              اندروید Svg را به یک bitmap تبدیل می‌کند و با صدها صحنه آن bitmap
+              از سقف حافظه‌ی Canvas رد می‌شد و اپ کرش می‌کرد. */}
+          {nodeItems.slice(1).map((item, i) => {
               const prev = nodeItems[i];
               // بین دو سطح مختلف خطی رسم نمی‌شود — هر سطح مسیر جدای خودش است.
               if (prev.scenario.level !== item.scenario.level) return null;
               const fromX = CONTENT_WIDTH / 2 + prev.offsetX;
               const toX = CONTENT_WIDTH / 2 + item.offsetX;
-              const fromY = prev.top + ROW_HEIGHT / 2;
-              const toY = item.top + ROW_HEIGHT / 2;
+              const segTop = Math.min(prev.top, item.top) + ROW_HEIGHT / 2 - 4;
+              const segHeight = Math.abs(prev.top - item.top) + 8;
+              const fromY = prev.top + ROW_HEIGHT / 2 - segTop;
+              const toY = item.top + ROW_HEIGHT / 2 - segTop;
               const midY = (fromY + toY) / 2;
               const levelColor = (LEVEL_BADGE_STYLE[item.scenario.level] || LEVEL_BADGE_STYLE.Beginner).bg;
               // بخشی از مسیر که کاربر واقعاً پشت سر گذاشته (صحنه‌ی قبلی
@@ -206,18 +210,24 @@ export const CurriculumMapScreen = () => {
               // نمونه‌ی مرجع بود: مسیر جاری و پیوسته، نه زیگزاگِ تیز.
               const d = `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
               return (
-                <Path
-                  key={item.scenario.id}
-                  d={d}
-                  fill="none"
-                  stroke={traveled ? COLORS.tertiary : hexToRgba(levelColor, 0.45)}
-                  strokeWidth={traveled ? 6 : 5}
-                  strokeDasharray={traveled ? undefined : '1 11'}
-                  strokeLinecap="round"
-                />
+                <Svg
+                  key={`seg-${item.scenario.id}`}
+                  style={{ position: 'absolute', left: 0, top: segTop }}
+                  width={CONTENT_WIDTH}
+                  height={segHeight}
+                  pointerEvents="none"
+                >
+                  <Path
+                    d={d}
+                    fill="none"
+                    stroke={traveled ? COLORS.tertiary : hexToRgba(levelColor, 0.45)}
+                    strokeWidth={traveled ? 6 : 5}
+                    strokeDasharray={traveled ? undefined : '1 11'}
+                    strokeLinecap="round"
+                  />
+                </Svg>
               );
             })}
-          </Svg>
 
           {flippedLayout.map((item) => {
             if (item.kind === 'header') {

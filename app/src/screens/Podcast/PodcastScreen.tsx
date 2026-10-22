@@ -6,7 +6,7 @@ import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
@@ -19,6 +19,9 @@ import { KaraokeText } from '../../components/KaraokeText';
 import { Slideshow, slideStarts } from '../../components/Slideshow';
 
 const RATES = [0.5, 0.75, 1, 1.25];
+// رنگ گوینده‌ها به ترتیب ورودشان؛ گوینده‌ی دوم سمت مقابل می‌نشیند.
+const SPEAKER_COLORS = [COLORS.primary, COLORS.audioMine, COLORS.pink, COLORS.levelIntermediateBg];
+const VOCAB_COLORS = [COLORS.primary, COLORS.audioMine, COLORS.pink, COLORS.levelBeginnerBg, COLORS.levelIntermediateBg];
 const PODCAST_TRACK_ID = 'podcast';
 
 /**
@@ -166,6 +169,14 @@ export const PodcastScreen: React.FC = () => {
   };
 
   const lines = podcast?.lines ?? [];
+  const speakers: string[] = [];
+  lines.forEach((l) => {
+    if (!speakers.includes(l.speaker)) speakers.push(l.speaker);
+  });
+  const speakerTone = (name: string) => {
+    const idx = Math.max(0, speakers.indexOf(name));
+    return { color: SPEAKER_COLORS[idx % SPEAKER_COLORS.length], alt: idx % 2 === 1 };
+  };
   const activeIdx = lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 350);
 
   // جمله‌ی قبلی/بعدی: اگر بیش از یک ثانیه از جمله‌ی فعلی گذشته، «قبلی» همین جمله را از اول پخش می‌کند.
@@ -291,17 +302,30 @@ export const PodcastScreen: React.FC = () => {
 
         {lines.map((l, i) => {
           const isActive = i === activeIdx;
+          // هر گوینده رنگ و سمت خودش را دارد (مثل گفتگوی چت) تا نوبتِ حرف زدن
+          // با یک نگاه معلوم باشد.
+          const tone = speakerTone(l.speaker);
           return (
             <TouchableOpacity
               key={l.id ?? i}
               onLayout={(e) => {
                 lineY.current[i] = e.nativeEvent.layout.y;
               }}
-              style={[styles.line, isActive && styles.lineActive]}
+              style={[
+                styles.line,
+                tone.alt && styles.lineAlt,
+                { backgroundColor: hexToRgba(tone.color, isActive ? 0.16 : 0.06) },
+                isActive && { borderColor: tone.color },
+              ]}
               onPress={() => seekToLine(l.start_ms)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.speaker, i % 2 === 1 && styles.speakerAlt]}>{l.speaker}</Text>
+              <View style={styles.speakerRow}>
+                <View style={[styles.avatar, { backgroundColor: tone.color }]}>
+                  <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={[styles.speaker, { color: tone.color }]}>{l.speaker}</Text>
+              </View>
               {isActive ? (
                 <KaraokeText
                   text={l.text}
@@ -321,12 +345,17 @@ export const PodcastScreen: React.FC = () => {
         {podcast.vocabulary.length > 0 && (
           <View style={styles.vocabCard}>
             <Text style={styles.vocabTitle}>{t('podcastVocabulary')}</Text>
-            {podcast.vocabulary.map((v, i) => (
-              <View key={i} style={styles.vocabRow}>
-                <Text style={styles.vocabWord}>{v.word}</Text>
-                <Text style={styles.vocabMeaning}>{v.meaning_fa}</Text>
-              </View>
-            ))}
+            <View style={styles.vocabChips}>
+              {podcast.vocabulary.map((v, i) => {
+                const c = VOCAB_COLORS[i % VOCAB_COLORS.length];
+                return (
+                  <View key={i} style={[styles.vocabChip, { backgroundColor: hexToRgba(c, 0.1), borderColor: hexToRgba(c, 0.35) }]}>
+                    <Text style={[styles.vocabWord, { color: c }]}>{v.word}</Text>
+                    <Text style={styles.vocabMeaning}>{v.meaning_fa}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -478,20 +507,38 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   line: {
-    borderRadius: BORDER_RADIUS.m,
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     padding: SPACING.s,
-    gap: 2,
+    paddingHorizontal: SPACING.m,
+    gap: 4,
+    maxWidth: '90%',
+    alignSelf: 'flex-start',
   },
-  lineActive: {
-    backgroundColor: COLORS.primaryLight,
+  lineAlt: {
+    alignSelf: 'flex-end',
+  },
+  speakerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  avatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
   },
   speaker: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
-    color: COLORS.primary,
-  },
-  speakerAlt: {
-    color: COLORS.secondary,
   },
   lineText: {
     ...TEXT_STYLES.bodyMd,
@@ -520,10 +567,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
   },
-  vocabRow: {
+  vocabChips: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: SPACING.s,
+  },
+  vocabChip: {
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 6,
+    alignItems: 'center',
   },
   vocabWord: {
     ...TEXT_STYLES.bodyMd,

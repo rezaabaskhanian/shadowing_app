@@ -2,9 +2,9 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Clock, Headphones, X } from 'lucide-react-native';
+import { Clock, Headphones, Play, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
@@ -67,6 +67,9 @@ export const PodcastListScreen: React.FC = () => {
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
+        <View style={styles.heroIcon}>
+          <Headphones size={26} color={COLORS.white} />
+        </View>
         <Text style={styles.headerTitle}>{t('podcastTitle')}</Text>
         <Text style={styles.headerSub}>{t('podcastSubtitle')}</Text>
       </View>
@@ -131,29 +134,35 @@ export const PodcastListScreen: React.FC = () => {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
               >
-                <View style={styles.cardIcon}>
+                {/* بنر بالای کارت: تصویرِ پادکست؛ بدون تصویر، نوار رنگیِ همان سطح. */}
+                <View style={[styles.banner, { backgroundColor: level.bg }]}>
                   {p.cover_url ? (
-                    <Image source={{ uri: absUrl(p.cover_url) }} style={styles.cardCover} />
+                    <Image source={{ uri: absUrl(p.cover_url) }} style={styles.bannerImage} resizeMode="cover" />
                   ) : (
-                    <Headphones size={22} color={COLORS.primary} />
+                    <Headphones size={34} color={hexToRgba(COLORS.white, 0.9)} />
                   )}
+                  <View style={styles.playBadge}>
+                    <Play size={16} color={COLORS.white} fill={COLORS.white} />
+                  </View>
+                  <View style={styles.durationBadge}>
+                    <Clock size={12} color={COLORS.white} />
+                    <Text style={styles.durationText}>{formatDuration(p.duration_seconds)}</Text>
+                  </View>
                 </View>
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{p.title}</Text>
+                <View style={[styles.cardBody, { borderTopColor: level.bg }]}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {p.title}
+                    </Text>
+                    <View style={[styles.badge, { backgroundColor: level.bg }]}>
+                      <Text style={styles.badgeText}>{t(level.labelKey)}</Text>
+                    </View>
+                  </View>
                   {!!p.description_fa && (
                     <Text style={styles.cardDesc} numberOfLines={2}>
                       {p.description_fa}
                     </Text>
                   )}
-                  <View style={styles.metaRow}>
-                    <View style={[styles.badge, { backgroundColor: level.bg }]}>
-                      <Text style={styles.badgeText}>{t(level.labelKey)}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <Clock size={13} color={COLORS.muted} />
-                      <Text style={styles.metaText}>{formatDuration(p.duration_seconds)}</Text>
-                    </View>
-                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -239,33 +248,71 @@ const styles = StyleSheet.create({
   list: {
     gap: SPACING.m,
   },
-  card: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    ...SHADOWS.level1,
-  },
-  cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primaryLight,
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.pink,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    marginBottom: SPACING.s,
+    ...SHADOWS.level2,
   },
-  cardCover: {
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    overflow: 'hidden',
+    ...SHADOWS.level1,
+  },
+  banner: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     width: '100%',
     height: '100%',
   },
+  playBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: hexToRgba(COLORS.black, 0.45),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: hexToRgba(COLORS.white, 0.85),
+  },
+  durationBadge: {
+    position: 'absolute',
+    bottom: SPACING.s,
+    right: SPACING.s,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: hexToRgba(COLORS.black, 0.55),
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  durationText: {
+    ...TEXT_STYLES.labelSm,
+    color: COLORS.white,
+  },
   cardBody: {
-    flex: 1,
+    padding: SPACING.m,
+    borderTopWidth: 3,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
   },
   cardTitle: {
+    flex: 1,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
     color: COLORS.text,
@@ -275,12 +322,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    marginTop: SPACING.s,
-  },
   badge: {
     borderRadius: BORDER_RADIUS.s,
     paddingHorizontal: 8,
@@ -289,15 +330,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
-    color: COLORS.text,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.muted,
+    color: COLORS.white,
   },
 });
