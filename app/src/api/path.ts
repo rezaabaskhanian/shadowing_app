@@ -18,7 +18,8 @@ export type PathItemKind =
   | 'dictation'
   | 'self_intro'
   | 'verb'
-  | 'idioms';
+  | 'idioms'
+  | 'story';
 
 export interface PathItem {
   key: string;

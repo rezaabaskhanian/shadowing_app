@@ -1,15 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Clock, Headphones, Play, X } from 'lucide-react-native';
+import { Headphones, Play, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
-import { getPodcasts, featuredForLevel, type Podcast } from '../../api/podcasts';
+import { getPodcasts, atOrBelowLevel, type Podcast } from '../../api/podcasts';
+import { BannerCard, ListHero } from '../../components/ContentVisuals';
 import { getMyLevel } from '../../api/assessment';
 
 const LEVEL_META: Record<string, { labelKey: string; bg: string }> = {
@@ -40,10 +40,9 @@ export const PodcastListScreen: React.FC = () => {
     if (route.params?.kind) setKind(route.params.kind);
   }, [route.params?.kind]);
   const hasFeatured = !!allPodcasts?.some((p) => p.kind === 'featured');
-  // منتخب‌ها پیش‌فرض فقط سطح کاربر و یک سطح بالاتر؛ «همه‌ی سطح‌ها» بقیه را باز می‌کند.
+  // فقط سطح کاربر و پایین‌تر (درسی و منتخب)؛ سطح بالاتر هرگز.
   const [myLevel, setMyLevel] = useState<string | null>(null);
-  const [allLevels, setAllLevels] = useState(false);
-  const scoped = allPodcasts && !allLevels ? featuredForLevel(allPodcasts, myLevel) : allPodcasts;
+  const scoped = allPodcasts ? atOrBelowLevel(allPodcasts, myLevel) : allPodcasts;
   const podcasts =
     scoped && kind !== 'all'
       ? scoped.filter((p) => (p.kind === 'featured' ? 'featured' : 'lesson') === kind)
@@ -67,11 +66,12 @@ export const PodcastListScreen: React.FC = () => {
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.heroIcon}>
-          <Headphones size={26} color={COLORS.white} />
-        </View>
-        <Text style={styles.headerTitle}>{t('podcastTitle')}</Text>
-        <Text style={styles.headerSub}>{t('podcastSubtitle')}</Text>
+        <ListHero
+          icon={<Headphones size={26} color={COLORS.white} />}
+          color={COLORS.pink}
+          title={t('podcastTitle')}
+          subtitle={t('podcastSubtitle')}
+        />
       </View>
 
       {hasFeatured && (
@@ -93,12 +93,6 @@ export const PodcastListScreen: React.FC = () => {
             </TouchableOpacity>
           ))}
         </View>
-      )}
-
-      {hasFeatured && kind !== 'lesson' && !!myLevel && (
-        <TouchableOpacity onPress={() => setAllLevels((v) => !v)} activeOpacity={0.8} style={{ alignSelf: 'center', paddingVertical: SPACING.xs }}>
-          <Text style={styles.linkText}>{allLevels ? t('podcastMyLevelsOnly') : t('podcastAllLevels')}</Text>
-        </TouchableOpacity>
       )}
 
       {podcasts === null && !error && (
@@ -128,43 +122,17 @@ export const PodcastListScreen: React.FC = () => {
           {podcasts.map((p) => {
             const level = LEVEL_META[p.level] ?? LEVEL_META.beginner;
             return (
-              <TouchableOpacity
+              <BannerCard
                 key={p.id}
-                style={styles.card}
-                activeOpacity={0.85}
+                image={p.cover_url ? { uri: absUrl(p.cover_url) } : null}
+                accent={level.bg}
+                icon={<Play size={18} color={COLORS.white} fill={COLORS.white} />}
+                title={p.title}
+                subtitle={p.description_fa}
+                badgeLabel={t(level.labelKey)}
+                cornerLabel={`🎧 ${formatDuration(p.duration_seconds)}`}
                 onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
-              >
-                {/* بنر بالای کارت: تصویرِ پادکست؛ بدون تصویر، نوار رنگیِ همان سطح. */}
-                <View style={[styles.banner, { backgroundColor: level.bg }]}>
-                  {p.cover_url ? (
-                    <Image source={{ uri: absUrl(p.cover_url) }} style={styles.bannerImage} resizeMode="cover" />
-                  ) : (
-                    <Headphones size={34} color={hexToRgba(COLORS.white, 0.9)} />
-                  )}
-                  <View style={styles.playBadge}>
-                    <Play size={16} color={COLORS.white} fill={COLORS.white} />
-                  </View>
-                  <View style={styles.durationBadge}>
-                    <Clock size={12} color={COLORS.white} />
-                    <Text style={styles.durationText}>{formatDuration(p.duration_seconds)}</Text>
-                  </View>
-                </View>
-                <View style={[styles.cardBody, { borderTopColor: level.bg }]}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {p.title}
-                    </Text>
-                    <View style={[styles.badge, { backgroundColor: level.bg }]}>
-                      <Text style={styles.badgeText}>{t(level.labelKey)}</Text>
-                    </View>
-                  </View>
-                  {!!p.description_fa && (
-                    <Text style={styles.cardDesc} numberOfLines={2}>
-                      {p.description_fa}
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+              />
             );
           })}
         </ScrollView>
@@ -219,16 +187,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: SPACING.s,
   },
-  headerTitle: {
-    ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
-  },
-  headerSub: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-  },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -247,89 +205,5 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: SPACING.m,
-  },
-  heroIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.pink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.s,
-    ...SHADOWS.level2,
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    overflow: 'hidden',
-    ...SHADOWS.level1,
-  },
-  banner: {
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bannerImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-  },
-  playBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: hexToRgba(COLORS.black, 0.45),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: hexToRgba(COLORS.white, 0.85),
-  },
-  durationBadge: {
-    position: 'absolute',
-    bottom: SPACING.s,
-    right: SPACING.s,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: hexToRgba(COLORS.black, 0.55),
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  durationText: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.white,
-  },
-  cardBody: {
-    padding: SPACING.m,
-    borderTopWidth: 3,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-  },
-  cardTitle: {
-    flex: 1,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  cardDesc: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  badge: {
-    borderRadius: BORDER_RADIUS.s,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 11,
-    color: COLORS.white,
   },
 });

@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleCheck, CircleX, Lock, TriangleAlert, X } from 'lucide-react-native';
+import { CircleCheck, CircleX, Lock, PenLine, TriangleAlert, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
@@ -23,6 +23,8 @@ import { getAIUsageStatus } from '../../api/aiUsage';
 import { submitWriting, type WritingPrompt, type WritingResult } from '../../api/writing';
 import { track } from '../../services/analytics';
 import { RiseIn } from '../../components/RiseIn';
+import { absUrl } from '../../api/config';
+import { ACCENT_CYCLE, PromptHero, levelColor } from '../../components/ContentVisuals';
 
 type Phase = 'write' | 'checking' | 'result' | 'locked';
 
@@ -123,30 +125,46 @@ export const WritingScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{prompt.title}</Text>
-        {!!prompt.prompt_fa && <Text style={styles.prompt}>{prompt.prompt_fa}</Text>}
+        <PromptHero
+          image={prompt.image_url ? { uri: absUrl(prompt.image_url) } : null}
+          accent={levelColor(prompt.level)}
+          icon={<PenLine size={18} color={COLORS.white} />}
+          title={prompt.title}
+          prompt={prompt.prompt_fa}
+        />
 
         {phase === 'write' && (
           <>
             {prompt.guide_questions.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>{t('writingIdeasTitle')}</Text>
+              <View style={[styles.card, styles.ideasCard]}>
+                <Text style={[styles.cardLabel, { color: COLORS.levelIntermediateBg }]}>💡 {t('writingIdeasTitle')}</Text>
                 {prompt.guide_questions.map((q, i) => (
-                  <Text key={i} style={styles.listItem}>
-                    • {q}
-                  </Text>
+                  <View key={i} style={styles.numberedRow}>
+                    <View style={[styles.numDot, { backgroundColor: ACCENT_CYCLE[i % ACCENT_CYCLE.length] }]}>
+                      <Text style={styles.numDotText}>{i + 1}</Text>
+                    </View>
+                    <Text style={[styles.listItem, styles.flex1]}>{q}</Text>
+                  </View>
                 ))}
               </View>
             )}
             {prompt.useful_phrases.length > 0 && (
               <View style={styles.card}>
-                <Text style={styles.cardLabel}>{t('writingPhrasesTitle')}</Text>
+                <Text style={[styles.cardLabel, { color: COLORS.pink }]}>✨ {t('writingPhrasesTitle')}</Text>
                 <View style={styles.chips}>
-                  {prompt.useful_phrases.map((p, i) => (
-                    <TouchableOpacity key={i} style={styles.chip} onPress={() => insertPhrase(p)} activeOpacity={0.8}>
-                      <Text style={styles.chipText}>{p}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {prompt.useful_phrases.map((p, i) => {
+                    const c = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
+                    return (
+                      <TouchableOpacity
+                        key={i}
+                        style={[styles.chip, { backgroundColor: hexToRgba(c, 0.1), borderColor: hexToRgba(c, 0.35) }]}
+                        onPress={() => insertPhrase(p)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.chipText, { color: c }]}>{p}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
                 <Text style={styles.mutedSmall}>{t('writingPhrasesHint')}</Text>
               </View>
@@ -384,8 +402,35 @@ const styles = StyleSheet.create({
   chip: {
     backgroundColor: COLORS.primaryLight,
     borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  ideasCard: {
+    backgroundColor: hexToRgba(COLORS.levelIntermediateBg, 0.05),
+    borderColor: hexToRgba(COLORS.levelIntermediateBg, 0.2),
+  },
+  numberedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.s,
+  },
+  numDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  numDotText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+  },
+  flex1: {
+    flex: 1,
   },
   chipDone: {
     backgroundColor: COLORS.successLight,

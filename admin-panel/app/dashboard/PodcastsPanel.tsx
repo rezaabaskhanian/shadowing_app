@@ -44,6 +44,9 @@ const emptyDraft = (position = 0): Draft => ({
   description_fa: "",
   level: "beginner",
   kind: "lesson",
+  series_title: "",
+  chapter_no: 0,
+  questions: [],
   scene_id: "",
   vocabulary: [],
   voices: {},
@@ -70,6 +73,7 @@ const SPEEDS = [
 const KINDS = [
   { id: "lesson", label: "📚 درسی", hint: "درباره‌ی یک صحنه، درس یا موضوعِ آموزشی" },
   { id: "featured", label: "⭐ منتخب", hint: "موضوعِ آزاد و جذاب (داستان، فرهنگ، نکته‌های جالب) — بی‌ربط به درس‌ها" },
+  { id: "story", label: "📖 داستان", hint: "یک فصل از داستانِ بخش «خواندن» (متن‌محور، با گوینده‌ی Narrator)" },
 ] as const;
 
 type ScriptSettings = Pick<PodcastLevelPreset, "max_words_per_sentence" | "min_lines" | "max_lines" | "new_vocab">;
@@ -369,7 +373,9 @@ export default function PodcastsPanel({
                 type="button"
                 className={`btn btn-sm ${draft.kind === k.id ? "" : "btn-ghost"}`}
                 title={k.hint}
-                onClick={() => update(k.id === "featured" ? { kind: "featured", scene_id: "" } : { kind: "lesson" })}
+                onClick={() =>
+                  update(k.id === "lesson" ? { kind: "lesson" } : { kind: k.id, scene_id: "" })
+                }
               >
                 {k.label}
               </button>
@@ -377,9 +383,32 @@ export default function PodcastsPanel({
             <span className="hint" style={{ margin: 0 }}>
               {draft.kind === "featured"
                 ? "منتخب: در اپ بخش جدای «پادکست‌های منتخب» دارد و به درسی وصل نیست؛ فقط موضوع بنویس."
+                : draft.kind === "story"
+                ? "داستان: در بخش «خواندن» اپ نشان داده می‌شود؛ فصل‌های یک داستان عنوان داستانِ یکسان دارند."
                 : "درسی: از صحنه، منبع کتابخانه یا موضوع ساخته می‌شود."}
             </span>
           </div>
+
+          {draft.kind === "story" && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+              <div style={{ flex: "2 1 260px" }}>
+                <label>عنوان داستان (برای همه‌ی فصل‌ها یکسان)</label>
+                <input dir="ltr" value={draft.series_title ?? ""} onChange={(e) => update({ series_title: e.target.value })} />
+              </div>
+              <div style={{ flex: "0 1 120px" }}>
+                <label>شماره‌ی فصل</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={draft.chapter_no || 1}
+                  onChange={(e) => update({ chapter_no: Number(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="hint" style={{ margin: 0 }}>
+                {(draft.questions ?? []).length} سؤال فهم (از MCP ساخته می‌شود)
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
             {draft.kind === "lesson" && (
@@ -657,7 +686,7 @@ export default function PodcastsPanel({
                     {p.title}
                   </div>
                   <div className="hint" style={{ margin: 0 }}>
-                    {p.kind === "featured" ? "⭐ منتخب" : "📚 درسی"} · {LEVELS.find((l) => l.id === p.level)?.label} ·{" "}
+                    {p.kind === "featured" ? "⭐ منتخب" : p.kind === "story" ? `📖 ${p.series_title} · فصل ${p.chapter_no}` : "📚 درسی"} · {LEVELS.find((l) => l.id === p.level)?.label} ·{" "}
                     {p.line_count ?? 0} جمله · {STATUS_LABELS[p.audio_status]}
                     {p.duration_seconds > 0 && ` · ${Math.round(p.duration_seconds / 60)} دقیقه`}
                     {p.is_active ? " · منتشرشده" : ""}

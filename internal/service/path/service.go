@@ -72,18 +72,20 @@ const (
 	// سطح همین هفته (مرور در تب «اصطلاحات» لایتنر، بدون ref).
 	KindVerb   = "verb"
 	KindIdioms = "idioms"
+	// KindStory یک فصل از داستانِ بخش خواندن (ref_id = podcast id با kind = story).
+	KindStory = "story"
 )
 
 var validKinds = map[string]bool{
 	KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true,
 	KindLeitner: true, KindWeakLines: true, KindCheckpoint: true, KindHabitMission: true, KindDictation: true, KindSelfIntro: true, KindWriting: true,
-	KindVerb: true, KindIdioms: true,
+	KindVerb: true, KindIdioms: true, KindStory: true,
 }
 
 // validCefr سطح‌هایی که برای برچسب هفته پذیرفته می‌شوند.
 var validCefr = map[string]bool{"PRE-A1": true, "A1": true, "A2": true, "B1": true, "B2": true, "C1": true, "C2": true}
 
-var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true, KindVerb: true}
+var needsRef = map[string]bool{KindScene: true, KindPodcast: true, KindVideoClip: true, KindSpeakingTopic: true, KindWriting: true, KindVerb: true, KindStory: true}
 
 // مهارت‌های Checkpoint؛ نمره‌ی کل میانگین همین‌هاست (هر کدام که فرستاده شده).
 var skills = []string{"vocabulary", "grammar", "listening", "speaking", "real_life"}

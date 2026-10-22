@@ -63,6 +63,8 @@ import { PathCheckpointScreen } from '../screens/Path/PathCheckpointScreen';
 import { PathDictationScreen } from '../screens/Path/PathDictationScreen';
 import { PathSelfIntroScreen } from '../screens/Path/PathSelfIntroScreen';
 import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
+import { StoryListScreen } from '../screens/Story/StoryListScreen';
+import { StoryScreen } from '../screens/Story/StoryScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
@@ -94,6 +96,7 @@ const FreshPathCheckpoint = freshPerOpen(PathCheckpointScreen);
 const FreshPathDictation = freshPerOpen(PathDictationScreen);
 const FreshPathSelfIntro = freshPerOpen(PathSelfIntroScreen);
 const FreshPodcast = freshPerOpen(PodcastScreen);
+const FreshStory = freshPerOpen(StoryScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
@@ -130,6 +133,8 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'PathWeakLines',
   'PathCheckpoint',
   'PodcastList',
+  'StoryList',
+  'Story',
   'Podcast',
   'PodcastMyVersion',
   'Paywall',
@@ -376,6 +381,8 @@ export const AppNavigator = () => {
       <Tab.Screen name="PathDictation" component={FreshPathDictation} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PathSelfIntro" component={FreshPathSelfIntro} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="StoryList" component={StoryListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="Story" component={FreshStory} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />
       <Tab.Screen

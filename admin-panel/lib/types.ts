@@ -655,8 +655,12 @@ export interface Podcast {
   title: string;
   description_fa: string;
   level: "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
-  /** lesson = درسی (صحنه/موضوع درس‌ها)، featured = منتخب (موضوع آزاد و جذاب). */
-  kind: "lesson" | "featured";
+  /** lesson = درسی (صحنه/موضوع درس‌ها)، featured = منتخب (موضوع آزاد و جذاب)، story = فصلی از داستانِ بخش خواندن. */
+  kind: "lesson" | "featured" | "story";
+  /** فقط story: عنوان داستان، شماره‌ی فصل و سؤال‌های فهم آخر فصل. */
+  series_title?: string;
+  chapter_no?: number;
+  questions?: { q: string; q_fa: string; options: string[]; answer: number }[];
   scene_id: string;
   vocabulary: { word: string; meaning_fa: string }[];
   voices: Record<string, string>;

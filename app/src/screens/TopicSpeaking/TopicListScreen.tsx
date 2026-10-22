@@ -4,11 +4,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Clock, Mic, Trophy, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { getSpeakingTopics, type SpeakingTopic, type TopicLevel } from '../../api/topicSpeaking';
+import { getMyLevel } from '../../api/assessment';
+import { atOrBelowLevel } from '../../api/podcasts';
+import { absUrl } from '../../api/config';
+import { BannerCard, ListHero } from '../../components/ContentVisuals';
 
 const LEVEL_META: Record<TopicLevel, { labelKey: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
@@ -31,8 +34,9 @@ export const TopicListScreen: React.FC = () => {
 
   const load = useCallback(() => {
     setError(false);
-    getSpeakingTopics()
-      .then(setTopics)
+    // فقط موضوع‌های سطح کاربر و پایین‌تر؛ سطح بالاتر نشان داده نمی‌شود.
+    Promise.all([getSpeakingTopics(), getMyLevel().catch(() => null)])
+      .then(([list, lvl]) => setTopics(atOrBelowLevel(list, lvl?.scene_level)))
       .catch(() => setError(true));
   }, []);
 
@@ -45,8 +49,12 @@ export const TopicListScreen: React.FC = () => {
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('topicSpeakingTitle')}</Text>
-        <Text style={styles.headerSub}>{t('topicSpeakingSubtitle')}</Text>
+        <ListHero
+          icon={<Mic size={26} color={COLORS.white} />}
+          color={COLORS.warning}
+          title={t('topicSpeakingTitle')}
+          subtitle={t('topicSpeakingSubtitle')}
+        />
       </View>
 
       {topics === null && !error && (
@@ -77,45 +85,35 @@ export const TopicListScreen: React.FC = () => {
         >
           {topics.map((topic) => {
             const level = LEVEL_META[topic.level] ?? LEVEL_META.beginner;
+            const picture = topic.image_url || topic.images?.find((img) => !!img.url)?.url;
+            const metas = [
+              {
+                icon: <Clock size={13} color={COLORS.muted} />,
+                text: `${topic.images?.length ? `🖼 ${t('pictureStoryBadge')} · ` : ''}${t('topicSpeakingSeconds').replace(
+                  '{s}',
+                  String(topic.duration_seconds)
+                )}`,
+              },
+            ];
+            if (topic.attempts > 0) {
+              metas.push({
+                icon: <Trophy size={13} color={COLORS.warning} />,
+                text: t('topicSpeakingBest').replace('{score}', String(topic.best_score)),
+              });
+            }
             return (
-              <TouchableOpacity
+              <BannerCard
                 key={topic.id}
-                style={styles.card}
-                activeOpacity={0.85}
+                image={picture ? { uri: absUrl(picture) } : null}
+                accent={level.bg}
+                icon={<Mic size={22} color={COLORS.white} />}
+                title={topic.title}
+                subtitle={topic.prompt_fa}
+                badgeLabel={t(level.labelKey)}
+                metas={metas}
+                done={topic.attempts > 0}
                 onPress={() => navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() })}
-              >
-                <View style={styles.cardIcon}>
-                  <Mic size={20} color={COLORS.primary} />
-                </View>
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle}>{topic.title}</Text>
-                  {!!topic.prompt_fa && (
-                    <Text style={styles.cardPrompt} numberOfLines={2}>
-                      {topic.prompt_fa}
-                    </Text>
-                  )}
-                  <View style={styles.metaRow}>
-                    <View style={[styles.badge, { backgroundColor: level.bg }]}>
-                      <Text style={styles.badgeText}>{t(level.labelKey)}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <Clock size={13} color={COLORS.muted} />
-                      <Text style={styles.metaText}>
-                        {topic.images?.length ? `🖼 ${t('pictureStoryBadge')} · ` : ''}
-                        {t('topicSpeakingSeconds').replace('{s}', String(topic.duration_seconds))}
-                      </Text>
-                    </View>
-                    {topic.attempts > 0 && (
-                      <View style={styles.metaItem}>
-                        <Trophy size={13} color={COLORS.warning} />
-                        <Text style={styles.metaText}>
-                          {t('topicSpeakingBest').replace('{score}', String(topic.best_score))}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
+              />
             );
           })}
         </ScrollView>
@@ -144,16 +142,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: SPACING.s,
   },
-  headerTitle: {
-    ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
-  },
-  headerSub: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-  },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -172,62 +160,5 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: SPACING.m,
-  },
-  card: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    ...SHADOWS.level1,
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  cardPrompt: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.s,
-    marginTop: SPACING.s,
-  },
-  badge: {
-    borderRadius: BORDER_RADIUS.s,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 11,
-    color: COLORS.text,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.muted,
   },
 });

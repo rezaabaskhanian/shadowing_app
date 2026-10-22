@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BookOpen,
+  BookText,
   Check,
   ChevronDown,
   ChevronUp,
@@ -46,6 +47,7 @@ const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: str
   writing: NotebookPen,
   verb: Zap,
   idioms: MessageCircle,
+  story: BookText,
 };
 
 /** هفته‌ای که الان باید رویش کار کرد: اولین هفته‌ی بازِ تمام‌نشده (یا آخرین هفته). */
@@ -102,6 +104,9 @@ export const PathHomeScreen: React.FC = () => {
         break;
       case 'podcast':
         navigation.navigate('Podcast', { podcastId: item.ref_id, openedAt: Date.now() });
+        break;
+      case 'story':
+        navigation.navigate('Story', { storyId: item.ref_id, openedAt: Date.now() });
         break;
       case 'video_clip':
         navigation.navigate('VideoClip', { clipId: item.ref_id, openedAt: Date.now() });

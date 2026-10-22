@@ -1181,6 +1181,7 @@ export const translations: Translations = {
   pathKind_writing: { en: 'Writing', fa: 'تمرین نوشتن' },
   pathKind_verb: { en: 'Verb of the week', fa: 'فعل این هفته' },
   pathKind_idioms: { en: 'Idioms of the week', fa: 'اصطلاح‌های این هفته' },
+  pathKind_story: { en: 'Story reading', fa: 'خواندن داستان' },
   pathCefrRange: { en: 'Level {from} → {to}', fa: 'سطح {from} ← {to}' },
   pathCefrMilestone: {
     en: '🎉 You finished {cefr} (approx. level)',
@@ -1375,6 +1376,20 @@ export const translations: Translations = {
   podcastBack: { en: 'Back to podcasts', fa: 'برگشت به پادکست‌ها' },
   podcastShowTranslation: { en: 'Show Persian translation', fa: 'نمایش ترجمه‌ی فارسی' },
   podcastVocabulary: { en: 'Key words and phrases', fa: 'لغت‌ها و عبارت‌های مهم' },
+  storyTitle: { en: 'Reading', fa: 'داستان و خواندن' },
+  storySubtitle: { en: 'Short stories at your level — read and listen together', fa: 'داستان‌های کوتاه هم‌سطح خودت — بخوان و هم‌زمان گوش بده' },
+  storyEmpty: { en: 'No stories at your level yet. Check back soon!', fa: 'هنوز داستانی برای سطح تو منتشر نشده. به‌زودی!' },
+  storyLoadError: { en: 'Could not load the story.', fa: 'داستان باز نشد. اتصال را بررسی کن.' },
+  storyChapterN: { en: 'Chapter {n}', fa: 'فصل {n}' },
+  storyChaptersProgress: { en: '{done}/{total} chapters', fa: '{done} از {total} فصل' },
+  storyAllRead: { en: 'All chapters read', fa: 'همه‌ی فصل‌ها خوانده شد' },
+  storyReadHint: { en: 'Tap a sentence to hear it, hold it to see the translation.', fa: 'روی هر جمله بزن تا بشنوی؛ نگه دار تا ترجمه‌اش را ببینی.' },
+  storyQuestionsTitle: { en: 'Did you understand?', fa: 'فهمیدی؟' },
+  storyQuizResult: { en: '{c} of {n} correct', fa: '{c} از {n} درست' },
+  storyNextChapter: { en: 'Next chapter', fa: 'فصل بعد' },
+  storyFinish: { en: 'Finish', fa: 'پایان' },
+  storyListenAlong: { en: 'Read and listen', fa: 'بخوان و گوش بده' },
+  homeStories: { en: 'Stories', fa: 'داستان‌ها' },
 };
 
 /**

@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CircleCheck, CircleX, Lock, Mic, Square, TriangleAlert, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
@@ -17,6 +17,8 @@ import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { track } from '../../services/analytics';
 import { RiseIn } from '../../components/RiseIn';
 import { StoryPictures } from './StoryPictures';
+import { absUrl } from '../../api/config';
+import { ACCENT_CYCLE, PromptHero, levelColor } from '../../components/ContentVisuals';
 
 type Phase = 'idle' | 'recording' | 'analyzing' | 'result' | 'error' | 'locked';
 type ActionCommand = 'none' | 'start_record' | 'stop_record';
@@ -167,8 +169,14 @@ export const TopicSpeakingScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{topic.title}</Text>
-        {!!topic.prompt_fa && <Text style={styles.prompt}>{topic.prompt_fa}</Text>}
+        {/* داستان تصویری عکس‌هایش را پایین‌تر نشان می‌دهد؛ این‌جا فقط عکسِ خودِ موضوع. */}
+        <PromptHero
+          image={topic.image_url ? { uri: absUrl(topic.image_url) } : null}
+          accent={levelColor(topic.level)}
+          icon={<Mic size={18} color={COLORS.white} />}
+          title={topic.title}
+          prompt={topic.prompt_fa}
+        />
 
         {(phase === 'idle' || phase === 'recording') && (
           <>
@@ -182,24 +190,30 @@ export const TopicSpeakingScreen: React.FC = () => {
               </View>
             )}
             {topic.guide_questions.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>{t('topicSpeakingGuideTitle')}</Text>
+              <View style={[styles.card, styles.ideasCard]}>
+                <Text style={[styles.cardLabel, { color: COLORS.levelIntermediateBg }]}>💡 {t('topicSpeakingGuideTitle')}</Text>
                 {topic.guide_questions.map((q, i) => (
-                  <Text key={i} style={styles.listItem}>
-                    • {q}
-                  </Text>
+                  <View key={i} style={styles.numberedRow}>
+                    <View style={[styles.numDot, { backgroundColor: ACCENT_CYCLE[i % ACCENT_CYCLE.length] }]}>
+                      <Text style={styles.numDotText}>{i + 1}</Text>
+                    </View>
+                    <Text style={[styles.listItem, styles.flex1]}>{q}</Text>
+                  </View>
                 ))}
               </View>
             )}
             {topic.useful_phrases.length > 0 && (
               <View style={styles.card}>
-                <Text style={styles.cardLabel}>{t('topicSpeakingPhrasesTitle')}</Text>
+                <Text style={[styles.cardLabel, { color: COLORS.pink }]}>✨ {t('topicSpeakingPhrasesTitle')}</Text>
                 <View style={styles.chips}>
-                  {topic.useful_phrases.map((p, i) => (
-                    <View key={i} style={styles.chip}>
-                      <Text style={styles.chipText}>{p}</Text>
-                    </View>
-                  ))}
+                  {topic.useful_phrases.map((p, i) => {
+                    const c = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
+                    return (
+                      <View key={i} style={[styles.chip, { backgroundColor: hexToRgba(c, 0.1), borderColor: hexToRgba(c, 0.35) }]}>
+                        <Text style={[styles.chipText, { color: c }]}>{p}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -485,8 +499,35 @@ const styles = StyleSheet.create({
   chip: {
     backgroundColor: COLORS.primaryLight,
     borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  ideasCard: {
+    backgroundColor: hexToRgba(COLORS.levelIntermediateBg, 0.05),
+    borderColor: hexToRgba(COLORS.levelIntermediateBg, 0.2),
+  },
+  numberedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.s,
+  },
+  numDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  numDotText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+  },
+  flex1: {
+    flex: 1,
   },
   chipDone: {
     backgroundColor: COLORS.successLight,

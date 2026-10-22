@@ -66,7 +66,8 @@ import { SCENE_CATEGORY_LABEL_KEY } from '../data/scenarios';
 import { absUrl } from '../api/config';
 import { getVideoClips, type VideoClipListItem } from '../api/videoClips';
 import { getGoalPlan, type GoalPlanView } from '../api/goalPlan';
-import { getPodcasts, featuredForLevel, type Podcast } from '../api/podcasts';
+import { getPodcasts, getStories, atOrBelowLevel, type Podcast } from '../api/podcasts';
+import { getReadChapters, groupStories } from '../services/storyProgress';
 import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
 import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
@@ -145,6 +146,8 @@ export const HomeScreen = () => {
   const [podcasts, setPodcasts] = React.useState<Podcast[]>([]);
   const [topics, setTopics] = React.useState<SpeakingTopic[]>([]);
   const [prompts, setPrompts] = React.useState<WritingPrompt[]>([]);
+  const [stories, setStories] = React.useState<Podcast[]>([]);
+  const [readChapters, setReadChapters] = React.useState<Set<string>>(new Set());
   const [courseLessons, setCourseLessons] = React.useState<CourseLesson[]>([]);
   const [paths, setPaths] = React.useState<PathSummary[]>([]);
   useFocusEffect(
@@ -156,12 +159,17 @@ export const HomeScreen = () => {
       getPodcasts()
         .then((list) => active && setPodcasts(list))
         .catch(() => active && setPodcasts([]));
+      // فهرست کامل نگه داشته می‌شود و موقع نمایش به سطح کاربر (و پایین‌تر) محدود می‌شود.
       getSpeakingTopics()
-        .then((list) => active && setTopics(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .then((list) => active && setTopics(list))
         .catch(() => active && setTopics([]));
       getWritingPrompts()
-        .then((list) => active && setPrompts(list.slice(0, HOME_SECTION_PREVIEW_COUNT)))
+        .then((list) => active && setPrompts(list))
         .catch(() => active && setPrompts([]));
+      getStories()
+        .then((list) => active && setStories(list))
+        .catch(() => active && setStories([]));
+      getReadChapters().then((read) => active && setReadChapters(read));
       getCourse()
         .then((units) => active && setCourseLessons(upcomingLessons(units.flatMap((u) => u.lessons))))
         .catch(() => active && setCourseLessons([]));
@@ -411,9 +419,16 @@ export const HomeScreen = () => {
     }));
 
   // پادکست‌ها دو بخشِ جدا دارند: درسی (درباره‌ی صحنه/موضوعِ درس‌ها) و منتخب (موضوعِ آزاد).
-  const lessonPodcasts = podcasts.filter((p) => p.kind !== 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
-  const featuredPodcasts = featuredForLevel(podcasts, myLevel?.scene_level)
-    .filter((p) => p.kind === 'featured')
+  // همه‌ی محتوای خانه فقط تا سطحِ کاربر؛ سطحِ بالاتر هرگز (پایین‌تر اشکالی ندارد).
+  const userLevel = myLevel?.scene_level;
+  const levelPodcasts = atOrBelowLevel(podcasts, userLevel);
+  const lessonPodcasts = levelPodcasts.filter((p) => p.kind !== 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const featuredPodcasts = levelPodcasts.filter((p) => p.kind === 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const levelTopics = atOrBelowLevel(topics, userLevel).slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const levelPrompts = atOrBelowLevel(prompts, userLevel).slice(0, HOME_SECTION_PREVIEW_COUNT);
+  // هر داستان یک کارت: فصلِ بعدیِ نخوانده؛ داستان‌های تمام‌شده آخر می‌روند.
+  const storySeries = groupStories(atOrBelowLevel(stories, userLevel), readChapters)
+    .sort((a, b) => Number(a.readCount === a.chapters.length) - Number(b.readCount === b.chapters.length))
     .slice(0, HOME_SECTION_PREVIEW_COUNT);
   const podcastItems = (list: Podcast[], emoji: string): BentoItem[] =>
     list.map((p) => ({
@@ -564,13 +579,34 @@ export const HomeScreen = () => {
       items: podcastItems(featuredPodcasts, '⭐'),
     },
     {
+      key: 'stories',
+      title: t('homeStories'),
+      icon: <BookOpen size={16} color={COLORS.white} />,
+      accent: COLORS.levelIntermediateBg,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('StoryList'),
+      items: storySeries.map((st) => ({
+        key: st.title,
+        title: st.title,
+        subtitle: `${t('storyChapterN').replace('{n}', String(st.next.chapter_no || 1))} · ${st.next.title}`,
+        meta: `📖 ${t('storyChaptersProgress')
+          .replace('{done}', String(st.readCount))
+          .replace('{total}', String(st.chapters.length))}`,
+        image: uriImage(st.cover_url),
+        emoji: '📖',
+        badge: contentBadge(st.level),
+        completed: st.readCount === st.chapters.length,
+        onPress: () => navigation.navigate('Story', { storyId: st.next.id, openedAt: Date.now() }),
+      })),
+    },
+    {
       key: 'topics',
       title: t('topicSpeakingTitle'),
       icon: <Mic size={16} color={COLORS.white} />,
       accent: COLORS.warning,
       actionLabel: t('homeSeeAll'),
       onAction: () => navigation.navigate('TopicList'),
-      items: topics.map((topic) => ({
+      items: levelTopics.map((topic) => ({
         key: topic.id,
         title: topic.title,
         subtitle: topic.prompt_fa || undefined,
@@ -592,7 +628,7 @@ export const HomeScreen = () => {
       accent: COLORS.levelAdvancedBg,
       actionLabel: t('homeSeeAll'),
       onAction: () => navigation.navigate('WritingList'),
-      items: prompts.map((prompt) => ({
+      items: levelPrompts.map((prompt) => ({
         key: prompt.id,
         title: prompt.title,
         subtitle: prompt.prompt_fa || undefined,

@@ -63,8 +63,29 @@ func parseID(op richerror.Op, id string) error {
 
 // ---------- اپ ----------
 
+// List پادکست‌های منتشرشده بدون داستان‌ها (داستان‌ها مال بخش خواندن‌اند و
+// نسخه‌های قدیمی اپ نباید آن‌ها را در لیست پادکست ببینند).
 func (s *Service) List(ctx context.Context) ([]Podcast, error) {
-	return s.repo.List(ctx, true)
+	return s.listByStory(ctx, false)
+}
+
+// ListStories فصل‌های منتشرشده‌ی داستان‌ها، مرتب بر اساس داستان و شماره‌ی فصل.
+func (s *Service) ListStories(ctx context.Context) ([]Podcast, error) {
+	return s.listByStory(ctx, true)
+}
+
+func (s *Service) listByStory(ctx context.Context, stories bool) ([]Podcast, error) {
+	all, err := s.repo.List(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Podcast, 0, len(all))
+	for _, p := range all {
+		if (p.Kind == "story") == stories {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) Get(ctx context.Context, id string) (Podcast, error) {
@@ -128,9 +149,32 @@ func (s *Service) AdminSave(ctx context.Context, id string, p Podcast) (Podcast,
 	if !validLevels[p.Level] {
 		p.Level = "beginner"
 	}
-	if p.Kind != "featured" {
+	if p.Kind != "featured" && p.Kind != "story" {
 		p.Kind = "lesson"
 	}
+	p.SeriesTitle = strings.TrimSpace(p.SeriesTitle)
+	if p.Kind == "story" {
+		if p.SeriesTitle == "" {
+			p.SeriesTitle = p.Title
+		}
+		if p.ChapterNo < 1 {
+			p.ChapterNo = 1
+		}
+	} else {
+		p.SeriesTitle, p.ChapterNo, p.Questions = "", 0, nil
+	}
+	questions := make([]postgrespodcast.Question, 0, len(p.Questions))
+	for i, q := range p.Questions {
+		q.Q = strings.TrimSpace(q.Q)
+		if q.Q == "" {
+			continue
+		}
+		if len(q.Options) < 2 || q.Answer < 0 || q.Answer >= len(q.Options) {
+			return invalid(fmt.Sprintf("سؤال %d حداقل دو گزینه و یک جواب درست لازم دارد", i+1))
+		}
+		questions = append(questions, q)
+	}
+	p.Questions = questions
 	if p.SceneID != "" {
 		if err := parseID(op, p.SceneID); err != nil {
 			return Podcast{}, err

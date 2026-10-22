@@ -269,7 +269,7 @@ type podcastScriptArgs struct {
 }
 
 type podcastArgs struct {
-	Podcast obj `json:"podcast" jsonschema:"podcast: title, description_fa, level, kind, scene_id, vocabulary[{word,meaning_fa}], voices{speaker:voice_id}, speech_speed, line_gap_ms, images[{url,from_line}], image_url, lines[{position,speaker,text,translation_fa}]"`
+	Podcast obj `json:"podcast" jsonschema:"podcast: title, description_fa, level, kind (lesson | featured | story), scene_id, vocabulary[{word,meaning_fa}], voices{speaker:voice_id}, speech_speed, line_gap_ms, images[{url,from_line}], image_url, lines[{position,speaker,text,translation_fa}]; for kind=story (a reading chapter, speaker Narrator): series_title, chapter_no, questions[{q,q_fa,options[],answer}]"`
 }
 
 type updateArgs struct {
@@ -923,7 +923,7 @@ func registerTools(s *mcp.Server, c *client) {
 			}))
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "create_podcast_draft", Description: "Create a podcast as inactive (hidden from the app). Then generate_podcast_audio."},
+	mcp.AddTool(s, &mcp.Tool{Name: "create_podcast_draft", Description: "Create a podcast (or, with kind=story, a reading-story chapter) as inactive (hidden from the app). Then generate_podcast_audio."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in podcastArgs) (*mcp.CallToolResult, any, error) {
 			if in.Podcast == nil {
 				return nil, nil, errors.New("podcast is required")

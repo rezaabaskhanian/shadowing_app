@@ -295,6 +295,13 @@ export const AppDrawer = ({
             </TouchableOpacity>
           )}
 
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('StoryList')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+              <BookOpen color={COLORS.levelIntermediateBg} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('storyTitle')}</Text>
+          </TouchableOpacity>
+
           {available.podcasts && (
             <TouchableOpacity
               style={styles.row}

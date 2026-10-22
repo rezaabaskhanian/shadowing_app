@@ -26,6 +26,7 @@ func (h Handler) SetPodcastRoutes(e *echo.Echo) {
 
 	app := e.Group("/v1/podcasts", auth)
 	app.GET("", h.List)
+	app.GET("/stories", h.ListStories)
 	app.GET("/:id", h.Get)
 
 	admin := e.Group("/v1/admin/podcasts", auth, middlware.AdminOnly)
@@ -53,6 +54,11 @@ func badRequest(c echo.Context) error {
 
 func (h Handler) List(c echo.Context) error {
 	list, err := h.svc.List(c.Request().Context())
+	return respond(c, list, err)
+}
+
+func (h Handler) ListStories(c echo.Context) error {
+	list, err := h.svc.ListStories(c.Request().Context())
 	return respond(c, list, err)
 }
 
