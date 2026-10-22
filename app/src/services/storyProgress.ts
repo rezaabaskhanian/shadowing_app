@@ -60,3 +60,39 @@ export function groupStories(chapters: Podcast[], read: Set<string>): StorySerie
     };
   });
 }
+
+// ---------- سرعت خواندن بی‌صدا (B1 به بالا) ----------
+
+const SPEED_KEY = 'story_reading_speed_v1';
+const SPEED_HISTORY = 30;
+
+export interface ReadingSpeed {
+  wpm: number;
+  /** میانگین چند بارِ قبلی (بدون همین بار)؛ null یعنی اولین اندازه‌گیری. */
+  previousAvg: number | null;
+}
+
+/**
+ * سرعت خواندن یک فصل را ثبت می‌کند و میانگین قبلی را برمی‌گرداند تا کاربر
+ * پیشرفتش را ببیند. اندازه‌های غیرواقعی (ورق زدن سریع یا رها کردن صفحه) ثبت نمی‌شوند.
+ */
+export async function recordReadingSpeed(words: number, seconds: number): Promise<ReadingSpeed | null> {
+  if (seconds < 20 || seconds > 30 * 60) return null;
+  const wpm = Math.round((words / seconds) * 60);
+  if (wpm < 20 || wpm > 500) return null;
+  let history: number[] = [];
+  try {
+    const raw = await AsyncStorage.getItem(SPEED_KEY);
+    history = raw ? (JSON.parse(raw) as number[]) : [];
+  } catch {
+    history = [];
+  }
+  const recent = history.slice(-5);
+  const previousAvg = recent.length ? Math.round(recent.reduce((a, b) => a + b, 0) / recent.length) : null;
+  try {
+    await AsyncStorage.setItem(SPEED_KEY, JSON.stringify([...history, wpm].slice(-SPEED_HISTORY)));
+  } catch {
+    // ذخیره نشد؛ فقط مقایسه‌ی دفعه‌ی بعد از دست می‌رود.
+  }
+  return { wpm, previousAvg };
+}

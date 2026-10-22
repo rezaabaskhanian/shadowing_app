@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { BookOpen, ChevronLeft, Pause, Play, X } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, Gauge, Headphones, Pause, Play, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -13,7 +13,7 @@ import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
 import { getPodcast, getStories, type Podcast } from '../../api/podcasts';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
-import { markChapterRead } from '../../services/storyProgress';
+import { markChapterRead, recordReadingSpeed, type ReadingSpeed } from '../../services/storyProgress';
 import { track } from '../../services/analytics';
 import { KaraokeText } from '../../components/KaraokeText';
 import { ACCENT_CYCLE, levelColor } from '../../components/ContentVisuals';
@@ -22,6 +22,9 @@ const STORY_TRACK_ID = 'story';
 const RATES = [0.75, 1];
 // بدون عکس، متن هر چند جمله یک بند جدا می‌شود تا دیوار متن نباشد.
 const SENTENCES_PER_PARAGRAPH = 4;
+// A1–A2 اول با صدا می‌خوانند (خواندن همراه با شنیدن)؛ از B1 اول بی‌صدا، بعد گوش دادن —
+// و فقط همین سطح‌ها سرعت خواندنِ بی‌صدا را می‌بینند.
+const LISTEN_FIRST_LEVELS = ['starter', 'beginner'];
 
 /**
  * خواندنِ یک فصل از داستان (بخش خواندن): متن‌محور، با «خواندن همراه با شنیدن»
@@ -46,6 +49,10 @@ export const StoryScreen: React.FC = () => {
   const [shownTranslations, setShownTranslations] = useState<Set<number>>(new Set());
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [nextChapter, setNextChapter] = useState<Podcast | null>(null);
+  // زمان‌سنجِ خواندنِ بی‌صدا: از باز شدن فصل تا اولین جواب؛ اگر قبلش صدا پخش شود، باطل.
+  const readStartRef = useRef<number | null>(null);
+  const listenedBeforeQuizRef = useRef(false);
+  const [speed, setSpeed] = useState<ReadingSpeed | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
   const lastActive = useRef(-1);
@@ -61,6 +68,7 @@ export const StoryScreen: React.FC = () => {
       .then(async (p) => {
         if (!active) return;
         setStory(p);
+        readStartRef.current = Date.now();
         track('story_opened', p.id);
         getStories()
           .then((all) => {
@@ -136,12 +144,14 @@ export const StoryScreen: React.FC = () => {
       trackedRef.current = true;
       track('story_played', story.id);
     }
+    if (Object.keys(answers).length === 0) listenedBeforeQuizRef.current = true;
     if (positionMs >= story.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
     await TrackPlayer.play();
   };
 
   const playFrom = async (startMs: number) => {
     if (!ready) return;
+    if (Object.keys(answers).length === 0) listenedBeforeQuizRef.current = true;
     await TrackPlayer.seekTo(startMs / 1000);
     positionSV.value = startMs;
     setPositionMs(startMs);
@@ -173,6 +183,18 @@ export const StoryScreen: React.FC = () => {
     const y = lineY.current[activeIdx];
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 160), animated: true });
   }, [activeIdx]);
+
+  const listenFirst = LISTEN_FIRST_LEVELS.includes(story?.level ?? 'starter');
+  const wordCount = lines.reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0);
+
+  // اولین جواب = پایانِ خواندن؛ سرعت فقط برای B1+ و فقط اگر بی‌صدا خوانده باشد.
+  const answer = (qi: number, oi: number) => {
+    if (Object.keys(answers).length === 0 && !listenFirst && !listenedBeforeQuizRef.current && readStartRef.current) {
+      const seconds = (Date.now() - readStartRef.current) / 1000;
+      recordReadingSpeed(wordCount, seconds).then((r) => r && setSpeed(r));
+    }
+    setAnswers((prev) => ({ ...prev, [qi]: oi }));
+  };
 
   const questions = story?.questions ?? [];
   const allAnswered = questions.length > 0 && questions.every((_, i) => answers[i] !== undefined);
@@ -248,6 +270,16 @@ export const StoryScreen: React.FC = () => {
             <Text style={styles.recapText}>{story.description_fa}</Text>
           </View>
         )}
+
+        <View style={[styles.guide, { backgroundColor: hexToRgba(accent, 0.1) }]}>
+          {listenFirst ? <Headphones size={18} color={accent} /> : <BookOpen size={18} color={accent} />}
+          <View style={styles.flex}>
+            <Text style={[styles.guideTitle, { color: accent }]}>
+              {listenFirst ? t('storyGuideListenTitle') : t('storyGuideSilentTitle')}
+            </Text>
+            <Text style={styles.guideText}>{listenFirst ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
+          </View>
+        </View>
 
         <View style={styles.switchRow}>
           <Text style={styles.hint}>{t('storyReadHint')}</Text>
@@ -331,7 +363,7 @@ export const StoryScreen: React.FC = () => {
                       <TouchableOpacity
                         key={oi}
                         disabled={answered}
-                        onPress={() => setAnswers((prev) => ({ ...prev, [qi]: oi }))}
+                        onPress={() => answer(qi, oi)}
                         activeOpacity={0.8}
                         style={[
                           styles.option,
@@ -346,6 +378,23 @@ export const StoryScreen: React.FC = () => {
                 </View>
               );
             })}
+            {!!speed && (
+              <View style={[styles.speedCard, { borderColor: hexToRgba(accent, 0.35) }]}>
+                <Gauge size={22} color={accent} />
+                <View style={styles.flex}>
+                  <Text style={styles.speedValue}>
+                    {t('storySpeedValue').replace('{wpm}', String(speed.wpm))}
+                  </Text>
+                  <Text style={styles.speedCompare}>
+                    {speed.previousAvg === null
+                      ? t('storySpeedFirst')
+                      : speed.wpm >= speed.previousAvg
+                      ? t('storySpeedUp').replace('{avg}', String(speed.previousAvg))
+                      : t('storySpeedDown').replace('{avg}', String(speed.previousAvg))}
+                  </Text>
+                </View>
+              </View>
+            )}
             {allAnswered && (
               <View style={[styles.result, { backgroundColor: hexToRgba(accent, 0.1) }]}>
                 <Text style={styles.resultText}>
@@ -448,6 +497,19 @@ const styles = StyleSheet.create({
   recap: { borderRadius: BORDER_RADIUS.m, borderWidth: 1, padding: SPACING.m },
   recapText: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
   switchRow: { gap: SPACING.xs },
+  guide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.s, borderRadius: BORDER_RADIUS.m, padding: SPACING.m },
+  guideTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
+  guideText: { ...TEXT_STYLES.labelMd, color: COLORS.text, marginTop: 2 },
+  speedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+  },
+  speedValue: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  speedCompare: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary },
   switchInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { ...TEXT_STYLES.labelMd, color: COLORS.text },
   hint: { ...TEXT_STYLES.labelSm, color: COLORS.muted },

@@ -1390,6 +1390,20 @@ export const translations: Translations = {
   storyFinish: { en: 'Finish', fa: 'پایان' },
   storyListenAlong: { en: 'Read and listen', fa: 'بخوان و گوش بده' },
   homeStories: { en: 'Stories', fa: 'داستان‌ها' },
+  storyGuideListenTitle: { en: 'Listen and read first', fa: 'اول با صدا بخوان' },
+  storyGuideListenText: {
+    en: 'Press play and follow the highlighted words. Then, if you like, read it again without sound.',
+    fa: 'دکمه‌ی پخش را بزن و کلمه‌های رنگی را دنبال کن. بعد اگر خواستی، یک بار هم بی‌صدا بخوان.',
+  },
+  storyGuideSilentTitle: { en: 'Read silently first, then listen', fa: 'اول بی‌صدا بخوان، بعد گوش بده' },
+  storyGuideSilentText: {
+    en: 'Read without sound and answer the questions — we measure your reading speed. Then listen to check.',
+    fa: 'بدون صدا بخوان و به سؤال‌ها جواب بده؛ سرعت خواندنت اندازه گرفته می‌شود. بعد با صدا گوش بده و مقایسه کن.',
+  },
+  storySpeedValue: { en: 'Reading speed: {wpm} words per minute', fa: 'سرعت خواندن: {wpm} کلمه در دقیقه' },
+  storySpeedFirst: { en: 'Your first measurement. Read more chapters to see your progress.', fa: 'اولین اندازه‌گیری‌ات. با فصل‌های بعد پیشرفتت را می‌بینی.' },
+  storySpeedUp: { en: 'Up from your recent average of {avg}. Great progress!', fa: 'از میانگین اخیرت ({avg}) بیشتر است. عالی!' },
+  storySpeedDown: { en: 'Your recent average is {avg}. Harder texts are slower — that is normal.', fa: 'میانگین اخیرت {avg} است. متن سخت‌تر کندتر خوانده می‌شود؛ طبیعی است.' },
 };
 
 /**
