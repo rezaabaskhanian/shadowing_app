@@ -1022,6 +1022,7 @@ export const translations: Translations = {
   goalPlanOutOfPlan: { en: 'Beyond your plan; open it any time', fa: 'بیرون از برنامه؛ هر وقت خواستی' },
   goalPlanEdit: { en: 'Change my plan', fa: 'تغییر برنامه' },
   goalPlanDelete: { en: 'Delete plan', fa: 'حذف برنامه' },
+  goalPlanForecastTitle: { en: 'Honest forecast', fa: 'پیش‌بینی صادقانه' },
   goalPlanDeleteTitle: { en: 'Delete this plan?', fa: 'برنامه حذف شود؟' },
   goalPlanDeleteBody: { en: 'Your finished scenes stay as they are.', fa: 'صحنه‌هایی که تمام کرده‌ای سر جایشان می‌مانند.' },
   goalPlanLoadError: { en: 'Something went wrong. Try again.', fa: 'مشکلی پیش آمد. دوباره امتحان کن.' },

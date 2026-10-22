@@ -1,15 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, Check, Clock, GraduationCap, Home, Lock, Plane, X } from 'lucide-react-native';
+import { Briefcase, CalendarDays, Check, ChevronLeft, Clock, GraduationCap, Home, Lock, Pencil, Plane, Target, Timer, Trash2, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { track } from '../../services/analytics';
 import { getMyLevel } from '../../api/assessment';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import {
   deleteGoalPlan,
   getGoalPlan,
@@ -66,6 +68,8 @@ export const GoalPlanScreen: React.FC = () => {
   const [months, setMonths] = useState<number | null | undefined>(undefined);
   const [minutes, setMinutes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(() => {
     setError(false);
@@ -96,24 +100,19 @@ export const GoalPlanScreen: React.FC = () => {
     }
   };
 
-  const remove = () =>
-    Alert.alert(t('goalPlanDeleteTitle'), t('goalPlanDeleteBody'), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('goalPlanDelete'),
-        style: 'destructive',
-        onPress: () => {
-          deleteGoalPlan()
-            .then(() => {
-              setView(null);
-              setGoal(null);
-              setMonths(undefined);
-              setMinutes(null);
-            })
-            .catch(() => setError(true));
-        },
-      },
-    ]);
+  const remove = () => {
+    setDeleting(true);
+    deleteGoalPlan()
+      .then(() => {
+        setView(null);
+        setGoal(null);
+        setMonths(undefined);
+        setMinutes(null);
+        setConfirmDelete(false);
+      })
+      .catch(() => setError(true))
+      .finally(() => setDeleting(false));
+  };
 
   const header = (
     <View style={styles.topRow}>
@@ -137,14 +136,30 @@ export const GoalPlanScreen: React.FC = () => {
   // ---------- ساختن برنامه ----------
   if (!view || editing) {
     const ready = !!goal && months !== undefined && !!minutes;
+    // رنگ انتخاب‌ها از هدفِ انتخاب‌شده می‌آید تا کل فرم هم‌رنگ هدف شود.
+    const pickColor = GOALS.find((g) => g.id === goal)?.color ?? COLORS.primary;
+    const selectedStyle = { borderColor: pickColor, backgroundColor: hexToRgba(pickColor, 0.12) };
+    const step = (n: number, label: string, done: boolean) => (
+      <View style={styles.stepRow}>
+        <View style={[styles.stepBadge, { backgroundColor: done ? COLORS.success : pickColor }]}>
+          {done ? <Check size={14} color={COLORS.white} /> : <Text style={styles.stepBadgeText}>{num(n)}</Text>}
+        </View>
+        <Text style={styles.stepLabel}>{label}</Text>
+      </View>
+    );
     return (
       <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
         {header}
         <ScrollView contentContainerStyle={{ padding: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
-          <Text style={styles.title}>{t('goalPlanTitle')}</Text>
-          <Text style={styles.sub}>{t('goalPlanIntro')}</Text>
+          <View style={[styles.introHero, { backgroundColor: hexToRgba(pickColor, 0.1) }]}>
+            <View style={[styles.bannerIcon, { backgroundColor: pickColor }]}>
+              <Target size={28} color={COLORS.white} />
+            </View>
+            <Text style={styles.title}>{t('goalPlanTitle')}</Text>
+            <Text style={styles.sub}>{t('goalPlanIntro')}</Text>
+          </View>
 
-          <Text style={styles.sectionLabel}>{t('goalPlanPickGoal')}</Text>
+          {step(1, t('goalPlanPickGoal'), !!goal)}
           <View style={styles.grid}>
             {GOALS.map((g) => (
               <TouchableOpacity
@@ -164,12 +179,12 @@ export const GoalPlanScreen: React.FC = () => {
             ))}
           </View>
 
-          <Text style={styles.sectionLabel}>{t('goalPlanWhen')}</Text>
+          {step(2, t('goalPlanWhen'), months !== undefined)}
           <View style={styles.wrap}>
             {DATE_CHOICES.map((m) => (
               <TouchableOpacity
                 key={String(m)}
-                style={[styles.chip, months === m && styles.selected]}
+                style={[styles.chip, months === m && selectedStyle]}
                 onPress={() => setMonths(m)}
                 activeOpacity={0.85}
               >
@@ -180,12 +195,12 @@ export const GoalPlanScreen: React.FC = () => {
             ))}
           </View>
 
-          <Text style={styles.sectionLabel}>{t('goalPlanMinutes')}</Text>
+          {step(3, t('goalPlanMinutes'), !!minutes)}
           <View style={styles.wrap}>
             {MINUTES.map((m) => (
               <TouchableOpacity
                 key={m}
-                style={[styles.chip, minutes === m && styles.selected]}
+                style={[styles.chip, minutes === m && selectedStyle]}
                 onPress={() => setMinutes(m)}
                 activeOpacity={0.85}
               >
@@ -196,7 +211,7 @@ export const GoalPlanScreen: React.FC = () => {
 
           {error && <Text style={styles.errorText}>{t('goalPlanLoadError')}</Text>}
           <TouchableOpacity
-            style={[styles.primaryBtn, (!ready || busy) && styles.btnDisabled]}
+            style={[styles.primaryBtn, { backgroundColor: pickColor }, (!ready || busy) && styles.btnDisabled]}
             onPress={create}
             disabled={!ready || busy}
             activeOpacity={0.85}
@@ -220,27 +235,67 @@ export const GoalPlanScreen: React.FC = () => {
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       {header}
       <ScrollView contentContainerStyle={{ padding: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
-        <View style={[styles.banner, { backgroundColor: goalMeta.light }]}>
-          <View style={[styles.bannerIcon, { backgroundColor: goalMeta.color }]}>
-            <goalMeta.icon size={28} color={COLORS.white} />
+        {/* سربرگ: رنگِ هدف، حلقه‌ی پیشرفت (موقعیت‌های آماده) و دو برچسب زمان. */}
+        <View style={[styles.hero, { backgroundColor: goalMeta.color }]}>
+          <View style={styles.heroTop}>
+            <View style={styles.flex1}>
+              <View style={styles.heroIconRow}>
+                <View style={styles.heroIcon}>
+                  <goalMeta.icon size={22} color={COLORS.white} />
+                </View>
+                <Text style={styles.heroTitle}>{goalLabel}</Text>
+              </View>
+              <Text style={styles.heroSub}>
+                {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
+              </Text>
+            </View>
+            <ProgressRing pct={pct} label={`${num(pct)}${language === 'fa' ? '٪' : '%'}`} />
           </View>
-          <Text style={[styles.title, { color: goalMeta.color }]}>{goalLabel}</Text>
+          <View style={styles.pills}>
+            <View style={styles.pill}>
+              <CalendarDays size={14} color={COLORS.white} />
+              <Text style={styles.pillText}>
+                {f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}
+              </Text>
+            </View>
+            <View style={styles.pill}>
+              <Timer size={14} color={COLORS.white} />
+              <Text style={styles.pillText}>{t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}</Text>
+            </View>
+          </View>
         </View>
-        {f ? (
-          <Text style={styles.sub}>
-            {t('goalPlanDaysLeft').replace('{n}', num(f.days_left))} ·{' '}
-            {t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}
-          </Text>
+
+        {today ? (
+          <TouchableOpacity
+            style={[styles.todayCard, { borderColor: goalMeta.color, backgroundColor: hexToRgba(goalMeta.color, 0.08) }]}
+            activeOpacity={0.85}
+            onPress={() => {
+              track('goal_situation_open', today.id);
+              navigation.navigate('Shadowing', { scenarioId: today.scene_id });
+            }}
+          >
+            <View style={[styles.todayIcon, { backgroundColor: goalMeta.color }]}>
+              <Clock size={20} color={COLORS.white} />
+            </View>
+            <View style={styles.flex1}>
+              <Text style={[styles.todayLabel, { color: goalMeta.color }]}>{t('goalPlanToday')}</Text>
+              <Text style={styles.todayTitle}>{today.title_fa}</Text>
+            </View>
+            <ChevronLeft size={20} color={goalMeta.color} />
+          </TouchableOpacity>
         ) : (
-          <Text style={styles.sub}>{t('goalPlanNoDateNote')}</Text>
+          view.ready >= view.in_plan_count &&
+          view.in_plan_count > 0 && (
+            <View style={[styles.doneCard, { backgroundColor: COLORS.successLight }]}>
+              <Check size={20} color={COLORS.success} />
+              <Text style={[styles.honest, styles.flex1]}>{t('goalPlanAllDone')}</Text>
+            </View>
+          )
         )}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}</Text>
-          <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: goalMeta.color }]} />
-          </View>
-          {f && (
+        {f && (
+          <View style={[styles.card, { borderColor: hexToRgba(goalMeta.color, 0.25) }]}>
+            <Text style={styles.cardTitle}>🎯 {t('goalPlanForecastTitle')}</Text>
             <Text style={styles.honest}>
               {f.situations_target < f.situations_total
                 ? t('goalPlanHonestPartial').replace('{n}', num(f.situations_target)).replace('{m}', num(f.situations_total))
@@ -252,59 +307,106 @@ export const GoalPlanScreen: React.FC = () => {
                     : t('goalPlanLevelPartial').replace('{level}', nextLabel).replace('{pct}', num(f.level_progress_pct)))
                 : ''}
             </Text>
-          )}
-        </View>
-
-        {today ? (
-          <TouchableOpacity
-            style={[styles.todayCard, { backgroundColor: goalMeta.color }]}
-            activeOpacity={0.85}
-            onPress={() => {
-              track('goal_situation_open', today.id);
-              navigation.navigate('Shadowing', { scenarioId: today.scene_id });
-            }}
-          >
-            <Clock size={22} color={COLORS.white} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.todayLabel}>{t('goalPlanToday')}</Text>
-              <Text style={styles.todayTitle}>{today.title_fa}</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          view.ready >= view.in_plan_count &&
-          view.in_plan_count > 0 && <Text style={styles.honest}>{t('goalPlanAllDone')}</Text>
+          </View>
         )}
+        {!f && <Text style={styles.sub}>{t('goalPlanNoDateNote')}</Text>}
 
         <Text style={styles.sectionLabel}>{t('goalPlanSituations')}</Text>
-        {view.situations.map((s) => {
+        {view.situations.map((s, i) => {
           const open = s.has_content && !!s.scene_id;
+          const isToday = s.id === view.today_id;
+          const tint = s.ready ? COLORS.success : open ? goalMeta.color : COLORS.muted;
           return (
             <TouchableOpacity
               key={s.id}
-              style={[styles.row, !s.in_plan && { opacity: 0.55 }]}
+              style={[
+                styles.row,
+                { borderColor: isToday ? goalMeta.color : hexToRgba(tint, 0.25) },
+                s.ready && { backgroundColor: COLORS.successLight },
+                !s.in_plan && styles.dimmed,
+              ]}
               disabled={!open}
               activeOpacity={0.85}
               onPress={() => navigation.navigate('Shadowing', { scenarioId: s.scene_id })}
             >
-              <View style={[styles.statusDot, s.ready && { backgroundColor: COLORS.success }]}>
-                {s.ready ? <Check size={14} color={COLORS.white} /> : !open ? <Lock size={12} color={COLORS.muted} /> : null}
+              <View style={[styles.statusDot, { backgroundColor: open || s.ready ? tint : COLORS.surfaceHigh }]}>
+                {s.ready ? (
+                  <Check size={14} color={COLORS.white} />
+                ) : !open ? (
+                  <Lock size={12} color={COLORS.muted} />
+                ) : (
+                  <Text style={styles.stepBadgeText}>{num(i + 1)}</Text>
+                )}
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flex1}>
                 <Text style={styles.rowTitle}>{s.title_fa}</Text>
                 {!open && <Text style={styles.rowSub}>{t('goalPlanComingSoon')}</Text>}
                 {open && !s.in_plan && <Text style={styles.rowSub}>{t('goalPlanOutOfPlan')}</Text>}
               </View>
+              {open && !s.ready && <ChevronLeft size={18} color={tint} />}
             </TouchableOpacity>
           );
         })}
 
-        <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.8}>
-          <Text style={styles.link}>{t('goalPlanEdit')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={remove} activeOpacity={0.8}>
-          <Text style={[styles.link, { color: COLORS.error }]}>{t('goalPlanDelete')}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: goalMeta.color }]}
+            onPress={() => setEditing(true)}
+            activeOpacity={0.85}
+          >
+            <Pencil size={16} color={goalMeta.color} />
+            <Text style={[styles.actionText, { color: goalMeta.color }]}>{t('goalPlanEdit')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: hexToRgba(COLORS.error, 0.4), backgroundColor: COLORS.errorLight }]}
+            onPress={() => setConfirmDelete(true)}
+            activeOpacity={0.85}
+          >
+            <Trash2 size={16} color={COLORS.error} />
+            <Text style={[styles.actionText, { color: COLORS.error }]}>{t('goalPlanDelete')}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmDelete}
+        icon={<Trash2 size={26} color={COLORS.white} />}
+        color={COLORS.error}
+        title={t('goalPlanDeleteTitle')}
+        body={t('goalPlanDeleteBody')}
+        confirmLabel={t('goalPlanDelete')}
+        cancelLabel={t('cancel')}
+        busy={deleting}
+        onConfirm={remove}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </View>
+  );
+};
+
+/** حلقه‌ی پیشرفتِ دایره‌ای (سفید روی رنگِ هدف). */
+const ProgressRing: React.FC<{ pct: number; label: string }> = ({ pct, label }) => {
+  const size = 76;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <View style={styles.ring}>
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={hexToRgba(COLORS.white, 0.25)} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={COLORS.white}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${(c * Math.max(0, Math.min(100, pct))) / 100} ${c}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <Text style={styles.ringText}>{label}</Text>
     </View>
   );
 };
@@ -395,12 +497,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
-    backgroundColor: COLORS.primary,
+    borderWidth: 1.5,
     borderRadius: BORDER_RADIUS.l,
     padding: SPACING.m,
   },
-  todayLabel: { ...TEXT_STYLES.labelSm, color: 'rgba(255,255,255,0.8)' },
-  todayTitle: { ...TEXT_STYLES.bodyLg, color: COLORS.white, fontFamily: FONT_FAMILY.bold },
+  todayLabel: { ...TEXT_STYLES.labelSm, fontFamily: FONT_FAMILY.semiBold },
+  todayTitle: { ...TEXT_STYLES.bodyLg, color: COLORS.text, fontFamily: FONT_FAMILY.bold },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,4 +524,51 @@ const styles = StyleSheet.create({
   rowTitle: { ...TEXT_STYLES.bodyLg, color: COLORS.text },
   rowSub: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
   link: { ...TEXT_STYLES.bodyMd, color: COLORS.primary, textAlign: 'center', paddingVertical: SPACING.xs },
+  flex1: { flex: 1 },
+  dimmed: { opacity: 0.55 },
+  introHero: { alignItems: 'center', gap: SPACING.s, borderRadius: BORDER_RADIUS.l, padding: SPACING.l },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, marginTop: SPACING.s },
+  stepBadge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  stepBadgeText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
+  stepLabel: { ...TEXT_STYLES.bodyLg, color: COLORS.text, fontFamily: FONT_FAMILY.semiBold },
+  hero: { borderRadius: BORDER_RADIUS.l, padding: SPACING.l, gap: SPACING.m, ...SHADOWS.level2 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
+  heroIconRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s },
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, color: COLORS.white },
+  heroSub: { ...TEXT_STYLES.bodyMd, color: 'rgba(255,255,255,0.9)', marginTop: SPACING.s },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.s },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 6,
+  },
+  pillText: { ...TEXT_STYLES.labelMd, color: COLORS.white, fontFamily: FONT_FAMILY.semiBold },
+  ring: { width: 76, height: 76, alignItems: 'center', justifyContent: 'center' },
+  ringText: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.white },
+  todayIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  doneCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, borderRadius: BORDER_RADIUS.l, padding: SPACING.m },
+  actionsRow: { flexDirection: 'row', gap: SPACING.s, marginTop: SPACING.m },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderRadius: BORDER_RADIUS.l,
+    paddingVertical: 12,
+  },
+  actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 15 },
 });
