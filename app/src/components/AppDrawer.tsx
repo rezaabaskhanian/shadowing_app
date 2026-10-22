@@ -27,6 +27,7 @@ import {
   Mail,
   MessageCircle,
   Mic,
+  Flag,
   PenLine,
   Sprout,
   Target,
@@ -248,6 +249,13 @@ export const AppDrawer = ({
               <Target color={COLORS.tertiary} size={18} />
             </View>
             <Text style={styles.rowText}>{t('habitRealSituations')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('GoalPlan')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.warningLight }]}>
+              <Flag color={COLORS.warning} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('goalPlanTitle')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

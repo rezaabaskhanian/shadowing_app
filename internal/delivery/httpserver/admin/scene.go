@@ -1,9 +1,11 @@
 package adminhandler
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"shadowing-backend/internal/pkg/errorhandling"
+	learningservice "shadowing-backend/internal/service/learning"
 	"shadowing-backend/internal/service/learning/dto"
 
 	"github.com/labstack/echo/v4"
@@ -114,6 +116,28 @@ func (h Handler) UpdateSceneDifficulty(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "سطح صحنه به‌روزرسانی شد"})
+}
+
+// FixSceneText ترجمه‌ی دیالوگ‌ها و/یا نکته‌ی گرامری را درجا اصلاح می‌کند
+// (برای صحنه‌های منتشرشده امن است؛ پیشرفت کاربرها پاک نمی‌شود).
+func (h Handler) FixSceneText(c echo.Context) error {
+	var req struct {
+		Translations       []learningservice.TranslationFix `json:"translations"`
+		GrammarTopic       *string                          `json:"grammar_topic"`
+		GrammarExplanation *string                          `json:"grammar_explanation"`
+		GrammarExamples    json.RawMessage                  `json:"grammar_examples"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":   "invalid_request",
+			"message": "درخواست نامعتبر است",
+		})
+	}
+	n, err := h.learningSvc.FixSceneText(c.Request().Context(), c.Param("sceneID"), req.Translations, req.GrammarTopic, req.GrammarExplanation, req.GrammarExamples)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+	return c.JSON(http.StatusOK, map[string]any{"fixed_translations": n})
 }
 
 // DeleteScene یک صحنه را حذف می‌کند.

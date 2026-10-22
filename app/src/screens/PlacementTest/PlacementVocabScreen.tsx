@@ -79,8 +79,8 @@ export const PlacementVocabScreen: React.FC<Props> = ({ items, onDone }) => {
 
       <View style={styles.buttons}>
         <TouchableOpacity style={[styles.btn, styles.btnNo]} onPress={() => answer(false)} activeOpacity={0.85}>
-          <X size={22} color={COLORS.textSecondary} />
-          <Text style={[styles.btnText, { color: COLORS.textSecondary }]}>{t('placementV2VocabNo')}</Text>
+          <X size={22} color={COLORS.error} />
+          <Text style={[styles.btnText, { color: COLORS.error }]}>{t('placementV2VocabNo')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.btn, styles.btnYes]} onPress={() => answer(true)} activeOpacity={0.85}>
           <Check size={22} color={COLORS.white} />
@@ -117,13 +117,13 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: 6,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.primaryLight,
     borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
     paddingVertical: SPACING.xl * 2,
     alignItems: 'center',
     ...SHADOWS.level1,
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   word: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 34,
-    color: COLORS.text,
+    color: COLORS.primary,
   },
   buttons: {
     flexDirection: 'row',
@@ -147,12 +147,12 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.l,
   },
   btnNo: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.errorLight,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
   },
   btnYes: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.success,
   },
   btnText: {
     fontFamily: FONT_FAMILY.bold,

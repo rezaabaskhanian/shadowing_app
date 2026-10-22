@@ -106,7 +106,8 @@ type getSceneArgs struct {
 }
 
 type sceneArgs struct {
-	Scene obj `json:"scene" jsonschema:"full create-scene payload: title, description, background_image_url (may be empty for a draft), difficulty, category, is_locked, hotspots[{name,x_position,y_position,order,dialogues[{order,speaker,original_text,translation,audio_url,display_type,partial_hint,wait_duration,words[{word,meaning}],phrases[{phrase,meaning}]}]}], grammar_topic, grammar_explanation, grammar_examples, grammar_audio_url"`
+	FilePath string `json:"file_path,omitempty" jsonschema:"optional absolute path of a local JSON file with the full scene payload (used instead of scene; unknown keys such as description_fa are dropped by the server)"`
+	Scene    obj    `json:"scene,omitempty" jsonschema:"full create-scene payload: title, description, background_image_url (may be empty for a draft), difficulty, category, is_locked, hotspots[{name,x_position,y_position,order,dialogues[{order,speaker,original_text,translation,audio_url,display_type,partial_hint,wait_duration,words[{word,meaning}],phrases[{phrase,meaning}]}]}], grammar_topic, grammar_explanation, grammar_examples, grammar_audio_url"`
 }
 
 type updateSceneArgs struct {
@@ -135,6 +136,11 @@ type lineEdit struct {
 	Translation string `json:"translation" jsonschema:"new Persian translation"`
 	Words       []obj  `json:"words,omitempty" jsonschema:"new vocab chips [{word, meaning}]; omitted = keep current"`
 	Phrases     []obj  `json:"phrases,omitempty" jsonschema:"new phrase chips [{phrase, meaning}]; omitted = keep current"`
+}
+
+type getPathArgs struct {
+	Level    string `json:"level" jsonschema:"path level, e.g. starter"`
+	FilePath string `json:"file_path,omitempty" jsonschema:"optional absolute path: when set, the full path JSON is written to this file (ready to edit and pass to save_learning_path) and only a short summary is returned"`
 }
 
 type savePathArgs struct {
@@ -230,6 +236,14 @@ type assessmentItemArgs struct {
 
 type assessmentItemsArgs struct {
 	Items []assessmentItemArgs `json:"items" jsonschema:"items to create (no id) or update (with id), at most 150"`
+}
+
+type fixSceneTextArgs struct {
+	SceneID            string `json:"scene_id" jsonschema:"scene id"`
+	Translations       []obj  `json:"translations,omitempty" jsonschema:"[{dialogue_id, translation?, words?, phrases?}]: new Persian translation and/or the FULL replacement word/phrase chip arrays ([{word,meaning}] / [{phrase,meaning}]) of these dialogue lines (ids from get_scene)"`
+	GrammarExamples    []obj  `json:"grammar_examples,omitempty" jsonschema:"FULL replacement grammar examples [{text, translation}] (empty = unchanged)"`
+	GrammarTopic       string `json:"grammar_topic,omitempty" jsonschema:"new grammar note topic (empty = unchanged)"`
+	GrammarExplanation string `json:"grammar_explanation,omitempty" jsonschema:"new grammar note explanation in Persian (empty = unchanged)"`
 }
 
 type goalPackArgs struct {
@@ -356,8 +370,17 @@ func registerTools(s *mcp.Server, c *client) {
 	mcp.AddTool(s, &mcp.Tool{Name: "create_scene_draft",
 		Description: "Create a scene as an unpublished draft (an image is optional for drafts). The admin publishes it in the panel."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in sceneArgs) (*mcp.CallToolResult, any, error) {
+			if strings.TrimSpace(in.FilePath) != "" {
+				raw, err := os.ReadFile(in.FilePath)
+				if err != nil {
+					return nil, nil, fmt.Errorf("read %s: %w", in.FilePath, err)
+				}
+				if err := json.Unmarshal(raw, &in.Scene); err != nil {
+					return nil, nil, fmt.Errorf("parse %s: %w", in.FilePath, err)
+				}
+			}
 			if in.Scene == nil {
-				return nil, nil, errors.New("scene is required")
+				return nil, nil, errors.New("scene or file_path is required")
 			}
 			payload := merge(in.Scene, obj{"is_published": false})
 			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/scenes", payload))
@@ -499,9 +522,16 @@ func registerTools(s *mcp.Server, c *client) {
 
 	// ---- مسیر آموزشی ----
 	mcp.AddTool(s, &mcp.Tool{Name: "get_learning_path", Annotations: ro,
-		Description: "Get a learning path (weeks, sessions, items and checkpoint content) by level, as the admin sees it."},
-		func(ctx context.Context, _ *mcp.CallToolRequest, in savePathArgs) (*mcp.CallToolResult, any, error) {
-			return rawResult(c.get(ctx, "/v1/admin/paths/"+url.PathEscape(in.Level)))
+		Description: "Get a learning path (weeks, sessions, items and checkpoint content) by level, as the admin sees it. Pass file_path to write the JSON to a file instead of returning it (these paths are ~80 KB)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in getPathArgs) (*mcp.CallToolResult, any, error) {
+			raw, err := c.get(ctx, "/v1/admin/paths/"+url.PathEscape(in.Level))
+			if err != nil || strings.TrimSpace(in.FilePath) == "" {
+				return rawResult(raw, err)
+			}
+			if err := os.WriteFile(in.FilePath, raw, 0o600); err != nil {
+				return nil, nil, fmt.Errorf("write %s: %w", in.FilePath, err)
+			}
+			return textResult([]byte(fmt.Sprintf(`{"saved_to":%q,"bytes":%d}`, in.FilePath, len(raw)))), nil, nil
 		})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "save_learning_path",
@@ -760,6 +790,26 @@ func registerTools(s *mcp.Server, c *client) {
 				ok++
 			}
 			return jsonResult(obj{"ok": ok, "failed": failed})
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "fix_scene_text", Description: "Safely fix a scene IN PLACE, also when it is published: Persian translations and word/phrase chip meanings of given dialogue lines and/or the grammar note topic/explanation/examples. " +
+		"English text, audio, dialogue ids and user progress are NOT touched (unlike update_scene / edit_scene_lines, which rebuild the scene and wipe progress)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in fixSceneTextArgs) (*mcp.CallToolResult, any, error) {
+			id, err := pathID(in.SceneID)
+			if err != nil {
+				return nil, nil, err
+			}
+			body := obj{"translations": in.Translations}
+			if t := strings.TrimSpace(in.GrammarTopic); t != "" {
+				body["grammar_topic"] = t
+			}
+			if e := strings.TrimSpace(in.GrammarExplanation); e != "" {
+				body["grammar_explanation"] = e
+			}
+			if len(in.GrammarExamples) > 0 {
+				body["grammar_examples"] = in.GrammarExamples
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPatch, "/v1/admin/scenes/"+id+"/text-fixes", body))
 		})
 
 	// ---- بسته‌های مسیر هدف‌محور ----

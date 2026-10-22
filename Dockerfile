@@ -20,16 +20,19 @@ ARG REGISTRY=docker.io
 
     WORKDIR /app
 
+    # پکیج‌ها داخلِ خودِ لایه دانلود می‌شوند (نه در cache mount): تا وقتی go.mod و
+    # go.sum عوض نشده‌اند این لایه «CACHED» است و هیچ پکیجی دوباره دانلود نمی‌شود.
+    # قبلاً /go/pkg/mod یک cache mount بود؛ آن mount روی مسیر لایه سوار می‌شد و
+    # پکیج‌های لایه را می‌پوشاند، برای همین مرحله‌ی build هر بار دوباره دانلود می‌کرد.
     COPY go.mod go.sum ./
-    RUN --mount=type=cache,target=/go/pkg/mod go mod download
+    RUN go mod download
     
     COPY . .
     
     # کشِ build خودِ Go (پکیج‌های کامپایل‌شده) بینِ buildها نگه داشته می‌شود؛
     # با تغییرِ چند فایل، فقط همان‌ها دوباره کامپایل می‌شوند نه کلِ پروژه و
     # وابستگی‌هایش. نیاز به BuildKit دارد (پیش‌فرضِ Docker 23 به بعد).
-    RUN --mount=type=cache,target=/go/pkg/mod \
-        --mount=type=cache,target=/root/.cache/go-build \
+    RUN --mount=type=cache,target=/root/.cache/go-build \
         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/main.go
     
     # -----------------------------

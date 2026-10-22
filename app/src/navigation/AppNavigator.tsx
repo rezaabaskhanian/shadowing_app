@@ -125,6 +125,8 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'CourseHome',
   'CourseLesson',
   'PathHome',
+  'PathDictation',
+  'PathSelfIntro',
   'PathWeakLines',
   'PathCheckpoint',
   'PodcastList',
@@ -164,8 +166,11 @@ const TabButton = ({
     focus.value = withTiming(isFocused ? 1 : 0, { duration: 220 });
   }, [isFocused, focus]);
 
+  // رنگ بیرون از worklet حساب می‌شود؛ صدا زدن تابع معمولی JS داخل
+  // useAnimatedStyle (روی UI thread) کرش «Tried to synchronously call a Remote Function» می‌دهد.
+  const pillColor = hexToRgba(color, 0.14);
   const pillStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(focus.value, [0, 1], ['transparent', hexToRgba(color, 0.14)]),
+    backgroundColor: interpolateColor(focus.value, [0, 1], ['transparent', pillColor]),
     transform: [{ scale: 0.9 + focus.value * 0.1 }],
   }));
 

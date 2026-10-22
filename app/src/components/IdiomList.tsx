@@ -16,7 +16,7 @@ import { idiomKeys } from '../screens/SceneScreen/shadowing/DialoguePhrases';
  * تا یک سطح بالاتر از سطح کاربر نشان داده می‌شود تا با اصطلاح‌های خیلی
  * پیشرفته غرق نشود؛ «همه‌ی سطح‌ها» بقیه را هم باز می‌کند.
  */
-export const IdiomList = () => {
+export const IdiomList: React.FC<{ focusPhrases?: string[] }> = ({ focusPhrases }) => {
   const { t } = useLanguage();
   const { has, add } = useVocab();
   const [showAll, setShowAll] = useState(false);
@@ -30,6 +30,11 @@ export const IdiomList = () => {
   const levels = CEFR_ORDER.slice(0, maxIndex + 1);
 
   const idioms = data || [];
+  // اصطلاح‌های «این هفته» (از قدم مسیر)، بالای فهرست و مستقل از فیلتر سطح
+  // با خودِ عبارت (نه شناسه) جور می‌شود چون شناسه‌ها با ایمپورت دوباره عوض می‌شوند.
+  const norm = (x: string) => x.trim().toLowerCase();
+  const wanted = (focusPhrases || []).map(norm);
+  const focus = wanted.length ? idioms.filter((i) => wanted.includes(norm(i.phrase))) : [];
   const byLevel = (lvl: string) => idioms.filter((i) => i.level === lvl);
   const unlevelled = idioms.filter((i) => !CEFR_ORDER.includes(i.level));
   const hidden = idioms.filter((i) => CEFR_ORDER.indexOf(i.level) > maxIndex).length;
@@ -38,6 +43,15 @@ export const IdiomList = () => {
     <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
       <Text style={styles.intro}>{t('idiomsIntro')}</Text>
       {idioms.length === 0 && <Text style={styles.empty}>{t('idiomsEmpty')}</Text>}
+
+      {focus.length > 0 && (
+        <View style={{ gap: 8 }}>
+          <Text style={styles.levelTitle}>{t('idiomsThisWeek')}</Text>
+          {focus.map((i) => (
+            <IdiomRow key={i.id} idiom={i} saved={has(i.phrase)} onAdd={() => add({ word: i.phrase, meaning: i.meaning_fa })} />
+          ))}
+        </View>
+      )}
 
       {levels.map((lvl) => {
         const items = byLevel(lvl);

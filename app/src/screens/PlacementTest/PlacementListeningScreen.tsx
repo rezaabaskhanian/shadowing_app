@@ -12,6 +12,7 @@ import { absUrl } from '../../api/config';
 import { CEFR_LEVELS, type CefrLevel, type ListenTestItem } from '../../api/assessment';
 
 const MAX_PLAYS = 2;
+const OPTION_COLORS = [COLORS.info, COLORS.tertiary, COLORS.secondary];
 const START_LEVEL: CefrLevel = 'A2';
 
 interface Props {
@@ -153,6 +154,9 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
             disabled={plays === 0}
             activeOpacity={0.85}
           >
+            <View style={[styles.badge, { backgroundColor: OPTION_COLORS[i % OPTION_COLORS.length] }]}>
+              <Text style={styles.badgeText}>{String.fromCharCode(65 + i)}</Text>
+            </View>
             <Text style={[styles.optionText, plays === 0 && { opacity: 0.4 }]}>{o}</Text>
           </TouchableOpacity>
         ))}
@@ -187,10 +191,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.infoLight,
     borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: COLORS.info,
     padding: SPACING.l,
     alignItems: 'center',
     gap: SPACING.s,
@@ -217,6 +221,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     borderWidth: 1.5,
@@ -228,7 +235,20 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primaryLight,
   },
+  badge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+  },
   optionText: {
+    flex: 1,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 15,
     color: COLORS.text,

@@ -25,6 +25,11 @@ type Repository interface {
 	UpdateOrder(ctx context.Context, id string, order int) error
 	// UpdateDifficulty فقط سطح یک صحنه را به‌روز می‌کند (دیالوگ‌ها دست نمی‌خورند).
 	UpdateDifficulty(ctx context.Context, id, difficulty string) error
+	// FixDialogueTranslation فقط ترجمه و/یا چیپ‌های یک دیالوگ از همین صحنه را درجا عوض
+	// می‌کند (شناسه، متن انگلیسی، صدا و پیشرفت کاربرها دست نمی‌خورند).
+	FixDialogueTranslation(ctx context.Context, sceneID, dialogueID string, translation *string, words, phrases []byte) error
+	// FixGrammarNote فقط موضوع/توضیح نکته‌ی گرامری صحنه را درجا عوض می‌کند.
+	FixGrammarNote(ctx context.Context, sceneID string, topic, explanation *string, examples []byte) error
 	// ShiftOrdersFrom ترتیب همه‌ی صحنه‌های با order >= from (به‌جز exceptID)
 	// را یکی جلو می‌برد تا برای درج یک صحنه در همان جایگاه جا باز شود.
 	ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error

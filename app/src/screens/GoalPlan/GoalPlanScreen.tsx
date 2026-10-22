@@ -18,11 +18,17 @@ import {
   type GoalPlanView,
 } from '../../api/goalPlan';
 
-const GOALS: { id: GoalId; icon: React.ComponentType<{ size?: number; color?: string }>; labelKey: string }[] = [
-  { id: 'travel', icon: Plane, labelKey: 'goalTravel' },
-  { id: 'migration', icon: Home, labelKey: 'goalMigration' },
-  { id: 'study', icon: GraduationCap, labelKey: 'goalStudy' },
-  { id: 'work', icon: Briefcase, labelKey: 'goalWork' },
+const GOALS: {
+  id: GoalId;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  labelKey: string;
+  color: string;
+  light: string;
+}[] = [
+  { id: 'travel', icon: Plane, labelKey: 'goalTravel', color: COLORS.info, light: COLORS.infoLight },
+  { id: 'migration', icon: Home, labelKey: 'goalMigration', color: COLORS.tertiary, light: COLORS.tertiaryLight },
+  { id: 'study', icon: GraduationCap, labelKey: 'goalStudy', color: COLORS.primary, light: COLORS.primaryLight },
+  { id: 'work', icon: Briefcase, labelKey: 'goalWork', color: COLORS.warning, light: COLORS.warningLight },
 ];
 // null = تاریخ ندارم
 const DATE_CHOICES: (number | null)[] = [1, 2, 3, 6, 12, null];
@@ -143,11 +149,16 @@ export const GoalPlanScreen: React.FC = () => {
             {GOALS.map((g) => (
               <TouchableOpacity
                 key={g.id}
-                style={[styles.goalCard, goal === g.id && styles.selected]}
+                style={[
+                  styles.goalCard,
+                  { backgroundColor: g.light, borderColor: goal === g.id ? g.color : 'transparent' },
+                ]}
                 onPress={() => setGoal(g.id)}
                 activeOpacity={0.85}
               >
-                <g.icon size={24} color={goal === g.id ? COLORS.primary : COLORS.textSecondary} />
+                <View style={[styles.goalIcon, { backgroundColor: g.color }]}>
+                  <g.icon size={22} color={COLORS.white} />
+                </View>
                 <Text style={styles.goalText}>{t(g.labelKey)}</Text>
               </TouchableOpacity>
             ))}
@@ -202,13 +213,19 @@ export const GoalPlanScreen: React.FC = () => {
   const today = view.situations.find((s) => s.id === view.today_id);
   const nextLabel = f?.next_level ? t(LEVEL_KEY[f.next_level] || 'levelBeginner') : '';
   const pct = view.in_plan_count > 0 ? Math.round((view.ready / view.in_plan_count) * 100) : 0;
-  const goalLabel = t(GOALS.find((g) => g.id === view.plan.goal)?.labelKey || 'goalTravel');
+  const goalMeta = GOALS.find((g) => g.id === view.plan.goal) || GOALS[0];
+  const goalLabel = t(goalMeta.labelKey);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       {header}
       <ScrollView contentContainerStyle={{ padding: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
-        <Text style={styles.title}>{goalLabel}</Text>
+        <View style={[styles.banner, { backgroundColor: goalMeta.light }]}>
+          <View style={[styles.bannerIcon, { backgroundColor: goalMeta.color }]}>
+            <goalMeta.icon size={28} color={COLORS.white} />
+          </View>
+          <Text style={[styles.title, { color: goalMeta.color }]}>{goalLabel}</Text>
+        </View>
         {f ? (
           <Text style={styles.sub}>
             {t('goalPlanDaysLeft').replace('{n}', num(f.days_left))} ·{' '}
@@ -221,7 +238,7 @@ export const GoalPlanScreen: React.FC = () => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}</Text>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${pct}%` }]} />
+            <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: goalMeta.color }]} />
           </View>
           {f && (
             <Text style={styles.honest}>
@@ -240,7 +257,7 @@ export const GoalPlanScreen: React.FC = () => {
 
         {today ? (
           <TouchableOpacity
-            style={styles.todayCard}
+            style={[styles.todayCard, { backgroundColor: goalMeta.color }]}
             activeOpacity={0.85}
             onPress={() => {
               track('goal_situation_open', today.id);
@@ -318,6 +335,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderWidth: 1.5,
     borderColor: COLORS.border,
+  },
+  goalIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  banner: {
+    alignItems: 'center',
+    gap: SPACING.s,
+    borderRadius: BORDER_RADIUS.l,
+    paddingVertical: SPACING.l,
+  },
+  bannerIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   goalText: { ...TEXT_STYLES.bodyLg, color: COLORS.text, fontFamily: FONT_FAMILY.semiBold },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.s },

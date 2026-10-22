@@ -981,6 +981,7 @@ export const translations: Translations = {
     fa: 'معنای تازه‌ای از «{verb}» دیدی',
   },
   verbPendingSub: { en: '30-second practice?', fa: '۳۰ ثانیه تمرین؟' },
+  idiomsThisWeek: { en: 'This week', fa: 'اصطلاح‌های این هفته' },
   podcastAllLevels: { en: 'Show all levels', fa: 'همه‌ی سطح‌ها' },
   podcastMyLevelsOnly: { en: 'Only my level', fa: 'فقط سطح من' },
   goalTravel: { en: 'Travel', fa: 'سفر' },

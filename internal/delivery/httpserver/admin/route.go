@@ -45,6 +45,7 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.PUT("/scenes/:sceneID", h.UpdateScene)
 	g.PATCH("/scenes/:sceneID/order", h.UpdateSceneOrder)
 	g.PATCH("/scenes/:sceneID/difficulty", h.UpdateSceneDifficulty)
+	g.PATCH("/scenes/:sceneID/text-fixes", h.FixSceneText)
 	g.DELETE("/scenes/:sceneID", h.DeleteScene)
 
 	// آیتم‌های تست تعیین سطح (intro/situational/shadow)

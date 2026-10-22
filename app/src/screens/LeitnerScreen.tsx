@@ -44,12 +44,14 @@ export const LeitnerScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const initialTab = route.params?.initialTab;
+  const [focusPhrases, setFocusPhrases] = useState<string[]>([]);
   useEffect(() => {
     if (initialTab === 'idioms' || initialTab === 'verbs') {
       setExtraTab(initialTab);
-      navigation.setParams({ initialTab: undefined });
+      setFocusPhrases(Array.isArray(route.params?.idiomPhrases) ? route.params.idiomPhrases : []);
+      navigation.setParams({ initialTab: undefined, idiomPhrases: undefined });
     }
-  }, [initialTab, navigation]);
+  }, [initialTab, navigation, route.params?.idiomPhrases]);
   const [index, setIndex] = useState(0);
   // بالای نوارِ پایینِ شناورِ تب‌ها
   const feedback = useFeedbackPop(80);
@@ -152,7 +154,7 @@ export const LeitnerScreen = () => {
 
         {/* Body */}
         {extraTab === 'idioms' ? (
-          <IdiomList />
+          <IdiomList focusPhrases={focusPhrases} />
         ) : showVerbs ? (
           <VerbList />
         ) : box.length === 0 ? (

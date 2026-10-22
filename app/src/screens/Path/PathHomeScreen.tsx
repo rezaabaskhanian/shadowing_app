@@ -146,7 +146,10 @@ export const PathHomeScreen: React.FC = () => {
         navigation.navigate('VerbQuiz', { verbId: item.ref_id });
         break;
       case 'idioms':
-        navigation.navigate('Leitner', { initialTab: 'idioms' });
+        navigation.navigate('Leitner', {
+          initialTab: 'idioms',
+          idiomPhrases: (item.ref_id || '').split('|').filter(Boolean),
+        });
         break;
       case 'dictation':
       case 'weak_lines': {
@@ -292,7 +295,7 @@ export const PathHomeScreen: React.FC = () => {
                           {session.done && <Check size={16} color={COLORS.success} />}
                           {!session.unlocked && <Lock size={14} color={COLORS.muted} />}
                         </View>
-                        {session.items.map((item) => {
+                        {session.items.filter((it) => it.kind in KIND_ICON).map((item) => {
                           const Icon = KIND_ICON[item.kind] || BookOpen;
                           return (
                             <TouchableOpacity

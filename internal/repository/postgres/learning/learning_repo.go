@@ -543,6 +543,59 @@ func (r DB) UpdateDifficulty(ctx context.Context, id, difficulty string) error {
 	return nil
 }
 
+// FixDialogueTranslation فقط ستون translation یک دیالوگ را عوض می‌کند و
+// بررسی می‌کند دیالوگ واقعاً مال همین صحنه باشد. برخلاف Update (که هات‌اسپات‌ها
+// را پاک و دوباره می‌سازد و پیشرفت کاربرها را با CASCADE پاک می‌کند) امن است.
+func (r DB) FixDialogueTranslation(ctx context.Context, sceneID, dialogueID string, translation *string, words, phrases []byte) error {
+	const op = "postgres.FixDialogueTranslation"
+
+	// nil یعنی «دست نزن»؛ words/phrases آرایه‌ی کامل JSON چیپ‌ها هستند.
+	result, err := r.conn.Exec(ctx, `
+		UPDATE dialogues d SET
+			translation = COALESCE($1, d.translation),
+			words = COALESCE($4::jsonb, d.words),
+			phrases = COALESCE($5::jsonb, d.phrases),
+			updated_at = now()
+		FROM hotspots h
+		WHERE d.id = $2 AND d.hotspot_id = h.id AND h.scene_id = $3`, translation, dialogueID, sceneID, nullJSON(words), nullJSON(phrases))
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update dialogue translation")
+	}
+	if result.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("dialogue not found in this scene").WithKind(richerror.KindNotFound)
+	}
+	return nil
+}
+
+// nullJSON بایت خالی را به NULL تبدیل می‌کند تا COALESCE مقدار قبلی را نگه دارد.
+func nullJSON(b []byte) *string {
+	if len(b) == 0 {
+		return nil
+	}
+	v := string(b)
+	return &v
+}
+
+// FixGrammarNote فقط grammar_topic و/یا grammar_explanation صحنه را عوض می‌کند (nil یعنی دست نزن).
+func (r DB) FixGrammarNote(ctx context.Context, sceneID string, topic, explanation *string, examples []byte) error {
+	const op = "postgres.FixGrammarNote"
+
+	result, err := r.conn.Exec(ctx, `
+		UPDATE scenes SET
+			grammar_topic = COALESCE($1, grammar_topic),
+			grammar_explanation = COALESCE($2, grammar_explanation),
+			grammar_examples = COALESCE($4::jsonb, grammar_examples),
+			updated_at = now()
+		WHERE id = $3`, topic, explanation, sceneID, nullJSON(examples))
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update grammar note")
+	}
+	if result.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+	}
+	return nil
+}
+
 // ShiftOrdersFrom implements [learningservice.Repository].
 func (r DB) ShiftOrdersFrom(ctx context.Context, from int, exceptID string) error {
 	const op = "postgres.ShiftSceneOrdersFrom"
