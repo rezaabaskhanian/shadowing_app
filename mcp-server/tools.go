@@ -269,7 +269,8 @@ type podcastScriptArgs struct {
 }
 
 type podcastArgs struct {
-	Podcast obj `json:"podcast" jsonschema:"podcast: title, description_fa, level, kind (lesson | featured | story), scene_id, vocabulary[{word,meaning_fa}], voices{speaker:voice_id}, speech_speed, line_gap_ms, images[{url,from_line}], image_url, lines[{position,speaker,text,translation_fa}]; for kind=story (a reading chapter, speaker Narrator): series_title, chapter_no, questions[{q,q_fa,options[],answer}]"`
+	FilePath string `json:"file_path,omitempty" jsonschema:"optional absolute path of a local JSON file with the full podcast/story payload (used instead of podcast); the reply is then a short summary instead of the whole podcast"`
+	Podcast  obj    `json:"podcast,omitempty" jsonschema:"podcast: title, description_fa, level, kind (lesson | featured | story), scene_id, vocabulary[{word,meaning_fa}], voices{speaker:voice_id}, speech_speed, line_gap_ms, images[{url,from_line}], image_url, lines[{position,speaker,text,translation_fa}]; for kind=story (a reading chapter, speaker Narrator): series_title, chapter_no, questions[{q,q_fa,options[],answer}]"`
 }
 
 type updateArgs struct {
@@ -925,12 +926,40 @@ func registerTools(s *mcp.Server, c *client) {
 
 	mcp.AddTool(s, &mcp.Tool{Name: "create_podcast_draft", Description: "Create a podcast (or, with kind=story, a reading-story chapter) as inactive (hidden from the app). Then generate_podcast_audio."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in podcastArgs) (*mcp.CallToolResult, any, error) {
+			fromFile := strings.TrimSpace(in.FilePath) != ""
+			if fromFile {
+				raw, err := os.ReadFile(in.FilePath)
+				if err != nil {
+					return nil, nil, fmt.Errorf("read %s: %w", in.FilePath, err)
+				}
+				if err := json.Unmarshal(raw, &in.Podcast); err != nil {
+					return nil, nil, fmt.Errorf("parse %s: %w", in.FilePath, err)
+				}
+			}
 			if in.Podcast == nil {
-				return nil, nil, errors.New("podcast is required")
+				return nil, nil, errors.New("podcast or file_path is required")
 			}
 			payload := merge(in.Podcast, obj{"is_active": false})
 			delete(payload, "id")
-			return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/podcasts", payload))
+			raw, err := c.sendJSON(ctx, http.MethodPost, "/v1/admin/podcasts", payload)
+			if err != nil || !fromFile {
+				return rawResult(raw, err)
+			}
+			// از فایل: فقط خلاصه، نه کل متن (فصل‌های بلند داستان context را پر می‌کنند).
+			var created struct {
+				ID          string `json:"id"`
+				Title       string `json:"title"`
+				Kind        string `json:"kind"`
+				Level       string `json:"level"`
+				SeriesTitle string `json:"series_title"`
+				ChapterNo   int    `json:"chapter_no"`
+				LineCount   int    `json:"line_count"`
+			}
+			if err := json.Unmarshal(raw, &created); err != nil {
+				return rawResult(raw, nil)
+			}
+			summary, _ := json.Marshal(created)
+			return rawResult(summary, nil)
 		})
 
 	mcp.AddTool(s, &mcp.Tool{Name: "update_podcast",
