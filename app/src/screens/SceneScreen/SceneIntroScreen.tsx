@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   ImageBackground,
   Share,
   ScrollView,
@@ -29,6 +30,9 @@ interface SceneIntroScreenProps {
   onShowAllDialogues: () => void;
   onClose: () => void;
   onEnterScene: () => void;
+  /** وضعیت دانلود صدای جمله‌ها؛ تا finished نشده دکمه‌ی ورود منتظر می‌ماند. */
+  audioPrep: { done: number; total: number; failed: number; finished: boolean };
+  onRetryAudio: () => void;
   t: (key: string) => string;
 }
 
@@ -46,6 +50,8 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onShowAllDialogues,
   onClose,
   onEnterScene,
+  audioPrep,
+  onRetryAudio,
   t,
 }) => {
   const insets = useSafeAreaInsets();
@@ -292,6 +298,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
               activeOpacity={0.8}
               style={styles.convCard}
               onPress={onEnterScene}
+              disabled={!audioPrep.finished}
             >
               <View style={styles.convNumCircle}>
                 <MessageCircle size={16} color={COLORS.primary} />
@@ -314,11 +321,37 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           )}
         </View>
 
-        {/* Enter Scene CTA Button */}
-        <TouchableOpacity activeOpacity={0.88} style={styles.enterCtaBtn} onPress={onEnterScene}>
-          <Play size={20} color={COLORS.white} fill={COLORS.white} />
-          <Text style={styles.enterCtaText}>{t('enterScene')}</Text>
+        {/* Enter Scene CTA Button — تا صدای جمله‌ها دانلود نشده منتظر می‌ماند */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          style={[styles.enterCtaBtn, !audioPrep.finished && styles.enterCtaBtnWaiting]}
+          onPress={onEnterScene}
+          disabled={!audioPrep.finished}
+          accessibilityState={{ disabled: !audioPrep.finished, busy: !audioPrep.finished }}
+        >
+          {audioPrep.finished ? (
+            <Play size={20} color={COLORS.white} fill={COLORS.white} />
+          ) : (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          )}
+          <Text style={styles.enterCtaText}>
+            {audioPrep.finished
+              ? t('enterScene')
+              : t('sceneAudioPreparing')
+                  .replace('{done}', String(audioPrep.done))
+                  .replace('{total}', String(audioPrep.total))}
+          </Text>
         </TouchableOpacity>
+        {audioPrep.finished && audioPrep.failed > 0 && (
+          <View style={styles.audioFailRow}>
+            <Text style={styles.audioFailText}>
+              {t('sceneAudioFailed').replace('{n}', String(audioPrep.failed))}
+            </Text>
+            <TouchableOpacity onPress={onRetryAudio} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: Math.max(insets.bottom, 24) + 16 }} />
       </ScrollView>
@@ -643,5 +676,25 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
+  },
+  enterCtaBtnWaiting: {
+    opacity: 0.75,
+  },
+  audioFailRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  audioFailText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+  },
+  audioRetryText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
   },
 });

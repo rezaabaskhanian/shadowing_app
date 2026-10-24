@@ -30,7 +30,7 @@ import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
 import { track } from '../../services/analytics';
 import { getPodcasts } from '../../api/podcasts';
-import { prefetchAudio } from '../../services/audio/audioCache';
+import { prefetchAudio, type PrefetchProgress } from '../../services/audio/audioCache';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -159,12 +159,28 @@ export const SceneScreen = () => {
   );
   const sceneHotspots = useMemo(() => scenario?.hotspots ?? [], [scenario]);
 
-  // تا کاربر صفحه‌ی معرفی صحنه را می‌خواند، صدای همه‌ی جمله‌ها پشت صحنه دانلود
-  // می‌شود تا موقع پخش منتظر شبکه نماند.
+  // تا کاربر صفحه‌ی معرفی صحنه را می‌خواند، صدای همه‌ی جمله‌ها دانلود می‌شود؛
+  // دکمه‌ی ورود تا تمام شدن دانلود منتظر می‌ماند تا صحنه بی‌صدا شروع نشود.
+  const [audioPrep, setAudioPrep] = useState<PrefetchProgress & { finished: boolean }>({
+    done: 0,
+    total: 0,
+    failed: 0,
+    finished: false,
+  });
+  const [audioPrepRun, setAudioPrepRun] = useState(0);
   useEffect(() => {
     if (!scenario) return;
-    prefetchAudio([...dialogueItems.map((d) => d.audioUrl), scenario.grammarNote?.audioUrl]);
-  }, [scenario, dialogueItems]);
+    let alive = true;
+    setAudioPrep({ done: 0, total: 0, failed: 0, finished: false });
+    prefetchAudio([...dialogueItems.map((d) => d.audioUrl), scenario.grammarNote?.audioUrl], (p) => {
+      if (alive) setAudioPrep({ ...p, finished: false });
+    }).then((p) => {
+      if (alive) setAudioPrep({ ...p, finished: true });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [scenario, dialogueItems, audioPrepRun]);
 
   useEffect(() => {
     let mounted = true;
@@ -409,6 +425,7 @@ export const SceneScreen = () => {
   );
 
   const handleEnterScene = () => {
+    if (!audioPrep.finished) return;
     track('scene_opened', scenarioId ? String(scenarioId) : undefined);
     setInScene(true);
     playDialogueAt(0);
@@ -1017,6 +1034,8 @@ export const SceneScreen = () => {
         onShowAllDialogues={() => setShowAllDialogues(true)}
         onClose={resetToHome}
         onEnterScene={handleEnterScene}
+        audioPrep={audioPrep}
+        onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
         t={t}
       />
     );

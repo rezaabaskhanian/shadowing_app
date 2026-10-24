@@ -47,17 +47,36 @@ export function getCachedAudio(url: string): string {
   return url;
 }
 
-/** همه‌ی صداهای یک صحنه را پشت صحنه دانلود می‌کند (حداکثر چند تا هم‌زمان). */
-export async function prefetchAudio(urls: (string | null | undefined)[]): Promise<void> {
+export interface PrefetchProgress {
+  done: number;
+  total: number;
+  failed: number;
+}
+
+/**
+ * همه‌ی صداهای یک صحنه را دانلود می‌کند (حداکثر چند تا هم‌زمان). onProgress
+ * بعد از هر فایل صدا زده می‌شود تا صفحه بتواند تا آماده شدن صداها منتظر بماند.
+ */
+export async function prefetchAudio(
+  urls: (string | null | undefined)[],
+  onProgress?: (p: PrefetchProgress) => void
+): Promise<PrefetchProgress> {
   const queue = Array.from(new Set(urls.filter((u): u is string => !!u && isRemote(u))));
+  const progress: PrefetchProgress = { done: 0, total: queue.length, failed: 0 };
+  onProgress?.({ ...progress });
   const workers = Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
     while (queue.length) {
       const next = queue.shift();
-      if (next) await download(next);
+      if (!next) continue;
+      const path = await download(next);
+      progress.done += 1;
+      if (!path) progress.failed += 1;
+      onProgress?.({ ...progress });
     }
   });
   await Promise.all(workers);
   trimCache();
+  return progress;
 }
 
 function download(url: string): Promise<string | null> {
@@ -76,7 +95,8 @@ function download(url: string): Promise<string | null> {
       // اول در فایل موقت می‌نویسیم و بعد جابه‌جا می‌کنیم، تا فایل نیمه‌کاره
       // (اگر اینترنت وسط کار قطع شد) هیچ‌وقت به‌جای صدای کامل پخش نشود.
       const tmp = `${path}.part`;
-      const res = await RNFS.downloadFile({ fromUrl: url, toFile: tmp }).promise;
+      // بدون سقف زمانی، روی اینترنت قطع‌ووصل یک فایل می‌توانست صفحه را تا ابد منتظر نگه دارد.
+      const res = await RNFS.downloadFile({ fromUrl: url, toFile: tmp, connectionTimeout: 15000, readTimeout: 20000 }).promise;
       if (res.statusCode < 200 || res.statusCode >= 300) {
         await RNFS.unlink(tmp).catch(() => undefined);
         return null;
