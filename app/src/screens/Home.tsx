@@ -81,6 +81,8 @@ import { formatDuration } from './Podcast/PodcastListScreen';
 // هر بخشِ محتوایی در خانه فقط چند موردِ اول را در یک شبکه‌ی ناهمگون (مستطیل +
 // مربع‌ها) نشان می‌دهد؛ بقیه از دکمه‌ی «همه».
 const HOME_SECTION_PREVIEW_COUNT = BENTO_ITEM_COUNT;
+// پادکست منتخب و داستان در کارت «برای امروز» هم هستند؛ بخشِ خودشان کوتاه‌تر می‌ماند.
+const HOME_SHORT_SECTION_COUNT = 2;
 
 // رنگِ سطحِ محتواهای غیرصحنه (ویدیو، پادکست، ...) برای بجِ روی کارت.
 const CONTENT_LEVEL_BG: Record<string, string> = {
@@ -424,13 +426,19 @@ export const HomeScreen = () => {
   const userLevel = myLevel?.scene_level;
   const levelPodcasts = atOrBelowLevel(podcasts, userLevel);
   const lessonPodcasts = levelPodcasts.filter((p) => p.kind !== 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
-  const featuredPodcasts = levelPodcasts.filter((p) => p.kind === 'featured').slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const allFeaturedPodcasts = levelPodcasts.filter((p) => p.kind === 'featured');
   const levelTopics = atOrBelowLevel(topics, userLevel).slice(0, HOME_SECTION_PREVIEW_COUNT);
   const levelPrompts = atOrBelowLevel(prompts, userLevel).slice(0, HOME_SECTION_PREVIEW_COUNT);
   // هر داستان یک کارت: فصلِ بعدیِ نخوانده؛ داستان‌های تمام‌شده آخر می‌روند.
-  const storySeries = groupStories(atOrBelowLevel(stories, userLevel), readChapters)
-    .sort((a, b) => Number(a.readCount === a.chapters.length) - Number(b.readCount === b.chapters.length))
-    .slice(0, HOME_SECTION_PREVIEW_COUNT);
+  const allStorySeries = groupStories(atOrBelowLevel(stories, userLevel), readChapters).sort(
+    (a, b) => Number(a.readCount === a.chapters.length) - Number(b.readCount === b.chapters.length)
+  );
+  // «برای امروز»: یک پادکست و یک داستان هم‌سطح کاربر (منتخب جلوتر از درسی؛ داستانِ تمام‌نشده جلوتر).
+  const todayPodcast = allFeaturedPodcasts[0] ?? lessonPodcasts[0];
+  const todayStory = allStorySeries.find((st) => st.readCount < st.chapters.length) ?? allStorySeries[0];
+  // بخش‌های خانه همان‌هایی را که در «برای امروز» آمده تکرار نمی‌کنند.
+  const featuredPodcasts = allFeaturedPodcasts.filter((p) => p.id !== todayPodcast?.id).slice(0, HOME_SHORT_SECTION_COUNT);
+  const storySeries = allStorySeries.filter((st) => st !== todayStory).slice(0, HOME_SHORT_SECTION_COUNT);
   const podcastItems = (list: Podcast[], emoji: string): BentoItem[] =>
     list.map((p) => ({
       key: p.id,
@@ -649,8 +657,7 @@ export const HomeScreen = () => {
   const homeSections = allHomeSections.filter((section) => section.items.length > 0 || !!section.emptyText);
 
   // «برای امروز»: یک پادکست و یک داستان هم‌سطح کاربر (منتخب جلوتر از درسی؛ داستانِ تمام‌نشده جلوتر).
-  const todayPodcast = featuredPodcasts[0] ?? lessonPodcasts[0];
-  const todayStory = storySeries.find((st) => st.readCount < st.chapters.length) ?? storySeries[0];
+
 
   const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
@@ -773,61 +780,90 @@ export const HomeScreen = () => {
           />
         )}
 
-        {/* برای امروز: یک پادکست و یک داستان با عکس */}
-        {(todayPodcast || todayStory) && (
-          <View style={styles.todayPicksCard}>
-            <Text style={styles.homeCardTitle}>{t('homeForToday')}</Text>
-            <View style={styles.todayPicksRow}>
-              {todayPodcast && (
-                <TouchableOpacity
-                  style={styles.todayPick}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('Podcast', { podcastId: todayPodcast.id, openedAt: Date.now() })}
-                >
-                  <ImageBackground
-                    source={uriImage(todayPodcast.cover_url) ?? undefined}
-                    style={styles.todayPickImage}
-                    imageStyle={styles.todayPickImageRadius}
-                  >
-                    <View style={styles.todayPickKind}>
-                      <Headphones size={13} color={COLORS.white} />
-                      <Text style={styles.todayPickKindText}>{t('homePickPodcast')}</Text>
-                    </View>
-                  </ImageBackground>
-                  <Text style={styles.todayPickTitle} numberOfLines={2}>
-                    {todayPodcast.title}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {todayStory && (
-                <TouchableOpacity
-                  style={styles.todayPick}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('Story', { storyId: todayStory.next.id, openedAt: Date.now() })}
-                >
-                  <ImageBackground
-                    source={uriImage(todayStory.cover_url) ?? undefined}
-                    style={styles.todayPickImage}
-                    imageStyle={styles.todayPickImageRadius}
-                  >
-                    <View style={styles.todayPickKind}>
-                      <BookOpen size={13} color={COLORS.white} />
-                      <Text style={styles.todayPickKindText}>{t('homePickStory')}</Text>
-                    </View>
-                    {/* اسم داستان روی خودِ عکس، روی نوار تیره تا خوانا بماند */}
-                    <View style={styles.todayPickOverlay}>
-                      <Text style={styles.todayPickOverlayTitle} numberOfLines={2}>
-                        {todayStory.title}
-                      </Text>
-                    </View>
-                  </ImageBackground>
-                  <Text style={styles.todayPickSub} numberOfLines={1}>
-                    {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))} · {todayStory.next.title}
-                  </Text>
-                </TouchableOpacity>
-              )}
+        {/* TODAY'S MISSION / CONTINUE STORY SECTION — همان کارتِ همیشگی، فقط
+            وقتی /v1/mission/today چیزی برگردانده باشد شخصی‌سازی می‌شود؛ وگرنه
+            دقیقاً همان «ادامه داستان»ِ قدیمی (scenes[0]) است. */}
+        {featuredScenario && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>
+                {missionScene ? t('todaysMission') : t('continueStory')}
+              </Text>
             </View>
-          </View>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={styles.storyCard}
+              onPress={() => openScene(featuredScenario)}
+            >
+              <ImageBackground
+                source={
+                  typeof featuredScenario.imageUri === 'string'
+                    ? { uri: featuredScenario.imageUri }
+                    : featuredScenario.imageUri
+                }
+                style={styles.storyImage}
+                imageStyle={styles.storyImageStyle}
+              >
+                <View style={styles.storyScrim} />
+
+                <View style={styles.storyContent}>
+                  {featuredScenario.category ? (
+                    // زدن روی دسته → تب صحنه‌ها با همین دسته فیلتر می‌شود
+                    <TouchableOpacity
+                      hitSlop={8}
+                      onPress={() => navigation.navigate('Scenes', { category: featuredScenario.category })}
+                    >
+                      <Text style={styles.storyCategory}>
+                        {SCENE_CATEGORY_LABEL_KEY[featuredScenario.category]
+                          ? t(SCENE_CATEGORY_LABEL_KEY[featuredScenario.category])
+                          : featuredScenario.category.toString().toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  <Text style={styles.storyTitle}>{featuredScenario.title}</Text>
+
+                  {missionScene && todaysMission && (
+                    <View style={styles.missionBadgesRow}>
+                      <View style={styles.missionBadge}>
+                        <Text style={styles.missionBadgeText}>{todaysMission.level}</Text>
+                      </View>
+                      <View style={styles.missionBadge}>
+                        <Clock size={12} color={COLORS.white} />
+                        <Text style={styles.missionBadgeText}>
+                          {todaysMission.estimated_minutes} {t('min')}
+                        </Text>
+                      </View>
+                      <View style={styles.missionBadge}>
+                        <Text style={styles.missionBadgeText}>
+                          {todaysMission.focus_skill === 'pronunciation'
+                            ? t('pronunciation')
+                            : todaysMission.focus_skill === 'fluency'
+                            ? t('fluency')
+                            : t('speaking')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Progress Line */}
+                  <View style={styles.storyProgressBg}>
+                    <View
+                      style={[
+                        styles.storyProgressFill,
+                        { width: `${featuredScenario.progress || 0}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                {/* Play Circle CTA Overlay */}
+                <View style={styles.playOverlayBtn}>
+                  <Play size={22} color={COLORS.white} fill={COLORS.white} />
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          </>
         )}
 
         {/* تمرین آزاد: دسترسی سریع به چهار نوع تمرین */}
@@ -985,90 +1021,61 @@ export const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* TODAY'S MISSION / CONTINUE STORY SECTION — همان کارتِ همیشگی، فقط
-            وقتی /v1/mission/today چیزی برگردانده باشد شخصی‌سازی می‌شود؛ وگرنه
-            دقیقاً همان «ادامه داستان»ِ قدیمی (scenes[0]) است. */}
-        {featuredScenario && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>
-                {missionScene ? t('todaysMission') : t('continueStory')}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.storyCard}
-              onPress={() => openScene(featuredScenario)}
-            >
-              <ImageBackground
-                source={
-                  typeof featuredScenario.imageUri === 'string'
-                    ? { uri: featuredScenario.imageUri }
-                    : featuredScenario.imageUri
-                }
-                style={styles.storyImage}
-                imageStyle={styles.storyImageStyle}
-              >
-                <View style={styles.storyScrim} />
-
-                <View style={styles.storyContent}>
-                  {featuredScenario.category ? (
-                    // زدن روی دسته → تب صحنه‌ها با همین دسته فیلتر می‌شود
-                    <TouchableOpacity
-                      hitSlop={8}
-                      onPress={() => navigation.navigate('Scenes', { category: featuredScenario.category })}
-                    >
-                      <Text style={styles.storyCategory}>
-                        {SCENE_CATEGORY_LABEL_KEY[featuredScenario.category]
-                          ? t(SCENE_CATEGORY_LABEL_KEY[featuredScenario.category])
-                          : featuredScenario.category.toString().toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  <Text style={styles.storyTitle}>{featuredScenario.title}</Text>
-
-                  {missionScene && todaysMission && (
-                    <View style={styles.missionBadgesRow}>
-                      <View style={styles.missionBadge}>
-                        <Text style={styles.missionBadgeText}>{todaysMission.level}</Text>
-                      </View>
-                      <View style={styles.missionBadge}>
-                        <Clock size={12} color={COLORS.white} />
-                        <Text style={styles.missionBadgeText}>
-                          {todaysMission.estimated_minutes} {t('min')}
-                        </Text>
-                      </View>
-                      <View style={styles.missionBadge}>
-                        <Text style={styles.missionBadgeText}>
-                          {todaysMission.focus_skill === 'pronunciation'
-                            ? t('pronunciation')
-                            : todaysMission.focus_skill === 'fluency'
-                            ? t('fluency')
-                            : t('speaking')}
-                        </Text>
-                      </View>
+        {/* برای امروز: یک پادکست و یک داستان با عکس */}
+        {(todayPodcast || todayStory) && (
+          <View style={styles.todayPicksCard}>
+            <Text style={styles.homeCardTitle}>{t('homeForToday')}</Text>
+            <View style={styles.todayPicksRow}>
+              {todayPodcast && (
+                <TouchableOpacity
+                  style={styles.todayPick}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('Podcast', { podcastId: todayPodcast.id, openedAt: Date.now() })}
+                >
+                  <ImageBackground
+                    source={uriImage(todayPodcast.cover_url) ?? undefined}
+                    style={styles.todayPickImage}
+                    imageStyle={styles.todayPickImageRadius}
+                  >
+                    <View style={styles.todayPickKind}>
+                      <Headphones size={13} color={COLORS.white} />
+                      <Text style={styles.todayPickKindText}>{t('homePickPodcast')}</Text>
                     </View>
-                  )}
-
-                  {/* Progress Line */}
-                  <View style={styles.storyProgressBg}>
-                    <View
-                      style={[
-                        styles.storyProgressFill,
-                        { width: `${featuredScenario.progress || 0}%` },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* Play Circle CTA Overlay */}
-                <View style={styles.playOverlayBtn}>
-                  <Play size={22} color={COLORS.white} fill={COLORS.white} />
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </>
+                  </ImageBackground>
+                  <Text style={styles.todayPickTitle} numberOfLines={2}>
+                    {todayPodcast.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {todayStory && (
+                <TouchableOpacity
+                  style={styles.todayPick}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('Story', { storyId: todayStory.next.id, openedAt: Date.now() })}
+                >
+                  <ImageBackground
+                    source={uriImage(todayStory.cover_url) ?? undefined}
+                    style={styles.todayPickImage}
+                    imageStyle={styles.todayPickImageRadius}
+                  >
+                    <View style={styles.todayPickKind}>
+                      <BookOpen size={13} color={COLORS.white} />
+                      <Text style={styles.todayPickKindText}>{t('homePickStory')}</Text>
+                    </View>
+                    {/* اسم داستان روی خودِ عکس، روی نوار تیره تا خوانا بماند */}
+                    <View style={styles.todayPickOverlay}>
+                      <Text style={styles.todayPickOverlayTitle} numberOfLines={2}>
+                        {todayStory.title}
+                      </Text>
+                    </View>
+                  </ImageBackground>
+                  <Text style={styles.todayPickSub} numberOfLines={1}>
+                    {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))} · {todayStory.next.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         )}
 
         {homeSections.map((section, index) => (
