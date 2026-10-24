@@ -866,7 +866,7 @@ export const HomeScreen = () => {
           </>
         )}
 
-        {/* تمرین آزاد: دسترسی سریع به چهار نوع تمرین */}
+        {/* کارت «تمرین آزاد» موقتاً برداشته شد؛ بخش‌های پایین خانه همین دسترسی را می‌دهند (برای برگرداندن، کامنت را باز کن).
         <View style={styles.freePracticeCard}>
           <Text style={styles.homeCardTitle}>{t('homeFreePractice')}</Text>
           <View style={styles.freePracticeRow}>
@@ -887,6 +887,7 @@ export const HomeScreen = () => {
             ))}
           </View>
         </View>
+        */}
 
         {/* کارت «سایه‌زنی امروز» موقتاً برداشته شد تا خانه بدون آن دیده شود (برای برگرداندن، این کامنت را باز کن).
         <View style={styles.progressCard}>
