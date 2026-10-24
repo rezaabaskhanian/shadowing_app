@@ -129,6 +129,24 @@ export const PodcastScreen: React.FC = () => {
     )
   );
 
+  // TrackPlayer سراسری است؛ صفحه‌ی دیگری که در پس‌زمینه mount مانده (مثل صحنه) ممکن است
+  // صف را با صدای خودش عوض کرده باشد و پخش بی‌صدا شود. قبل از هر پخش، اگر track
+  // پادکست در صف نیست، دوباره می‌گذاریمش و به همان جای قبلی برمی‌گردیم.
+  const ensurePodcastTrack = async () => {
+    if (!podcast) return;
+    const active = await TrackPlayer.getActiveTrack().catch(() => undefined);
+    if (active?.id === PODCAST_TRACK_ID) return;
+    await TrackPlayer.reset();
+    await TrackPlayer.add({
+      id: PODCAST_TRACK_ID,
+      url: absUrl(podcast.audio_url),
+      title: podcast.title,
+      artwork: podcast.cover_url ? absUrl(podcast.cover_url) : undefined,
+    });
+    await TrackPlayer.setRate(rate).catch(() => {});
+    if (positionMs > 0) await TrackPlayer.seekTo(positionMs / 1000);
+  };
+
   const togglePlay = async () => {
     if (!ready) return;
     if (playing) {
@@ -140,6 +158,7 @@ export const PodcastScreen: React.FC = () => {
       track('podcast_played', podcast.id);
     }
     // بعد از پایان، دوباره از اول.
+    await ensurePodcastTrack();
     if (podcast && positionMs >= podcast.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
     await TrackPlayer.play();
   };
@@ -156,6 +175,7 @@ export const PodcastScreen: React.FC = () => {
     // پرش به جمله‌ی دیگر یعنی تکرارِ جمله‌ی قبلی تمام شد.
     repeatRef.current = { on: false, start: 0, end: 0 };
     setRepeatLine(false);
+    await ensurePodcastTrack();
     await TrackPlayer.seekTo(startMs / 1000);
     positionSV.value = startMs;
     setPositionMs(startMs);
