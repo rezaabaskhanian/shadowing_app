@@ -147,6 +147,11 @@ export const SceneScreen = () => {
 
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [inScene, setInScene] = useState(false); // false = Intro overview, true = Active player
+  // هر بار که صحنه از جایی باز می‌شود (پارامترهای تازه)، از صفحه‌ی معرفی شروع کن؛
+  // این صفحه یک تب است و اگر زنده مانده بود، بدون این مستقیم وسط پخش باز می‌شد.
+  useEffect(() => {
+    setInScene(false);
+  }, [route.params]);
   const [showAllDialogues, setShowAllDialogues] = useState(false); // پیش‌نمایش دیالوگ‌ها در صفحه‌ی اینترو
 
   // خطوط دیالوگ (هر هات‌اسپات می‌تواند چند خط داشته باشد) در برابر خودِ
