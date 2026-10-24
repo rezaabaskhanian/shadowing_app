@@ -90,7 +90,7 @@ export const VerbDetailScreen = () => {
     <View style={styles.screen}>
       <AudioPlayer uri={audioUri} shouldPlay={false} actionCommand={actionCommand} actionNonce={actionNonce} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
           <ArrowLeft color={COLORS.text} size={22} />
         </TouchableOpacity>
 

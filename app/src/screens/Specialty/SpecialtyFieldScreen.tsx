@@ -79,7 +79,7 @@ export const SpecialtyFieldScreen: React.FC = () => {
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       <AudioPlayer uri={playUri} shouldPlay={false} actionCommand={playUri ? 'play_original' : 'none'} actionNonce={nonce} />
       <View style={styles.topRow}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
         {!!field && (

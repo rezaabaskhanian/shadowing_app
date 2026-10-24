@@ -151,7 +151,7 @@ export const CurriculumMapScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity style={styles.backButton} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
         <ArrowLeft color={COLORS.text} size={22} />
       </TouchableOpacity>
 

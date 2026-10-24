@@ -114,9 +114,11 @@ export const GoalPlanScreen: React.FC = () => {
       .finally(() => setDeleting(false));
   };
 
+  // «برنامه‌ی من» فقط از خانه باز می‌شود؛ goBack بعد از برگشتن از صحنه (که ناوبری را
+  // ریست می‌کند) جایی برای برگشت نداشت یا به صحنه‌ی قبلی می‌رفت.
   const header = (
     <View style={styles.topRow}>
-      <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
         <X size={20} color={COLORS.text} />
       </TouchableOpacity>
     </View>
