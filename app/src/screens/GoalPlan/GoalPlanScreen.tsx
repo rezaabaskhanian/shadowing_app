@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, CalendarDays, Check, ChevronLeft, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
+import { Briefcase, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -35,6 +35,9 @@ const GOALS: {
   { id: 'study', icon: GraduationCap, labelKey: 'goalStudy', color: COLORS.primary, light: COLORS.primaryLight },
   { id: 'work', icon: Briefcase, labelKey: 'goalWork', color: COLORS.warning, light: COLORS.warningLight },
 ];
+// چند موقعیت اول فهرست کامل که بدون باز کردنِ کشو دیده می‌شوند.
+const SITUATIONS_PREVIEW = 4;
+
 // تمرین‌های غیرصحنه‌ای هدف، به همین ترتیب زیر موقعیت‌ها نشان داده می‌شوند.
 const EXTRA_KINDS: {
   kind: GoalExtra['kind'];
@@ -98,6 +101,8 @@ export const GoalPlanScreen: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // فهرست کامل موقعیت‌ها جمع است و فقط چند تای اول دیده می‌شود؛ با لمس باز می‌شود.
+  const [showAllSituations, setShowAllSituations] = useState(false);
 
   const load = useCallback(() => {
     setError(false);
@@ -431,9 +436,9 @@ export const GoalPlanScreen: React.FC = () => {
           );
         })}
 
-        {/* همه‌ی موقعیت‌ها، با اسم */}
+        {/* همه‌ی موقعیت‌ها، با اسم: کشویی؛ پیش‌فرض فقط چند تای اول */}
         <View style={cine.section}>
-          {view.situations.map((s, i) => {
+          {(showAllSituations ? view.situations : view.situations.slice(0, SITUATIONS_PREVIEW)).map((s, i) => {
             const open = s.has_content && !!s.scene_id;
             const isToday = s.id === view.today_id;
             return (
@@ -462,6 +467,21 @@ export const GoalPlanScreen: React.FC = () => {
               </TouchableOpacity>
             );
           })}
+          {view.situations.length > SITUATIONS_PREVIEW && (
+            <TouchableOpacity
+              style={cine.moreBtn}
+              onPress={() => setShowAllSituations((v) => !v)}
+              activeOpacity={0.85}
+              accessibilityState={{ expanded: showAllSituations }}
+            >
+              <Text style={cine.moreText}>
+                {showAllSituations
+                  ? t('goalPlanShowLess')
+                  : t('goalPlanShowAll').replace('{n}', num(view.situations.length - SITUATIONS_PREVIEW))}
+              </Text>
+              {showAllSituations ? <ChevronUp size={18} color={CINE.accentText} /> : <ChevronDown size={18} color={CINE.accentText} />}
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.actionsRow}>
@@ -627,6 +647,18 @@ const cine = StyleSheet.create({
   rowNum: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.muted },
   rowTitle: { ...TEXT_STYLES.bodyLg, color: CINE.text },
   rowSub: { ...TEXT_STYLES.labelSm, color: CINE.dim },
+  moreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    borderStyle: 'dashed',
+  },
+  moreText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.accentText },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',

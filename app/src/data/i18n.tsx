@@ -1021,6 +1021,8 @@ export const translations: Translations = {
   goalPlanToday: { en: 'Today', fa: 'امروز' },
   goalPlanAllDone: { en: 'Everything in your plan is ready.', fa: 'همه‌ی موقعیت‌های برنامه‌ات آماده است.' },
   goalPlanSituations: { en: 'Situations', fa: 'موقعیت‌ها' },
+  goalPlanShowAll: { en: 'Show {n} more situations', fa: '{n} موقعیت دیگر' },
+  goalPlanShowLess: { en: 'Show less', fa: 'بستن فهرست' },
   goalPlanListenSection: { en: 'Listening for your goal', fa: 'شنیدن برای هدفت' },
   goalPlanSpeakSection: { en: 'Speaking about your goal', fa: 'صحبت درباره‌ی هدفت' },
   goalPlanWriteSection: { en: 'Writing for your goal', fa: 'نوشتن برای هدفت' },
