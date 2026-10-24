@@ -1403,6 +1403,11 @@ export const translations: Translations = {
   storyFinish: { en: 'Finish', fa: 'پایان' },
   storyListenAlong: { en: 'Read and listen', fa: 'بخوان و گوش بده' },
   homeStories: { en: 'Stories', fa: 'داستان‌ها' },
+  homeForToday: { en: 'For today', fa: 'برای امروز' },
+  homeFreePractice: { en: 'Free practice', fa: 'تمرین آزاد' },
+  homePickPodcast: { en: 'Podcast', fa: 'پادکست' },
+  homePickStory: { en: 'Story', fa: 'داستان' },
+  homePickWriting: { en: 'Writing', fa: 'نوشتن' },
   storyGuideListenTitle: { en: 'Listen and read first', fa: 'اول با صدا بخوان' },
   storyGuideListenText: {
     en: 'Press play and follow the highlighted words. Then, if you like, read it again without sound.',

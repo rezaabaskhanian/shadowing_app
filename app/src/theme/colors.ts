@@ -1,6 +1,5 @@
 export const COLORS = {
-  // زمینه‌ی سفید و کارت‌های کرمِ خیلی روشن (چیدمان «سینما»، مینیمال و بدون سایه؛
-  // docs/design/ui-directions). کارت‌ها با رنگِ زمینه و حاشیه‌ی ظریف جدا می‌شوند نه سایه.
+  // زمینه‌ی سفید و کارت‌های کرمِ خیلی روشن (چیدمان «سینما»، مینیمال؛ docs/design/ui-directions).
   background: '#FFFFFF',
   backgroundSoft: '#FAF8F5',
   surface: '#F7F5F1',

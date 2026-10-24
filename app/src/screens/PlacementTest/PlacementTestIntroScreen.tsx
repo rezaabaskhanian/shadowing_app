@@ -129,6 +129,11 @@ const styles = StyleSheet.create({
     borderRadius: ICON_CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 6,
   },
   title: {
     ...TEXT_STYLES.headlineMd,

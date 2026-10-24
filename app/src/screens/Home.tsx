@@ -58,7 +58,8 @@ import {
 import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
 import { PlacementV2Flow } from './PlacementTest/PlacementV2Flow';
-import { COLORS } from '../theme/colors';
+import { COLORS, hexToRgba } from '../theme/colors';
+import { SHADOWS } from '../theme/elevation';
 import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
 import { getPendingVerbPractice, type VerbPending } from '../api/verbs';
@@ -647,6 +648,10 @@ export const HomeScreen = () => {
   ];
   const homeSections = allHomeSections.filter((section) => section.items.length > 0 || !!section.emptyText);
 
+  // «برای امروز»: یک پادکست و یک داستان هم‌سطح کاربر (منتخب جلوتر از درسی؛ داستانِ تمام‌نشده جلوتر).
+  const todayPodcast = featuredPodcasts[0] ?? lessonPodcasts[0];
+  const todayStory = storySeries.find((st) => st.readCount < st.chapters.length) ?? storySeries[0];
+
   const todayPercent = Math.min(100, Math.round((todaySessions / DAILY_SESSIONS_GOAL) * 100));
 
   // اسمِ کاربر واقعی؛ اگر ثبت نشده بود، بدون اسم («عصر بخیر!») نشان می‌دهیم
@@ -767,6 +772,85 @@ export const HomeScreen = () => {
             }
           />
         )}
+
+        {/* برای امروز: یک پادکست و یک داستان با عکس */}
+        {(todayPodcast || todayStory) && (
+          <View style={styles.todayPicksCard}>
+            <Text style={styles.homeCardTitle}>{t('homeForToday')}</Text>
+            <View style={styles.todayPicksRow}>
+              {todayPodcast && (
+                <TouchableOpacity
+                  style={styles.todayPick}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('Podcast', { podcastId: todayPodcast.id, openedAt: Date.now() })}
+                >
+                  <ImageBackground
+                    source={uriImage(todayPodcast.cover_url) ?? undefined}
+                    style={styles.todayPickImage}
+                    imageStyle={styles.todayPickImageRadius}
+                  >
+                    <View style={styles.todayPickKind}>
+                      <Headphones size={13} color={COLORS.white} />
+                      <Text style={styles.todayPickKindText}>{t('homePickPodcast')}</Text>
+                    </View>
+                  </ImageBackground>
+                  <Text style={styles.todayPickTitle} numberOfLines={2}>
+                    {todayPodcast.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {todayStory && (
+                <TouchableOpacity
+                  style={styles.todayPick}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('Story', { storyId: todayStory.next.id, openedAt: Date.now() })}
+                >
+                  <ImageBackground
+                    source={uriImage(todayStory.cover_url) ?? undefined}
+                    style={styles.todayPickImage}
+                    imageStyle={styles.todayPickImageRadius}
+                  >
+                    <View style={styles.todayPickKind}>
+                      <BookOpen size={13} color={COLORS.white} />
+                      <Text style={styles.todayPickKindText}>{t('homePickStory')}</Text>
+                    </View>
+                    {/* اسم داستان روی خودِ عکس، روی نوار تیره تا خوانا بماند */}
+                    <View style={styles.todayPickOverlay}>
+                      <Text style={styles.todayPickOverlayTitle} numberOfLines={2}>
+                        {todayStory.title}
+                      </Text>
+                    </View>
+                  </ImageBackground>
+                  <Text style={styles.todayPickSub} numberOfLines={1}>
+                    {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))} · {todayStory.next.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* تمرین آزاد: دسترسی سریع به چهار نوع تمرین */}
+        <View style={styles.freePracticeCard}>
+          <Text style={styles.homeCardTitle}>{t('homeFreePractice')}</Text>
+          <View style={styles.freePracticeRow}>
+            {[
+              { key: 'shadow', label: t('shadowing'), Icon: Mic, color: COLORS.primary, onPress: () => navigation.navigate('Scenes') },
+              { key: 'podcast', label: t('homePickPodcast'), Icon: Headphones, color: COLORS.secondary, onPress: () => navigation.navigate('PodcastList') },
+              { key: 'story', label: t('homePickStory'), Icon: BookOpen, color: COLORS.levelIntermediateBg, onPress: () => navigation.navigate('StoryList') },
+              { key: 'writing', label: t('homePickWriting'), Icon: PenLine, color: COLORS.levelAdvancedBg, onPress: () => navigation.navigate('WritingList') },
+            ].map((tile) => (
+              <TouchableOpacity key={tile.key} style={styles.freeTile} onPress={tile.onPress} activeOpacity={0.85}>
+                <View style={[styles.freeTileIcon, { backgroundColor: hexToRgba(tile.color, 0.12) }]}>
+                  <tile.Icon size={24} color={tile.color} />
+                </View>
+                <Text style={styles.freeTileLabel} numberOfLines={1}>
+                  {tile.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* کارت «سایه‌زنی امروز» موقتاً برداشته شد تا خانه بدون آن دیده شود (برای برگرداندن، این کامنت را باز کن).
         <View style={styles.progressCard}>
@@ -1046,6 +1130,53 @@ export const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  todayPicksCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 22,
+    padding: 16,
+    gap: 12,
+    marginBottom: 20,
+    ...SHADOWS.level1,
+  },
+  homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  todayPicksRow: { flexDirection: 'row', gap: 12 },
+  todayPick: { flex: 1, gap: 6 },
+  todayPickImage: { height: 120, justifyContent: 'space-between', backgroundColor: COLORS.surfaceHigh, borderRadius: 16 },
+  todayPickImageRadius: { borderRadius: 16 },
+  todayPickKind: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    margin: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: 'rgba(16, 18, 24, 0.7)',
+  },
+  todayPickKindText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.white },
+  todayPickOverlay: {
+    backgroundColor: 'rgba(16, 18, 24, 0.62)',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  todayPickOverlayTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, lineHeight: 21, color: COLORS.white },
+  todayPickTitle: { fontFamily: FONT_FAMILY.semiBold, fontSize: 14, lineHeight: 21, color: COLORS.text },
+  todayPickSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary },
+  freePracticeCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 22,
+    padding: 16,
+    gap: 12,
+    marginBottom: 20,
+    ...SHADOWS.level1,
+  },
+  freePracticeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  freeTile: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
+  freeTileIcon: { width: 58, height: 58, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  freeTileLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 13, color: COLORS.text },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -1283,6 +1414,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
   },
   allDoneText: {
     color: COLORS.textSecondary,
