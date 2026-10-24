@@ -21,11 +21,11 @@ export const DEFAULT_TEXT_DISPLAY_MODE: TextDisplayMode = 'card';
 
 /** پالت رنگ‌های مجاز برای هایلایتِ کلمه‌به‌کلمه؛ کاربر از پروفایل انتخاب می‌کند. */
 export const HIGHLIGHT_COLOR_OPTIONS: string[] = [
-  COLORS.primary, // indigo (پیش‌فرض)
+  COLORS.primary, // نارنجی (پیش‌فرض)
   COLORS.tertiary, // green
   COLORS.secondary, // gold
   '#ba1a1a', // red
-  '#8b5cf6', // purple
+  '#1F2937', // charcoal
   '#0891b2', // teal
 ];
 export const DEFAULT_HIGHLIGHT_COLOR: string = COLORS.primary;

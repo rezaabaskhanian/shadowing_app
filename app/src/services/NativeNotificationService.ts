@@ -55,7 +55,7 @@ export class NativeNotificationService {
         android: {
           channelId,
           smallIcon: 'ic_launcher',
-          color: '#3525cd',
+          color: '#E8572F',
           pressAction: {
             id: 'default',
           },
@@ -109,7 +109,7 @@ export class NativeNotificationService {
             android: {
               channelId,
               smallIcon: 'ic_launcher',
-              color: '#3525cd',
+              color: '#E8572F',
               pressAction: { id: 'default' },
             },
             ios: { sound: 'default' },

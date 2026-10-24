@@ -1,19 +1,21 @@
 export const COLORS = {
-  // Soft-white surface tokens (light theme)
-  background: '#f9f9ff',
-  backgroundSoft: '#f0f3ff',
-  surface: '#ffffff',
-  surfaceLight: '#e7eefe',
-  surfaceCard: '#ffffff',
-  surfaceHigh: '#e2e8f8',
-  surfaceHighest: '#dce2f3',
+  // زمینه‌ی سفید و کارت‌های کرمِ خیلی روشن (چیدمان «سینما»، مینیمال و بدون سایه؛
+  // docs/design/ui-directions). کارت‌ها با رنگِ زمینه و حاشیه‌ی ظریف جدا می‌شوند نه سایه.
+  background: '#FFFFFF',
+  backgroundSoft: '#FAF8F5',
+  surface: '#F7F5F1',
+  surfaceLight: '#F2EEE8',
+  surfaceCard: '#F7F5F1',
+  surfaceHigh: '#ECE7DF',
+  surfaceHighest: '#E4DED4',
 
-  // Brand & Accent Colors — بنفشِ برگرفته از لوگوی جدید (مارپیچ بنفش/فیروزه‌ای/نارنجی)
-  primary: '#6D28D9', // Violet — CTAs, active states, focus
-  primaryDark: '#5B21B6',
-  primaryContainer: '#8B5CF6',
-  primaryLight: 'rgba(109, 40, 217, 0.10)',
-  onPrimaryContainer: '#ede4ff',
+  // Brand — نارنجیِ مرجانی (به‌جای بنفش). primary برای دکمه/حالت فعال؛ متن سفید روی آن
+  // ۳٫۶:۱ است، پس برای نوشته‌ی کوچکِ رنگی روی زمینه‌ی روشن primaryDark را بگذار.
+  primary: '#E8572F',
+  primaryDark: '#C2410C',
+  primaryContainer: '#FF8A65',
+  primaryLight: 'rgba(232, 87, 47, 0.10)',
+  onPrimaryContainer: '#FFE8DF',
 
   // Gold — فقط استریک، دستاورد و امتیاز/سکه. برای وضعیت (pending/ضعیف)،
   // آمار، دسته‌بندی یا حالتِ فعال از این توکن استفاده نکن؛ آن‌ها توکن
@@ -32,17 +34,17 @@ export const COLORS = {
   // Remove each alias as its screen is migrated.
   accent: '#006e4b',
   teal: '#006e4b',
-  amber: '#3525cd',
+  amber: '#E8572F',
   cyan: '#006e4b',
-  orange: '#3525cd',
+  orange: '#E8572F',
   pink: '#F43F5E',
 
   // Neutral Text Tokens
-  text: '#151c27',
-  textSecondary: '#464555',
-  muted: '#777587',
-  border: '#c7c4d8',
-  borderLight: '#e2e8f8',
+  text: '#1A1D26',
+  textSecondary: '#4F5562',
+  muted: '#727784',
+  border: '#E2DCD2',
+  borderLight: '#EFEBE4',
 
   // Scene level ramp — رمپ اختصاصی بج سطح صحنه‌ها.
   // عمداً از توکن‌های state و brand جدا نگه داشته شده تا معنیِ آن‌ها
@@ -52,12 +54,12 @@ export const COLORS = {
   levelStarterBg: '#0f766e',      // فیروزه‌ای — قدم اول (پایه‌تر از مبتدی)
   levelBeginnerBg: '#006e4b',     // سبز — شروع
   levelIntermediateBg: '#0b5cad', // آبی — در مسیر
-  levelAdvancedBg: '#3525cd',     // نیلی — تسلط
-  levelProficientBg: '#6b21a8',   // بنفش — حرفه‌ای (C1)
+  levelAdvancedBg: '#9A3412',     // نارنجیِ سوخته — تسلط
+  levelProficientBg: '#1F2937',   // زغالی — حرفه‌ای (C1)
 
   // A/B compare — «صدای اصلی» در برابر «صدای خودت».
   // این هم محور مستقلی است و توکن خودش را دارد تا از استریک قرض نگیرد.
-  audioOriginal: '#3525cd', // نیلی — صدای مرجع
+  audioOriginal: '#1F2937', // زغالی — صدای مرجع
   audioMine: '#0e7490',     // فیروزه‌ی تیره — صدای کاربر (با آیکن سفید ۵.۴:۱)
 
   // State Colors
