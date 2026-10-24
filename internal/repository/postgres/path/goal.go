@@ -146,3 +146,121 @@ func (r DB) SceneInfos(ctx context.Context, sceneIDs []string) (map[string]Scene
 	}
 	return out, rows.Err()
 }
+
+// GoalExtra یک تمرین غیرصحنه‌ای در بسته‌ی هدف (پادکست، موضوع صحبت، موضوع نوشتن).
+type GoalExtra struct {
+	Kind     string `json:"kind"` // podcast | topic | writing
+	RefID    string `json:"ref_id"`
+	Position int    `json:"position"`
+}
+
+// GoalExtraInfo اطلاعات نمایشی یک تمرین بسته‌ی هدف برای یک کاربر.
+type GoalExtraInfo struct {
+	Kind     string
+	RefID    string
+	Title    string
+	Subtitle string
+	Level    string
+	ImageURL string
+	Active   bool
+	Done     bool
+}
+
+func (r DB) GoalExtras(ctx context.Context, goal string) ([]GoalExtra, error) {
+	const op = "postgrespath.GoalExtras"
+	rows, err := r.conn.Query(ctx, `
+		SELECT kind, ref_id::text, position FROM goal_pack_extras WHERE goal = $1 ORDER BY position, kind`, goal)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+	out := []GoalExtra{}
+	for rows.Next() {
+		var x GoalExtra
+		if err := rows.Scan(&x.Kind, &x.RefID, &x.Position); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		out = append(out, x)
+	}
+	return out, rows.Err()
+}
+
+// SaveGoalExtras همه‌ی تمرین‌های غیرصحنه‌ای یک هدف را یک‌جا جایگزین می‌کند.
+func (r DB) SaveGoalExtras(ctx context.Context, goal string, items []GoalExtra) error {
+	const op = "postgrespath.SaveGoalExtras"
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if _, err := tx.Exec(ctx, `DELETE FROM goal_pack_extras WHERE goal = $1`, goal); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	for _, x := range items {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO goal_pack_extras (goal, kind, ref_id, position) VALUES ($1, $2, $3::uuid, $4)
+			ON CONFLICT (goal, kind, ref_id) DO UPDATE SET position = EXCLUDED.position`,
+			goal, x.Kind, x.RefID, x.Position); err != nil {
+			return richerror.New(op).WithErr(err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	return nil
+}
+
+// GoalExtraInfos عنوان، سطح، عکس، فعال بودن و «انجام‌شده» برای هر تمرین بسته‌ی هدف.
+// پادکست done ندارد (گوش دادن ثبت نمی‌شود)؛ صحبت و نوشتن با وجود یک تلاش done می‌شوند.
+func (r DB) GoalExtraInfos(ctx context.Context, userID string, items []GoalExtra) (map[string]GoalExtraInfo, error) {
+	const op = "postgrespath.GoalExtraInfos"
+	out := map[string]GoalExtraInfo{}
+	ids := map[string][]string{}
+	for _, x := range items {
+		ids[x.Kind] = append(ids[x.Kind], x.RefID)
+	}
+	queries := map[string]string{
+		"podcast": `
+			SELECT p.id::text, p.title, p.description_fa, p.level,
+			       COALESCE(NULLIF(p.image_url, ''), s.background_image_url, ''), p.is_active, false
+			FROM podcasts p LEFT JOIN scenes s ON s.id = p.scene_id
+			WHERE p.id = ANY($1::uuid[])`,
+		"topic": `
+			SELECT t.id::text, t.title, t.prompt_fa, t.level, t.image_url, t.is_active,
+			       EXISTS (SELECT 1 FROM topic_speaking_attempts a WHERE a.topic_id = t.id AND a.user_id = $2::uuid)
+			FROM speaking_topics t WHERE t.id = ANY($1::uuid[])`,
+		"writing": `
+			SELECT w.id::text, w.title, w.prompt_fa, w.level, w.image_url, w.is_active,
+			       EXISTS (SELECT 1 FROM writing_attempts a WHERE a.prompt_id = w.id AND a.user_id = $2::uuid)
+			FROM writing_prompts w WHERE w.id = ANY($1::uuid[])`,
+	}
+	for kind, list := range ids {
+		q, ok := queries[kind]
+		if !ok || len(list) == 0 {
+			continue
+		}
+		var rows pgx.Rows
+		var err error
+		if kind == "podcast" {
+			rows, err = r.conn.Query(ctx, q, list)
+		} else {
+			rows, err = r.conn.Query(ctx, q, list, userID)
+		}
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		for rows.Next() {
+			info := GoalExtraInfo{Kind: kind}
+			if err := rows.Scan(&info.RefID, &info.Title, &info.Subtitle, &info.Level, &info.ImageURL, &info.Active, &info.Done); err != nil {
+				rows.Close()
+				return nil, richerror.New(op).WithErr(err)
+			}
+			out[kind+":"+info.RefID] = info
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+	}
+	return out, nil
+}

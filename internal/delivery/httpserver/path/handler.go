@@ -42,6 +42,8 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	adminGoal := e.Group("/v1/admin/goal-packs", auth, middlware.AdminOnly)
 	adminGoal.GET("/:goal", h.AdminGoalPack)
 	adminGoal.PUT("/:goal", h.AdminSaveGoalPack)
+	adminGoal.GET("/:goal/extras", h.AdminGoalExtras)
+	adminGoal.PUT("/:goal/extras", h.AdminSaveGoalExtras)
 
 	admin := e.Group("/v1/admin/paths", auth, middlware.AdminOnly)
 	admin.GET("", h.AdminPaths)
@@ -244,5 +246,21 @@ func (h Handler) AdminSaveGoalPack(c echo.Context) error {
 		return badRequest(c)
 	}
 	err := h.svc.AdminSaveGoalPack(c.Request().Context(), c.Param("goal"), req.Items)
+	return respond(c, echo.Map{"ok": true, "count": len(req.Items)}, err)
+}
+
+func (h Handler) AdminGoalExtras(c echo.Context) error {
+	items, err := h.svc.AdminGoalExtras(c.Request().Context(), c.Param("goal"))
+	return respond(c, echo.Map{"items": items}, err)
+}
+
+func (h Handler) AdminSaveGoalExtras(c echo.Context) error {
+	var req struct {
+		Items []pathservice.GoalExtra `json:"items"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	err := h.svc.AdminSaveGoalExtras(c.Request().Context(), c.Param("goal"), req.Items)
 	return respond(c, echo.Map{"ok": true, "count": len(req.Items)}, err)
 }

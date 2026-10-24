@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, CalendarDays, Check, ChevronLeft, Clock, GraduationCap, Home, Lock, Pencil, Plane, Target, Timer, Trash2, X } from 'lucide-react-native';
+import { Briefcase, CalendarDays, Check, ChevronLeft, Clock, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Target, Timer, Trash2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -16,9 +16,12 @@ import {
   deleteGoalPlan,
   getGoalPlan,
   saveGoalPlan,
+  type GoalExtra,
   type GoalId,
   type GoalPlanView,
 } from '../../api/goalPlan';
+import { getSpeakingTopics } from '../../api/topicSpeaking';
+import { getWritingPrompts } from '../../api/writing';
 
 const GOALS: {
   id: GoalId;
@@ -32,6 +35,18 @@ const GOALS: {
   { id: 'study', icon: GraduationCap, labelKey: 'goalStudy', color: COLORS.primary, light: COLORS.primaryLight },
   { id: 'work', icon: Briefcase, labelKey: 'goalWork', color: COLORS.warning, light: COLORS.warningLight },
 ];
+// تمرین‌های غیرصحنه‌ای هدف، به همین ترتیب زیر موقعیت‌ها نشان داده می‌شوند.
+const EXTRA_KINDS: {
+  kind: GoalExtra['kind'];
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  labelKey: string;
+  sectionKey: string;
+}[] = [
+  { kind: 'podcast', icon: Headphones, labelKey: 'goalPlanKindListen', sectionKey: 'goalPlanListenSection' },
+  { kind: 'topic', icon: Mic, labelKey: 'goalPlanKindSpeak', sectionKey: 'goalPlanSpeakSection' },
+  { kind: 'writing', icon: PenLine, labelKey: 'goalPlanKindWrite', sectionKey: 'goalPlanWriteSection' },
+];
+
 // null = تاریخ ندارم
 const DATE_CHOICES: (number | null)[] = [1, 2, 3, 6, 12, null];
 const MINUTES = [15, 30, 45, 60];
@@ -58,6 +73,19 @@ export const GoalPlanScreen: React.FC = () => {
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+
+  // پادکست با شناسه باز می‌شود؛ صفحه‌ی صحبت و نوشتن خود موضوع را می‌خواهند، پس از فهرست پیدایش می‌کنیم.
+  const openExtra = async (x: GoalExtra) => {
+    track('goal_extra_open', `${x.kind}:${x.id}`);
+    if (x.kind === 'podcast') navigation.navigate('Podcast', { podcastId: x.id, openedAt: Date.now() });
+    else if (x.kind === 'topic') {
+      const topic = (await getSpeakingTopics().catch(() => [])).find((it) => it.id === x.id);
+      if (topic) navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() });
+    } else {
+      const prompt = (await getWritingPrompts().catch(() => [])).find((it) => it.id === x.id);
+      if (prompt) navigation.navigate('Writing', { prompt, openedAt: Date.now() });
+    }
+  };
   const num = (n: number | string) =>
     language === 'fa' ? String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(n);
 
@@ -295,6 +323,29 @@ export const GoalPlanScreen: React.FC = () => {
           )
         )}
 
+        {view.today_extra && (() => {
+          const x = view.today_extra;
+          const meta = EXTRA_KINDS.find((k) => k.kind === x.kind) ?? EXTRA_KINDS[0];
+          return (
+            <TouchableOpacity
+              style={[styles.todayCard, { borderColor: hexToRgba(goalMeta.color, 0.4) }]}
+              activeOpacity={0.85}
+              onPress={() => openExtra(x)}
+            >
+              <View style={[styles.todayIcon, { backgroundColor: hexToRgba(goalMeta.color, 0.85) }]}>
+                <meta.icon size={20} color={COLORS.white} />
+              </View>
+              <View style={styles.flex1}>
+                <Text style={[styles.todayLabel, { color: goalMeta.color }]}>
+                  {t('goalPlanTodayExtra').replace('{kind}', t(meta.labelKey))}
+                </Text>
+                <Text style={styles.todayTitle}>{x.title}</Text>
+              </View>
+              <ChevronLeft size={20} color={goalMeta.color} />
+            </TouchableOpacity>
+          );
+        })()}
+
         {f && (
           <View style={[styles.card, { borderColor: hexToRgba(goalMeta.color, 0.25) }]}>
             <Text style={styles.cardTitle}>🎯 {t('goalPlanForecastTitle')}</Text>
@@ -347,6 +398,36 @@ export const GoalPlanScreen: React.FC = () => {
               </View>
               {open && !s.ready && <ChevronLeft size={18} color={tint} />}
             </TouchableOpacity>
+          );
+        })}
+
+        {EXTRA_KINDS.map((k) => {
+          const items = (view.extras ?? []).filter((x) => x.kind === k.kind);
+          if (items.length === 0) return null;
+          return (
+            <View key={k.kind} style={styles.extraSection}>
+              <Text style={styles.sectionLabel}>{t(k.sectionKey)}</Text>
+              {items.map((x) => {
+                const tint = x.done ? COLORS.success : goalMeta.color;
+                return (
+                  <TouchableOpacity
+                    key={x.id}
+                    style={[styles.row, { borderColor: hexToRgba(tint, 0.25) }, x.done && { backgroundColor: COLORS.successLight }]}
+                    activeOpacity={0.85}
+                    onPress={() => openExtra(x)}
+                  >
+                    <View style={[styles.statusDot, { backgroundColor: tint }]}>
+                      {x.done ? <Check size={14} color={COLORS.white} /> : <k.icon size={14} color={COLORS.white} />}
+                    </View>
+                    <View style={styles.flex1}>
+                      <Text style={styles.rowTitle}>{x.title}</Text>
+                      {!!LEVEL_KEY[x.level] && <Text style={styles.rowSub}>{t(LEVEL_KEY[x.level])}</Text>}
+                    </View>
+                    <ChevronLeft size={18} color={tint} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           );
         })}
 
@@ -428,6 +509,7 @@ const styles = StyleSheet.create({
   title: { ...TEXT_STYLES.headlineSm, color: COLORS.text, fontFamily: FONT_FAMILY.bold, textAlign: 'center' },
   sub: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
   sectionLabel: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary, marginTop: SPACING.s },
+  extraSection: { gap: SPACING.s },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.s },
   goalCard: {
     flexBasis: '47%',

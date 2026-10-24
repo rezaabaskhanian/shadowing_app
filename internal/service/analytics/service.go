@@ -52,6 +52,7 @@ const (
 	// مسیر هدف‌محور: ساخته شدن برنامه (target = goal) و باز کردن یک موقعیت.
 	EventGoalPlanCreated   = "goal_plan_created"
 	EventGoalSituationOpen = "goal_situation_open"
+	EventGoalExtraOpen     = "goal_extra_open"
 )
 
 var validEvents = map[string]bool{
@@ -69,6 +70,7 @@ var validEvents = map[string]bool{
 	EventRetestCardTap:     true,
 	EventGoalPlanCreated:   true,
 	EventGoalSituationOpen: true,
+	EventGoalExtraOpen:     true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.

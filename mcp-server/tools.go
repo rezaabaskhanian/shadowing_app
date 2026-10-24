@@ -251,6 +251,11 @@ type goalPackArgs struct {
 	Items []obj  `json:"items,omitempty" jsonschema:"save only: the WHOLE pack in order: {position, priority 1-3 (1 = most urgent), title_fa, title_en, scene_ids:[scene uuids, one per level]}; replaces the existing pack"`
 }
 
+type goalExtrasArgs struct {
+	Goal  string `json:"goal" jsonschema:"travel | migration | study | work"`
+	Items []obj  `json:"items,omitempty" jsonschema:"save only: the WHOLE list in order: {kind: podcast | topic | writing, ref_id: uuid, position}"`
+}
+
 type importIdiomsArgs struct {
 	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
@@ -822,6 +827,16 @@ func registerTools(s *mcp.Server, c *client) {
 	mcp.AddTool(s, &mcp.Tool{Name: "save_goal_pack", Description: "Replace a goal pack (travel | migration | study | work) with the given ordered situations. Scenes are the existing published scenes; an empty scene_ids means the situation still needs content."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in goalPackArgs) (*mcp.CallToolResult, any, error) {
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal), obj{"items": in.Items}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "get_goal_extras", Annotations: ro, Description: "Get the non-scene practice of a goal pack (podcasts, speaking topics, writing prompts) shown in the user's goal plan."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalExtrasArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/extras"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_goal_extras", Description: "Replace the non-scene practice of a goal pack: the WHOLE ordered list of {kind: podcast | topic | writing, ref_id}. The app shows only active items up to the learner's level."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalExtrasArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/extras", obj{"items": in.Items}))
 		})
 
 	// ---- تست تعیین سطح ----

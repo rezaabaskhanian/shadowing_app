@@ -30,6 +30,17 @@ export interface GoalSituation {
   ready: boolean;
 }
 
+/** تمرین غیرصحنه‌ای هدف: پادکست (شنیدن)، موضوع صحبت یا موضوع نوشتن. */
+export interface GoalExtra {
+  kind: 'podcast' | 'topic' | 'writing';
+  id: string;
+  title: string;
+  subtitle?: string;
+  level: string;
+  image_url?: string;
+  done: boolean;
+}
+
 export interface GoalPlanView {
   plan: {
     goal: GoalId;
@@ -42,6 +53,10 @@ export interface GoalPlanView {
   ready: number;
   in_plan_count: number;
   today_id?: string;
+  /** پادکست، صحبت و نوشتنِ همین هدف تا سطح کاربر (سرور قدیمی: undefined). */
+  extras?: GoalExtra[];
+  /** تمرین دوم امروز، فقط برای برنامه‌ی ۳۰ دقیقه یا بیشتر. */
+  today_extra?: GoalExtra;
 }
 
 /** null یعنی کاربر هنوز برنامه نساخته. */

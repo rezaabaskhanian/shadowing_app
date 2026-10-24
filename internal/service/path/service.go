@@ -44,6 +44,9 @@ type repository interface {
 	SaveGoalPlan(ctx context.Context, userID string, p postgrespath.GoalPlan) error
 	DeleteGoalPlan(ctx context.Context, userID string) error
 	SceneInfos(ctx context.Context, sceneIDs []string) (map[string]postgrespath.SceneInfo, error)
+	GoalExtras(ctx context.Context, goal string) ([]postgrespath.GoalExtra, error)
+	SaveGoalExtras(ctx context.Context, goal string, items []postgrespath.GoalExtra) error
+	GoalExtraInfos(ctx context.Context, userID string, items []postgrespath.GoalExtra) (map[string]postgrespath.GoalExtraInfo, error)
 }
 
 type Path = postgrespath.Path

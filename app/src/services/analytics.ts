@@ -34,6 +34,7 @@ export type AnalyticsEvent =
   | 'retest_card_tap'
   | 'goal_plan_created'
   | 'goal_situation_open'
+  | 'goal_extra_open'
   | 'checkpoint_done'
   | 'path_self_intro'
   | 'podcast_played'

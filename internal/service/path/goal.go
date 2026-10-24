@@ -14,6 +14,7 @@ import (
 
 type GoalSituation = postgrespath.GoalSituation
 type GoalPlan = postgrespath.GoalPlan
+type GoalExtra = postgrespath.GoalExtra
 
 var validGoals = map[string]bool{"travel": true, "migration": true, "study": true, "work": true}
 var validMinutes = map[int]bool{15: true, 30: true, 45: true, 60: true}
@@ -106,6 +107,17 @@ type SituationView struct {
 	Ready      bool   `json:"ready"`
 }
 
+// GoalExtraView یک تمرین غیرصحنه‌ای هدف (پادکست، صحبت، نوشتن) برای کاربر.
+type GoalExtraView struct {
+	Kind     string `json:"kind"` // podcast | topic | writing
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Subtitle string `json:"subtitle,omitempty"`
+	Level    string `json:"level"`
+	ImageURL string `json:"image_url,omitempty"`
+	Done     bool   `json:"done"`
+}
+
 type GoalPlanView struct {
 	Plan       GoalPlan        `json:"plan"`
 	Forecast   *GoalForecast   `json:"forecast,omitempty"`
@@ -113,6 +125,31 @@ type GoalPlanView struct {
 	Ready      int             `json:"ready"`
 	InPlanCnt  int             `json:"in_plan_count"`
 	TodayID    string          `json:"today_id,omitempty"`
+	// Extras تمرین‌های غیرصحنه‌ای همین هدف تا سطح کاربر؛ TodayExtra یکی از آن‌ها برای
+	// کار امروز، فقط وقتی کاربر روزی ۳۰ دقیقه یا بیشتر گذاشته (قالب جلسه در طرح).
+	Extras     []GoalExtraView `json:"extras"`
+	TodayExtra *GoalExtraView  `json:"today_extra,omitempty"`
+}
+
+// pickTodayExtra هر روز یک نوع (شنیدن، صحبت، نوشتن) را به نوبت پیشنهاد می‌دهد؛
+// اگر از آن نوع تمرین انجام‌نشده نبود، اولین تمرین انجام‌نشده‌ی هر نوعی.
+func pickTodayExtra(extras []GoalExtraView, day int) *GoalExtraView {
+	kinds := []string{"podcast", "topic", "writing"}
+	want := kinds[day%len(kinds)]
+	var fallback *GoalExtraView
+	for i := range extras {
+		x := &extras[i]
+		if x.Done {
+			continue
+		}
+		if x.Kind == want {
+			return x
+		}
+		if fallback == nil {
+			fallback = x
+		}
+	}
+	return fallback
 }
 
 // pickScene بهترین صحنه‌ی منتشرشده برای سطح کاربر: هم‌سطح، وگرنه نزدیک‌ترین (پایین‌تر ارجح).
@@ -203,7 +240,47 @@ func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, e
 			}
 		}
 	}
+
+	extras, err := s.goalExtras(ctx, userID, plan)
+	if err != nil {
+		return nil, err
+	}
+	view.Extras = extras
+	if plan.MinutesPerDay >= 30 {
+		if x := pickTodayExtra(view.Extras, time.Now().YearDay()); x != nil {
+			cp := *x
+			view.TodayExtra = &cp
+		}
+	}
 	return view, nil
+}
+
+// goalExtras تمرین‌های فعالِ هدف تا سطح کاربر، به ترتیبی که ادمین چیده.
+func (s *Service) goalExtras(ctx context.Context, userID string, plan *GoalPlan) ([]GoalExtraView, error) {
+	items, err := s.repo.GoalExtras(ctx, plan.Goal)
+	if err != nil || len(items) == 0 {
+		return []GoalExtraView{}, err
+	}
+	infos, err := s.repo.GoalExtraInfos(ctx, userID, items)
+	if err != nil {
+		return nil, err
+	}
+	maxRank := levelRank(plan.StartLevel)
+	out := make([]GoalExtraView, 0, len(items))
+	for _, it := range items {
+		info, ok := infos[it.Kind+":"+it.RefID]
+		if !ok || !info.Active {
+			continue
+		}
+		if r := levelRank(info.Level); maxRank >= 0 && r > maxRank {
+			continue
+		}
+		out = append(out, GoalExtraView{
+			Kind: it.Kind, ID: it.RefID, Title: info.Title, Subtitle: info.Subtitle,
+			Level: info.Level, ImageURL: info.ImageURL, Done: info.Done,
+		})
+	}
+	return out, nil
 }
 
 type SaveGoalPlanInput struct {
@@ -291,4 +368,34 @@ func (s *Service) AdminSaveGoalPack(ctx context.Context, goal string, items []Go
 		}
 	}
 	return s.repo.SaveGoalPack(ctx, goal, items)
+}
+
+var validExtraKinds = map[string]bool{"podcast": true, "topic": true, "writing": true}
+
+func (s *Service) AdminGoalExtras(ctx context.Context, goal string) ([]GoalExtra, error) {
+	if !validGoals[goal] {
+		return nil, invalid("path.AdminGoalExtras", "هدف نامعتبر است")
+	}
+	return s.repo.GoalExtras(ctx, goal)
+}
+
+// AdminSaveGoalExtras کل فهرست پادکست/صحبت/نوشتنِ یک هدف را جایگزین می‌کند.
+func (s *Service) AdminSaveGoalExtras(ctx context.Context, goal string, items []GoalExtra) error {
+	const op = "path.AdminSaveGoalExtras"
+	if !validGoals[goal] {
+		return invalid(op, "هدف نامعتبر است")
+	}
+	for i := range items {
+		it := &items[i]
+		if !validExtraKinds[it.Kind] {
+			return invalid(op, "نوع باید podcast، topic یا writing باشد")
+		}
+		if err := parseID(op, it.RefID); err != nil {
+			return invalid(op, "شناسه‌ی محتوا نامعتبر است")
+		}
+		if it.Position == 0 {
+			it.Position = i + 1
+		}
+	}
+	return s.repo.SaveGoalExtras(ctx, goal, items)
 }
