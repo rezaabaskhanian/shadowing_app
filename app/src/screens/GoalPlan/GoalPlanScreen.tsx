@@ -531,7 +531,7 @@ const CINE = {
 const cine = StyleSheet.create({
   container: { flex: 1, backgroundColor: CINE.bg },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
-  kicker: { ...TEXT_STYLES.labelSm, color: CINE.muted },
+  kicker: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.muted },
   goalTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 24, color: CINE.text },
   pill: {
     flexDirection: 'row',
@@ -544,7 +544,7 @@ const cine = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  pillText: { ...TEXT_STYLES.labelSm, color: CINE.text },
+  pillText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.text },
   iconBtn: {
     width: 44,
     height: 44,
@@ -575,7 +575,7 @@ const cine = StyleSheet.create({
   },
   heroBody: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, gap: 4 },
   heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32, color: CINE.text },
-  heroSub: { ...TEXT_STYLES.bodyMd, color: CINE.muted },
+  heroSub: { fontFamily: FONT_FAMILY.regular, fontSize: 14, lineHeight: 22, color: CINE.muted },
   doneCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -586,7 +586,7 @@ const cine = StyleSheet.create({
     borderColor: CINE.border,
     padding: SPACING.l,
   },
-  bodyText: { ...TEXT_STYLES.bodyMd, color: CINE.text },
+  bodyText: { fontFamily: FONT_FAMILY.regular, fontSize: 15, lineHeight: 24, color: CINE.text },
   extraToday: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -603,7 +603,7 @@ const cine = StyleSheet.create({
   section: { gap: SPACING.s },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   sectionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: CINE.text },
-  sectionMeta: { ...TEXT_STYLES.labelSm, color: CINE.muted },
+  sectionMeta: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.muted },
   strip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stripCell: {
     width: 40,
@@ -617,7 +617,7 @@ const cine = StyleSheet.create({
   stripToday: { backgroundColor: 'transparent', borderWidth: 2, borderColor: CINE.accent },
   stripLocked: { opacity: 0.45 },
   stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.dim },
-  forecast: { ...TEXT_STYLES.bodyMd, color: CINE.muted, lineHeight: 24 },
+  forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 14, lineHeight: 24, color: CINE.muted },
   rail: { gap: 12, paddingRight: 2 },
   railCard: { width: 150, gap: 6 },
   railImg: { width: 150, height: 96, borderRadius: 14 },
@@ -645,8 +645,8 @@ const cine = StyleSheet.create({
   },
   rowDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
   rowNum: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.muted },
-  rowTitle: { ...TEXT_STYLES.bodyLg, color: CINE.text },
-  rowSub: { ...TEXT_STYLES.labelSm, color: CINE.dim },
+  rowTitle: { fontFamily: FONT_FAMILY.semiBold, fontSize: 15, lineHeight: 24, color: CINE.text },
+  rowSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: CINE.dim },
   moreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
