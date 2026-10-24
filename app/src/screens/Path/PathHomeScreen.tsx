@@ -100,7 +100,7 @@ export const PathHomeScreen: React.FC = () => {
 
     switch (item.kind) {
       case 'scene':
-        navigation.navigate('Shadowing', { scenarioId: item.ref_id });
+        navigation.navigate('Shadowing', { scenarioId: item.ref_id, returnTo: 'PathHome', returnParams: route.params });
         break;
       case 'podcast':
         navigation.navigate('Podcast', { podcastId: item.ref_id, openedAt: Date.now() });

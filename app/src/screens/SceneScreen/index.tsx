@@ -349,14 +349,22 @@ export const SceneScreen = () => {
     };
   }, [evaluations]);
 
+  // خروج از صحنه: اگر صفحه‌ی بازکننده returnTo داده (برنامه‌ی من، مسیر، نقشه، فهرست صحنه‌ها…)
+  // همان‌جا برمی‌گردیم؛ وگرنه مثل قبل پشته به خانه ریست می‌شود.
+  const returnTo: string | undefined = route.params?.returnTo;
+  const returnParams = route.params?.returnParams;
   const resetToHome = useCallback(() => {
+    if (returnTo) {
+      navigation.navigate(returnTo, returnParams);
+      return;
+    }
     navigation.reset({
       index: 0,
       routes: [{ name: 'Home' }],
     });
-  }, [navigation]);
+  }, [navigation, returnTo, returnParams]);
 
-  // Intercept physical phone back button on hardware press to return to Home
+  // Intercept physical phone back button on hardware press to leave the scene
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {

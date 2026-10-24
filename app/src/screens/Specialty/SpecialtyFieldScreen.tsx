@@ -63,7 +63,7 @@ export const SpecialtyFieldScreen: React.FC = () => {
   };
 
   const open = async (item: FieldContentItem) => {
-    if (item.kind === 'scene') navigation.navigate('Shadowing', { scenarioId: item.id });
+    if (item.kind === 'scene') navigation.navigate('Shadowing', { scenarioId: item.id, returnTo: 'SpecialtyField', returnParams: route.params });
     else if (item.kind === 'podcast') navigation.navigate('Podcast', { podcastId: item.id, openedAt: Date.now() });
     else if (item.kind === 'interview') navigation.navigate('InterviewSession', { setId: item.id, openedAt: Date.now() });
     else if (item.kind === 'speaking_topic') {

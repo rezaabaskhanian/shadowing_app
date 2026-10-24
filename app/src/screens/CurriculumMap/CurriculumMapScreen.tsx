@@ -146,7 +146,7 @@ export const CurriculumMapScreen = () => {
       navigation.navigate('Paywall');
       return;
     }
-    navigation.navigate('Shadowing', { scenarioId: scenario.id });
+    navigation.navigate('Shadowing', { scenarioId: scenario.id, returnTo: 'CurriculumMap' });
   };
 
   return (

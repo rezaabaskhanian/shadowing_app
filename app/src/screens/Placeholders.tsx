@@ -229,7 +229,7 @@ export const ScenesScreen = () => {
                   navigation.navigate('Paywall');
                   return;
                 }
-                navigation.navigate('Shadowing', { scenarioId: scenario.id });
+                navigation.navigate('Shadowing', { scenarioId: scenario.id, returnTo: 'Scenes' });
               }}
             />
           ))}

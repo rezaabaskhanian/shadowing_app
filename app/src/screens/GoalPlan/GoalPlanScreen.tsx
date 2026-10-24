@@ -271,7 +271,7 @@ export const GoalPlanScreen: React.FC = () => {
             activeOpacity={0.85}
             onPress={() => {
               track('goal_situation_open', today.id);
-              navigation.navigate('Shadowing', { scenarioId: today.scene_id });
+              navigation.navigate('Shadowing', { scenarioId: today.scene_id, returnTo: 'GoalPlan' });
             }}
           >
             <View style={[styles.todayIcon, { backgroundColor: goalMeta.color }]}>
@@ -327,7 +327,7 @@ export const GoalPlanScreen: React.FC = () => {
               ]}
               disabled={!open}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate('Shadowing', { scenarioId: s.scene_id })}
+              onPress={() => navigation.navigate('Shadowing', { scenarioId: s.scene_id, returnTo: 'GoalPlan' })}
             >
               <View style={[styles.statusDot, { backgroundColor: open || s.ready ? tint : COLORS.surfaceHigh }]}>
                 {s.ready ? (

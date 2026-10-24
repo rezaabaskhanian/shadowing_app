@@ -72,7 +72,7 @@ export const VerbDetailScreen = () => {
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) return;
     if (scene.isLocked) navigation.navigate('Paywall');
-    else navigation.navigate('Shadowing', { scenarioId: sceneId });
+    else navigation.navigate('Shadowing', { scenarioId: sceneId, returnTo: 'VerbDetail', returnParams: route.params });
   };
 
   const addToLeitner = (m: VerbMeaningView) => {
