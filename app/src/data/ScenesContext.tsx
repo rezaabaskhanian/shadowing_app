@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { fetchScene, fetchScenes, SceneLockedError } from '../api/scenes';
-import { SCENARIOS, type Scenario } from './scenarios';
+import { SCENARIOS, expandScenarioToDialogueItems, type Scenario } from './scenarios';
 
 interface ScenesContextValue {
   scenes: Scenario[];
@@ -63,8 +63,12 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
         // قفل‌بودن یعنی واقعاً نباید محتوا نشون داده بشه — به‌جای fallback
         // بی‌صدا، به صدازننده اجازه می‌دیم خودش هندلش کنه (مثلاً باز کردن Paywall).
         if (e instanceof SceneLockedError) throw e;
-        // بقیه‌ی خطاها (مثلاً قطعی شبکه): fallback به صحنه‌ی لیست جاری یا داده‌ی محلی
-        return scenes.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === id);
+        // بقیه‌ی خطاها (مثلاً قطعی شبکه): fallback به صحنه‌ی لیست جاری یا داده‌ی محلی.
+        // صحنه‌های لیست سبک‌اند و دیالوگ ندارند؛ نشان دادنشان صفحه‌ای بی‌جمله و
+        // بی‌صدا می‌ساخت، پس فقط نسخه‌ای که دیالوگ دارد قبول است وگرنه خطا بالا می‌رود.
+        const fallback = scenes.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === id);
+        if (fallback && expandScenarioToDialogueItems(fallback).some((d) => !!d.audioUrl)) return fallback;
+        throw e;
       }
     },
     [queryClient, scenes]

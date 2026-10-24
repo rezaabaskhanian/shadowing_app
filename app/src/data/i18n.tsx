@@ -240,6 +240,7 @@ export const translations: Translations = {
   sceneAudioPreparing: { en: 'Preparing audio… {done}/{total}', fa: 'آماده کردن صدا… {done} از {total}' },
   sceneAudioFailed: { en: '{n} sentence audio could not download; it will stream.', fa: 'صدای {n} جمله دانلود نشد؛ هنگام پخش از اینترنت می‌آید.' },
   sceneAudioRetry: { en: 'Try again', fa: 'دوباره' },
+  sceneLoadFailed: { en: 'Could not load this scene. Check your internet.', fa: 'صحنه دریافت نشد؛ اینترنت را بررسی کن.' },
   fourStepMethodTitle: { en: 'The 4-Step Method', fa: 'روش ۴ مرحله‌ای' },
   dialoguePreview: { en: 'Dialogue Preview', fa: 'پیش‌نمایش گفتگو' },
   moreSentencesSuffix: { en: 'more sentences', fa: 'جمله‌ی دیگر' },

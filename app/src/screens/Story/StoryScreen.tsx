@@ -56,6 +56,9 @@ export const StoryScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
   const lastActive = useRef(-1);
+  // وقتی کاربر خودش متن را می‌کشد، صفحه دیگر دنبال خطِ در حال پخش نمی‌رود
+  // تا با زدن دوباره‌ی پخش یا یک خط.
+  const followRef = useRef(true);
   const trackedRef = useRef(false);
 
   useEffect(() => {
@@ -146,12 +149,14 @@ export const StoryScreen: React.FC = () => {
     }
     if (Object.keys(answers).length === 0) listenedBeforeQuizRef.current = true;
     if (positionMs >= story.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
+    followRef.current = true;
     await TrackPlayer.play();
   };
 
   const playFrom = async (startMs: number) => {
     if (!ready) return;
     if (Object.keys(answers).length === 0) listenedBeforeQuizRef.current = true;
+    followRef.current = true;
     await TrackPlayer.seekTo(startMs / 1000);
     positionSV.value = startMs;
     setPositionMs(startMs);
@@ -180,6 +185,7 @@ export const StoryScreen: React.FC = () => {
   useEffect(() => {
     if (activeIdx < 0 || activeIdx === lastActive.current) return;
     lastActive.current = activeIdx;
+    if (!followRef.current) return;
     const y = lineY.current[activeIdx];
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 160), animated: true });
   }, [activeIdx]);
@@ -260,7 +266,12 @@ export const StoryScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        onScrollBeginDrag={() => {
+          followRef.current = false;
+        }}
+        contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.cover, { backgroundColor: accent }]}>
           {!!story.cover_url && <Image source={{ uri: absUrl(story.cover_url) }} style={styles.coverImage} resizeMode="cover" />}
           {!story.cover_url && <BookOpen size={40} color={hexToRgba(COLORS.white, 0.9)} />}

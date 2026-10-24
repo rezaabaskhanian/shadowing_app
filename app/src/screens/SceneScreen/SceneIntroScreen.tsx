@@ -33,6 +33,9 @@ interface SceneIntroScreenProps {
   /** وضعیت دانلود صدای جمله‌ها؛ تا finished نشده دکمه‌ی ورود منتظر می‌ماند. */
   audioPrep: { done: number; total: number; failed: number; finished: boolean };
   onRetryAudio: () => void;
+  /** خودِ صحنه از سرور نیامد؛ به‌جای چرخش بی‌پایان، پیام و تلاش دوباره. */
+  loadFailed: boolean;
+  onRetryLoad: () => void;
   t: (key: string) => string;
 }
 
@@ -52,6 +55,8 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onEnterScene,
   audioPrep,
   onRetryAudio,
+  loadFailed,
+  onRetryLoad,
   t,
 }) => {
   const insets = useSafeAreaInsets();
@@ -133,7 +138,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
         {/* Scenario Meta Header */}
         <View style={styles.introHeader}>
           <View style={styles.introTitleRow}>
-            <Text style={styles.introTitle}>{scenario?.title || 'The Last Can of Tuna'}</Text>
+            <Text style={styles.introTitle}>{scenario?.title ?? ''}</Text>
             <View style={[styles.introLevelBadge, { backgroundColor: levelInfo.bg }]}>
               <LevelIcon size={12} color={levelInfo.text} />
               <Text style={[styles.introLevelBadgeText, { color: levelInfo.text }]}>
@@ -342,6 +347,14 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
                   .replace('{total}', String(audioPrep.total))}
           </Text>
         </TouchableOpacity>
+        {loadFailed && (
+          <View style={styles.audioFailRow}>
+            <Text style={styles.audioFailText}>{t('sceneLoadFailed')}</Text>
+            <TouchableOpacity onPress={onRetryLoad} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {audioPrep.finished && audioPrep.failed > 0 && (
           <View style={styles.audioFailRow}>
             <Text style={styles.audioFailText}>

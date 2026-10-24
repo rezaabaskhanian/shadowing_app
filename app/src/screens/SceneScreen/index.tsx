@@ -173,6 +173,9 @@ export const SceneScreen = () => {
     finished: false,
   });
   const [audioPrepRun, setAudioPrepRun] = useState(0);
+  // دریافت خودِ صحنه شکست خورد (مثلاً اینترنت قطع)؛ صفحه‌ی معرفی دکمه‌ی تلاش دوباره نشان می‌دهد.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadRun, setLoadRun] = useState(0);
   useEffect(() => {
     if (!scenario) return;
     let alive = true;
@@ -189,9 +192,15 @@ export const SceneScreen = () => {
 
   useEffect(() => {
     let mounted = true;
+    // صحنه‌ی قبلی (این تب زنده می‌ماند) نباید تا رسیدن صحنه‌ی تازه نمایش داده شود.
+    setScenario(null);
+    setLoadFailed(false);
+    setAudioPrep({ done: 0, total: 0, failed: 0, finished: false });
     getScene(scenarioId)
       .then((s) => {
-        if (mounted) setScenario(s ?? null);
+        if (!mounted) return;
+        setScenario(s ?? null);
+        if (!s) setLoadFailed(true);
       })
       .catch((e) => {
         if (!mounted) return;
@@ -200,12 +209,14 @@ export const SceneScreen = () => {
           return;
         }
         setScenario(null);
+        setLoadFailed(true);
       });
     return () => {
       mounted = false;
     };
+    // getScene با هر بار تازه شدن لیست صحنه‌ها عوض می‌شود؛ نباید صحنه‌ی باز را از نو بارگیری کند.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarioId, getScene]);
+  }, [scenarioId, loadRun]);
 
   /**
    * ماشین حالتِ پخش و مرحله. این مقادیر به هم وابسته‌اند و هر گذارشان باید
@@ -1046,6 +1057,8 @@ export const SceneScreen = () => {
         onEnterScene={handleEnterScene}
         audioPrep={audioPrep}
         onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
+        loadFailed={loadFailed}
+        onRetryLoad={() => setLoadRun((n) => n + 1)}
         t={t}
       />
     );
