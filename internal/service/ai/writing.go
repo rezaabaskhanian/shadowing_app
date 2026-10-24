@@ -32,7 +32,7 @@ The learner wrote a short story/text about a given topic. You get the topic, the
 
 Review it:
 - on_topic: "yes", "partial" (drifted or too short), or "no".
-- score: 0-100 for THEIR level (beginner judged more gently): staying on topic, enough content, grammar, vocabulary, sentence variety, spelling. Empty or nonsense text is 0.
+- score: 0-100 for THEIR level (starter and beginner judged more gently): staying on topic, enough content, grammar, vocabulary, sentence variety, spelling. Empty or nonsense text is 0.
 - summary_fa: 1-2 short, encouraging Persian sentences: overall impression and the single most important next step.
 - strengths_fa: up to 3 short Persian points of what they did well.
 - mistakes: up to 6 of the MOST important real mistakes (grammar, tense, articles, prepositions, word choice, spelling): the learner's original phrase (copied exactly from their text), the corrected phrase, and a short Persian explanation of the grammar rule, like a kind teacher (e.g. "بعد از yesterday فعل باید گذشته باشد: went نه go"). Empty list if there are no real mistakes.
@@ -74,7 +74,7 @@ Rules:
   "guide_questions": [string] (4-6 short, simple English questions that help them build the story in order),
   "useful_phrases": [string] (4-6 English phrases, linking words or sentence structures useful for this story at this level, e.g. "One day, ...", "Suddenly, ...", "In the end, ...")
 }
-- Match vocabulary and grammar to the level: beginner = very simple past/present, short sentences.`
+- Match vocabulary and grammar to the level: starter (A1) = present simple, can, there is, 3-6 word sentences, everyday words only; beginner = very simple past/present, short sentences.`
 
 // SuggestWritingPrompt از یک ایده‌ی کوتاه، محتوای کامل یک موضوع نوشتن را پیشنهاد می‌دهد.
 func (s Service) SuggestWritingPrompt(ctx context.Context, idea, level string) (SpeakingTopicSuggestion, error) {

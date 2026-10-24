@@ -14,6 +14,7 @@ import { absUrl } from '../../api/config';
 import { BannerCard, ListHero } from '../../components/ContentVisuals';
 
 const LEVEL_META: Record<WritingLevel, { labelKey: string; bg: string }> = {
+  starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
   beginner: { labelKey: 'levelBeginner', bg: COLORS.levelBeginnerBg },
   intermediate: { labelKey: 'levelIntermediate', bg: COLORS.levelIntermediateBg },
   advanced: { labelKey: 'levelAdvanced', bg: COLORS.levelAdvancedBg },

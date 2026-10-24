@@ -6,6 +6,7 @@ import { deleteWritingPrompt, listWritingPrompts, saveWritingPrompt, suggestWrit
 import type { SpeakingTopicLevel, WritingPrompt } from "@/lib/types";
 
 const LEVELS: { id: SpeakingTopicLevel; label: string }[] = [
+  { id: "starter", label: "قدم اول (A1)" },
   { id: "beginner", label: "مبتدی" },
   { id: "intermediate", label: "متوسط" },
   { id: "advanced", label: "پیشرفته" },

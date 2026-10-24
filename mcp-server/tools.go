@@ -288,7 +288,7 @@ type topicArgs struct {
 }
 
 type writingPromptArgs struct {
-	Prompt obj `json:"prompt" jsonschema:"writing prompt: title, prompt_fa, guide_questions[], useful_phrases[], level (beginner | intermediate | advanced | proficient), min_words, max_words, image_url"`
+	Prompt obj `json:"prompt" jsonschema:"writing prompt: title, prompt_fa, guide_questions[], useful_phrases[], level (starter | beginner | intermediate | advanced | proficient), min_words, max_words, image_url"`
 }
 
 type detectLinesArgs struct {
