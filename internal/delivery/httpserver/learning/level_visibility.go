@@ -14,6 +14,24 @@ type speakingProfileGetter interface {
 	EffectiveSceneLevel(ctx context.Context, userID string) (string, error)
 }
 
+// goalSceneChecker صحنه‌هایی که برنامه‌ی هدف کاربر به او داده را می‌شناسد.
+type goalSceneChecker interface {
+	InGoalPlan(ctx context.Context, userID, sceneID string) (bool, error)
+}
+
+// inUserGoalPlan: صحنه‌ای که خودِ «برنامه‌ی من» داده، حتی اگر سطحش بالاتر باشد، باز است.
+func (h Handler) inUserGoalPlan(c echo.Context, sceneID string) bool {
+	if h.goalScenes == nil {
+		return false
+	}
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return false
+	}
+	ok, err := h.goalScenes.InGoalPlan(c.Request().Context(), userClaims.UserID, sceneID)
+	return err == nil && ok
+}
+
 // userDifficulty سطح مؤثر کاربر (انتخاب دستی، وگرنه نتیجه‌ی تست تعیین سطح) را
 // برمی‌گرداند؛ کاربری که هیچ‌کدام را ندارد یا لاگین نیست مبتدی حساب می‌شود.
 func (h Handler) userDifficulty(c echo.Context) scene.DifficultyLevel {

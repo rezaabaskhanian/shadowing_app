@@ -173,6 +173,40 @@ func pickScene(ids []string, infos map[string]postgrespath.SceneInfo, level stri
 	return best, bestLevel
 }
 
+// InGoalPlan می‌گوید آیا sceneID همان صحنه‌ای است که برنامه‌ی هدف کاربر برای یکی از
+// موقعیت‌هایش انتخاب کرده. موقعیتی که صحنه‌ی هم‌سطح ندارد صحنه‌ی سطح بالاتر می‌گیرد و
+// قفل سطح نباید جلوی بازشدن آن را بگیرد.
+func (s *Service) InGoalPlan(ctx context.Context, userID, sceneID string) (bool, error) {
+	plan, err := s.repo.GetGoalPlan(ctx, userID)
+	if err != nil || plan == nil {
+		return false, err
+	}
+	pack, err := s.repo.GoalPack(ctx, plan.Goal)
+	if err != nil {
+		return false, err
+	}
+	for _, sit := range pack {
+		listed := false
+		for _, id := range sit.SceneIDs {
+			if id == sceneID {
+				listed = true
+				break
+			}
+		}
+		if !listed {
+			continue
+		}
+		infos, err := s.repo.SceneInfos(ctx, sit.SceneIDs)
+		if err != nil {
+			return false, err
+		}
+		if picked, _ := pickScene(sit.SceneIDs, infos, plan.StartLevel); picked == sceneID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // GoalPlan برنامه‌ی کاربر با پیش‌بینی و وضعیت موقعیت‌ها؛ nil یعنی برنامه نساخته.
 func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, error) {
 	const op = "path.GoalPlan"

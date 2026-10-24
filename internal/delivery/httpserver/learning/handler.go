@@ -25,6 +25,7 @@ type Handler struct {
 	aiAccessSvc        *aiaccessservice.Service
 	tokenTopupSvc      tokentopupservice.Service
 	profileSvc         speakingProfileGetter
+	goalScenes         goalSceneChecker
 
 	authSvc authservice.Service
 
@@ -48,6 +49,7 @@ func New(
 	aiAccessSvc *aiaccessservice.Service,
 	tokenTopupSvc tokentopupservice.Service,
 	profileSvc speakingProfileGetter,
+	goalScenes goalSceneChecker,
 ) Handler {
 	return Handler{
 		learningSvc:        learningSvc,
@@ -63,5 +65,6 @@ func New(
 		aiAccessSvc:        aiAccessSvc,
 		tokenTopupSvc:      tokenTopupSvc,
 		profileSvc:         profileSvc,
+		goalScenes:         goalScenes,
 	}
 }
