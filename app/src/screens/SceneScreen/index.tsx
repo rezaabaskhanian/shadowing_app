@@ -366,12 +366,17 @@ export const SceneScreen = () => {
   }, [evaluations]);
 
   // خروج از صحنه: اگر صفحه‌ی بازکننده returnTo داده (برنامه‌ی من، مسیر، نقشه، فهرست صحنه‌ها…)
-  // همان‌جا برمی‌گردیم؛ وگرنه مثل قبل پشته به خانه ریست می‌شود.
+  // همان‌جا برمی‌گردیم؛ وگرنه مثل قبل پشته به خانه ریست می‌شود. هر دو با reset،
+  // تا خودِ صفحه‌ی صحنه از حالت ناوبری بیرون برود و دفعه‌ی بعد از نو (با صفحه‌ی
+  // معرفی) باز شود؛ navigate ساده صحنه را با inScene=true زنده نگه می‌داشت.
   const returnTo: string | undefined = route.params?.returnTo;
   const returnParams = route.params?.returnParams;
   const resetToHome = useCallback(() => {
     if (returnTo) {
-      navigation.navigate(returnTo, returnParams);
+      navigation.reset({
+        index: 1,
+        routes: [{ name: 'Home' }, { name: returnTo, params: returnParams }],
+      });
       return;
     }
     navigation.reset({
