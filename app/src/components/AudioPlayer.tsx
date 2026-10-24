@@ -5,6 +5,7 @@ import TrackPlayer, { Event, State } from 'react-native-track-player';
 import Sound from 'react-native-nitro-sound';
 
 import { ensureTrackPlayerSetup } from '../services/audio/trackPlayerSetup';
+import { getCachedAudio } from '../services/audio/audioCache';
 
 /**
  * موتور صدای اپ: دو مسیر کاملاً جدا با دو کتابخانه‌ی native.
@@ -193,9 +194,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       // نگه می‌داریم و فقط seek/rate را به‌روز می‌کنیم — این‌طور صدا هر بار
       // با یک تلق کوتاهِ reload نمی‌پرد.
       const active = await TrackPlayer.getActiveTrack();
-      if (active?.url !== uri) {
+      // track ممکن است از فایل کش (`file://`) پخش شود، پس URL اصلی را کنارش
+      // نگه می‌داریم و با آن می‌فهمیم صدا عوض شده یا نه. TrackPlayer سراسری
+      // است و صفحه‌های دیگر هم در آن track می‌گذارند، برای همین این را از
+      // خودِ track می‌خوانیم نه از state این کامپوننت.
+      if (active?.sourceUrl !== uri) {
         await TrackPlayer.reset();
-        await TrackPlayer.add({ id: MASTER_TRACK_ID, url: uri });
+        await TrackPlayer.add({ id: MASTER_TRACK_ID, url: getCachedAudio(uri), sourceUrl: uri });
       } else if (wantsRestart) {
         await TrackPlayer.seekTo(0);
       }

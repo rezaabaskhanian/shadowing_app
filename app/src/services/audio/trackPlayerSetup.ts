@@ -11,13 +11,34 @@ import TrackPlayer, { Capability } from 'react-native-track-player';
  */
 let setupPromise: Promise<void> | null = null;
 
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * بار اولِ بعد از نصب یا Clear Data، سرویس پخش اندروید هنوز کامل بالا نیامده
+ * و `setupPlayer` گاهی شکست می‌خورد؛ بدون تلاش دوباره، جمله‌ی اول هیچ‌وقت پخش
+ * نمی‌شد چون تا تغییر بعدیِ جمله کسی دوباره درخواست پخش نمی‌داد. خطای «قبلاً
+ * راه‌اندازی شده» هم یعنی پخش‌کننده آماده است، نه شکست.
+ */
+async function setupWithRetry(): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await TrackPlayer.setupPlayer({
+        // این اپ music player نیست؛ فقط یک صدای مرجع کوتاه در یک لحظه پخش
+        // می‌شود، پس صف/کنترل‌های پیشرفته لازم نیست.
+        maxCacheSize: 1024 * 10, // ۱۰ مگابایت؛ صداهای جمله چند ده کیلوبایتی‌اند
+      });
+      return;
+    } catch (err) {
+      if (/already been initialized/i.test(String((err as Error)?.message ?? err))) return;
+      if (attempt >= 2) throw err;
+      await wait(400 * (attempt + 1));
+    }
+  }
+}
+
 export function ensureTrackPlayerSetup(): Promise<void> {
   if (!setupPromise) {
-    setupPromise = TrackPlayer.setupPlayer({
-      // این اپ music player نیست؛ فقط یک صدای مرجع کوتاه در یک لحظه پخش
-      // می‌شود، پس صف/کنترل‌های پیشرفته لازم نیست.
-      maxCacheSize: 1024 * 10, // ۱۰ مگابایت؛ صداهای جمله چند ده کیلوبایتی‌اند
-    })
+    setupPromise = setupWithRetry()
       .then(() =>
         TrackPlayer.updateOptions({
           // بدون این، اندروید انتظار دارد notification/media-session کامل

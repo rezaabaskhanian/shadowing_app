@@ -30,6 +30,7 @@ import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
 import { track } from '../../services/analytics';
 import { getPodcasts } from '../../api/podcasts';
+import { prefetchAudio } from '../../services/audio/audioCache';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -157,6 +158,13 @@ export const SceneScreen = () => {
     [scenario]
   );
   const sceneHotspots = useMemo(() => scenario?.hotspots ?? [], [scenario]);
+
+  // تا کاربر صفحه‌ی معرفی صحنه را می‌خواند، صدای همه‌ی جمله‌ها پشت صحنه دانلود
+  // می‌شود تا موقع پخش منتظر شبکه نماند.
+  useEffect(() => {
+    if (!scenario) return;
+    prefetchAudio([...dialogueItems.map((d) => d.audioUrl), scenario.grammarNote?.audioUrl]);
+  }, [scenario, dialogueItems]);
 
   useEffect(() => {
     let mounted = true;
@@ -1098,7 +1106,7 @@ export const SceneScreen = () => {
             if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
             autoTimeoutRef.current = setTimeout(() => {
               handleNextDialogue();
-            }, 2200);
+            }, 1000);
           }
           // این جمله فایل صدا ندارد: به کاربر می‌گوییم چرا ساکت است و در
           // مرحله‌های خودکار می‌رویم جمله‌ی بعد، وگرنه روی یک جمله‌ی بی‌صدا
