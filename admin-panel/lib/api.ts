@@ -1,4 +1,8 @@
 import type {
+  InterviewSet,
+  SpecialtyField,
+  SpecialtyFieldDetail,
+  FieldWord,
   LearningPath,
   PodcastLevelPreset,
   ContentResource,
@@ -1035,5 +1039,61 @@ export async function getLearningPath(level: string): Promise<LearningPath> {
 export async function setLearningPathActive(level: string, isActive: boolean): Promise<void> {
   await jsonOrThrow(
     await authFetch(`/v1/admin/paths/${encodeURIComponent(level)}/active`, jsonBody("PUT", { is_active: isActive }))
+  );
+}
+
+// ---------- مصاحبه‌ی شبیه‌سازی‌شده ----------
+export async function listInterviewSets(): Promise<InterviewSet[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/interviews", { method: "GET" }))) || [];
+}
+
+export async function getInterviewSet(id: string): Promise<InterviewSet> {
+  return jsonOrThrow(await authFetch(`/v1/admin/interviews/${id}`, { method: "GET" }));
+}
+
+export async function saveInterviewSet(set: InterviewSet): Promise<InterviewSet> {
+  return jsonOrThrow(
+    await authFetch(set.id ? `/v1/admin/interviews/${set.id}` : "/v1/admin/interviews", {
+      method: set.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(set),
+    })
+  );
+}
+
+export async function deleteInterviewSet(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/interviews/${id}`, { method: "DELETE" }));
+}
+
+// ---------- زبان تخصصی ----------
+export async function listSpecialtyFields(): Promise<SpecialtyField[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/specialty/fields", { method: "GET" }))) || [];
+}
+
+export async function getSpecialtyField(key: string): Promise<SpecialtyFieldDetail> {
+  return jsonOrThrow(await authFetch(`/v1/admin/specialty/fields/${encodeURIComponent(key)}`, { method: "GET" }));
+}
+
+export async function saveSpecialtyField(f: SpecialtyField): Promise<SpecialtyFieldDetail> {
+  return jsonOrThrow(
+    await authFetch(`/v1/admin/specialty/fields/${encodeURIComponent(f.key)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(f),
+    })
+  );
+}
+
+export async function deleteSpecialtyField(key: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/specialty/fields/${encodeURIComponent(key)}`, { method: "DELETE" }));
+}
+
+export async function saveFieldWords(key: string, words: FieldWord[]): Promise<SpecialtyFieldDetail> {
+  return jsonOrThrow(
+    await authFetch(`/v1/admin/specialty/fields/${encodeURIComponent(key)}/words`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ words }),
+    })
   );
 }

@@ -38,6 +38,9 @@ const (
 	KeyTelegramChatID   = "TELEGRAM_CHAT_ID"
 	KeyBaleBotToken     = "BALE_BOT_TOKEN"
 	KeyBaleChatID       = "BALE_CHAT_ID"
+	// کلیدهای روشن/خاموشِ بخش‌های تازه‌ی اپ ("true" = باز برای کاربرها).
+	KeyFeatureInterview = "FEATURE_INTERVIEW_ENABLED"
+	KeyFeatureESP       = "FEATURE_ESP_ENABLED"
 )
 
 // AllowedKeys برای اعتبارسنجی درخواست‌های به‌روزرسانی از پنل ادمین استفاده می‌شود.
@@ -69,6 +72,8 @@ var AllowedKeys = map[string]bool{
 	KeyTelegramChatID:      true,
 	KeyBaleBotToken:        true,
 	KeyBaleChatID:          true,
+	KeyFeatureInterview:    true,
+	KeyFeatureESP:          true,
 }
 
 type repository interface {

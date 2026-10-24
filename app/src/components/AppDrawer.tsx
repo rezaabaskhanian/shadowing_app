@@ -17,6 +17,8 @@ import {
   BookOpen,
   ChevronRight,
   Clapperboard,
+  BookMarked,
+  Briefcase,
   Coins,
   Compass,
   GraduationCap,
@@ -325,6 +327,24 @@ export const AppDrawer = ({
                 <PenLine color={COLORS.info} size={18} />
               </View>
               <Text style={styles.rowText}>{t('writingTitle')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {available.interview && (
+            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('InterviewList')}>
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                <Briefcase color={COLORS.primary} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('interviewTitle')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {available.specialty && (
+            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SpecialtyHub')}>
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
+                <BookMarked color={COLORS.levelAdvancedBg} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('specialtyTitle')}</Text>
             </TouchableOpacity>
           )}
 

@@ -50,6 +50,8 @@ type settingsResponse struct {
 	TelegramChatID     string      `json:"telegram_chat_id"`
 	BaleBotToken       settingItem `json:"bale_bot_token"`
 	BaleChatID         string      `json:"bale_chat_id"`
+	FeatureInterview   string      `json:"feature_interview_enabled"`
+	FeatureESP         string      `json:"feature_esp_enabled"`
 }
 
 // GetSettings وضعیت فعلی تنظیمات را برمی‌گرداند؛ خودِ کلیدها هیچ‌وقت کامل نمایش
@@ -91,6 +93,8 @@ func (h Handler) GetSettings(c echo.Context) error {
 		TelegramChatID:     s.Get(settingsservice.KeyTelegramChatID),
 		BaleBotToken:       get(settingsservice.KeyBaleBotToken),
 		BaleChatID:         s.Get(settingsservice.KeyBaleChatID),
+		FeatureInterview:   s.Get(settingsservice.KeyFeatureInterview),
+		FeatureESP:         s.Get(settingsservice.KeyFeatureESP),
 	})
 }
 

@@ -21,6 +21,7 @@ import (
 	postgresfeedback "shadowing-backend/internal/repository/postgres/feedback"
 	postgresfreespeech "shadowing-backend/internal/repository/postgres/freespeech"
 	posthabit "shadowing-backend/internal/repository/postgres/habit"
+	postgresinterview "shadowing-backend/internal/repository/postgres/interview"
 	postgreslanding "shadowing-backend/internal/repository/postgres/landing"
 	postgreslearning "shadowing-backend/internal/repository/postgres/learning"
 	postgresleitner "shadowing-backend/internal/repository/postgres/leitner"
@@ -37,6 +38,7 @@ import (
 	postgressettings "shadowing-backend/internal/repository/postgres/settings"
 	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 	postgressession "shadowing-backend/internal/repository/postgres/shadowing/session"
+	postgresspecialty "shadowing-backend/internal/repository/postgres/specialty"
 	postgressubmission "shadowing-backend/internal/repository/postgres/submission"
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
 	postgretokentopup "shadowing-backend/internal/repository/postgres/tokentopup"
@@ -62,6 +64,7 @@ import (
 	feedbackservice "shadowing-backend/internal/service/feedback"
 	freespeechservice "shadowing-backend/internal/service/freespeech"
 	habitservice "shadowing-backend/internal/service/habit"
+	interviewservice "shadowing-backend/internal/service/interview"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
@@ -73,6 +76,7 @@ import (
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
 	smsservice "shadowing-backend/internal/service/sms"
+	specialtyservice "shadowing-backend/internal/service/specialty"
 	"shadowing-backend/internal/service/speecheval"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
@@ -176,11 +180,11 @@ func main() {
 
 	fmt.Println("server is runing")
 
-	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot := setupservice(cfg)
+	authSvc, userSvc, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot, interviewSvc, specialtySvc := setupservice(cfg)
 
 	go runDailyStreakJob(context.Background(), progressSvc, notificationSvc)
 
-	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot)
+	server := httpserver.New(cfg, userSvc, authSvc, cfg.Auth, learningSvc, shadowingSvc, progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot, interviewSvc, specialtySvc)
 
 	server.Server()
 
@@ -250,7 +254,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	learningservice.Service, shadowingservice.Service, progressservice.Service, *settingsservice.Service,
 	notificationservice.Service, submissionservice.Service, subscriptionservice.Service,
 	topicsuggestionservice.Service, feedbackservice.Service, habitservice.Service, billingservice.Service, leitnerservice.Service,
-	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service, *pathservice.Service, *adminbotservice.Service) {
+	otpservice.Service, landingservice.Service, *assessmentservice.Service, *missionservice.Service, *aiconversationservice.Service, *freespeechservice.Service, *aiaccessservice.Service, tokentopupservice.Service, *verbservice.Service, analyticsservice.Service, *topicspeakingservice.Service, *videoclipservice.Service, *writingservice.Service, *courseservice.Service, *podcastservice.Service, *libraryservice.Service, *pathservice.Service, *adminbotservice.Service, *interviewservice.Service, *specialtyservice.Service) {
 
 	authSvc := authservice.New(cfg.Auth)
 
@@ -446,7 +450,11 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	// «کتابخانه‌ی محتوا» (فایل‌های JSON مرجع) و «اصطلاحات» پنل ادمین — ببینید libraryservice.
 	librarySvc := libraryservice.New(postgreslibrary.New(MyPostgresgresRepo.DB))
 
+	// «مصاحبه‌ی شبیه‌سازی‌شده» و «زبان تخصصی» — پشت کلیدهای FEATURE_* پنل؛ ببینید interviewservice و specialtyservice.
+	interviewSvc := interviewservice.New(postgresinterview.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), aiAccessSvc, evaluator, settingsSvc)
+	specialtySvc := specialtyservice.New(postgresspecialty.New(MyPostgresgresRepo.DB), settingsSvc)
+
 	// adminSvc := adminservice.New(UserRepo, ExerciseRepo, AssessmentRepo)
 
-	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot
+	return authSvc, userSvc, learnningSvc, *shadowingSvc, *progressSvc, settingsSvc, notificationSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, habitSvc, billingSvc, leitnerSvc, otpSvc, landingSvc, assessmentSvc, missionSvc, aiConversationSvc, freeSpeechSvc, aiAccessSvc, tokenTopupSvc, verbSvc, analyticsSvc, topicSpeakingSvc, videoClipSvc, writingSvc, courseSvc, podcastSvc, librarySvc, pathSvc, adminBot, interviewSvc, specialtySvc
 }

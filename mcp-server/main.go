@@ -34,7 +34,9 @@ func main() {
 			"There are no delete tools. Typical flow: get_resource → generate_scene / generate_podcast_script → " +
 			"create_*_draft → generate_audio / generate_podcast_audio → content_health to verify.",
 	})
-	registerTools(server, newClient(baseURL, phone, password))
+	c := newClient(baseURL, phone, password)
+	registerTools(server, c)
+	registerInterviewTools(server, c)
 
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)

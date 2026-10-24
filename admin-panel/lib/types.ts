@@ -172,6 +172,8 @@ export interface SettingsResp {
   telegram_chat_id: string;
   bale_bot_token: SettingItem;
   bale_chat_id: string;
+  feature_interview_enabled?: string;
+  feature_esp_enabled?: string;
 }
 
 // ---------- نوتیفیکیشن‌ها ----------
@@ -777,4 +779,70 @@ export interface LearningPath {
   position: number;
   is_active: boolean;
   weeks?: LearningPathWeek[];
+}
+
+// ---------- مصاحبه‌ی شبیه‌سازی‌شده و زبان تخصصی ----------
+export type InterviewKind = "job" | "admission" | "visa";
+
+export interface InterviewQuestion {
+  id?: string;
+  text: string;
+  translation_fa: string;
+  audio_url: string;
+  prep_seconds: number;
+  answer_seconds: number;
+  tip_fa: string;
+  sample_answer: string;
+  sample_answer_fa: string;
+  key_phrases: string[];
+}
+
+export interface InterviewSet {
+  id?: string;
+  kind: InterviewKind;
+  field_key: string;
+  title: string;
+  title_fa: string;
+  description_fa: string;
+  level: string;
+  image_url: string;
+  interviewer_voice: string;
+  position: number;
+  is_active: boolean;
+  question_count?: number;
+  questions?: InterviewQuestion[];
+}
+
+export interface SpecialtyField {
+  key: string;
+  title_fa: string;
+  title_en: string;
+  icon: string;
+  min_level: string;
+  position: number;
+  is_active: boolean;
+  word_count?: number;
+}
+
+export interface FieldWord {
+  id?: string;
+  word: string;
+  meaning_fa: string;
+  example: string;
+  example_fa: string;
+  level: string;
+  audio_url: string;
+}
+
+export interface FieldContentItem {
+  kind: "scene" | "podcast" | "speaking_topic" | "writing_prompt" | "interview";
+  id: string;
+  title: string;
+  level: string;
+  image_url: string;
+}
+
+export interface SpecialtyFieldDetail extends SpecialtyField {
+  words: FieldWord[];
+  content: FieldContentItem[];
 }

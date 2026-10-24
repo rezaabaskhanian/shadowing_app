@@ -64,6 +64,10 @@ import { PathDictationScreen } from '../screens/Path/PathDictationScreen';
 import { PathSelfIntroScreen } from '../screens/Path/PathSelfIntroScreen';
 import { PodcastListScreen } from '../screens/Podcast/PodcastListScreen';
 import { StoryListScreen } from '../screens/Story/StoryListScreen';
+import { InterviewListScreen } from '../screens/Interview/InterviewListScreen';
+import { InterviewSessionScreen } from '../screens/Interview/InterviewSessionScreen';
+import { SpecialtyHubScreen } from '../screens/Specialty/SpecialtyHubScreen';
+import { SpecialtyFieldScreen } from '../screens/Specialty/SpecialtyFieldScreen';
 import { StoryScreen } from '../screens/Story/StoryScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
@@ -97,6 +101,8 @@ const FreshPathDictation = freshPerOpen(PathDictationScreen);
 const FreshPathSelfIntro = freshPerOpen(PathSelfIntroScreen);
 const FreshPodcast = freshPerOpen(PodcastScreen);
 const FreshStory = freshPerOpen(StoryScreen);
+const FreshInterviewSession = freshPerOpen(InterviewSessionScreen);
+const FreshSpecialtyField = freshPerOpen(SpecialtyFieldScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
@@ -134,6 +140,10 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'PathCheckpoint',
   'PodcastList',
   'StoryList',
+  'InterviewList',
+  'InterviewSession',
+  'SpecialtyHub',
+  'SpecialtyField',
   'Story',
   'Podcast',
   'PodcastMyVersion',
@@ -383,6 +393,10 @@ export const AppNavigator = () => {
       <Tab.Screen name="PodcastList" component={PodcastListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="StoryList" component={StoryListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Story" component={FreshStory} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="InterviewList" component={InterviewListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="InterviewSession" component={FreshInterviewSession} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="SpecialtyHub" component={SpecialtyHubScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="SpecialtyField" component={FreshSpecialtyField} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />
       <Tab.Screen

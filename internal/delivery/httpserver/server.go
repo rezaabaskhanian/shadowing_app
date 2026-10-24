@@ -16,6 +16,7 @@ import (
 	leitnerhandler "shadowing-backend/internal/delivery/httpserver/leitner"
 
 	coursehandler "shadowing-backend/internal/delivery/httpserver/course"
+	interviewhandler "shadowing-backend/internal/delivery/httpserver/interview"
 	landinghandler "shadowing-backend/internal/delivery/httpserver/landing"
 	learninghandler "shadowing-backend/internal/delivery/httpserver/learning"
 	libraryhandler "shadowing-backend/internal/delivery/httpserver/library"
@@ -25,6 +26,7 @@ import (
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
+	specialtyhandler "shadowing-backend/internal/delivery/httpserver/specialty"
 	topicspeakinghandler "shadowing-backend/internal/delivery/httpserver/topicspeaking"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
 	verbhandler "shadowing-backend/internal/delivery/httpserver/verb"
@@ -44,6 +46,7 @@ import (
 	feedbackservice "shadowing-backend/internal/service/feedback"
 	freespeechservice "shadowing-backend/internal/service/freespeech"
 	habitservice "shadowing-backend/internal/service/habit"
+	interviewservice "shadowing-backend/internal/service/interview"
 	landingservice "shadowing-backend/internal/service/landing"
 	learningservice "shadowing-backend/internal/service/learning"
 	leitnerservice "shadowing-backend/internal/service/leitner"
@@ -54,6 +57,7 @@ import (
 	proxyservice "shadowing-backend/internal/service/proxy"
 	settingsservice "shadowing-backend/internal/service/settings"
 	shadowingservice "shadowing-backend/internal/service/shadowing"
+	specialtyservice "shadowing-backend/internal/service/specialty"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
@@ -112,6 +116,8 @@ type Service struct {
 	analyticsHandler   analyticshandler.Handler
 
 	topicSpeakingHandler topicspeakinghandler.Handler
+	interviewHandler     interviewhandler.Handler
+	specialtyHandler     specialtyhandler.Handler
 	videoClipHandler     videocliphandler.Handler
 	podcastHandler       podcasthandler.Handler
 	courseHandler        coursehandler.Handler
@@ -152,6 +158,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 	librarySvc *libraryservice.Service,
 	pathSvc *pathservice.Service,
 	adminBot *adminbotservice.Service,
+	interviewSvc *interviewservice.Service,
+	specialtySvc *specialtyservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -215,6 +223,8 @@ func New(cfg config.Config, userSvc userservice.Service,
 		analyticsHandler: analyticshandler.New(analyticsSvc, authSvc, authConfig),
 
 		topicSpeakingHandler: topicspeakinghandler.New(topicSpeakingSvc, authSvc, authConfig, uploadDir),
+		interviewHandler:     interviewhandler.New(interviewSvc, authSvc, authConfig, uploadDir),
+		specialtyHandler:     specialtyhandler.New(specialtySvc, interviewSvc, authSvc, authConfig),
 		videoClipHandler:     videocliphandler.New(videoClipSvc, authSvc, authConfig),
 		podcastHandler:       podcasthandler.New(podcastSvc, authSvc, authConfig),
 		courseHandler:        coursehandler.New(courseSvc, authSvc, authConfig),
@@ -309,6 +319,10 @@ func (s Service) Server() {
 
 	// صحبت ۱ تا ۲ دقیقه‌ای درباره‌ی یک موضوع (اپ + مدیریت موضوع‌ها در پنل)
 	s.topicSpeakingHandler.SetTopicSpeakingRoutes(e)
+
+	// «مصاحبه‌ی شبیه‌سازی‌شده»، «زبان تخصصی» و /v1/app-config (کلیدهای روشن/خاموش بخش‌ها)
+	s.interviewHandler.SetInterviewRoutes(e)
+	s.specialtyHandler.SetSpecialtyRoutes(e)
 
 	// تمرین با ویدیو: کلیپ‌ها + جای شخصیت حرف زدن (اپ) و مدیریت کلیپ‌ها (پنل)
 	s.videoClipHandler.SetVideoClipRoutes(e)
