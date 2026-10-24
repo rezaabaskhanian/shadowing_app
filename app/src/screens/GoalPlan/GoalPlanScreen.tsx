@@ -373,7 +373,7 @@ export const GoalPlanScreen: React.FC = () => {
                   {s.ready ? (
                     <Check size={14} color={CINE.bg} />
                   ) : (
-                    <Text style={[cine.stripText, isToday && { color: CINE.accent }]}>{num(i + 1)}</Text>
+                    <Text style={[cine.stripText, isToday && { color: CINE.accentText }]}>{num(i + 1)}</Text>
                   )}
                 </TouchableOpacity>
               );
@@ -470,8 +470,8 @@ export const GoalPlanScreen: React.FC = () => {
             <Text style={cine.actionText}>{t('goalPlanEdit')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={cine.actionBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.85}>
-            <Trash2 size={16} color={CINE.accent} />
-            <Text style={[cine.actionText, { color: CINE.accent }]}>{t('goalPlanDelete')}</Text>
+            <Trash2 size={16} color={CINE.accentText} />
+            <Text style={[cine.actionText, { color: CINE.accentText }]}>{t('goalPlanDelete')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -492,18 +492,20 @@ export const GoalPlanScreen: React.FC = () => {
   );
 };
 
-// پالت «سینما» (docs/design/ui-directions/Cinema.dc.html)؛ فعلاً فقط برای همین صفحه.
+// چیدمان «سینما» (docs/design/ui-directions/Cinema.dc.html) با زمینه‌ی روشن؛ فعلاً فقط برای همین صفحه.
 const CINE = {
-  bg: '#101218',
-  surface: '#1A1D26',
-  border: '#2A2E3A',
-  strip: '#1F2330',
-  text: '#F2EEE6',
-  muted: '#A9AEBB',
-  dim: '#6E7486',
+  bg: '#FFFFFF',
+  surface: '#F7F5F1',
+  border: '#E7E2D9',
+  strip: '#EEEAE3',
+  text: '#1A1D26',
+  muted: '#5F6573',
+  dim: '#9AA0AC',
   accent: '#FF7A59',
-  gold: '#F5C04A',
-  success: '#5ED6A0',
+  // متنِ مرجانی روی سفید با accent خوانا نیست (کنتراست کم)؛ برای نوشته این تیره‌تر.
+  accentText: '#C2412D',
+  gold: '#C98A12',
+  success: '#2E9E6B',
 };
 
 const cine = StyleSheet.create({
@@ -576,7 +578,7 @@ const cine = StyleSheet.create({
     padding: 10,
   },
   extraTodayImg: { width: 72, height: 56, borderRadius: 12 },
-  accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accent },
+  accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accentText },
   cardTitle: { fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 22, color: CINE.text },
   section: { gap: SPACING.s },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
