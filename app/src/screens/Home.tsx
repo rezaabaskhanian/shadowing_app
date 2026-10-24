@@ -32,7 +32,7 @@ import {
   Zap,
   Layers,
 } from 'lucide-react-native';
-import { BENTO_ITEM_COUNT, BENTO_PATTERNS, BentoGrid, BentoSectionHeader, type BentoItem } from '../components/BentoGrid';
+import { BENTO_PATTERNS, BentoGrid, BentoSectionHeader, type BentoItem } from '../components/BentoGrid';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY as SCENE_LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
@@ -80,9 +80,9 @@ import { formatDuration } from './Podcast/PodcastListScreen';
 
 // هر بخشِ محتوایی در خانه فقط چند موردِ اول را در یک شبکه‌ی ناهمگون (مستطیل +
 // مربع‌ها) نشان می‌دهد؛ بقیه از دکمه‌ی «همه».
-const HOME_SECTION_PREVIEW_COUNT = BENTO_ITEM_COUNT;
-// پادکست منتخب و داستان در کارت «برای امروز» هم هستند؛ بخشِ خودشان کوتاه‌تر می‌ماند.
-const HOME_SHORT_SECTION_COUNT = 2;
+// هر بخش خانه فقط دو کارت کوچک کنار هم نشان می‌دهد؛ بقیه با «همه را ببین».
+const HOME_SECTION_PREVIEW_COUNT = 2;
+const HOME_SHORT_SECTION_COUNT = HOME_SECTION_PREVIEW_COUNT;
 
 // رنگِ سطحِ محتواهای غیرصحنه (ویدیو، پادکست، ...) برای بجِ روی کارت.
 const CONTENT_LEVEL_BG: Record<string, string> = {

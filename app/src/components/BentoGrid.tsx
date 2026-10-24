@@ -147,7 +147,9 @@ export const BentoGrid: React.FC<GridProps> = ({ items, pattern, accent }) => {
   if (list.length === 0) return null;
   if (list.length === 1) return <View style={styles.grid}>{card(list[0], 'wide', full, wideHeight)}</View>;
   if (list.length === 2) {
-    return <View style={[styles.grid, styles.row]}>{list.map((it) => card(it, 'square', half, half))}</View>;
+    // دو کارت کوچکِ کنار هم (چیدمان پیش‌فرض خانه): کمی کوتاه‌تر از مربع تا صفحه شلوغ نشود.
+    const pairH = Math.round(half * 0.82);
+    return <View style={[styles.grid, styles.row]}>{list.map((it) => card(it, 'square', half, pairH))}</View>;
   }
 
   const [a, b, c] = list;
