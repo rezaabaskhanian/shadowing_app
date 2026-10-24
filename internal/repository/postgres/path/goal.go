@@ -34,6 +34,7 @@ type GoalPlan struct {
 type SceneInfo struct {
 	Level     string
 	Published bool
+	ImageURL  string
 }
 
 func (r DB) GoalPack(ctx context.Context, goal string) ([]GoalSituation, error) {
@@ -131,7 +132,8 @@ func (r DB) SceneInfos(ctx context.Context, sceneIDs []string) (map[string]Scene
 		return out, nil
 	}
 	rows, err := r.conn.Query(ctx, `
-		SELECT id::text, difficulty, status = 'published' FROM scenes WHERE id = ANY($1::uuid[])`, sceneIDs)
+		SELECT id::text, difficulty, status = 'published', COALESCE(background_image_url, '')
+		FROM scenes WHERE id = ANY($1::uuid[])`, sceneIDs)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -139,7 +141,7 @@ func (r DB) SceneInfos(ctx context.Context, sceneIDs []string) (map[string]Scene
 	for rows.Next() {
 		var id string
 		var si SceneInfo
-		if err := rows.Scan(&id, &si.Level, &si.Published); err != nil {
+		if err := rows.Scan(&id, &si.Level, &si.Published, &si.ImageURL); err != nil {
 			return nil, richerror.New(op).WithErr(err)
 		}
 		out[id] = si

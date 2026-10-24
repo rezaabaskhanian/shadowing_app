@@ -25,6 +25,7 @@ export interface GoalSituation {
   priority: number;
   scene_id?: string;
   scene_level?: string;
+  scene_image_url?: string;
   has_content: boolean;
   in_plan: boolean;
   ready: boolean;

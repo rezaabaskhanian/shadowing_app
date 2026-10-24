@@ -102,6 +102,7 @@ type SituationView struct {
 	Priority   int    `json:"priority"`
 	SceneID    string `json:"scene_id,omitempty"`
 	SceneLevel string `json:"scene_level,omitempty"`
+	SceneImage string `json:"scene_image_url,omitempty"`
 	HasContent bool   `json:"has_content"`
 	InPlan     bool   `json:"in_plan"`
 	Ready      bool   `json:"ready"`
@@ -203,6 +204,7 @@ func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, e
 	for _, sit := range pack {
 		sv := SituationView{ID: sit.ID, TitleFa: sit.TitleFa, Priority: sit.Priority}
 		sv.SceneID, sv.SceneLevel = pickScene(sit.SceneIDs, infos, plan.StartLevel)
+		sv.SceneImage = infos[sv.SceneID].ImageURL
 		sv.HasContent = sv.SceneID != ""
 		for _, id := range sit.SceneIDs {
 			if done[id] {

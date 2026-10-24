@@ -1,9 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, CalendarDays, Check, ChevronLeft, Clock, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Target, Timer, Trash2, X } from 'lucide-react-native';
+import { Briefcase, CalendarDays, Check, ChevronLeft, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -21,6 +20,7 @@ import {
   type GoalPlanView,
 } from '../../api/goalPlan';
 import { getSpeakingTopics } from '../../api/topicSpeaking';
+import { absUrl } from '../../api/config';
 import { getWritingPrompts } from '../../api/writing';
 
 const GOALS: {
@@ -253,200 +253,225 @@ export const GoalPlanScreen: React.FC = () => {
     );
   }
 
-  // ---------- برنامه‌ی من ----------
+  // ---------- برنامه‌ی من (چیدمان «سینما»: زمینه‌ی تیره، عکس صحنه‌ی امروز ستاره‌ی صفحه) ----------
   const f = view.forecast;
   const today = view.situations.find((s) => s.id === view.today_id);
   const nextLabel = f?.next_level ? t(LEVEL_KEY[f.next_level] || 'levelBeginner') : '';
-  const pct = view.in_plan_count > 0 ? Math.round((view.ready / view.in_plan_count) * 100) : 0;
   const goalMeta = GOALS.find((g) => g.id === view.plan.goal) || GOALS[0];
   const goalLabel = t(goalMeta.labelKey);
+  const inPlan = view.situations.filter((s) => s.in_plan);
+  const openScene = (sceneId?: string) =>
+    sceneId && navigation.navigate('Shadowing', { scenarioId: sceneId, returnTo: 'GoalPlan' });
+  const todayExtra = view.today_extra;
+  const todayExtraMeta = todayExtra ? EXTRA_KINDS.find((k) => k.kind === todayExtra.kind) ?? EXTRA_KINDS[0] : null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      {header}
-      <ScrollView contentContainerStyle={{ padding: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
-        {/* سربرگ: رنگِ هدف، حلقه‌ی پیشرفت (موقعیت‌های آماده) و دو برچسب زمان. */}
-        <View style={[styles.hero, { backgroundColor: goalMeta.color }]}>
-          <View style={styles.heroTop}>
-            <View style={styles.flex1}>
-              <View style={styles.heroIconRow}>
-                <View style={styles.heroIcon}>
-                  <goalMeta.icon size={22} color={COLORS.white} />
-                </View>
-                <Text style={styles.heroTitle}>{goalLabel}</Text>
-              </View>
-              <Text style={styles.heroSub}>
-                {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
-              </Text>
-            </View>
-            <ProgressRing pct={pct} label={`${num(pct)}${language === 'fa' ? '٪' : '%'}`} />
-          </View>
-          <View style={styles.pills}>
-            <View style={styles.pill}>
-              <CalendarDays size={14} color={COLORS.white} />
-              <Text style={styles.pillText}>
-                {f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}
-              </Text>
-            </View>
-            <View style={styles.pill}>
-              <Timer size={14} color={COLORS.white} />
-              <Text style={styles.pillText}>{t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}</Text>
-            </View>
-          </View>
+    <View style={[cine.container, { paddingTop: insets.top + SPACING.s }]}>
+      <View style={cine.topBar}>
+        <View style={styles.flex1}>
+          <Text style={cine.kicker}>{t('goalPlanTitle')}</Text>
+          <Text style={cine.goalTitle}>{goalLabel}</Text>
         </View>
+        <View style={cine.pill}>
+          <CalendarDays size={14} color={CINE.gold} />
+          <Text style={cine.pillText}>{f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}</Text>
+        </View>
+        <TouchableOpacity
+          style={cine.iconBtn}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.8}
+          accessibilityLabel={t('close')}
+        >
+          <X size={20} color={CINE.text} />
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView contentContainerStyle={{ paddingHorizontal: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.l }}>
+        {/* کار امروز: عکس بزرگ صحنه با دکمه‌ی پخش */}
         {today ? (
           <TouchableOpacity
-            style={[styles.todayCard, { borderColor: goalMeta.color, backgroundColor: hexToRgba(goalMeta.color, 0.08) }]}
-            activeOpacity={0.85}
+            style={cine.heroCard}
+            activeOpacity={0.9}
             onPress={() => {
               track('goal_situation_open', today.id);
-              navigation.navigate('Shadowing', { scenarioId: today.scene_id, returnTo: 'GoalPlan' });
+              openScene(today.scene_id);
             }}
           >
-            <View style={[styles.todayIcon, { backgroundColor: goalMeta.color }]}>
-              <Clock size={20} color={COLORS.white} />
+            <View>
+              {today.scene_image_url ? (
+                <Image source={{ uri: absUrl(today.scene_image_url) }} style={cine.heroImage} resizeMode="cover" />
+              ) : (
+                <View style={[cine.heroImage, cine.heroImageEmpty]}>
+                  <goalMeta.icon size={44} color={CINE.dim} />
+                </View>
+              )}
+              <View style={cine.heroBadge}>
+                <Text style={cine.heroBadgeText}>{t('goalPlanToday')}</Text>
+              </View>
+              <View style={cine.playFab}>
+                <Play size={22} color={CINE.bg} fill={CINE.bg} />
+              </View>
             </View>
-            <View style={styles.flex1}>
-              <Text style={[styles.todayLabel, { color: goalMeta.color }]}>{t('goalPlanToday')}</Text>
-              <Text style={styles.todayTitle}>{today.title_fa}</Text>
+            <View style={cine.heroBody}>
+              <Text style={cine.heroTitle}>{today.title_fa}</Text>
+              <Text style={cine.heroSub}>
+                {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
+                {' · '}
+                {t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}
+              </Text>
             </View>
-            <ChevronLeft size={20} color={goalMeta.color} />
           </TouchableOpacity>
         ) : (
           view.ready >= view.in_plan_count &&
           view.in_plan_count > 0 && (
-            <View style={[styles.doneCard, { backgroundColor: COLORS.successLight }]}>
-              <Check size={20} color={COLORS.success} />
-              <Text style={[styles.honest, styles.flex1]}>{t('goalPlanAllDone')}</Text>
+            <View style={cine.doneCard}>
+              <Check size={22} color={CINE.success} />
+              <Text style={[cine.bodyText, styles.flex1]}>{t('goalPlanAllDone')}</Text>
             </View>
           )
         )}
 
-        {view.today_extra && (() => {
-          const x = view.today_extra;
-          const meta = EXTRA_KINDS.find((k) => k.kind === x.kind) ?? EXTRA_KINDS[0];
-          return (
-            <TouchableOpacity
-              style={[styles.todayCard, { borderColor: hexToRgba(goalMeta.color, 0.4) }]}
-              activeOpacity={0.85}
-              onPress={() => openExtra(x)}
-            >
-              <View style={[styles.todayIcon, { backgroundColor: hexToRgba(goalMeta.color, 0.85) }]}>
-                <meta.icon size={20} color={COLORS.white} />
+        {/* تمرین دوم امروز */}
+        {todayExtra && todayExtraMeta && (
+          <TouchableOpacity style={cine.extraToday} activeOpacity={0.85} onPress={() => openExtra(todayExtra)}>
+            {todayExtra.image_url ? (
+              <Image source={{ uri: absUrl(todayExtra.image_url) }} style={cine.extraTodayImg} />
+            ) : (
+              <View style={[cine.extraTodayImg, cine.heroImageEmpty]}>
+                <todayExtraMeta.icon size={22} color={CINE.dim} />
               </View>
-              <View style={styles.flex1}>
-                <Text style={[styles.todayLabel, { color: goalMeta.color }]}>
-                  {t('goalPlanTodayExtra').replace('{kind}', t(meta.labelKey))}
-                </Text>
-                <Text style={styles.todayTitle}>{x.title}</Text>
-              </View>
-              <ChevronLeft size={20} color={goalMeta.color} />
-            </TouchableOpacity>
-          );
-        })()}
+            )}
+            <View style={styles.flex1}>
+              <Text style={cine.accentLabel}>{t('goalPlanTodayExtra').replace('{kind}', t(todayExtraMeta.labelKey))}</Text>
+              <Text style={cine.cardTitle} numberOfLines={2}>{todayExtra.title}</Text>
+            </View>
+            <todayExtraMeta.icon size={20} color={CINE.accent} />
+          </TouchableOpacity>
+        )}
 
-        {f && (
-          <View style={[styles.card, { borderColor: hexToRgba(goalMeta.color, 0.25) }]}>
-            <Text style={styles.cardTitle}>🎯 {t('goalPlanForecastTitle')}</Text>
-            <Text style={styles.honest}>
+        {/* مسیر: هر موقعیت برنامه یک خانه؛ پر = آماده، دور رنگی = امروز */}
+        <View style={cine.section}>
+          <View style={cine.sectionHead}>
+            <Text style={cine.sectionTitle}>{t('goalPlanSituations')}</Text>
+            <Text style={cine.sectionMeta}>
+              {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
+            </Text>
+          </View>
+          <View style={cine.strip}>
+            {inPlan.map((s, i) => {
+              const isToday = s.id === view.today_id;
+              const open = s.has_content && !!s.scene_id;
+              return (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[cine.stripCell, s.ready && cine.stripDone, isToday && cine.stripToday, !open && cine.stripLocked]}
+                  disabled={!open}
+                  onPress={() => openScene(s.scene_id)}
+                  activeOpacity={0.85}
+                  accessibilityLabel={s.title_fa}
+                >
+                  {s.ready ? (
+                    <Check size={14} color={CINE.bg} />
+                  ) : (
+                    <Text style={[cine.stripText, isToday && { color: CINE.accent }]}>{num(i + 1)}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {f && (
+            <Text style={cine.forecast}>
               {f.situations_target < f.situations_total
                 ? t('goalPlanHonestPartial').replace('{n}', num(f.situations_target)).replace('{m}', num(f.situations_total))
                 : t('goalPlanHonestAll').replace('{n}', num(f.situations_total))}
               {nextLabel
-                ? '\n' +
+                ? ' ' +
                   (f.level_reachable
                     ? t('goalPlanLevelReachable').replace('{level}', nextLabel)
                     : t('goalPlanLevelPartial').replace('{level}', nextLabel).replace('{pct}', num(f.level_progress_pct)))
                 : ''}
             </Text>
-          </View>
-        )}
-        {!f && <Text style={styles.sub}>{t('goalPlanNoDateNote')}</Text>}
+          )}
+          {!f && <Text style={cine.forecast}>{t('goalPlanNoDateNote')}</Text>}
+        </View>
 
-        <Text style={styles.sectionLabel}>{t('goalPlanSituations')}</Text>
-        {view.situations.map((s, i) => {
-          const open = s.has_content && !!s.scene_id;
-          const isToday = s.id === view.today_id;
-          const tint = s.ready ? COLORS.success : open ? goalMeta.color : COLORS.muted;
-          return (
-            <TouchableOpacity
-              key={s.id}
-              style={[
-                styles.row,
-                { borderColor: isToday ? goalMeta.color : hexToRgba(tint, 0.25) },
-                s.ready && { backgroundColor: COLORS.successLight },
-                !s.in_plan && styles.dimmed,
-              ]}
-              disabled={!open}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('Shadowing', { scenarioId: s.scene_id, returnTo: 'GoalPlan' })}
-            >
-              <View style={[styles.statusDot, { backgroundColor: open || s.ready ? tint : COLORS.surfaceHigh }]}>
-                {s.ready ? (
-                  <Check size={14} color={COLORS.white} />
-                ) : !open ? (
-                  <Lock size={12} color={COLORS.muted} />
-                ) : (
-                  <Text style={styles.stepBadgeText}>{num(i + 1)}</Text>
-                )}
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.rowTitle}>{s.title_fa}</Text>
-                {!open && <Text style={styles.rowSub}>{t('goalPlanComingSoon')}</Text>}
-                {open && !s.in_plan && <Text style={styles.rowSub}>{t('goalPlanOutOfPlan')}</Text>}
-              </View>
-              {open && !s.ready && <ChevronLeft size={18} color={tint} />}
-            </TouchableOpacity>
-          );
-        })}
-
+        {/* شنیدن / صحبت / نوشتن برای هدف: ردیف افقی کارت‌های عکس‌دار */}
         {EXTRA_KINDS.map((k) => {
           const items = (view.extras ?? []).filter((x) => x.kind === k.kind);
           if (items.length === 0) return null;
           return (
-            <View key={k.kind} style={styles.extraSection}>
-              <Text style={styles.sectionLabel}>{t(k.sectionKey)}</Text>
-              {items.map((x) => {
-                const tint = x.done ? COLORS.success : goalMeta.color;
-                return (
-                  <TouchableOpacity
-                    key={x.id}
-                    style={[styles.row, { borderColor: hexToRgba(tint, 0.25) }, x.done && { backgroundColor: COLORS.successLight }]}
-                    activeOpacity={0.85}
-                    onPress={() => openExtra(x)}
-                  >
-                    <View style={[styles.statusDot, { backgroundColor: tint }]}>
-                      {x.done ? <Check size={14} color={COLORS.white} /> : <k.icon size={14} color={COLORS.white} />}
+            <View key={k.kind} style={cine.section}>
+              <Text style={cine.sectionTitle}>{t(k.sectionKey)}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cine.rail}>
+                {items.map((x) => (
+                  <TouchableOpacity key={x.id} style={cine.railCard} activeOpacity={0.85} onPress={() => openExtra(x)}>
+                    <View>
+                      {x.image_url ? (
+                        <Image source={{ uri: absUrl(x.image_url) }} style={cine.railImg} />
+                      ) : (
+                        <View style={[cine.railImg, cine.heroImageEmpty]}>
+                          <k.icon size={26} color={CINE.dim} />
+                        </View>
+                      )}
+                      {x.done && (
+                        <View style={cine.doneBadge}>
+                          <Check size={12} color={CINE.bg} />
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.flex1}>
-                      <Text style={styles.rowTitle}>{x.title}</Text>
-                      {!!LEVEL_KEY[x.level] && <Text style={styles.rowSub}>{t(LEVEL_KEY[x.level])}</Text>}
-                    </View>
-                    <ChevronLeft size={18} color={tint} />
+                    <Text style={cine.accentLabel}>
+                      {t(k.labelKey)}
+                      {LEVEL_KEY[x.level] ? ` · ${t(LEVEL_KEY[x.level])}` : ''}
+                    </Text>
+                    <Text style={cine.cardTitle} numberOfLines={2}>{x.title}</Text>
                   </TouchableOpacity>
-                );
-              })}
+                ))}
+              </ScrollView>
             </View>
           );
         })}
 
+        {/* همه‌ی موقعیت‌ها، با اسم */}
+        <View style={cine.section}>
+          {view.situations.map((s, i) => {
+            const open = s.has_content && !!s.scene_id;
+            const isToday = s.id === view.today_id;
+            return (
+              <TouchableOpacity
+                key={s.id}
+                style={[cine.row, isToday && { borderColor: CINE.accent }, !s.in_plan && styles.dimmed]}
+                disabled={!open}
+                activeOpacity={0.85}
+                onPress={() => openScene(s.scene_id)}
+              >
+                <View style={[cine.rowDot, s.ready && { backgroundColor: CINE.success }, isToday && { backgroundColor: CINE.accent }]}>
+                  {s.ready ? (
+                    <Check size={13} color={CINE.bg} />
+                  ) : !open ? (
+                    <Lock size={12} color={CINE.dim} />
+                  ) : (
+                    <Text style={[cine.rowNum, isToday && { color: CINE.bg }]}>{num(i + 1)}</Text>
+                  )}
+                </View>
+                <View style={styles.flex1}>
+                  <Text style={cine.rowTitle}>{s.title_fa}</Text>
+                  {!open && <Text style={cine.rowSub}>{t('goalPlanComingSoon')}</Text>}
+                  {open && !s.in_plan && <Text style={cine.rowSub}>{t('goalPlanOutOfPlan')}</Text>}
+                </View>
+                {open && !s.ready && <ChevronLeft size={18} color={isToday ? CINE.accent : CINE.muted} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: goalMeta.color }]}
-            onPress={() => setEditing(true)}
-            activeOpacity={0.85}
-          >
-            <Pencil size={16} color={goalMeta.color} />
-            <Text style={[styles.actionText, { color: goalMeta.color }]}>{t('goalPlanEdit')}</Text>
+          <TouchableOpacity style={cine.actionBtn} onPress={() => setEditing(true)} activeOpacity={0.85}>
+            <Pencil size={16} color={CINE.text} />
+            <Text style={cine.actionText}>{t('goalPlanEdit')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: hexToRgba(COLORS.error, 0.4), backgroundColor: COLORS.errorLight }]}
-            onPress={() => setConfirmDelete(true)}
-            activeOpacity={0.85}
-          >
-            <Trash2 size={16} color={COLORS.error} />
-            <Text style={[styles.actionText, { color: COLORS.error }]}>{t('goalPlanDelete')}</Text>
+          <TouchableOpacity style={cine.actionBtn} onPress={() => setConfirmDelete(true)} activeOpacity={0.85}>
+            <Trash2 size={16} color={CINE.accent} />
+            <Text style={[cine.actionText, { color: CINE.accent }]}>{t('goalPlanDelete')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -467,32 +492,153 @@ export const GoalPlanScreen: React.FC = () => {
   );
 };
 
-/** حلقه‌ی پیشرفتِ دایره‌ای (سفید روی رنگِ هدف). */
-const ProgressRing: React.FC<{ pct: number; label: string }> = ({ pct, label }) => {
-  const size = 76;
-  const stroke = 8;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  return (
-    <View style={styles.ring}>
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={hexToRgba(COLORS.white, 0.25)} strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={COLORS.white}
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${(c * Math.max(0, Math.min(100, pct))) / 100} ${c}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <Text style={styles.ringText}>{label}</Text>
-    </View>
-  );
+// پالت «سینما» (docs/design/ui-directions/Cinema.dc.html)؛ فعلاً فقط برای همین صفحه.
+const CINE = {
+  bg: '#101218',
+  surface: '#1A1D26',
+  border: '#2A2E3A',
+  strip: '#1F2330',
+  text: '#F2EEE6',
+  muted: '#A9AEBB',
+  dim: '#6E7486',
+  accent: '#FF7A59',
+  gold: '#F5C04A',
+  success: '#5ED6A0',
 };
+
+const cine = StyleSheet.create({
+  container: { flex: 1, backgroundColor: CINE.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
+  kicker: { ...TEXT_STYLES.labelSm, color: CINE.muted },
+  goalTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 24, color: CINE.text },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: CINE.surface,
+    borderColor: CINE.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pillText: { ...TEXT_STYLES.labelSm, color: CINE.text },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: CINE.surface,
+    borderColor: CINE.border,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCard: { backgroundColor: CINE.surface, borderRadius: 22, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden' },
+  heroImage: { width: '100%', height: 230 },
+  heroImageEmpty: { backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
+  heroBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: CINE.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  heroBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.text },
+  playFab: {
+    position: 'absolute',
+    bottom: -26,
+    left: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: CINE.accent,
+    borderWidth: 4,
+    borderColor: CINE.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBody: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, gap: 4 },
+  heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32, color: CINE.text },
+  heroSub: { ...TEXT_STYLES.bodyMd, color: CINE.muted },
+  doneCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    backgroundColor: CINE.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    padding: SPACING.l,
+  },
+  bodyText: { ...TEXT_STYLES.bodyMd, color: CINE.text },
+  extraToday: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    backgroundColor: CINE.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    padding: 10,
+  },
+  extraTodayImg: { width: 72, height: 56, borderRadius: 12 },
+  accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accent },
+  cardTitle: { fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 22, color: CINE.text },
+  section: { gap: SPACING.s },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  sectionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: CINE.text },
+  sectionMeta: { ...TEXT_STYLES.labelSm, color: CINE.muted },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  stripCell: {
+    width: 40,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: CINE.strip,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stripDone: { backgroundColor: CINE.accent },
+  stripToday: { backgroundColor: 'transparent', borderWidth: 2, borderColor: CINE.accent },
+  stripLocked: { opacity: 0.45 },
+  stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.dim },
+  forecast: { ...TEXT_STYLES.bodyMd, color: CINE.muted, lineHeight: 24 },
+  rail: { gap: 12, paddingRight: 2 },
+  railCard: { width: 150, gap: 6 },
+  railImg: { width: 150, height: 96, borderRadius: 14 },
+  doneBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: CINE.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    backgroundColor: CINE.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  rowDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
+  rowNum: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.muted },
+  rowTitle: { ...TEXT_STYLES.bodyLg, color: CINE.text },
+  rowSub: { ...TEXT_STYLES.labelSm, color: CINE.dim },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: CINE.surface,
+    borderWidth: 1,
+    borderColor: CINE.border,
+  },
+  actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.text },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
