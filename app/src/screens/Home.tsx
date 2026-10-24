@@ -768,7 +768,7 @@ export const HomeScreen = () => {
           />
         )}
 
-        {/* TODAY'S SHADOWING PROGRESS CARD */}
+        {/* کارت «سایه‌زنی امروز» موقتاً برداشته شد تا خانه بدون آن دیده شود (برای برگرداندن، این کامنت را باز کن).
         <View style={styles.progressCard}>
           <View style={styles.progressTopRow}>
             <ProgressRing percent={todayPercent} size={88} strokeWidth={8} color={COLORS.primary}>
@@ -800,6 +800,7 @@ export const HomeScreen = () => {
             </View>
           </View>
         </View>
+        */}
 
         <TouchableOpacity
           style={styles.placementCtaCard}
