@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"shadowing-backend/internal/pkg/phone"
 	"shadowing-backend/internal/service/user/dto"
 
 	"github.com/labstack/echo/v4"
@@ -36,6 +37,7 @@ func (h Handler) Login(c echo.Context) error {
 	}
 
 	// 2️⃣ اعتبارسنجی شماره تلفن
+	req.PhoneNumber = phone.Normalize(req.PhoneNumber)
 	if err := validatePhoneNumber(req.PhoneNumber); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_phone",

@@ -6,6 +6,7 @@ import (
 	domain "shadowing-backend/internal/domain/user"
 	uservalueobject "shadowing-backend/internal/domain/user/valueobject"
 	"shadowing-backend/internal/pkg/errmesg"
+	"shadowing-backend/internal/pkg/phone"
 	"shadowing-backend/internal/pkg/richerror"
 
 	"github.com/jackc/pgx/v5"
@@ -99,19 +100,21 @@ func (r DB) GetUserByID(ID string) (domain.User, error) {
 }
 
 // GetUserByNickName implements [userservice.Repository].
-func (r DB) GetUserByPhoneNumber(phone string) (domain.User, error) {
+func (r DB) GetUserByPhoneNumber(phoneNumber string) (domain.User, error) {
 	const op = "postgres.GetUserByPhoneNumber"
 
 	query := ` SELECT id, nickname,password_hash,phone,role , created_at, updated_at
         FROM users
-        WHERE phone = $1`
+        WHERE phone = ANY($1)
+        ORDER BY phone = $2 DESC
+        LIMIT 1`
 	var (
 		u      domain.User
 		rawID  string // یا uuid.UUID بسته به نوع ستون در دیتابیس
 		rawPwd string // هش پسورد به‌صورت رشته
 	)
 
-	err := r.conn.QueryRow(context.Background(), query, phone).Scan(
+	err := r.conn.QueryRow(context.Background(), query, phone.Variants(phoneNumber), phone.Normalize(phoneNumber)).Scan(
 		&rawID,
 		&u.NickName,
 		&rawPwd,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"shadowing-backend/internal/pkg/phone"
 
 	"github.com/labstack/echo/v4"
 
@@ -31,6 +32,7 @@ func (h Handler) SendOtp(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 
+	req.Phone = phone.Normalize(req.Phone)
 	if req.Phone == "" || !validPurpose(req.Purpose) {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_input",
@@ -77,6 +79,7 @@ func (h Handler) VerifyOtp(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 
+	req.Phone = phone.Normalize(req.Phone)
 	if req.Phone == "" || req.Code == "" || !validPurpose(req.Purpose) {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_input",

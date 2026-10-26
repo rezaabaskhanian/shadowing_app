@@ -2,6 +2,7 @@ package adminhandler
 
 import (
 	"net/http"
+	"shadowing-backend/internal/pkg/phone"
 	"strconv"
 
 	subscriptionservice "shadowing-backend/internal/service/subscription"
@@ -74,7 +75,7 @@ func (h Handler) GrantSubscription(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "شماره تلفن و طرح اشتراک الزامی است"})
 	}
 
-	targetUser, err := h.userSvc.GetUserByPhone(req.Phone)
+	targetUser, err := h.userSvc.GetUserByPhone(phone.Normalize(req.Phone))
 	if err != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "کاربری با این شماره پیدا نشد"})
 	}

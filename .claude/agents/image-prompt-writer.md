@@ -32,7 +32,7 @@ The three areas are clearly separated by open space and by light, but belong to 
 
 LIGHTING: <light and mood>, subtle depth of field with all three areas still readable.
 
-CHARACTERS: six adults in <clothes>, natural calm poses, full or three-quarter bodies visible, none looking at the camera, none cropped by the frame, none near the edges.
+CHARACTERS: six adults in <clothes>, natural calm poses, full or three-quarter bodies visible, none looking at the camera, none cropped by the frame, none near the edges. All characters look Iranian. Every woman wears modest Islamic dress: a loose, long manteau or tunic over trousers and a headscarf (hijab) that fully covers her hair and neck. Men wear modest clothes with long sleeves, shirts or jackets. No tight, short or revealing clothing anywhere in the image.
 
 The image contains no text at all: no letters, no numbers, no signs, no labels, no posters, no screens with content, no subtitles, no captions, no speech bubbles, no UI, no watermark, no border. Every surface and object is plain and unmarked.
 ```

@@ -3,6 +3,7 @@ package userhandler
 import (
 	"log"
 	"net/http"
+	"shadowing-backend/internal/pkg/phone"
 	"shadowing-backend/internal/pkg/richerror"
 	"shadowing-backend/internal/service/user/dto"
 
@@ -17,6 +18,8 @@ func (h Handler) ResetPass(c echo.Context) error {
 		log.Println(op, "Bind error:", err)
 		return richerror.New(op).WithErr(err)
 	}
+
+	req.Phone = phone.Normalize(req.Phone)
 
 	// 3️⃣ اعتبارسنجی رمز عبور (خالی نباشد)
 	if req.Password == "" {

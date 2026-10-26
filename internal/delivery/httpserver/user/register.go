@@ -2,6 +2,7 @@ package userhandler
 
 import (
 	"net/http"
+	"shadowing-backend/internal/pkg/phone"
 
 	"github.com/labstack/echo/v4"
 
@@ -17,6 +18,7 @@ func (h Handler) Register(c echo.Context) error {
 	if err := c.Bind(&uReq); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
+	uReq.Phone = phone.Normalize(uReq.Phone)
 
 	resp, err := h.userSvc.Register(c.Request().Context(), uReq)
 
