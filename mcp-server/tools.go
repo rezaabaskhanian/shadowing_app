@@ -265,6 +265,15 @@ type goalMapArgs struct {
 	Tiles    obj    `json:"tiles,omitempty" jsonschema:"save only, optional: high-detail tiles {tile_size, full_width, full_height, cols, rows, urls: row-major list of uploaded tile urls}"`
 }
 
+type songIDArgs struct {
+	ID string `json:"id" jsonschema:"song id"`
+}
+
+type saveSongArgs struct {
+	ID   string `json:"id,omitempty" jsonschema:"existing song id to replace; empty = create a new draft"`
+	Song obj    `json:"song" jsonschema:"{title, artist, description_fa, level (starter|beginner|intermediate|advanced|proficient), cover_url, audio_url and instrumental_url (from upload_image / upload_audio), duration_seconds, lines: [{text, translation_fa, start_ms, end_ms}] in order, vocabulary: [{word, meaning_fa}], license_note, position}"`
+}
+
 type importIdiomsArgs struct {
 	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
@@ -857,6 +866,40 @@ func registerTools(s *mcp.Server, c *client) {
 		func(ctx context.Context, _ *mcp.CallToolRequest, in goalMapArgs) (*mcp.CallToolResult, any, error) {
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/map",
 				obj{"image_url": in.ImageURL, "width": in.Width, "height": in.Height, "spots": in.Spots, "tiles": in.Tiles}))
+		})
+
+	// ---- آهنگ ----
+	mcp.AddTool(s, &mcp.Tool{Name: "list_songs", Annotations: ro, Description: "List all songs (drafts and published) without lyrics."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/songs"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "get_song", Annotations: ro, Description: "Get one song with its timed lyric lines and vocabulary."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in songIDArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/songs/"+url.PathEscape(in.ID)))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_song", Description: "Create a song draft (no id) or replace an existing song (id). Lines are timed lyrics in ms, in order and not overlapping. Never publishes: a new song is always a draft and an existing song keeps its current published state; the admin publishes in the panel."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in saveSongArgs) (*mcp.CallToolResult, any, error) {
+			body := obj{}
+			for k, v := range in.Song {
+				body[k] = v
+			}
+			body["is_active"] = false
+			if in.ID == "" {
+				return rawResult(c.sendJSON(ctx, http.MethodPost, "/v1/admin/songs", body))
+			}
+			raw, err := c.get(ctx, "/v1/admin/songs/"+url.PathEscape(in.ID))
+			if err != nil {
+				return nil, nil, err
+			}
+			var cur struct {
+				IsActive bool `json:"is_active"`
+			}
+			if err := json.Unmarshal(raw, &cur); err == nil {
+				body["is_active"] = cur.IsActive
+			}
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/songs/"+url.PathEscape(in.ID), body))
 		})
 
 	// ---- تست تعیین سطح ----

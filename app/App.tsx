@@ -21,6 +21,7 @@ import { Toast } from './src/components/Toast';
 import { OnboardingScreens } from './src/screens/OnboardingScreens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track, trackAppOpen, trackScreen } from './src/services/analytics';
+import { stopAllAudio } from './src/services/audio/trackPlayerSetup';
 
 type OnboardingGateStatus = 'checking' | 'show' | 'hide';
 
@@ -137,6 +138,8 @@ export default function App() {
     trackAppOpen();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') trackAppOpen();
+      // بیرون رفتن از اپ: صدا و ضبط قطع، اعلان پخش پاک.
+      if (state === 'background') stopAllAudio();
     });
     return () => sub.remove();
   }, []);

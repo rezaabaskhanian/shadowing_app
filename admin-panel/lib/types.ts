@@ -846,3 +846,29 @@ export interface SpecialtyFieldDetail extends SpecialtyField {
   words: FieldWord[];
   content: FieldContentItem[];
 }
+
+// ---------- آهنگ ----------
+export interface SongLine {
+  text: string;
+  translation_fa: string;
+  start_ms: number;
+  end_ms: number;
+}
+
+export interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  description_fa: string;
+  level: "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
+  cover_url: string;
+  audio_url: string;
+  instrumental_url: string;
+  duration_seconds: number;
+  lines: SongLine[];
+  vocabulary: { word: string; meaning_fa: string }[];
+  license_note: string;
+  position: number;
+  is_active: boolean;
+  line_count?: number;
+}

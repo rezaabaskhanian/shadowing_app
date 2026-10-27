@@ -22,6 +22,7 @@ import VideoClipsPanel from "./VideoClipsPanel";
 import WritingPromptsPanel from "./WritingPromptsPanel";
 import CoursePanel from "./CoursePanel";
 import PodcastsPanel from "./PodcastsPanel";
+import SongsPanel from "./SongsPanel";
 import ResourcesPanel from "./ResourcesPanel";
 import IdiomsPanel from "./IdiomsPanel";
 import LearningPathsPanel from "./LearningPathsPanel";
@@ -47,6 +48,7 @@ type Tab =
   | "writing"
   | "course"
   | "podcasts"
+  | "songs"
   | "idioms"
   | "paths"
   | "resources"
@@ -199,6 +201,12 @@ export default function DashboardPage() {
             🎧 پادکست
           </button>
           <button
+            className={`sidebar-link ${tab === "songs" ? "active" : ""}`}
+            onClick={() => setTab("songs")}
+          >
+            🎵 آهنگ
+          </button>
+          <button
             className={`sidebar-link ${tab === "videoClips" ? "active" : ""}`}
             onClick={() => setTab("videoClips")}
           >
@@ -321,6 +329,7 @@ export default function DashboardPage() {
         {tab === "writing" && <WritingPromptsPanel notify={notify} />}
         {tab === "course" && <CoursePanel notify={notify} />}
         {tab === "podcasts" && <PodcastsPanel notify={notify} />}
+        {tab === "songs" && <SongsPanel notify={notify} />}
         {tab === "idioms" && <IdiomsPanel notify={notify} />}
         {tab === "paths" && <LearningPathsPanel notify={notify} />}
         {tab === "resources" && <ResourcesPanel notify={notify} />}

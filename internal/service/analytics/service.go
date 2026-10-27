@@ -55,6 +55,8 @@ const (
 	EventGoalExtraOpen     = "goal_extra_open"
 	EventGoalMapOpen       = "goal_map_open"
 	EventGoalMapSpot       = "goal_map_spot"
+	EventSongOpened        = "song_opened"
+	EventSongSingRecorded  = "song_sing_recorded"
 )
 
 var validEvents = map[string]bool{
@@ -75,6 +77,8 @@ var validEvents = map[string]bool{
 	EventGoalExtraOpen:     true,
 	EventGoalMapOpen:       true,
 	EventGoalMapSpot:       true,
+	EventSongOpened:        true,
+	EventSongSingRecorded:  true,
 }
 
 // FunnelSteps قدم‌های قیف اصلی محصول، به ترتیب نمایش در پنل.

@@ -179,87 +179,115 @@ export const GoalPlanScreen: React.FC = () => {
     const ready = !!goal && months !== undefined && !!minutes;
     // رنگ انتخاب‌ها از هدفِ انتخاب‌شده می‌آید تا کل فرم هم‌رنگ هدف شود.
     const pickColor = GOALS.find((g) => g.id === goal)?.color ?? COLORS.primary;
-    const selectedStyle = { borderColor: pickColor, backgroundColor: hexToRgba(pickColor, 0.12) };
     const step = (n: number, label: string, done: boolean) => (
-      <View style={styles.stepRow}>
-        <View style={[styles.stepBadge, { backgroundColor: done ? COLORS.success : pickColor }]}>
-          {done ? <Check size={14} color={COLORS.white} /> : <Text style={styles.stepBadgeText}>{num(n)}</Text>}
+      <View style={form.stepRow}>
+        <View style={[form.stepBadge, { backgroundColor: done ? CINE.success : hexToRgba(pickColor, 0.14) }]}>
+          {done ? (
+            <Check size={12} color={COLORS.white} />
+          ) : (
+            <Text style={[form.stepBadgeText, { color: pickColor }]}>{num(n)}</Text>
+          )}
         </View>
-        <Text style={styles.stepLabel}>{label}</Text>
+        <Text style={form.stepLabel}>{label}</Text>
       </View>
     );
+    // هر انتخاب یک دکمه‌ی هم‌اندازه در شبکه است؛ انتخاب‌شده با رنگ هدف پر می‌شود.
+    const option = (key: string, label: string, active: boolean, onPress: () => void) => (
+      <TouchableOpacity
+        key={key}
+        style={[form.option, active && { borderColor: pickColor, backgroundColor: hexToRgba(pickColor, 0.1) }]}
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityState={{ selected: active }}
+      >
+        <Text style={[form.optionText, active && { color: pickColor, fontFamily: FONT_FAMILY.bold }]}>{label}</Text>
+      </TouchableOpacity>
+    );
     return (
-      <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-        {header}
-        <ScrollView contentContainerStyle={{ padding: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
-          <View style={[styles.introHero, { backgroundColor: hexToRgba(pickColor, 0.1) }]}>
-            <View style={[styles.bannerIcon, { backgroundColor: pickColor }]}>
-              <Target size={28} color={COLORS.white} />
-            </View>
-            <Text style={styles.title}>{t('goalPlanTitle')}</Text>
-            <Text style={styles.sub}>{t('goalPlanIntro')}</Text>
+      <View style={[form.container, { paddingTop: insets.top + SPACING.s }]}>
+        <View style={form.topBar}>
+          <View style={styles.flex1}>
+            <Text style={form.title}>{t('goalPlanTitle')}</Text>
           </View>
-
-          {step(1, t('goalPlanPickGoal'), !!goal)}
-          <View style={styles.grid}>
-            {GOALS.map((g) => (
-              <TouchableOpacity
-                key={g.id}
-                style={[
-                  styles.goalCard,
-                  { backgroundColor: g.light, borderColor: goal === g.id ? g.color : 'transparent' },
-                ]}
-                onPress={() => setGoal(g.id)}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.goalIcon, { backgroundColor: g.color }]}>
-                  <g.icon size={22} color={COLORS.white} />
-                </View>
-                <Text style={styles.goalText}>{t(g.labelKey)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {step(2, t('goalPlanWhen'), months !== undefined)}
-          <View style={styles.wrap}>
-            {DATE_CHOICES.map((m) => (
-              <TouchableOpacity
-                key={String(m)}
-                style={[styles.chip, months === m && selectedStyle]}
-                onPress={() => setMonths(m)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.chipText}>
-                  {m === null ? t('goalPlanNoDate') : t('goalPlanMonths').replace('{n}', num(m))}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {step(3, t('goalPlanMinutes'), !!minutes)}
-          <View style={styles.wrap}>
-            {MINUTES.map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, minutes === m && selectedStyle]}
-                onPress={() => setMinutes(m)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.chipText}>{t('goalPlanMinuteOption').replace('{n}', num(m))}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {error && <Text style={styles.errorText}>{t('goalPlanLoadError')}</Text>}
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: pickColor }, (!ready || busy) && styles.btnDisabled]}
+            style={cine.iconBtn}
+            onPress={() => (editing && view ? setEditing(false) : navigation.navigate('Home'))}
+            activeOpacity={0.8}
+            accessibilityLabel={t('close')}
+          >
+            <X size={18} color={CINE.text} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: SPACING.l, paddingBottom: SPACING.l, gap: SPACING.m }}>
+          <View style={[form.intro, { backgroundColor: hexToRgba(pickColor, 0.08) }]}>
+            <View style={[form.introIcon, { backgroundColor: pickColor }]}>
+              <Target size={18} color={COLORS.white} />
+            </View>
+            <Text style={form.introText}>{t('goalPlanIntro')}</Text>
+          </View>
+
+          <View style={form.section}>
+            {step(1, t('goalPlanPickGoal'), !!goal)}
+            <View style={form.grid}>
+              {GOALS.map((g) => {
+                const active = goal === g.id;
+                return (
+                  <TouchableOpacity
+                    key={g.id}
+                    style={[form.goalCard, active && { borderColor: g.color, backgroundColor: g.light }]}
+                    onPress={() => setGoal(g.id)}
+                    activeOpacity={0.85}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <View style={[form.goalIcon, { backgroundColor: active ? g.color : hexToRgba(g.color, 0.14) }]}>
+                      <g.icon size={16} color={active ? COLORS.white : g.color} />
+                    </View>
+                    <Text style={[form.goalText, active && { fontFamily: FONT_FAMILY.bold }]} numberOfLines={1}>
+                      {t(g.labelKey)}
+                    </Text>
+                    {active && <Check size={14} color={g.color} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={form.section}>
+            {step(2, t('goalPlanWhen'), months !== undefined)}
+            <View style={form.grid}>
+              {DATE_CHOICES.map((m) =>
+                option(
+                  String(m),
+                  m === null ? t('goalPlanNoDate') : t('goalPlanMonths').replace('{n}', num(m)),
+                  months === m,
+                  () => setMonths(m),
+                ),
+              )}
+            </View>
+          </View>
+
+          <View style={form.section}>
+            {step(3, t('goalPlanMinutes'), !!minutes)}
+            <View style={form.grid}>
+              {MINUTES.map((m) =>
+                option(String(m), t('goalPlanMinuteOption').replace('{n}', num(m)), minutes === m, () => setMinutes(m)),
+              )}
+            </View>
+          </View>
+
+          {error && <Text style={form.errorText}>{t('goalPlanLoadError')}</Text>}
+        </ScrollView>
+        {/* دکمه‌ی ساختن همیشه پایین صفحه دیده می‌شود */}
+        <View style={[form.footer, { paddingBottom: insets.bottom + SPACING.m }]}>
+          <TouchableOpacity
+            style={[form.primaryBtn, { backgroundColor: pickColor }, (!ready || busy) && form.btnDisabled]}
             onPress={create}
             disabled={!ready || busy}
             activeOpacity={0.85}
           >
-            {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryBtnText}>{t('goalPlanCreate')}</Text>}
+            {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={form.primaryBtnText}>{t('goalPlanCreate')}</Text>}
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </View>
     );
   }
@@ -308,7 +336,7 @@ export const GoalPlanScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.l }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: SPACING.l, paddingBottom: insets.bottom + SPACING.xl, gap: SPACING.m }}>
         {/* کار امروز: عکس بزرگ صحنه با دکمه‌ی پخش */}
         {today ? (
           <TouchableOpacity
@@ -331,7 +359,7 @@ export const GoalPlanScreen: React.FC = () => {
                 <Text style={cine.heroBadgeText}>{t('goalPlanToday')}</Text>
               </View>
               <View style={cine.playFab}>
-                <Play size={22} color={CINE.bg} fill={CINE.bg} />
+                <Play size={18} color={CINE.bg} fill={CINE.bg} />
               </View>
             </View>
             <View style={cine.heroBody}>
@@ -466,21 +494,31 @@ export const GoalPlanScreen: React.FC = () => {
                 activeOpacity={0.85}
                 onPress={() => openScene(s.scene_id)}
               >
-                <View style={[cine.rowDot, s.ready && { backgroundColor: CINE.success }, isToday && { backgroundColor: CINE.accent }]}>
-                  {s.ready ? (
-                    <Check size={13} color={CINE.bg} />
-                  ) : !open ? (
-                    <Lock size={12} color={CINE.dim} />
+                <View>
+                  {s.scene_image_url ? (
+                    <Image source={{ uri: absUrl(s.scene_image_url) }} style={cine.rowThumb} resizeMode="cover" />
                   ) : (
-                    <Text style={[cine.rowNum, isToday && { color: CINE.bg }]}>{num(i + 1)}</Text>
+                    <View style={[cine.rowThumb, cine.heroImageEmpty]}>
+                      <goalMeta.icon size={18} color={CINE.dim} />
+                    </View>
                   )}
+                  {/* وضعیت روی گوشه‌ی عکس: تیک سبز، قفل، یا شماره */}
+                  <View style={[cine.rowDot, s.ready && { backgroundColor: CINE.success }, isToday && { backgroundColor: CINE.accent }]}>
+                    {s.ready ? (
+                      <Check size={11} color={CINE.bg} />
+                    ) : !open ? (
+                      <Lock size={10} color={CINE.dim} />
+                    ) : (
+                      <Text style={[cine.rowNum, isToday && { color: CINE.bg }]}>{num(i + 1)}</Text>
+                    )}
+                  </View>
                 </View>
                 <View style={styles.flex1}>
                   <Text style={cine.rowTitle}>{s.title_fa}</Text>
                   {!open && <Text style={cine.rowSub}>{t('goalPlanComingSoon')}</Text>}
                   {open && !s.in_plan && <Text style={cine.rowSub}>{t('goalPlanOutOfPlan')}</Text>}
                 </View>
-                {open && !s.ready && <ChevronLeft size={18} color={isToday ? CINE.accent : CINE.muted} />}
+                {open && !s.ready && <ChevronLeft size={16} color={isToday ? CINE.accent : CINE.muted} />}
               </TouchableOpacity>
             );
           })}
@@ -548,8 +586,8 @@ const CINE = {
 const cine = StyleSheet.create({
   container: { flex: 1, backgroundColor: CINE.bg },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
-  kicker: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.muted },
-  goalTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 24, color: CINE.text },
+  kicker: { fontFamily: FONT_FAMILY.medium, fontSize: 11, lineHeight: 16, color: CINE.muted },
+  goalTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 19, lineHeight: 28, color: CINE.text },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -561,11 +599,11 @@ const cine = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  pillText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.text },
+  pillText: { fontFamily: FONT_FAMILY.medium, fontSize: 11, lineHeight: 16, color: CINE.text },
   iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: CINE.surface,
     borderColor: CINE.border,
     borderWidth: 1,
@@ -576,35 +614,35 @@ const cine = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 44,
+    height: 40,
     paddingHorizontal: 12,
-    borderRadius: 22,
+    borderRadius: 20,
     backgroundColor: hexToRgba(CINE.accent, 0.12),
     borderColor: hexToRgba(CINE.accent, 0.35),
     borderWidth: 1,
   },
-  mapBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, lineHeight: 20, color: CINE.accentText },
-  heroCard: { backgroundColor: CINE.surface, borderRadius: 22, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden' },
-  heroImage: { width: '100%', height: 230 },
+  mapBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, lineHeight: 18, color: CINE.accentText },
+  heroCard: { backgroundColor: CINE.surface, borderRadius: 18, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden' },
+  heroImage: { width: '100%', height: 170 },
   heroImageEmpty: { backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
   heroBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: CINE.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  heroBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.text },
+  heroBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.text },
   playFab: {
     position: 'absolute',
-    bottom: -26,
-    left: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: -22,
+    left: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: CINE.accent,
     borderWidth: 4,
     borderColor: CINE.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroBody: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18, gap: 4 },
-  heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32, color: CINE.text },
-  heroSub: { fontFamily: FONT_FAMILY.regular, fontSize: 14, lineHeight: 22, color: CINE.muted },
+  heroBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, gap: 2 },
+  heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: CINE.text },
+  heroSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 19, color: CINE.muted },
   doneCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,7 +653,7 @@ const cine = StyleSheet.create({
     borderColor: CINE.border,
     padding: SPACING.l,
   },
-  bodyText: { fontFamily: FONT_FAMILY.regular, fontSize: 15, lineHeight: 24, color: CINE.text },
+  bodyText: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: CINE.text },
   extraToday: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -626,18 +664,18 @@ const cine = StyleSheet.create({
     borderColor: CINE.border,
     padding: 10,
   },
-  extraTodayImg: { width: 72, height: 56, borderRadius: 12 },
-  accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accentText },
-  cardTitle: { fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 22, color: CINE.text },
+  extraTodayImg: { width: 64, height: 48, borderRadius: 10 },
+  accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.accentText },
+  cardTitle: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 19, color: CINE.text },
   section: { gap: SPACING.s },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sectionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: CINE.text },
-  sectionMeta: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.muted },
+  sectionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.text },
+  sectionMeta: { fontFamily: FONT_FAMILY.medium, fontSize: 11, lineHeight: 16, color: CINE.muted },
   strip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stripCell: {
-    width: 40,
-    height: 34,
-    borderRadius: 8,
+    width: 34,
+    height: 28,
+    borderRadius: 7,
     backgroundColor: CINE.strip,
     alignItems: 'center',
     justifyContent: 'center',
@@ -645,11 +683,11 @@ const cine = StyleSheet.create({
   stripDone: { backgroundColor: CINE.accent },
   stripToday: { backgroundColor: 'transparent', borderWidth: 2, borderColor: CINE.accent },
   stripLocked: { opacity: 0.45 },
-  stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.dim },
-  forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 14, lineHeight: 24, color: CINE.muted },
+  stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.dim },
+  forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: CINE.muted },
   rail: { gap: 12, paddingRight: 2 },
-  railCard: { width: 150, gap: 6 },
-  railImg: { width: 150, height: 96, borderRadius: 14 },
+  railCard: { width: 128, gap: 4 },
+  railImg: { width: 128, height: 80, borderRadius: 12 },
   doneBadge: {
     position: 'absolute',
     top: 8,
@@ -669,38 +707,51 @@ const cine = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: CINE.border,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
-  rowDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
-  rowNum: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.muted },
-  rowTitle: { fontFamily: FONT_FAMILY.semiBold, fontSize: 15, lineHeight: 24, color: CINE.text },
-  rowSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: CINE.dim },
+  rowThumb: { width: 64, height: 46, borderRadius: 10, backgroundColor: CINE.strip },
+  rowDot: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: CINE.strip,
+    borderWidth: 2,
+    borderColor: CINE.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowNum: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: CINE.muted },
+  rowTitle: { fontFamily: FONT_FAMILY.semiBold, fontSize: 13, lineHeight: 20, color: CINE.text },
+  rowSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 16, color: CINE.dim },
   moreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minHeight: 44,
+    minHeight: 40,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: CINE.border,
     borderStyle: 'dashed',
   },
-  moreText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.accentText },
+  moreText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accentText },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 48,
+    height: 42,
     borderRadius: 14,
     backgroundColor: CINE.surface,
     borderWidth: 1,
     borderColor: CINE.border,
   },
-  actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.text },
+  actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.text },
 });
 
 const styles = StyleSheet.create({
@@ -864,4 +915,64 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+});
+
+// فرم ساختن/ویرایش برنامه، با همان پالت روشن «سینما»ی صفحه‌ی برنامه.
+const form = StyleSheet.create({
+  container: { flex: 1, backgroundColor: CINE.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 27, color: CINE.text },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 12 },
+  introIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  introText: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: CINE.muted },
+  section: {
+    gap: 10,
+    backgroundColor: CINE.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    padding: 12,
+  },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  stepBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  stepLabel: { fontFamily: FONT_FAMILY.semiBold, fontSize: 13, lineHeight: 20, color: CINE.text },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  goalCard: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: CINE.bg,
+    borderWidth: 1.5,
+    borderColor: CINE.border,
+  },
+  goalIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  goalText: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 13, lineHeight: 20, color: CINE.text },
+  option: {
+    flexBasis: '30%',
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: CINE.bg,
+    borderWidth: 1.5,
+    borderColor: CINE.border,
+  },
+  optionText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.text },
+  errorText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: COLORS.error, textAlign: 'center' },
+  footer: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.s,
+    backgroundColor: CINE.bg,
+    borderTopWidth: 1,
+    borderTopColor: CINE.border,
+  },
+  primaryBtn: { height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  btnDisabled: { backgroundColor: CINE.dim },
+  primaryBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 14 },
 });

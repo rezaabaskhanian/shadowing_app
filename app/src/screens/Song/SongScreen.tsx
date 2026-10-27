@@ -1,0 +1,573 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TrackPlayer, { Event, State } from 'react-native-track-player';
+import Sound from 'react-native-nitro-sound';
+import * as RNFS from '@dr.pogodin/react-native-fs';
+import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
+import { Headphones, Mic, Music, Pause, Play, RotateCcw, Square, X } from 'lucide-react-native';
+
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
+import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
+import { useLanguage } from '../../data/i18n';
+import { absUrl } from '../../api/config';
+import { getSong, type Song } from '../../api/songs';
+import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
+import { ensureMicPermission } from '../../services/micPermission';
+import { track } from '../../services/analytics';
+import { KaraokeText } from '../../components/KaraokeText';
+import { levelColor } from '../../components/ContentVisuals';
+
+const SONG_TRACK_ID = 'song';
+// صدای خود کاربر روی موزیک: موزیک کمی آرام‌تر تا صدایش شنیده شود.
+const BACKING_VOLUME_ON_REPLAY = 0.6;
+
+type Mode = 'listen' | 'sing';
+// مراحل «با آهنگ بخوان»: آماده، در حال ضبط، ضبط تمام شده، در حال پخشِ نسخه‌ی خودم.
+type SingStep = 'idle' | 'recording' | 'recorded' | 'replaying';
+
+/**
+ * صفحه‌ی آهنگ، دو حالت:
+ * - «گوش بده و بخوان»: مثل داستان، متن خط‌به‌خط و کلمه‌به‌کلمه هم‌زمان با آهنگ روشن
+ *   می‌شود؛ لمس یک خط پخش را از همان‌جا شروع می‌کند و ترجمه با لمس طولانی باز می‌شود.
+ * - «با آهنگ بخوان»: نسخه‌ی بی‌کلام (اگر نباشد خود آهنگ) پخش می‌شود، متن جلوی کاربر
+ *   روشن می‌شود و صدایش ضبط می‌شود؛ آخر کار صدای خودش را همراه همان موزیک می‌شنود.
+ *   ضبط فقط روی گوشی می‌ماند.
+ */
+export const SongScreen: React.FC = () => {
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const songId: string | undefined = route.params?.songId;
+
+  const [song, setSong] = useState<Song | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [mode, setMode] = useState<Mode>('listen');
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [positionMs, setPositionMs] = useState(0);
+  const [showAllFa, setShowAllFa] = useState(false);
+  const [shownFa, setShownFa] = useState<Set<number>>(new Set());
+  const [singStep, setSingStep] = useState<SingStep>('idle');
+  const [micDenied, setMicDenied] = useState(false);
+
+  const takeRef = useRef<{ path: string; offsetMs: number } | null>(null);
+  const singStepRef = useRef<SingStep>('idle');
+  singStepRef.current = singStep;
+
+  const scrollRef = useRef<ScrollView>(null);
+  const lineY = useRef<Record<number, number>>({});
+  const pageY = useRef(0);
+  const scrollY = useRef(0);
+  const viewH = useRef(0);
+  const followRef = useRef(true);
+  const lastActive = useRef(-1);
+
+  useEffect(() => {
+    if (!songId) {
+      setLoadError(true);
+      return;
+    }
+    let active = true;
+    getSong(songId)
+      .then((s) => {
+        if (!active) return;
+        setSong(s);
+        track('song_opened', s.id);
+      })
+      .catch(() => active && setLoadError(true));
+    return () => {
+      active = false;
+    };
+  }, [songId]);
+
+  const backingUrl = song ? song.instrumental_url || song.audio_url : '';
+
+  // یک پخش‌کننده‌ی سراسری داریم؛ هر بار فقط آهنگی که این حالت لازم دارد در صف است.
+  const loadTrack = useCallback(
+    async (url: string) => {
+      if (!song) return;
+      await ensureTrackPlayerSetup();
+      if (loadedUrl === url) {
+        await TrackPlayer.seekTo(0);
+        return;
+      }
+      await TrackPlayer.reset();
+      await TrackPlayer.add({
+        id: SONG_TRACK_ID,
+        url: absUrl(url),
+        title: song.title,
+        artist: song.artist || undefined,
+        artwork: song.cover_url ? absUrl(song.cover_url) : undefined,
+      });
+      setLoadedUrl(url);
+    },
+    [song, loadedUrl],
+  );
+
+  useEffect(() => {
+    if (song) loadTrack(song.audio_url).catch(() => setLoadError(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [song]);
+
+  // هایلایت نرم بین دو رویداد موقعیت (مثل داستان).
+  const positionSV = useSharedValue(0);
+  const playingSV = useSharedValue(false);
+  useFrameCallback((frame) => {
+    if (playingSV.value && frame.timeSincePreviousFrame) positionSV.value += frame.timeSincePreviousFrame;
+  });
+
+  const stopRecording = useCallback(async () => {
+    await TrackPlayer.pause().catch(() => {});
+    try {
+      const path = await Sound.stopRecorder();
+      if (takeRef.current) takeRef.current.path = path || takeRef.current.path;
+      setSingStep('recorded');
+      track('song_sing_recorded', song?.id);
+    } catch {
+      setSingStep('idle');
+    }
+  }, [song]);
+
+  const stopReplay = useCallback(async () => {
+    await TrackPlayer.pause().catch(() => {});
+    await TrackPlayer.setVolume(1).catch(() => {});
+    await Sound.stopPlayer().catch(() => {});
+    setSingStep('recorded');
+  }, []);
+
+  useEffect(() => {
+    const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
+      const ms = Math.round(d.position * 1000);
+      positionSV.value = ms;
+      setPositionMs(ms);
+    });
+    const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
+      playingSV.value = d.state === State.Playing;
+      setPlaying(d.state === State.Playing);
+    });
+    const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      playingSV.value = false;
+      setPlaying(false);
+      // آخر موزیک = آخر ضبط یا آخر پخشِ نسخه‌ی خودم.
+      if (singStepRef.current === 'recording') stopRecording();
+      else if (singStepRef.current === 'replaying') stopReplay();
+    });
+    return () => {
+      progressSub.remove();
+      stateSub.remove();
+      endedSub.remove();
+    };
+  }, [positionSV, playingSV, stopRecording, stopReplay]);
+
+  // ترک صفحه: صدا و ضبط و پخشِ ضبط همه قطع.
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        TrackPlayer.pause().catch(() => {});
+        TrackPlayer.setVolume(1).catch(() => {});
+        Sound.stopPlayer().catch(() => {});
+        if (singStepRef.current === 'recording') Sound.stopRecorder().catch(() => {});
+      },
+      [],
+    ),
+  );
+
+  // ---------- گوش بده ----------
+  const togglePlay = async () => {
+    if (!song) return;
+    if (playing) {
+      await TrackPlayer.pause();
+      return;
+    }
+    if (loadedUrl !== song.audio_url) await loadTrack(song.audio_url);
+    if (positionMs >= song.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
+    followRef.current = true;
+    await TrackPlayer.play();
+    track('song_played', song.id);
+  };
+
+  const playFrom = async (startMs: number) => {
+    if (!song || mode !== 'listen') return;
+    if (loadedUrl !== song.audio_url) await loadTrack(song.audio_url);
+    followRef.current = true;
+    await TrackPlayer.seekTo(startMs / 1000);
+    positionSV.value = startMs;
+    setPositionMs(startMs);
+    if (!playing) await TrackPlayer.play();
+  };
+
+  const toggleFa = (i: number) =>
+    setShownFa((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
+  // ---------- با آهنگ بخوان ----------
+  const switchMode = async (m: Mode) => {
+    if (m === mode || singStep === 'recording') return;
+    await TrackPlayer.pause().catch(() => {});
+    await Sound.stopPlayer().catch(() => {});
+    await TrackPlayer.setVolume(1).catch(() => {});
+    if (singStep === 'replaying') setSingStep('recorded');
+    setMode(m);
+    positionSV.value = 0;
+    setPositionMs(0);
+    lastActive.current = -1;
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const startSinging = async () => {
+    if (!song) return;
+    if (!(await ensureMicPermission())) {
+      setMicDenied(true);
+      return;
+    }
+    setMicDenied(false);
+    await Sound.stopPlayer().catch(() => {});
+    await loadTrack(backingUrl);
+    await TrackPlayer.setVolume(1).catch(() => {});
+    const path = `${RNFS.DocumentDirectoryPath}/song_take_${song.id}.m4a`;
+    try {
+      await Sound.startRecorder(path, undefined, false);
+    } catch {
+      setMicDenied(true);
+      return;
+    }
+    const recStartedAt = Date.now();
+    await TrackPlayer.seekTo(0);
+    await TrackPlayer.play();
+    // ضبط کمی زودتر از موزیک شروع شده؛ موقع پخش، ضبط را به همین اندازه جلو می‌بریم تا هم‌زمان شوند.
+    takeRef.current = { path, offsetMs: Date.now() - recStartedAt };
+    followRef.current = true;
+    lastActive.current = -1;
+    setSingStep('recording');
+    track('song_sing_started', song.id);
+  };
+
+  const replayMine = async () => {
+    const take = takeRef.current;
+    if (!take) return;
+    await loadTrack(backingUrl);
+    await TrackPlayer.setVolume(BACKING_VOLUME_ON_REPLAY).catch(() => {});
+    try {
+      await Sound.startPlayer(take.path);
+      if (take.offsetMs > 0) await Sound.seekToPlayer(take.offsetMs);
+    } catch {
+      return;
+    }
+    await TrackPlayer.seekTo(0);
+    await TrackPlayer.play();
+    followRef.current = true;
+    lastActive.current = -1;
+    setSingStep('replaying');
+    track('song_sing_replayed', song?.id);
+  };
+
+  // ---------- متن ----------
+  const lines = song?.lines ?? [];
+  const activeIdx =
+    playing || positionMs > 0
+      ? lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 250)
+      : -1;
+
+  useEffect(() => {
+    if (activeIdx < 0 || activeIdx === lastActive.current) return;
+    lastActive.current = activeIdx;
+    if (!followRef.current) return;
+    const ly = lineY.current[activeIdx];
+    if (ly === undefined) return;
+    const y = pageY.current + ly;
+    const top = scrollY.current;
+    // وقت خواندن، خط فعلی همیشه بالای صفحه باشد تا خط بعدی هم دیده شود؛ وقت گوش دادن
+    // فقط وقتی از دید بیرون رفت.
+    const singing = singStep === 'recording' || singStep === 'replaying';
+    if (singing || y < top + 40 || y > top + viewH.current - 160) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - (singing ? 120 : 160)), animated: true });
+    }
+  }, [activeIdx, singStep]);
+
+  if (loadError) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <Text style={styles.muted}>{t('songLoadError')}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Text style={styles.link}>{t('close')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (!song) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  const accent = levelColor(song.level);
+  const singing = singStep === 'recording';
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8} disabled={singing}>
+          <X size={18} color={COLORS.text} />
+        </TouchableOpacity>
+        <View style={styles.flex}>
+          <Text style={styles.title} numberOfLines={1}>
+            {song.title}
+          </Text>
+          {!!song.artist && (
+            <Text style={styles.artist} numberOfLines={1}>
+              {song.artist}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* دو حالت صفحه */}
+      <View style={styles.tabs}>
+        {(['listen', 'sing'] as Mode[]).map((m) => {
+          const on = mode === m;
+          const Icon = m === 'listen' ? Headphones : Mic;
+          return (
+            <TouchableOpacity
+              key={m}
+              style={[styles.tab, on && { backgroundColor: accent }]}
+              onPress={() => switchMode(m)}
+              disabled={singing}
+              activeOpacity={0.85}
+            >
+              <Icon size={15} color={on ? COLORS.white : COLORS.textSecondary} />
+              <Text style={[styles.tabText, on && styles.tabTextOn]}>{m === 'listen' ? t('songListenTab') : t('songSingTab')}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          followRef.current = false;
+        }}
+        onScroll={(e) => {
+          scrollY.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={64}
+        onLayout={(e) => {
+          viewH.current = e.nativeEvent.layout.height;
+        }}
+      >
+        {mode === 'listen' ? (
+          <>
+            <View style={[styles.cover, { backgroundColor: accent }]}>
+              {song.cover_url ? (
+                <Image source={{ uri: absUrl(song.cover_url) }} style={styles.coverImage} resizeMode="cover" />
+              ) : (
+                <Music size={36} color={hexToRgba(COLORS.white, 0.9)} />
+              )}
+            </View>
+            {!!song.description_fa && <Text style={styles.desc}>{song.description_fa}</Text>}
+            <View style={styles.switchRow}>
+              <Text style={styles.hint}>{t('songListenHint')}</Text>
+              <View style={styles.switchInline}>
+                <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
+                <Switch value={showAllFa} onValueChange={setShowAllFa} trackColor={{ true: accent }} />
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={[styles.singCard, { backgroundColor: hexToRgba(accent, 0.08) }]}>
+            <Headphones size={16} color={accent} />
+            <Text style={styles.singHint}>
+              {song.instrumental_url ? t('songSingHint') : t('songSingHintNoInstrumental')}
+            </Text>
+          </View>
+        )}
+        {micDenied && <Text style={styles.error}>{t('songNoMic')}</Text>}
+
+        <View
+          style={styles.page}
+          onLayout={(e) => {
+            pageY.current = e.nativeEvent.layout.y;
+          }}
+        >
+          {lines.map((l, i) => {
+            const isActive = i === activeIdx;
+            const showFa = mode === 'listen' && (showAllFa || shownFa.has(i));
+            return (
+              <View
+                key={i}
+                onLayout={(e) => {
+                  lineY.current[i] = e.nativeEvent.layout.y;
+                }}
+              >
+                <TouchableOpacity
+                  style={[styles.line, isActive && { backgroundColor: hexToRgba(accent, 0.12) }]}
+                  onPress={() => playFrom(l.start_ms)}
+                  onLongPress={() => toggleFa(i)}
+                  disabled={mode !== 'listen'}
+                  activeOpacity={0.75}
+                >
+                  {isActive ? (
+                    <KaraokeText
+                      text={l.text}
+                      startMs={l.start_ms}
+                      endMs={l.end_ms}
+                      positionMs={positionSV}
+                      textStyle={StyleSheet.flatten([styles.lineText, mode === 'sing' && styles.lineTextSing, styles.lineTextActive])}
+                    />
+                  ) : (
+                    <Text style={[styles.lineText, mode === 'sing' && styles.lineTextSing]}>{l.text}</Text>
+                  )}
+                  {showFa && !!l.translation_fa && <Text style={styles.translation}>{l.translation_fa}</Text>}
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {/* نوار پایین */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + SPACING.s }]}>
+        {mode === 'listen' ? (
+          <TouchableOpacity style={[styles.mainBtn, { backgroundColor: accent }]} onPress={togglePlay} activeOpacity={0.85}>
+            {playing ? <Pause size={22} color={COLORS.white} /> : <Play size={22} color={COLORS.white} fill={COLORS.white} />}
+          </TouchableOpacity>
+        ) : singStep === 'idle' ? (
+          <TouchableOpacity style={[styles.wideBtn, { backgroundColor: accent }]} onPress={startSinging} activeOpacity={0.85}>
+            <Mic size={18} color={COLORS.white} />
+            <Text style={styles.wideBtnText}>{t('songStartSinging')}</Text>
+          </TouchableOpacity>
+        ) : singStep === 'recording' ? (
+          <TouchableOpacity style={[styles.wideBtn, styles.recBtn]} onPress={stopRecording} activeOpacity={0.85}>
+            <Square size={16} color={COLORS.white} fill={COLORS.white} />
+            <Text style={styles.wideBtnText}>{t('songStopSinging')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={[styles.wideBtn, styles.flex, { backgroundColor: accent }]}
+              onPress={singStep === 'replaying' ? stopReplay : replayMine}
+              activeOpacity={0.85}
+            >
+              {singStep === 'replaying' ? (
+                <Pause size={18} color={COLORS.white} />
+              ) : (
+                <Play size={18} color={COLORS.white} fill={COLORS.white} />
+              )}
+              <Text style={styles.wideBtnText}>{singStep === 'replaying' ? t('songStopMine') : t('songPlayMine')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.ghostBtn}
+              onPress={async () => {
+                if (singStep === 'replaying') await stopReplay();
+                startSinging();
+              }}
+              activeOpacity={0.85}
+            >
+              <RotateCcw size={16} color={COLORS.text} />
+              <Text style={styles.ghostBtnText}>{t('songSingAgain')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.s, backgroundColor: COLORS.background },
+  muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
+  link: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
+  flex: { flex: 1 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 16, lineHeight: 24, color: COLORS.text, textAlign: 'right' },
+  artist: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, textAlign: 'right' },
+  tabs: {
+    flexDirection: 'row',
+    gap: 6,
+    marginHorizontal: SPACING.l,
+    marginTop: SPACING.m,
+    padding: 4,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  tabText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.textSecondary },
+  tabTextOn: { color: COLORS.white, fontFamily: FONT_FAMILY.bold },
+  content: { padding: SPACING.l, paddingBottom: SPACING.xl, gap: SPACING.m },
+  cover: { height: 160, borderRadius: BORDER_RADIUS.l, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  coverImage: { width: '100%', height: '100%' },
+  desc: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: COLORS.textSecondary, textAlign: 'right' },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.s },
+  hint: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 17, color: COLORS.muted, textAlign: 'right' },
+  switchInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  switchLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.textSecondary },
+  singCard: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12 },
+  singHint: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 19, color: COLORS.textSecondary, textAlign: 'right' },
+  error: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.error, textAlign: 'center' },
+  page: { gap: 4 },
+  line: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  lineText: { fontFamily: FONT_FAMILY.medium, fontSize: 17, lineHeight: 27, color: COLORS.text, textAlign: 'left' },
+  lineTextSing: { fontSize: 20, lineHeight: 31, textAlign: 'center' },
+  lineTextActive: { fontFamily: FONT_FAMILY.bold },
+  translation: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'right', marginTop: 2 },
+  bottomBar: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.s,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+  },
+  mainBtn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: SPACING.s, alignSelf: 'stretch' },
+  wideBtn: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 14,
+  },
+  recBtn: { backgroundColor: COLORS.error },
+  wideBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.white },
+  ghostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  ghostBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.text },
+});

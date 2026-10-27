@@ -55,6 +55,11 @@ export const StoryScreen: React.FC = () => {
   const [speed, setSpeed] = useState<ReadingSpeed | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
+  // y هر خط نسبت به کادر متن است، نه کل محتوای اسکرول؛ جلد و راهنمای بالای متن
+  // حساب نمی‌شد و صفحه به‌جای خط به نزدیکی بالای داستان می‌پرید.
+  const pageY = useRef(0);
+  const scrollY = useRef(0);
+  const viewH = useRef(0);
   const lastActive = useRef(-1);
   // وقتی کاربر خودش متن را می‌کشد، صفحه دیگر دنبال خطِ در حال پخش نمی‌رود
   // تا با زدن دوباره‌ی پخش یا یک خط.
@@ -186,8 +191,16 @@ export const StoryScreen: React.FC = () => {
     if (activeIdx < 0 || activeIdx === lastActive.current) return;
     lastActive.current = activeIdx;
     if (!followRef.current) return;
-    const y = lineY.current[activeIdx];
-    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 160), animated: true });
+    const ly = lineY.current[activeIdx];
+    if (ly === undefined) return;
+    // فقط وقتی خطِ در حال پخش از دید بیرون رفته (یا به پایین صفحه رسیده) جابه‌جا
+    // می‌کنیم؛ خطی که کاربر رویش زده و دیده می‌شود سر جایش می‌ماند.
+    const y = pageY.current + ly;
+    const top = scrollY.current;
+    const bottom = top + viewH.current;
+    if (y < top + 40 || y > bottom - 160) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 160), animated: true });
+    }
   }, [activeIdx]);
 
   const listenFirst = LISTEN_FIRST_LEVELS.includes(story?.level ?? 'starter');
@@ -271,6 +284,13 @@ export const StoryScreen: React.FC = () => {
         onScrollBeginDrag={() => {
           followRef.current = false;
         }}
+        onScroll={(e) => {
+          scrollY.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={64}
+        onLayout={(e) => {
+          viewH.current = e.nativeEvent.layout.height;
+        }}
         contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.cover, { backgroundColor: accent }]}>
           {!!story.cover_url && <Image source={{ uri: absUrl(story.cover_url) }} style={styles.coverImage} resizeMode="cover" />}
@@ -300,7 +320,12 @@ export const StoryScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.page}>
+        <View
+          style={styles.page}
+          onLayout={(e) => {
+            pageY.current = e.nativeEvent.layout.y;
+          }}
+        >
           {lines.map((l, i) => {
             const isActive = i === activeIdx;
             const img = imageAt.get(i);

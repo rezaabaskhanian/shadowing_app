@@ -62,5 +62,10 @@
   },
   "engines": {
     "node": ">= 22.11.0"
+  },
+  "reanimated": {
+    "staticFeatureFlags": {
+      "ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS": true
+    }
   }
 }

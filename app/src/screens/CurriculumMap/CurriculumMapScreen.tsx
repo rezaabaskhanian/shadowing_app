@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Check, Crown, Play, Trophy } from 'lucide-react-native';
@@ -25,6 +25,13 @@ const OFFSET_PATTERN = [-68, 68];
 // شده، باید خط هم با همون واحدِ پیکسلی (نه درصد) رسم بشه.
 const SCREEN_PADDING = 20;
 const CONTENT_WIDTH = Dimensions.get('window').width - SCREEN_PADDING * 2;
+// فقط ردیف‌های نزدیک به صفحه ساخته می‌شوند: با صدها صحنه، ساختن همه‌ی نودها و
+// تکه‌های Svg با هم چند ثانیه طول می‌کشید تا صفحه باز شود.
+const VIEW_H = Dimensions.get('window').height;
+const WINDOW_ABOVE = VIEW_H * 1.5;
+const WINDOW_BELOW = VIEW_H * 2.5;
+// تا اسکرول کمتر از این جابه‌جا نشده، پنجره‌ی ساخته‌شده عوض نمی‌شود.
+const WINDOW_STEP = VIEW_H * 0.5;
 
 // ترتیب نمایش سطح‌ها روی نقشه: همیشه از آسان به سخت، صرف‌نظر از اینکه
 // ادمین چه عددی برای "order" هر صحنه گذاشته — چون خودِ درخواست کاربر این
@@ -129,17 +136,16 @@ export const CurriculumMapScreen = () => {
   // با مسیرهای بلند (مثلاً صدها صحنه)، کاربر نباید هر بار از بالای مسیر
   // (سطح مبتدی) دستی اسکرول کنه تا برسه به جایی که الان هست — همون لحظه‌ی
   // باز شدن صفحه، خودکار می‌ره سراغ اولین نودِ «فعلی».
-  const sceneIdsKey = ordered.map((s) => `${s.id}:${s.isCompleted}`).join(',');
-  useEffect(() => {
+  // جای شروع یک بار حساب می‌شود و اسکرول از همان‌جا باز می‌شود (contentOffset)،
+  // تا پنجره‌ی ردیف‌های ساخته‌شده هم از اول همان‌جا باشد.
+  const startY = useMemo(() => {
     const current = nodeItems.find((item) => nodeState(item.scenario) === 'current');
-    if (!current) return;
-    const targetY = Math.max(0, current.top - 180);
-    const id = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: targetY, animated: false });
-    }, 0);
-    return () => clearTimeout(id);
+    return current ? Math.max(0, current.top - 180) : 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneIdsKey]);
+  }, [ordered.length > 0]);
+  const [winTop, setWinTop] = useState(startY);
+  const startedRef = useRef(false);
+  const inWindow = (top: number, height: number) => top + height >= winTop - WINDOW_ABOVE && top <= winTop + WINDOW_BELOW;
 
   const openScene = (scenario: Scenario) => {
     if (scenario.isLocked) {
@@ -151,11 +157,12 @@ export const CurriculumMapScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backButton} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
-        <ArrowLeft color={COLORS.text} size={22} />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>{t('curriculumMapTitle')}</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.backButton} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
+          <ArrowLeft color={COLORS.text} size={20} />
+        </TouchableOpacity>
+        <Text style={styles.title}>{t('curriculumMapTitle')}</Text>
+      </View>
       <Text style={styles.sub}>
         {t('curriculumMapSub').replace('{done}', String(completedCount)).replace('{total}', String(ordered.length))}
       </Text>
@@ -168,7 +175,24 @@ export const CurriculumMapScreen = () => {
         />
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        contentOffset={{ x: 0, y: startY }}
+        scrollEventThrottle={100}
+        onScroll={(e) => {
+          const offY = e.nativeEvent.contentOffset.y;
+          if (Math.abs(offY - winTop) > WINDOW_STEP) setWinTop(offY);
+        }}
+        // contentOffset روی همه‌ی نسخه‌های اندروید قابل اعتماد نیست؛ بار اولی که اندازه‌ی
+        // محتوا معلوم شد، یک بار هم دستی به همان‌جا می‌رویم.
+        onContentSizeChange={() => {
+          if (startedRef.current || startY === 0) return;
+          startedRef.current = true;
+          scrollRef.current?.scrollTo({ y: startY, animated: false });
+        }}
+      >
         <View style={[styles.pathArea, { height: pathHeight }]}>
           {/* یه ناحیه‌ی رنگیِ خیلی کم‌رنگ پشت هر سطح — تا هر بخش حتی از دور
               هم یه «قلمرو»ی بصری جدا حس بشه، نه فقط یه خط جداکننده. */}
@@ -192,6 +216,7 @@ export const CurriculumMapScreen = () => {
               از سقف حافظه‌ی Canvas رد می‌شد و اپ کرش می‌کرد. */}
           {nodeItems.slice(1).map((item, i) => {
               const prev = nodeItems[i];
+              if (!inWindow(Math.min(prev.top, item.top), Math.abs(prev.top - item.top) + ROW_HEIGHT)) return null;
               // بین دو سطح مختلف خطی رسم نمی‌شود — هر سطح مسیر جدای خودش است.
               if (prev.scenario.level !== item.scenario.level) return null;
               const fromX = CONTENT_WIDTH / 2 + prev.offsetX;
@@ -230,6 +255,7 @@ export const CurriculumMapScreen = () => {
             })}
 
           {flippedLayout.map((item) => {
+            if (!inWindow(item.top, item.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT)) return null;
             if (item.kind === 'header') {
               const levelStyle = LEVEL_BADGE_STYLE[item.level] || LEVEL_BADGE_STYLE.Beginner;
               const LevelIcon = levelStyle.Icon;
@@ -320,26 +346,36 @@ const styles = StyleSheet.create({
     paddingTop: 54,
     paddingHorizontal: 20,
   },
+  // دکمه‌ی برگشت چپ، عنوان راست؛ توضیح و نوار پیشرفت زیر هر دو.
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 6,
+  },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
   title: {
+    flex: 1,
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 24,
-    marginBottom: 6,
+    fontSize: 18,
+    lineHeight: 28,
+    textAlign: 'right',
   },
   sub: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    marginBottom: 12,
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: 'right',
+    marginBottom: 10,
   },
   progressTrack: {
     height: 8,

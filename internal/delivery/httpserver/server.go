@@ -26,6 +26,7 @@ import (
 	progresshandler "shadowing-backend/internal/delivery/httpserver/progress"
 	realtimepochandler "shadowing-backend/internal/delivery/httpserver/realtimepoc"
 	shadowinghandler "shadowing-backend/internal/delivery/httpserver/shadowing"
+	songhandler "shadowing-backend/internal/delivery/httpserver/song"
 	specialtyhandler "shadowing-backend/internal/delivery/httpserver/specialty"
 	topicspeakinghandler "shadowing-backend/internal/delivery/httpserver/topicspeaking"
 	userhandler "shadowing-backend/internal/delivery/httpserver/user"
@@ -72,6 +73,7 @@ import (
 	libraryservice "shadowing-backend/internal/service/library"
 	pathservice "shadowing-backend/internal/service/path"
 	podcastservice "shadowing-backend/internal/service/podcast"
+	songservice "shadowing-backend/internal/service/song"
 	userservice "shadowing-backend/internal/service/user"
 	writingservice "shadowing-backend/internal/service/writing"
 
@@ -120,6 +122,7 @@ type Service struct {
 	specialtyHandler     specialtyhandler.Handler
 	videoClipHandler     videocliphandler.Handler
 	podcastHandler       podcasthandler.Handler
+	songHandler          songhandler.Handler
 	courseHandler        coursehandler.Handler
 	pathHandler          pathhandler.Handler
 	writingHandler       writinghandler.Handler
@@ -160,6 +163,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	adminBot *adminbotservice.Service,
 	interviewSvc *interviewservice.Service,
 	specialtySvc *specialtyservice.Service,
+	songSvc *songservice.Service,
 ) Service {
 
 	// store محلِ ذخیره‌ی فایل‌های عمومی/دائمی (تصویر صحنه، صدای آپلودیِ ادمین،
@@ -227,6 +231,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 		specialtyHandler:     specialtyhandler.New(specialtySvc, interviewSvc, authSvc, authConfig),
 		videoClipHandler:     videocliphandler.New(videoClipSvc, authSvc, authConfig),
 		podcastHandler:       podcasthandler.New(podcastSvc, authSvc, authConfig),
+		songHandler:          songhandler.New(songSvc, authSvc, authConfig),
 		courseHandler:        coursehandler.New(courseSvc, authSvc, authConfig),
 		pathHandler:          pathhandler.New(pathSvc, authSvc, authConfig),
 		writingHandler:       writinghandler.New(writingSvc, authSvc, authConfig),
@@ -329,6 +334,7 @@ func (s Service) Server() {
 
 	// «پادکست» (گفتگوی دو مجری با متن هم‌زمان؛ صدا در پس‌زمینه) — ببینید podcastservice.
 	s.podcastHandler.SetPodcastRoutes(e)
+	s.songHandler.SetSongRoutes(e)
 
 	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
 	s.courseHandler.SetCourseRoutes(e)

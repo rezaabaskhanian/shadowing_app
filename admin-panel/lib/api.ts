@@ -1,4 +1,5 @@
 import type {
+  Song,
   InterviewSet,
   SpecialtyField,
   SpecialtyFieldDetail,
@@ -1096,4 +1097,21 @@ export async function saveFieldWords(key: string, words: FieldWord[]): Promise<S
       body: JSON.stringify({ words }),
     })
   );
+}
+
+// ---------- آهنگ ----------
+export async function listSongs(): Promise<Song[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/songs", { method: "GET" }))) || [];
+}
+
+export async function getSong(id: string): Promise<Song> {
+  return jsonOrThrow(await authFetch(`/v1/admin/songs/${id}`, { method: "GET" }));
+}
+
+export async function saveSong(s: Omit<Song, "id"> & { id?: string }): Promise<Song> {
+  return jsonOrThrow(await authFetch(s.id ? `/v1/admin/songs/${s.id}` : "/v1/admin/songs", jsonBody(s.id ? "PUT" : "POST", s)));
+}
+
+export async function deleteSong(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/songs/${id}`, { method: "DELETE" }));
 }

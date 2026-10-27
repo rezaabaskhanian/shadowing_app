@@ -1,4 +1,5 @@
-import TrackPlayer, { Capability } from 'react-native-track-player';
+import TrackPlayer, { AppKilledPlaybackBehavior, Capability } from 'react-native-track-player';
+import Sound from 'react-native-nitro-sound';
 
 /**
  * راه‌اندازیِ یک‌بارِ TrackPlayer برای کل عمر اپ.
@@ -49,6 +50,12 @@ export function ensureTrackPlayerSetup(): Promise<void> {
           // برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با پخش لازم است؛ پیش‌فرض
           // کتابخانه (۱ ثانیه) خیلی درشت است.
           progressUpdateEventInterval: 0.1,
+          android: {
+            // پیش‌فرض کتابخانه «ادامه‌ی پخش» است: با بستن اپ اعلانِ پخش در نوار
+            // اعلان‌ها می‌ماند و پاک نمی‌شد.
+            appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+            stopForegroundGracePeriod: 1,
+          },
         })
       )
       .catch((err) => {
@@ -60,4 +67,18 @@ export function ensureTrackPlayerSetup(): Promise<void> {
       });
   }
   return setupPromise;
+}
+
+/**
+ * وقتی کاربر از اپ بیرون می‌رود: صدا قطع شود، ضبطِ نیمه‌کاره دور ریخته شود و
+ * اعلانِ پخش از نوار اعلان‌ها برود (reset صف را خالی می‌کند و سرویس پخش از
+ * حالت foreground بیرون می‌آید). برگشت به اپ با زدن دوباره‌ی پخش ادامه می‌یابد.
+ */
+export async function stopAllAudio(): Promise<void> {
+  if (setupPromise) {
+    await setupPromise.catch(() => {});
+    await TrackPlayer.reset().catch(() => {});
+  }
+  await Sound.stopPlayer().catch(() => {});
+  await Sound.stopRecorder().catch(() => {});
 }

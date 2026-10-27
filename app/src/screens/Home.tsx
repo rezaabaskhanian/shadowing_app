@@ -31,6 +31,7 @@ import {
   X,
   Zap,
   Layers,
+  Music,
 } from 'lucide-react-native';
 import { BENTO_PATTERNS, BentoGrid, BentoSectionHeader, type BentoItem } from '../components/BentoGrid';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY as SCENE_LEVEL_LABEL_KEY } from '../components/SceneListCard';
@@ -68,6 +69,7 @@ import { absUrl } from '../api/config';
 import { getVideoClips, type VideoClipListItem } from '../api/videoClips';
 import { getGoalPlan, type GoalPlanView } from '../api/goalPlan';
 import { getPodcasts, getStories, atOrBelowLevel, type Podcast } from '../api/podcasts';
+import { getSongs, type Song } from '../api/songs';
 import { getReadChapters, groupStories } from '../services/storyProgress';
 import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
 import { getWritingPrompts, type WritingPrompt } from '../api/writing';
@@ -150,6 +152,7 @@ export const HomeScreen = () => {
   const [topics, setTopics] = React.useState<SpeakingTopic[]>([]);
   const [prompts, setPrompts] = React.useState<WritingPrompt[]>([]);
   const [stories, setStories] = React.useState<Podcast[]>([]);
+  const [songs, setSongs] = React.useState<Song[]>([]);
   const [readChapters, setReadChapters] = React.useState<Set<string>>(new Set());
   const [courseLessons, setCourseLessons] = React.useState<CourseLesson[]>([]);
   const [paths, setPaths] = React.useState<PathSummary[]>([]);
@@ -173,6 +176,9 @@ export const HomeScreen = () => {
         .then((list) => active && setStories(list))
         .catch(() => active && setStories([]));
       getReadChapters().then((read) => active && setReadChapters(read));
+      getSongs()
+        .then((list) => active && setSongs(list))
+        .catch(() => active && setSongs([]));
       getCourse()
         .then((units) => active && setCourseLessons(upcomingLessons(units.flatMap((u) => u.lessons))))
         .catch(() => active && setCourseLessons([]));
@@ -607,6 +613,26 @@ export const HomeScreen = () => {
         completed: st.readCount === st.chapters.length,
         onPress: () => navigation.navigate('Story', { storyId: st.next.id, openedAt: Date.now() }),
       })),
+    },
+    {
+      key: 'songs',
+      title: t('homeSongs'),
+      icon: <Music size={16} color={COLORS.white} />,
+      accent: COLORS.pink,
+      actionLabel: t('homeSeeAll'),
+      onAction: () => navigation.navigate('SongList'),
+      items: atOrBelowLevel(songs, userLevel)
+        .slice(0, HOME_SHORT_SECTION_COUNT)
+        .map((song) => ({
+          key: song.id,
+          title: song.title,
+          subtitle: song.artist || song.description_fa || undefined,
+          meta: song.instrumental_url ? `🎤 ${t('songSingAlongBadge')}` : '🎵',
+          image: uriImage(song.cover_url),
+          emoji: '🎵',
+          badge: contentBadge(song.level),
+          onPress: () => navigation.navigate('Song', { songId: song.id, openedAt: Date.now() }),
+        })),
     },
     {
       key: 'topics',
@@ -1199,12 +1225,12 @@ const styles = StyleSheet.create({
   greeting: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.medium,
-    fontSize: 14,
+    fontSize: 12,
   },
   headerTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 26,
+    fontSize: 19,
     marginTop: 2,
     letterSpacing: -0.5,
   },

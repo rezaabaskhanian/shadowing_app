@@ -94,12 +94,24 @@ export interface GoalMapSpot {
   y: number;
 }
 
+/** نسخه‌ی پرجزئیات نقشه، بریده به کاشی (ردیف‌به‌ردیف در urls)؛ فقط کاشی‌های روی صفحه بار می‌شوند. */
+export interface GoalMapTiles {
+  tile_size: number;
+  full_width: number;
+  full_height: number;
+  cols: number;
+  rows: number;
+  urls: string[];
+}
+
 /** نقشه‌ی شهرِ هدف (مثلاً شهر سفر) که کاربر با انگشت جابه‌جا و زوم می‌کند. */
 export interface GoalMap {
   goal: GoalId;
+  /** نمای کلیِ سبک؛ width و height نسبت تصویر را می‌دهند. */
   image_url: string;
   width: number;
   height: number;
+  tiles?: GoalMapTiles;
   spots: GoalMapSpot[];
 }
 

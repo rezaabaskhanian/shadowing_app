@@ -319,16 +319,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   headerIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
+    width: 24,
+    height: 24,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 17,
+    fontSize: 14,
   },
   headerAction: {
     flexDirection: 'row',
@@ -338,6 +338,6 @@ const styles = StyleSheet.create({
   headerActionText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
+    fontSize: 12,
   },
 });
