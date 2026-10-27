@@ -256,6 +256,15 @@ type goalExtrasArgs struct {
 	Items []obj  `json:"items,omitempty" jsonschema:"save only: the WHOLE list in order: {kind: podcast | topic | writing, ref_id: uuid, position}"`
 }
 
+type goalMapArgs struct {
+	Goal     string `json:"goal" jsonschema:"travel | migration | study | work"`
+	ImageURL string `json:"image_url,omitempty" jsonschema:"save only: uploaded map image url"`
+	Width    int    `json:"width,omitempty" jsonschema:"save only: image width in pixels"`
+	Height   int    `json:"height,omitempty" jsonschema:"save only: image height in pixels"`
+	Spots    []obj  `json:"spots,omitempty" jsonschema:"save only: the WHOLE list of {position: goal-pack situation position, x: percent 0-100, y: percent 0-100}"`
+	Tiles    obj    `json:"tiles,omitempty" jsonschema:"save only, optional: high-detail tiles {tile_size, full_width, full_height, cols, rows, urls: row-major list of uploaded tile urls}"`
+}
+
 type importIdiomsArgs struct {
 	Items     []obj `json:"items" jsonschema:"idioms: {phrase, meaning_fa, explanation_fa, example_en, example_fa, level (CEFR A1–C2), category}"`
 	Overwrite bool  `json:"overwrite,omitempty" jsonschema:"replace existing idioms with the same phrase (default false)"`
@@ -837,6 +846,17 @@ func registerTools(s *mcp.Server, c *client) {
 	mcp.AddTool(s, &mcp.Tool{Name: "save_goal_extras", Description: "Replace the non-scene practice of a goal pack: the WHOLE ordered list of {kind: podcast | topic | writing, ref_id}. The app shows only active items up to the learner's level."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in goalExtrasArgs) (*mcp.CallToolResult, any, error) {
 			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/extras", obj{"items": in.Items}))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "get_goal_map", Annotations: ro, Description: "Get the pan/zoom map of a goal pack (travel | migration | study | work): image url, size and spots {position, x, y} where x,y are percent of the image and position is the situation position in the goal pack."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalMapArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.get(ctx, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/map"))
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "save_goal_map", Description: "Replace the map of a goal pack: image_url (from upload_image), width, height in pixels and the WHOLE list of spots {position, x, y}; x,y are percent (0-100) of the image, position is the goal-pack situation position. Tapping a spot in the app opens that situation's level-matched scene."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, in goalMapArgs) (*mcp.CallToolResult, any, error) {
+			return rawResult(c.sendJSON(ctx, http.MethodPut, "/v1/admin/goal-packs/"+url.PathEscape(in.Goal)+"/map",
+				obj{"image_url": in.ImageURL, "width": in.Width, "height": in.Height, "spots": in.Spots, "tiles": in.Tiles}))
 		})
 
 	// ---- تست تعیین سطح ----

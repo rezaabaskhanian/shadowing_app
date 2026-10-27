@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"shadowing-backend/internal/pkg/richerror"
@@ -15,6 +16,7 @@ import (
 type GoalSituation = postgrespath.GoalSituation
 type GoalPlan = postgrespath.GoalPlan
 type GoalExtra = postgrespath.GoalExtra
+type GoalMap = postgrespath.GoalMap
 
 var validGoals = map[string]bool{"travel": true, "migration": true, "study": true, "work": true}
 var validMinutes = map[int]bool{15: true, 30: true, 45: true, 60: true}
@@ -98,6 +100,7 @@ func ComputeForecast(startLevel string, daysLeft, minutesPerDay, packSize int) G
 // SituationView یک موقعیت برای کاربر.
 type SituationView struct {
 	ID         string `json:"id"`
+	Position   int    `json:"position"` // برای پیدا کردن نقطه‌ی همین موقعیت روی نقشه‌ی هدف
 	TitleFa    string `json:"title_fa"`
 	Priority   int    `json:"priority"`
 	SceneID    string `json:"scene_id,omitempty"`
@@ -236,7 +239,7 @@ func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, e
 
 	view := &GoalPlanView{Plan: *plan, Situations: make([]SituationView, 0, len(pack))}
 	for _, sit := range pack {
-		sv := SituationView{ID: sit.ID, TitleFa: sit.TitleFa, Priority: sit.Priority}
+		sv := SituationView{ID: sit.ID, Position: sit.Position, TitleFa: sit.TitleFa, Priority: sit.Priority}
 		sv.SceneID, sv.SceneLevel = pickScene(sit.SceneIDs, infos, plan.StartLevel)
 		sv.SceneImage = infos[sv.SceneID].ImageURL
 		sv.HasContent = sv.SceneID != ""
@@ -434,4 +437,52 @@ func (s *Service) AdminSaveGoalExtras(ctx context.Context, goal string, items []
 		}
 	}
 	return s.repo.SaveGoalExtras(ctx, goal, items)
+}
+
+// GoalMap نقشه‌ی هدفِ برنامه‌ی کاربر؛ nil اگر کاربر برنامه ندارد یا برای هدفش هنوز نقشه‌ای نیست.
+// کدام صحنه با زدن هر نقطه باز شود را اپ از همان «برنامه‌ی من» (scene_id هر موقعیت) برمی‌دارد.
+func (s *Service) GoalMap(ctx context.Context, userID string) (*GoalMap, error) {
+	if err := parseID("path.GoalMap", userID); err != nil {
+		return nil, err
+	}
+	plan, err := s.repo.GetGoalPlan(ctx, userID)
+	if err != nil || plan == nil {
+		return nil, err
+	}
+	return s.repo.GoalMap(ctx, plan.Goal)
+}
+
+func (s *Service) AdminGoalMap(ctx context.Context, goal string) (*GoalMap, error) {
+	if !validGoals[goal] {
+		return nil, invalid("path.AdminGoalMap", "هدف نامعتبر است")
+	}
+	return s.repo.GoalMap(ctx, goal)
+}
+
+// AdminSaveGoalMap عکس نقشه‌ی یک هدف و جای همه‌ی نقطه‌ها را جایگزین می‌کند.
+func (s *Service) AdminSaveGoalMap(ctx context.Context, m GoalMap) error {
+	const op = "path.AdminSaveGoalMap"
+	if !validGoals[m.Goal] {
+		return invalid(op, "هدف نامعتبر است")
+	}
+	if strings.TrimSpace(m.ImageURL) == "" || m.Width <= 0 || m.Height <= 0 {
+		return invalid(op, "عکس نقشه و اندازه‌اش لازم است")
+	}
+	if t := m.Tiles; t != nil {
+		if t.TileSize <= 0 || t.Cols <= 0 || t.Rows <= 0 || t.FullWidth <= 0 || t.FullHeight <= 0 ||
+			len(t.URLs) != t.Cols*t.Rows {
+			return invalid(op, "کاشی‌های نقشه ناقص است (تعداد URLها باید ستون×ردیف باشد)")
+		}
+	}
+	seen := map[int]bool{}
+	for _, sp := range m.Spots {
+		if sp.Position <= 0 || seen[sp.Position] {
+			return invalid(op, "شماره‌ی موقعیت هر نقطه باید مثبت و یکتا باشد")
+		}
+		if sp.X < 0 || sp.X > 100 || sp.Y < 0 || sp.Y > 100 {
+			return invalid(op, "جای نقطه باید بین ۰ تا ۱۰۰ درصد باشد")
+		}
+		seen[sp.Position] = true
+	}
+	return s.repo.SaveGoalMap(ctx, m)
 }

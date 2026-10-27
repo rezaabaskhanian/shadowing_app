@@ -35,6 +35,8 @@ export type AnalyticsEvent =
   | 'goal_plan_created'
   | 'goal_situation_open'
   | 'goal_extra_open'
+  | 'goal_map_open'
+  | 'goal_map_spot'
   | 'checkpoint_done'
   | 'path_self_intro'
   | 'podcast_played'

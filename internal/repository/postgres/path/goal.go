@@ -266,3 +266,102 @@ func (r DB) GoalExtraInfos(ctx context.Context, userID string, items []GoalExtra
 	}
 	return out, nil
 }
+
+// GoalMapSpot یک نقطه روی نقشه‌ی هدف؛ x و y درصد از عرض و ارتفاع عکس.
+type GoalMapSpot struct {
+	Position int     `json:"position"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+}
+
+// GoalMapTiles نسخه‌ی پرجزئیات نقشه، بریده به کاشی‌های مربعی (ردیف‌به‌ردیف در URLs).
+type GoalMapTiles struct {
+	TileSize   int      `json:"tile_size"`
+	FullWidth  int      `json:"full_width"`
+	FullHeight int      `json:"full_height"`
+	Cols       int      `json:"cols"`
+	Rows       int      `json:"rows"`
+	URLs       []string `json:"urls"`
+}
+
+// GoalMap عکس نقشه‌ی یک هدف و نقطه‌های موقعیت‌ها روی آن. ImageURL نمای کلی سبک است
+// و Width/Height نسبت تصویر را می‌دهند؛ Tiles برای زوم زیاد.
+type GoalMap struct {
+	Goal     string        `json:"goal"`
+	ImageURL string        `json:"image_url"`
+	Width    int           `json:"width"`
+	Height   int           `json:"height"`
+	Tiles    *GoalMapTiles `json:"tiles,omitempty"`
+	Spots    []GoalMapSpot `json:"spots"`
+}
+
+// GoalMap نقشه‌ی یک هدف؛ nil اگر هنوز نقشه‌ای ساخته نشده.
+func (r DB) GoalMap(ctx context.Context, goal string) (*GoalMap, error) {
+	const op = "postgrespath.GoalMap"
+	m := GoalMap{Goal: goal, Spots: []GoalMapSpot{}}
+	var tiles []byte
+	err := r.conn.QueryRow(ctx, `SELECT image_url, width, height, tiles FROM goal_maps WHERE goal = $1`, goal).
+		Scan(&m.ImageURL, &m.Width, &m.Height, &tiles)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	if len(tiles) > 0 {
+		var t GoalMapTiles
+		if json.Unmarshal(tiles, &t) == nil && len(t.URLs) > 0 {
+			m.Tiles = &t
+		}
+	}
+	rows, err := r.conn.Query(ctx, `SELECT position, x, y FROM goal_map_spots WHERE goal = $1 ORDER BY position`, goal)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var s GoalMapSpot
+		var x, y float32
+		if err := rows.Scan(&s.Position, &x, &y); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		s.X, s.Y = float64(x), float64(y)
+		m.Spots = append(m.Spots, s)
+	}
+	return &m, rows.Err()
+}
+
+// SaveGoalMap عکس و همه‌ی نقطه‌های نقشه‌ی یک هدف را یک‌جا جایگزین می‌کند.
+func (r DB) SaveGoalMap(ctx context.Context, m GoalMap) error {
+	const op = "postgrespath.SaveGoalMap"
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	var tiles any          // nil → NULL در دیتابیس
+	if m.Tiles != nil {
+		b, _ := json.Marshal(m.Tiles)
+		tiles = string(b)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO goal_maps (goal, image_url, width, height, tiles, updated_at) VALUES ($1, $2, $3, $4, $5::jsonb, now())
+		ON CONFLICT (goal) DO UPDATE SET image_url = EXCLUDED.image_url, width = EXCLUDED.width,
+			height = EXCLUDED.height, tiles = EXCLUDED.tiles, updated_at = now()`,
+		m.Goal, m.ImageURL, m.Width, m.Height, tiles); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM goal_map_spots WHERE goal = $1`, m.Goal); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	for _, s := range m.Spots {
+		if _, err := tx.Exec(ctx, `INSERT INTO goal_map_spots (goal, position, x, y) VALUES ($1, $2, $3, $4)`,
+			m.Goal, s.Position, s.X, s.Y); err != nil {
+			return richerror.New(op).WithErr(err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	return nil
+}

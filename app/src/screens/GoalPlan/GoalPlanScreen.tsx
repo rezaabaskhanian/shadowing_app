@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
+import { Briefcase, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Map as MapIcon, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -13,6 +13,7 @@ import { getMyLevel } from '../../api/assessment';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import {
   deleteGoalPlan,
+  getGoalMap,
   getGoalPlan,
   saveGoalPlan,
   type GoalExtra,
@@ -103,12 +104,17 @@ export const GoalPlanScreen: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   // فهرست کامل موقعیت‌ها جمع است و فقط چند تای اول دیده می‌شود؛ با لمس باز می‌شود.
   const [showAllSituations, setShowAllSituations] = useState(false);
+  // دکمه‌ی نقشه فقط وقتی دیده می‌شود که برای هدف کاربر نقشه ساخته شده باشد.
+  const [hasMap, setHasMap] = useState(false);
 
   const load = useCallback(() => {
     setError(false);
     getGoalPlan()
       .then(setView)
       .catch(() => setError(true));
+    getGoalMap()
+      .then((m) => setHasMap(!!m))
+      .catch(() => setHasMap(false));
   }, []);
   useFocusEffect(load);
 
@@ -281,6 +287,17 @@ export const GoalPlanScreen: React.FC = () => {
           <CalendarDays size={14} color={CINE.gold} />
           <Text style={cine.pillText}>{f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}</Text>
         </View>
+        {hasMap && (
+          <TouchableOpacity
+            style={cine.mapBtn}
+            onPress={() => navigation.navigate('GoalMap')}
+            activeOpacity={0.85}
+            accessibilityLabel={t('goalMapTitle')}
+          >
+            <MapIcon size={18} color={CINE.accentText} />
+            <Text style={cine.mapBtnText}>{t('goalMapButton')}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={cine.iconBtn}
           onPress={() => navigation.navigate('Home')}
@@ -555,6 +572,18 @@ const cine = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  mapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    backgroundColor: hexToRgba(CINE.accent, 0.12),
+    borderColor: hexToRgba(CINE.accent, 0.35),
+    borderWidth: 1,
+  },
+  mapBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, lineHeight: 20, color: CINE.accentText },
   heroCard: { backgroundColor: CINE.surface, borderRadius: 22, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden' },
   heroImage: { width: '100%', height: 230 },
   heroImageEmpty: { backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },

@@ -21,6 +21,8 @@ export interface GoalForecast {
 
 export interface GoalSituation {
   id: string;
+  /** شماره‌ی موقعیت در بسته‌ی هدف؛ نقطه‌های نقشه با همین وصل می‌شوند (سرور قدیمی: undefined). */
+  position?: number;
   title_fa: string;
   priority: number;
   scene_id?: string;
@@ -83,4 +85,29 @@ export async function saveGoalPlan(input: {
 
 export async function deleteGoalPlan(): Promise<void> {
   await jsonOrThrow(await authFetch('/v1/goal-plan', { method: 'DELETE' }));
+}
+
+/** یک نقطه روی نقشه‌ی هدف؛ x و y درصد از عرض و ارتفاع عکس. */
+export interface GoalMapSpot {
+  position: number;
+  x: number;
+  y: number;
+}
+
+/** نقشه‌ی شهرِ هدف (مثلاً شهر سفر) که کاربر با انگشت جابه‌جا و زوم می‌کند. */
+export interface GoalMap {
+  goal: GoalId;
+  image_url: string;
+  width: number;
+  height: number;
+  spots: GoalMapSpot[];
+}
+
+/** null یعنی کاربر برنامه ندارد، یا برای هدفش هنوز نقشه‌ای ساخته نشده (یا سرور قدیمی است). */
+export async function getGoalMap(): Promise<GoalMap | null> {
+  const res = await authFetch('/v1/goal-plan/map', { method: 'GET' });
+  if (res.status === 404) return null;
+  const data = await jsonOrThrow(res);
+  const map = data?.map as GoalMap | null | undefined;
+  return map && map.image_url && map.spots?.length ? map : null;
 }

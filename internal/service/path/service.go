@@ -47,6 +47,8 @@ type repository interface {
 	GoalExtras(ctx context.Context, goal string) ([]postgrespath.GoalExtra, error)
 	SaveGoalExtras(ctx context.Context, goal string, items []postgrespath.GoalExtra) error
 	GoalExtraInfos(ctx context.Context, userID string, items []postgrespath.GoalExtra) (map[string]postgrespath.GoalExtraInfo, error)
+	GoalMap(ctx context.Context, goal string) (*postgrespath.GoalMap, error)
+	SaveGoalMap(ctx context.Context, m postgrespath.GoalMap) error
 }
 
 type Path = postgrespath.Path

@@ -38,12 +38,15 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	goal.GET("", h.GoalPlan)
 	goal.PUT("", h.SaveGoalPlan)
 	goal.DELETE("", h.DeleteGoalPlan)
+	goal.GET("/map", h.GoalMap)
 
 	adminGoal := e.Group("/v1/admin/goal-packs", auth, middlware.AdminOnly)
 	adminGoal.GET("/:goal", h.AdminGoalPack)
 	adminGoal.PUT("/:goal", h.AdminSaveGoalPack)
 	adminGoal.GET("/:goal/extras", h.AdminGoalExtras)
 	adminGoal.PUT("/:goal/extras", h.AdminSaveGoalExtras)
+	adminGoal.GET("/:goal/map", h.AdminGoalMap)
+	adminGoal.PUT("/:goal/map", h.AdminSaveGoalMap)
 
 	admin := e.Group("/v1/admin/paths", auth, middlware.AdminOnly)
 	admin.GET("", h.AdminPaths)
@@ -263,4 +266,32 @@ func (h Handler) AdminSaveGoalExtras(c echo.Context) error {
 	}
 	err := h.svc.AdminSaveGoalExtras(c.Request().Context(), c.Param("goal"), req.Items)
 	return respond(c, echo.Map{"ok": true, "count": len(req.Items)}, err)
+}
+
+// GoalMap نقشه‌ی هدفِ کاربر؛ بدون برنامه یا بدون نقشه {"map": null}.
+func (h Handler) GoalMap(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	m, err := h.svc.GoalMap(c.Request().Context(), uid)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"map": m})
+}
+
+func (h Handler) AdminGoalMap(c echo.Context) error {
+	m, err := h.svc.AdminGoalMap(c.Request().Context(), c.Param("goal"))
+	return respond(c, echo.Map{"map": m}, err)
+}
+
+func (h Handler) AdminSaveGoalMap(c echo.Context) error {
+	var req pathservice.GoalMap
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	req.Goal = c.Param("goal")
+	err := h.svc.AdminSaveGoalMap(c.Request().Context(), req)
+	return respond(c, echo.Map{"ok": true, "spots": len(req.Spots)}, err)
 }
