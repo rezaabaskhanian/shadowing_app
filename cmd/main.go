@@ -443,7 +443,7 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	podcastSvc := podcastservice.New(postgrespodcast.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store, settingsSvc)
 
 	// «آهنگ» (آهنگ آماده با متن هم‌زمان، مثل داستان) — ببینید songservice.
-	songSvc := songservice.New(postgressong.New(MyPostgresgresRepo.DB))
+	songSvc := songservice.New(postgressong.New(MyPostgresgresRepo.DB), store)
 
 	// «دوره‌ی شروع» برای مبتدی‌مبتدی‌ها (فصل ← درس ← کارت) — ببینید courseservice.
 	courseSvc := courseservice.New(postgrescourse.New(MyPostgresgresRepo.DB), aiservice.New(settingsSvc), ttsservice.New(settingsSvc), store)

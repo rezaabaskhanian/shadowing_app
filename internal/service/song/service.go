@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"shadowing-backend/internal/pkg/filestore"
 	"shadowing-backend/internal/pkg/richerror"
 	postgressong "shadowing-backend/internal/repository/postgres/song"
 
@@ -29,10 +30,12 @@ type Repository interface {
 
 type Service struct {
 	repo Repository
+	// store فایل‌های آپلودی (نسخه‌ی بی‌کلام) را برای ترکیب با صدای کاربر باز می‌کند.
+	store filestore.Store
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+func New(repo Repository, store filestore.Store) *Service {
+	return &Service{repo: repo, store: store}
 }
 
 func parseID(op richerror.Op, id string) error {
