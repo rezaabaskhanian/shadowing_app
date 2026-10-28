@@ -326,6 +326,30 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           )}
         </View>
 
+        {loadFailed && (
+          <View style={styles.audioFailRow}>
+            <Text style={styles.audioFailText}>{t('sceneLoadFailed')}</Text>
+            <TouchableOpacity onPress={onRetryLoad} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {audioPrep.finished && audioPrep.failed > 0 && (
+          <View style={styles.audioFailRow}>
+            <Text style={styles.audioFailText}>
+              {t('sceneAudioFailed').replace('{n}', String(audioPrep.failed))}
+            </Text>
+            <TouchableOpacity onPress={onRetryAudio} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
+      {/* دکمه‌ی ورود همیشه پایین صفحه دیده می‌شود؛ قبلاً ته اسکرول بود و کاربر بعد از
+          خواندن توضیح و گرامر راه شروع را پیدا نمی‌کرد. */}
+      <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         {/* Enter Scene CTA Button — تا صدای جمله‌ها دانلود نشده منتظر می‌ماند */}
         <TouchableOpacity
           activeOpacity={0.88}
@@ -347,27 +371,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
                   .replace('{total}', String(audioPrep.total))}
           </Text>
         </TouchableOpacity>
-        {loadFailed && (
-          <View style={styles.audioFailRow}>
-            <Text style={styles.audioFailText}>{t('sceneLoadFailed')}</Text>
-            <TouchableOpacity onPress={onRetryLoad} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        {audioPrep.finished && audioPrep.failed > 0 && (
-          <View style={styles.audioFailRow}>
-            <Text style={styles.audioFailText}>
-              {t('sceneAudioFailed').replace('{n}', String(audioPrep.failed))}
-            </Text>
-            <TouchableOpacity onPress={onRetryAudio} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.audioRetryText}>{t('sceneAudioRetry')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={{ height: Math.max(insets.bottom, 24) + 16 }} />
-      </ScrollView>
+      </View>
     </View>
   );
 };
@@ -675,6 +679,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     flex: 1,
+  },
+  ctaBar: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
   enterCtaBtn: {
     flexDirection: 'row',

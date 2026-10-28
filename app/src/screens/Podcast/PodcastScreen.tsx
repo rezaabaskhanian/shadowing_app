@@ -20,7 +20,8 @@ import { Slideshow, slideStarts } from '../../components/Slideshow';
 
 const RATES = [0.5, 0.75, 1, 1.25];
 // رنگ گوینده‌ها به ترتیب ورودشان؛ گوینده‌ی دوم سمت مقابل می‌نشیند.
-const SPEAKER_COLORS = [COLORS.primary, COLORS.audioMine, COLORS.pink, COLORS.levelIntermediateBg];
+// مرجانیِ اصلی برای دکمه‌ی پخش می‌ماند؛ گوینده‌ها رنگ‌های دیگر می‌گیرند.
+const SPEAKER_COLORS = [COLORS.audioMine, COLORS.levelIntermediateBg, COLORS.pink, COLORS.levelBeginnerBg];
 const VOCAB_COLORS = [COLORS.primary, COLORS.audioMine, COLORS.pink, COLORS.levelBeginnerBg, COLORS.levelIntermediateBg];
 const PODCAST_TRACK_ID = 'podcast';
 
@@ -300,23 +301,8 @@ export const PodcastScreen: React.FC = () => {
         )}
         {!!podcast.description_fa && <Text style={styles.desc}>{podcast.description_fa}</Text>}
 
-        {/* «نسخه‌ی من»: کاربر جمله‌های یک مجری را خودش ضبط می‌کند (PodcastMyVersionScreen). */}
-        {lines.length > 0 && (
-          <TouchableOpacity
-            style={styles.myVersionBtn}
-            activeOpacity={0.85}
-            onPress={async () => {
-              await TrackPlayer.pause().catch(() => {});
-              navigation.navigate('PodcastMyVersion', { podcastId: podcast.id, openedAt: Date.now() });
-            }}
-          >
-            <Mic size={18} color={COLORS.primary} />
-            <Text style={styles.myVersionText}>{t('myVersionButton')}</Text>
-          </TouchableOpacity>
-        )}
-
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
+          <Text style={styles.switchLabel}>{t('podcastShowAllTranslations')}</Text>
           <Switch value={showTranslation} onValueChange={setShowTranslation} trackColor={{ true: COLORS.primary }} />
         </View>
 
@@ -344,7 +330,9 @@ export const PodcastScreen: React.FC = () => {
                 <View style={[styles.avatar, { backgroundColor: tone.color }]}>
                   <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
                 </View>
-                <Text style={[styles.speaker, { color: tone.color }]}>{l.speaker}</Text>
+                <Text style={[styles.speaker, styles.flex1, { color: tone.color }]}>{l.speaker}</Text>
+                {/* نشانه‌ی اینکه لمس هر جمله همان جمله را پخش می‌کند. */}
+                <Play size={12} color={isActive ? tone.color : COLORS.muted} fill={isActive ? tone.color : 'transparent'} />
               </View>
               {isActive ? (
                 <KaraokeText
@@ -361,6 +349,21 @@ export const PodcastScreen: React.FC = () => {
             </TouchableOpacity>
           );
         })}
+
+        {/* «نسخه‌ی من» بعد از متن: اول گفتگو را بفهمد، بعد خودش ضبط کند (قبلاً بالای متن بود). */}
+        {lines.length > 0 && (
+          <TouchableOpacity
+            style={styles.myVersionBtn}
+            activeOpacity={0.85}
+            onPress={async () => {
+              await TrackPlayer.pause().catch(() => {});
+              navigation.navigate('PodcastMyVersion', { podcastId: podcast.id, openedAt: Date.now() });
+            }}
+          >
+            <Mic size={18} color={COLORS.primary} />
+            <Text style={styles.myVersionText}>{t('myVersionButton')}</Text>
+          </TouchableOpacity>
+        )}
 
         {podcast.vocabulary.length > 0 && (
           <View style={styles.vocabCard}>
@@ -425,7 +428,7 @@ export const PodcastScreen: React.FC = () => {
             disabled={!ready || (activeIdx < 0 && !repeatLine)}
             activeOpacity={0.85}
           >
-            <Repeat1 size={14} color={repeatLine ? COLORS.white : COLORS.textSecondary} />
+            <Repeat1 size={14} color={repeatLine ? COLORS.text : COLORS.textSecondary} />
           </TouchableOpacity>
           {RATES.map((r) => (
             <TouchableOpacity
@@ -444,6 +447,7 @@ export const PodcastScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
   myVersionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -453,6 +457,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
     paddingVertical: 10,
+    marginTop: SPACING.s,
     marginBottom: SPACING.m,
     backgroundColor: COLORS.primaryLight,
   },
@@ -461,9 +466,10 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
   },
+  // عکس کوتاه‌تر (قبلاً ۱۶:۹، حدود یک‌چهارم صفحه) تا متن گفتگو زودتر دیده شود.
   cover: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    aspectRatio: 21 / 9,
     borderRadius: BORDER_RADIUS.l,
     backgroundColor: COLORS.surfaceLight,
     marginBottom: SPACING.m,
@@ -615,8 +621,8 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,
     paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    gap: SPACING.s,
+    paddingTop: SPACING.s,
+    gap: 6,
   },
   progressTrack: {
     height: 6,
@@ -646,9 +652,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   playBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -666,15 +672,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
+  // سرعت انتخاب‌شده خنثی است؛ مرجانی فقط برای دکمه‌ی پخش.
   rateBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surfaceHigh,
+    borderColor: COLORS.textSecondary,
   },
   rateText: {
     ...TEXT_STYLES.labelMd,
     color: COLORS.text,
   },
   rateTextActive: {
-    color: COLORS.white,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
   },
 });

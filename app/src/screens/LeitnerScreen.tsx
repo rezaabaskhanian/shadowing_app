@@ -10,12 +10,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { BookOpen, Check, Clock, Layers, MessageCircle, Sparkles, Trash2, X } from 'lucide-react-native';
+import { BookOpen, Check, Clock, Eye, Layers, MessageCircle, MoreHorizontal, Sparkles, Trash2, X } from 'lucide-react-native';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { SHADOWS } from '../theme/elevation';
 import { ProgressRing } from '../components/ProgressRing';
-import { useVocab, MAX_LEVEL, isDue, dueLabel, BoxWord } from '../data/VocabContext';
+import { useVocab, MAX_LEVEL, isDue, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { VerbList } from '../components/VerbList';
 import { IdiomList } from '../components/IdiomList';
@@ -34,7 +35,7 @@ const levelColor = (level: number): string => {
 
 export const LeitnerScreen = () => {
   const { box, promote, demote, remove } = useVocab();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [dueOnly, setDueOnly] = useState(true);
   // تب سوم «افعال»: به‌جای کارت‌های لایتنر لیست افعال چندمعنایی نشان داده می‌شود.
   // تب‌های کنار جعبه‌ی لغت: افعال چندمعنایی و اصطلاحات
@@ -53,6 +54,11 @@ export const LeitnerScreen = () => {
     }
   }, [initialTab, navigation, route.params?.idiomPhrases]);
   const [index, setIndex] = useState(0);
+  // اول معنی دیده می‌شود، بعد کاربر می‌گوید بلد بود یا نه (قبلاً باید قبل از دیدن جواب تصمیم می‌گرفت).
+  const [revealed, setRevealed] = useState(false);
+  // همان مودال تأیید بقیه‌ی اپ برای حذف لغت (نه Alert پیش‌فرض اندروید).
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  useEffect(() => setRevealed(false), [index]);
   // بالای نوارِ پایینِ شناورِ تب‌ها
   const feedback = useFeedbackPop(80);
 
@@ -90,18 +96,10 @@ export const LeitnerScreen = () => {
     <View style={styles.screen}>
       <View style={styles.scrollContent}>
         {/* Top Header */}
+        {/* فقط عنوان؛ توضیح قانون لایتنر و شمارنده‌ی «n واژه» (که در زبانه‌ی «همه» هم هست) حذف شد. */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.kicker}>LEITNER SYSTEM</Text>
-            <Text style={styles.headerTitle}>{t('leitnerBoxTitle')}</Text>
-          </View>
-          <View style={styles.badge}>
-            <BookOpen size={16} color={COLORS.primary} />
-            <Text style={styles.badgeText}>{box.length} {t('wordsUnit')}</Text>
-          </View>
+          <Text style={styles.headerTitle}>{t('leitnerBoxTitle')}</Text>
         </View>
-
-        <Text style={styles.subtitle}>{t('leitnerSubtitle')}</Text>
 
         {/* Today vs All Filter Tabs */}
         <View style={styles.filterRow}>
@@ -188,26 +186,31 @@ export const LeitnerScreen = () => {
                   {index + 1}/{list.length}
                 </Text>
               </ProgressRing>
+              {/* حذف لغت داخل منوی سه‌نقطه و با تأیید، تا تصادفی پاک نشود. */}
               <TouchableOpacity
                 style={styles.removeLink}
-                onPress={() => {
-                  remove(current.word);
-                  setIndex((i) => Math.min(i, Math.max(0, list.length - 2)));
-                }}
+                hitSlop={10}
+                onPress={() => setConfirmRemove(true)}
               >
-                <Trash2 color={COLORS.muted} size={14} />
-                <Text style={styles.removeLinkText}>{t('removeWord')}</Text>
+                <MoreHorizontal color={COLORS.textSecondary} size={20} />
               </TouchableOpacity>
             </View>
 
             <Flashcard
               key={current.word}
               item={current}
-              language={language}
               onSwipeKnow={() => handleAdvance('know')}
               onSwipeForgot={() => handleAdvance('forgot')}
+              flipped={revealed}
+              onFlip={() => setRevealed(true)}
             />
 
+            {!revealed ? (
+              <TouchableOpacity style={styles.revealBtn} onPress={() => setRevealed(true)} activeOpacity={0.85}>
+                <Eye color={COLORS.text} size={18} />
+                <Text style={styles.revealText}>{t('leitnerShowAnswer')}</Text>
+              </TouchableOpacity>
+            ) : (
             <View style={styles.actionsRow}>
               <TouchableOpacity
                 style={[styles.actionBtn, styles.forgotBtn]}
@@ -227,10 +230,26 @@ export const LeitnerScreen = () => {
                 <Text style={styles.actionText}>{t('knewIt')}</Text>
               </TouchableOpacity>
             </View>
+            )}
           </>
         )}
       </View>
       {feedback.element}
+      <ConfirmModal
+        visible={confirmRemove && !!current}
+        icon={<Trash2 size={26} color={COLORS.white} />}
+        color={COLORS.error}
+        title={t('removeWord')}
+        body={current?.word}
+        confirmLabel={t('removeWord')}
+        cancelLabel={t('cancel')}
+        onConfirm={() => {
+          if (current) remove(current.word);
+          setIndex((i) => Math.min(i, Math.max(0, list.length - 2)));
+          setConfirmRemove(false);
+        }}
+        onCancel={() => setConfirmRemove(false)}
+      />
     </View>
   );
 };
@@ -254,29 +273,29 @@ const EmptyState = ({
 // SINGLE FLASHCARD: tap to flip word/meaning, swipe right = knew it, swipe left = forgot
 const Flashcard = ({
   item,
-  language,
   onSwipeKnow,
   onSwipeForgot,
+  flipped,
+  onFlip,
 }: {
   item: BoxWord;
-  language: 'en' | 'fa';
   onSwipeKnow: () => void;
   onSwipeForgot: () => void;
+  flipped: boolean;
+  onFlip: () => void;
 }) => {
   const { t } = useLanguage();
   const translateX = useSharedValue(0);
   // کدام رو دیده شود فقط از state ری‌اکت می‌آید. قبلاً با چرخش سه‌بعدی
   // (useAnimatedStyle روی rotateY/opacity) بود، ولی روی اندروید آن تغییرها
   // روی صفحه نمی‌نشست و با لمس، معنی نمایش داده نمی‌شد.
-  const [flipped, setFlipped] = useState(false);
-
-  const toggleFlip = () => {
-    setFlipped((f) => !f);
-  };
+  const toggleFlip = () => onFlip();
 
   // Pan فقط بعد از یک حرکت افقیِ واقعی فعال می‌شود؛ بدون activeOffsetX،
   // Pan همان لمس ساده را هم می‌گرفت و Tap (برگرداندن کارت) هیچ‌وقت کامل نمی‌شد.
+  // کشیدن (بلد بودم/نبودم) فقط بعد از دیدن جواب.
   const pan = Gesture.Pan()
+    .enabled(flipped)
     .activeOffsetX([-12, 12])
     .onUpdate((e) => {
       translateX.value = e.translationX;
@@ -333,6 +352,7 @@ const Flashcard = ({
         {flipped ? (
           <View style={[styles.card, styles.cardFace, styles.cardBack]}>
             <View pointerEvents="none" style={styles.cardBackTint} />
+            <Text style={styles.backWord}>{item.word}</Text>
             <Text style={styles.meaning}>{item.meaning}</Text>
           </View>
         ) : (
@@ -343,12 +363,6 @@ const Flashcard = ({
               </Text>
             </View>
             <Text style={styles.word}>{item.word}</Text>
-            <View style={[styles.dueBadge, isDue(item) && styles.dueBadgeNow]}>
-              <Clock color={isDue(item) ? COLORS.primary : COLORS.textSecondary} size={11} />
-              <Text style={[styles.dueText, isDue(item) && styles.dueTextNow]}>
-                {dueLabel(item, language)}
-              </Text>
-            </View>
             <Text style={styles.tapHint}>{t('tapToReveal')}</Text>
           </View>
         )}
@@ -358,6 +372,20 @@ const Flashcard = ({
 };
 
 const styles = StyleSheet.create({
+  revealBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 54,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    marginTop: 16,
+  },
+  revealText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
+  backWord: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.textSecondary, marginBottom: 8, textAlign: 'center' },
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,

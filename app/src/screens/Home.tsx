@@ -29,18 +29,18 @@ import {
   Sprout,
   TrendingUp,
   X,
-  Zap,
   Layers,
   Music,
+  ChevronLeft,
 } from 'lucide-react-native';
-import { BENTO_PATTERNS, BentoGrid, BentoSectionHeader, type BentoItem } from '../components/BentoGrid';
+import { type BentoItem } from '../components/BentoGrid';
+import { HomeGroup, type HomeGroupTab } from '../components/HomeGroup';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY as SCENE_LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
 import { StreakInfoModal } from '../components/StreakInfoModal';
 import { XpInfoModal } from '../components/XpInfoModal';
 import { useScenes } from '../data/ScenesContext';
-import { useVocab, isDue } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { getUserStreak, getUserSummary, getWeeklyActivity, getSkillsBreakdown } from '../api/progress';
@@ -132,8 +132,6 @@ export const HomeScreen = () => {
   const { scenes, reload: reloadScenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
   const { user } = useAuth();
-  const { box } = useVocab();
-  const dueCount = box.filter(isDue).length;
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [streak, setStreak] = React.useState(0);
   const [streakFreezes, setStreakFreezes] = React.useState<number | undefined>(undefined);
@@ -155,7 +153,9 @@ export const HomeScreen = () => {
   const [songs, setSongs] = React.useState<Song[]>([]);
   const [readChapters, setReadChapters] = React.useState<Set<string>>(new Set());
   const [courseLessons, setCourseLessons] = React.useState<CourseLesson[]>([]);
-  const [paths, setPaths] = React.useState<PathSummary[]>([]);
+  // null = هنوز نیامده؛ تا معلوم نشده کاربر مسیر را شروع کرده یا نه، کارت مأموریت را نشان
+  // نمی‌دهیم (وگرنه یک لحظه دیده می‌شد و بعد غیب می‌شد).
+  const [paths, setPaths] = React.useState<PathSummary[] | null>(null);
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
@@ -405,10 +405,14 @@ export const HomeScreen = () => {
   const best = (attempts: number, score: number) =>
     attempts > 0 ? ` · ${t('topicSpeakingBest').replace('{score}', String(score))}` : '';
 
-  const contentBadge = (level?: string) => ({
-    label: levelLabel(level),
-    color: CONTENT_LEVEL_BG[level || ''] || CONTENT_LEVEL_BG.beginner,
-  });
+  // برچسب سطح فقط وقتی سطح محتوا با سطح کاربر فرق دارد؛ برچسب «مبتدی» روی همه‌ی کارت‌ها تکرار بی‌فایده بود.
+  const contentBadge = (level?: string) =>
+    level && level.toLowerCase() === (myLevel?.scene_level || '').toLowerCase()
+      ? undefined
+      : {
+          label: levelLabel(level),
+          color: CONTENT_LEVEL_BG[level || ''] || CONTENT_LEVEL_BG.beginner,
+        };
   const uriImage = (path?: string) => (path ? { uri: absUrl(path) } : undefined);
 
   const clipItems = (list: VideoClipListItem[], source: 'flow' | 'movie'): BentoItem[] =>
@@ -510,10 +514,13 @@ export const HomeScreen = () => {
         meta: scenario.time || undefined,
         image: typeof scenario.imageUri === 'string' ? { uri: scenario.imageUri } : scenario.imageUri,
         emoji: '🌍',
-        badge: {
-          label: t(SCENE_LEVEL_LABEL_KEY[level] || SCENE_LEVEL_LABEL_KEY.Beginner),
-          color: (LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner).bg,
-        },
+        badge:
+          level.toLowerCase() === (myLevel?.scene_level || '').toLowerCase()
+            ? undefined
+            : {
+                label: t(SCENE_LEVEL_LABEL_KEY[level] || SCENE_LEVEL_LABEL_KEY.Beginner),
+                color: (LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner).bg,
+              },
         progress: scenario.progress || 0,
         completed: !!scenario.isCompleted,
         locked: scenario.isLocked,
@@ -523,12 +530,13 @@ export const HomeScreen = () => {
   };
 
   // مسیری که کاربر شروع کرده؛ وگرنه مسیر سطح خودش (یا اولین مسیر) به‌عنوان دعوت.
+  const pathList = paths ?? [];
   const homePath =
-    paths.find((p) => p.started) ||
-    paths.find((p) => p.level === myLevel?.scene_level) ||
-    paths.find((p) => p.level === 'starter') ||
-    paths[0];
-  const pathLevels = paths.map((p) => p.level);
+    pathList.find((p) => p.started) ||
+    pathList.find((p) => p.level === myLevel?.scene_level) ||
+    pathList.find((p) => p.level === 'starter') ||
+    pathList[0];
+  const pathLevels = pathList.map((p) => p.level);
 
   /** نزدیک‌ترین مسیر موجود هم‌سطح یا پایین‌تر از سطح کاربر. */
   const pathLevelFor = (level: string): string | undefined => {
@@ -680,7 +688,25 @@ export const HomeScreen = () => {
     },
     ...(!isBeginner ? [courseSection] : []),
   ];
-  const homeSections = allHomeSections.filter((section) => section.items.length > 0 || !!section.emptyText);
+  // بخش‌ها در سه دسته: ادامه‌ی یادگیری، کتابخانه (شنیدن و خواندن)، تمرین (صحبت و نوشتن).
+  // هر دسته یک لینک «همه» دارد که به همان نوعِ انتخاب‌شده در زبانه‌ها می‌رود.
+  const toTab = (sec: HomeSection, allLabel?: string): HomeGroupTab => ({
+    key: sec.key,
+    label: sec.title,
+    accent: sec.accent,
+    items: sec.items,
+    onAll: sec.onAction,
+    emptyText: sec.emptyText,
+    allLabel,
+  });
+  const byKey = (k: string) => allHomeSections.find((sec) => sec.key === k);
+  const pick = (keys: string[]) => keys.map(byKey).filter((x): x is HomeSection => !!x);
+  const learnTabs = [
+    ...(isBeginner ? [toTab(courseSection)] : []),
+    toTab(worldsSection, t('viewFullPath')),
+  ];
+  const libraryTabs = pick(['podcast', 'featuredPodcast', 'stories', 'songs', 'flow', 'movie']).map((sec) => toTab(sec));
+  const practiceTabs = pick(['topics', 'writing']).map((sec) => toTab(sec));
 
   // «برای امروز»: یک پادکست و یک داستان هم‌سطح کاربر (منتخب جلوتر از درسی؛ داستانِ تمام‌نشده جلوتر).
 
@@ -757,11 +783,7 @@ export const HomeScreen = () => {
               <Text style={styles.streakText}>{streak}</Text>
             </TouchableOpacity>
 
-            {/* XP Badge — لمس توضیح می‌دهد XP از کجا می‌آید (مثل بج استریک). */}
-            <TouchableOpacity style={styles.xpBadge} onPress={() => setXpInfoVisible(true)}>
-              <Zap size={16} color={COLORS.tertiary} fill={COLORS.tertiary} />
-              <Text style={styles.xpText}>{totalXP}</Text>
-            </TouchableOpacity>
+            {/* نشان XP از سربرگ برداشته شد تا سربرگ خلوت شود (XP در صفحه‌ی پیشرفت هست). */}
 
             {/* Drawer Trigger */}
             <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
@@ -809,7 +831,9 @@ export const HomeScreen = () => {
         {/* TODAY'S MISSION / CONTINUE STORY SECTION — همان کارتِ همیشگی، فقط
             وقتی /v1/mission/today چیزی برگردانده باشد شخصی‌سازی می‌شود؛ وگرنه
             دقیقاً همان «ادامه داستان»ِ قدیمی (scenes[0]) است. */}
-        {featuredScenario && (
+        {/* کارت «مأموریت امروز» فقط برای کسی که هنوز مسیر را شروع نکرده؛ وگرنه با «جلسه‌ی
+            بعدی من» رقابت می‌کرد و کاربر نمی‌دانست کدام را بزند. */}
+        {featuredScenario && paths !== null && !homePath?.started && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionLabel}>
@@ -949,104 +973,52 @@ export const HomeScreen = () => {
         </View>
         */}
 
-        <TouchableOpacity
-          style={styles.placementCtaCard}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('GoalPlan')}
-        >
-          <View style={styles.placementCtaIconCircle}>
-            <Flag size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.placementCtaTextContainer}>
-            <Text style={styles.placementCtaTitle}>
-              {goalPlan ? t('goalPlanTitle') : t('goalPlanHomeTitle')}
-            </Text>
-            <Text style={styles.placementCtaSub}>
+        {/* مسیرهای فرعی (برنامه‌ی هدف، تست دوباره، تمرین فعل) لینک‌های متنی کوچک زیر کارت اصلی‌اند،
+            نه کارت‌های هم‌وزن آن؛ تا «ادامه‌ی جلسه» تنها اقدام اصلی صفحه بماند. */}
+        <View style={styles.sideLinks}>
+          <TouchableOpacity style={styles.sideLink} onPress={() => navigation.navigate('GoalPlan')} hitSlop={6}>
+            <Flag size={15} color={COLORS.textSecondary} />
+            <Text style={styles.sideLinkText} numberOfLines={1}>
               {goalPlan
-                ? t('goalPlanReadyOf')
+                ? `${t('goalPlanTitle')} · ${t('goalPlanReadyOf')
                     .replace('{a}', String(goalPlan.ready))
-                    .replace('{b}', String(goalPlan.in_plan_count))
-                : t('goalPlanHomeSub')}
+                    .replace('{b}', String(goalPlan.in_plan_count))}`
+                : t('goalPlanHomeTitle')}
             </Text>
-          </View>
-        </TouchableOpacity>
-
-        {retestDue && (
-          <TouchableOpacity
-            style={styles.placementCtaCard}
-            activeOpacity={0.85}
-            onPress={() => {
-              track('retest_card_tap');
-              setPlacementModalVisible(true);
-            }}
-          >
-            <View style={styles.placementCtaIconCircle}>
-              <TrendingUp size={20} color={COLORS.primary} />
-            </View>
-            <View style={styles.placementCtaTextContainer}>
-              <Text style={styles.placementCtaTitle}>{t('retestCardTitle')}</Text>
-              <Text style={styles.placementCtaSub}>{t('retestCardSub')}</Text>
-            </View>
+            <ChevronLeft size={15} color={COLORS.primary} />
           </TouchableOpacity>
-        )}
-
-        {pendingVerb && (
-          <TouchableOpacity
-            style={styles.placementCtaCard}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
-          >
-            <View style={styles.placementCtaIconCircle}>
-              <Layers size={20} color={COLORS.primary} />
-            </View>
-            <View style={styles.placementCtaTextContainer}>
-              <Text style={styles.placementCtaTitle}>
+          {retestDue && (
+            <TouchableOpacity
+              style={styles.sideLink}
+              onPress={() => {
+                track('retest_card_tap');
+                setPlacementModalVisible(true);
+              }}
+              hitSlop={6}
+            >
+              <TrendingUp size={15} color={COLORS.textSecondary} />
+              <Text style={styles.sideLinkText} numberOfLines={1}>{t('retestLink')}</Text>
+              <ChevronLeft size={15} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
+          {pendingVerb && (
+            <TouchableOpacity
+              style={styles.sideLink}
+              onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
+              hitSlop={6}
+            >
+              <Layers size={15} color={COLORS.textSecondary} />
+              <Text style={styles.sideLinkText} numberOfLines={1}>
                 {t('verbPendingTitle').replace('{verb}', pendingVerb.lemma)}
               </Text>
-              <Text style={styles.placementCtaSub}>{t('verbPendingSub')}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* QUICK ACCESS: SHADOWING & LEITNER BOX */}
-        <View style={styles.quickActionsRow}>
-          <TouchableOpacity
-            style={[styles.quickCard, styles.quickCardPrimary]}
-            onPress={() => primaryScenario && openScene(primaryScenario)}
-            activeOpacity={0.85}
-            disabled={!primaryScenario}
-          >
-            <View style={[styles.quickIconCircle, { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
-              <Mic size={20} color={COLORS.white} />
-            </View>
-            <View style={styles.quickTextContainer}>
-              <Text style={[styles.quickCardTitle, { color: COLORS.white }]}>{t('shadowing')}</Text>
-              <Text style={[styles.quickCardSub, { color: 'rgba(255,255,255,0.8)' }]}>
-                {t('continueStory')}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => navigation.navigate('Leitner')}
-            activeOpacity={0.85}
-          >
-            {/* آبی به‌جای بنفش تکراری — تا با کارت شدوئینگ (که خودش بنفشِ
-                توپره) از همون نگاه اول جدا دیده شود. */}
-            <View style={[styles.quickIconCircle, { backgroundColor: COLORS.infoLight }]}>
-              <BookOpen size={20} color={COLORS.info} />
-            </View>
-            <View style={styles.quickTextContainer}>
-              <Text style={styles.quickCardTitle}>{t('leitner')}</Text>
-              <Text style={styles.quickCardSub}>
-                {dueCount > 0
-                  ? `${dueCount} ${t('wordsDue')}`
-                  : `${box.length} ${t('wordsSaved')}`}
-              </Text>
-            </View>
-          </TouchableOpacity>
+              <ChevronLeft size={15} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* کارت‌های سریع «سایه‌زنی» و «لایتنر» برداشته شدند؛ هر دو در نوار پایین هستند. */}
+        {/* ادامه‌ی یادگیری: صحنه‌های سطح (و قدم اول برای مبتدی)، با یک لینک «مسیر کامل». */}
+        <HomeGroup title={t('homeGroupLearn')} tabs={learnTabs} allLabel={t('homeSeeAll')} />
 
         {/* برای امروز: یک پادکست و یک داستان با عکس */}
         {(todayPodcast || todayStory) && (
@@ -1105,29 +1077,12 @@ export const HomeScreen = () => {
           </View>
         )}
 
-        {homeSections.map((section, index) => (
-          <View key={section.key}>
-            <BentoSectionHeader
-              title={section.title}
-              icon={section.icon}
-              accent={section.accent}
-              actionLabel={section.actionLabel}
-              onAction={section.onAction}
-            />
-            {section.items.length === 0 && section.emptyText ? (
-              <Text style={styles.allDoneText}>{section.emptyText}</Text>
-            ) : (
-              <BentoGrid
-                items={section.items}
-                pattern={BENTO_PATTERNS[index % BENTO_PATTERNS.length]}
-                accent={section.accent}
-              />
-            )}
-          </View>
-        ))}
+        <HomeGroup title={t('homeGroupLibrary')} tabs={libraryTabs} allLabel={t('homeSeeAll')} />
+        <HomeGroup title={t('homeGroupPractice')} tabs={practiceTabs} allLabel={t('homeSeeAll')} />
 
         {/* Bottom padding for tab bar */}
-        <View style={{ height: 90 }} />
+        {/* نوار شناور پایین (۷۰ + فاصله‌ی ۱۶ + لبه‌ی گوشی) نباید روی کارت آخر بیفتد. */}
+        <View style={{ height: 170 }} />
       </ScrollView>
 
       <PathStartSheet
@@ -1164,15 +1119,12 @@ export const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // بدون پس‌زمینه و سایه، هم‌خانواده‌ی بقیه‌ی دسته‌های خانه.
   todayPicksCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    padding: 16,
-    gap: 12,
-    marginBottom: 20,
-    ...SHADOWS.level1,
+    gap: 10,
+    marginBottom: 22,
   },
-  homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
   todayPicksRow: { flexDirection: 'row', gap: 12 },
   todayPick: { flex: 1, gap: 6 },
   todayPickImage: { height: 120, justifyContent: 'space-between', backgroundColor: COLORS.surfaceHigh, borderRadius: 16 },
@@ -1241,15 +1193,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
   },
+  // کنترل‌های سربرگ بدون کپسول و کادر؛ لمس‌پذیر می‌مانند ولی از سلام و کارت اصلی توجه نمی‌گیرند.
   langBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     gap: 4,
   },
   langBadgeText: {
@@ -1260,14 +1209,13 @@ const styles = StyleSheet.create({
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 6,
+    gap: 4,
   },
+  sideLinks: { gap: 2, marginBottom: 20, marginTop: -4 },
+  sideLink: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  sideLinkText: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 13, color: COLORS.textSecondary, textAlign: 'right' },
   streakText: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
@@ -1290,14 +1238,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   menuBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   progressCard: {
     backgroundColor: COLORS.surface,

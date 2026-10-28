@@ -1195,7 +1195,9 @@ export const SceneScreen = () => {
           onStreakPress={() => setStreakInfoVisible(true)}
           onExit={resetToHome}
           bubbleSpeaker={currentDialogue.speaker}
-          bubbleText={!isShadowingMode ? currentDialogue.dialogue : undefined}
+          // در حالت اکسپلور همین جمله در کارت پایین هست؛ حباب روی تصویر فقط تکرارش بود
+          // و صورت شخصیت‌ها را می‌پوشاند.
+          bubbleText={undefined}
           bubbleContent={
             isShadowingMode && textDisplayMode === 'bubble' ? (
               <DialogueSentenceContent

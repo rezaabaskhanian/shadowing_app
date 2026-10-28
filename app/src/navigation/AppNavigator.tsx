@@ -72,6 +72,9 @@ import { SpecialtyFieldScreen } from '../screens/Specialty/SpecialtyFieldScreen'
 import { StoryScreen } from '../screens/Story/StoryScreen';
 import { SongListScreen } from '../screens/Song/SongListScreen';
 import { SongScreen } from '../screens/Song/SongScreen';
+import { SongTakesScreen } from '../screens/Song/SongTakesScreen';
+import { PodcastDictationScreen } from '../screens/Podcast/PodcastDictationScreen';
+import { DictationListScreen } from '../screens/Podcast/DictationListScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
@@ -108,6 +111,7 @@ const FreshSong = freshPerOpen(SongScreen);
 const FreshInterviewSession = freshPerOpen(InterviewSessionScreen);
 const FreshSpecialtyField = freshPerOpen(SpecialtyFieldScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
+const FreshPodcastDictation = freshPerOpen(PodcastDictationScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
@@ -146,6 +150,9 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'PodcastList',
   'StoryList',
   'SongList',
+  'SongTakes',
+  'PodcastDictation',
+  'DictationList',
   'InterviewList',
   'InterviewSession',
   'SpecialtyHub',
@@ -226,8 +233,9 @@ const HomeTabButton = ({ label, isFocused, onPress }: { label: string; isFocused
   }, [isFocused, focus]);
 
   const circleStyle = useAnimatedStyle(() => ({
+    // در حالت غیرفعال خنثی (نه نارنجی)؛ وگرنه کنار تب فعالِ دیگر، دو تب فعال دیده می‌شد.
     backgroundColor: interpolateColor(focus.value, [0, 1], [COLORS.surface, COLORS.primary]),
-    borderColor: interpolateColor(focus.value, [0, 1], [COLORS.primary, COLORS.background]),
+    borderColor: interpolateColor(focus.value, [0, 1], [COLORS.border, COLORS.background]),
     transform: [{ scale: 0.94 + focus.value * 0.12 }],
   }));
 
@@ -235,7 +243,7 @@ const HomeTabButton = ({ label, isFocused, onPress }: { label: string; isFocused
     <TouchableOpacity onPress={onPress} style={styles.centerTabItem} activeOpacity={0.85}>
       <Animated.View style={[styles.centerCircle, circleStyle]}>
         <House
-          color={isFocused ? COLORS.white : COLORS.primary}
+          color={isFocused ? COLORS.white : COLORS.textSecondary}
           size={24}
           strokeWidth={isFocused ? 2.4 : 2}
           fill={isFocused ? hexToRgba(COLORS.white, 0.25) : 'transparent'}
@@ -403,12 +411,15 @@ export const AppNavigator = () => {
       <Tab.Screen name="Story" component={FreshStory} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SongList" component={SongListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Song" component={FreshSong} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="SongTakes" component={SongTakesScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="InterviewList" component={InterviewListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="InterviewSession" component={FreshInterviewSession} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SpecialtyHub" component={SpecialtyHubScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SpecialtyField" component={FreshSpecialtyField} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PodcastDictation" component={FreshPodcastDictation} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="DictationList" component={DictationListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen
         name="TopicSuggestion"
         component={TopicSuggestionScreen}
@@ -472,20 +483,26 @@ export const AppNavigator = () => {
           tabBarButton: () => null,
         }}
       />
-      <Tab.Screen
-        name="ToastDemo"
-        component={ToastDemoScreen}
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tab.Screen
-        name="RealtimePoC"
-        component={RealtimePoCScreen}
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
+      {/* ابزار فقط-توسعه؛ در بیلد ریلیز اصلاً مسیرش ثبت نمی‌شود. */}
+      {__DEV__ && (
+        <Tab.Screen
+          name="ToastDemo"
+          component={ToastDemoScreen}
+          options={{
+            tabBarButton: () => null,
+          }}
+        />
+      )}
+      {/* ابزار فقط-توسعه؛ در بیلد ریلیز اصلاً مسیرش ثبت نمی‌شود. */}
+      {__DEV__ && (
+        <Tab.Screen
+          name="RealtimePoC"
+          component={RealtimePoCScreen}
+          options={{
+            tabBarButton: () => null,
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 };

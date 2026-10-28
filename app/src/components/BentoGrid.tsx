@@ -234,7 +234,8 @@ const styles = StyleSheet.create({
   },
   scrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(12, 16, 23, 0.38)',
+    // تیره‌تر از قبل (۰٫۳۸): نوشته‌ی سفید روی عکس‌های روشن خوانا نبود.
+    backgroundColor: 'rgba(12, 16, 23, 0.5)',
   },
   scrimLight: {
     backgroundColor: 'rgba(12, 16, 23, 0.12)',

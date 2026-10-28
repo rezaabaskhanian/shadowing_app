@@ -63,6 +63,10 @@ const TILE_FROM_SCALE = 1.3;
 const OPEN_SCALE = 1.6; // زوم اولیه روی «جای امروز»
 const MARKER = 34;
 const HIT_RADIUS = 30; // شعاع لمس هر نقطه روی صفحه (پیکسل)
+// نشانه مثل پین روی زمین می‌نشیند: سایه‌ی بیضی دقیقاً روی نقطه و دایره کمی بالاتر،
+// تا تخت و چسبیده روی عکس به نظر نرسد. LIFT فاصله‌ی مرکز دایره تا نقطه روی صفحه است.
+const PIN_SHADOW = 8;
+const LIFT = MARKER / 2 + PIN_SHADOW / 2;
 const PREVIEW_LINES = 2;
 
 const LEVEL_KEY: Record<string, string> = {
@@ -277,13 +281,14 @@ export const GoalMapScreen = () => {
         const lx = (p.x / 100) * base.w;
         const ly = (p.y / 100) * base.h;
         const px = base.w / 2 + ttx + s * (lx - base.w / 2);
-        const py = base.h / 2 + tty + s * (ly - base.h / 2);
+        const py = base.h / 2 + tty + s * (ly - base.h / 2) - LIFT;
         const d = Math.hypot(px - sx, py - sy);
         if (d < bestD) {
           bestD = d;
           best = p;
         }
       }
+      setHintGone(true);
       if (best) openPoint(best);
       else setSelected(null);
     },
@@ -293,6 +298,10 @@ export const GoalMapScreen = () => {
   // تپش «جای امروز» هر فریم اجرا می‌شود؛ وسط زوم/جابه‌جایی متوقفش می‌کنیم تا
   // گوشی فقط یک کار داشته باشد، و بعد از رها کردن دوباره شروع می‌شود.
   const pulse = useSharedValue(0);
+  // راهنمای «زوم کن · روی یه جا بزن» فقط تا اولین لمس/زوم دیده می‌شود.
+  const [hintGone, setHintGone] = useState(false);
+  const hideHint = useCallback(() => setHintGone(true), []);
+
   const startPulse = () => {
     'worklet';
     pulse.value = 0;
@@ -313,7 +322,10 @@ export const GoalMapScreen = () => {
   }, []);
 
   const pinch = Gesture.Pinch()
-    .onBegin(stopPulse)
+    .onBegin(() => {
+      stopPulse();
+      runOnJS(hideHint)();
+    })
     .onFinalize(startPulse)
     .onStart(() => {
       startScale.value = scale.value;
@@ -338,7 +350,10 @@ export const GoalMapScreen = () => {
 
   const pan = Gesture.Pan()
     .minDistance(6)
-    .onBegin(stopPulse)
+    .onBegin(() => {
+      stopPulse();
+      runOnJS(hideHint)();
+    })
     .onFinalize(startPulse)
     .onStart(() => {
       startTx.value = tx.value;
@@ -499,11 +514,12 @@ export const GoalMapScreen = () => {
                         styles.markerWrap,
                         {
                           left: (p.x / 100) * base.w - MARKER / 2,
-                          top: (p.y / 100) * base.h - MARKER / 2,
+                          top: (p.y / 100) * base.h - MARKER - PIN_SHADOW / 2,
                         },
                         markerStyle,
                       ]}
                     >
+                      <View style={styles.pinShadow} />
                       {st === 'today' && (
                         <Animated.View style={[styles.halo, haloStyle]} />
                       )}
@@ -522,14 +538,13 @@ export const GoalMapScreen = () => {
                         ) : st === 'empty' ? (
                           <Lock size={14} color="#FFFFFF" />
                         ) : (
-                          <Text
+                          // شماره‌ی داخلی موقعیت معنایی برای کاربر نداشت؛ اسمش با لمس دیده می‌شود.
+                          <View
                             style={[
-                              styles.markerNum,
-                              st === 'today' && styles.markerNumToday,
+                              styles.markerDot,
+                              st === 'today' && styles.markerDotToday,
                             ]}
-                          >
-                            {p.position}
-                          </Text>
+                          />
                         )}
                       </View>
                       {(st === 'today' ||
@@ -563,11 +578,11 @@ export const GoalMapScreen = () => {
           }
           accessibilityLabel={t('close')}
         >
-          <X size={20} color={CINE.text} />
+          <X size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {!selected && (
+      {!selected && !hintGone && (
         <View
           style={[styles.hint, { bottom: insets.bottom + SPACING.l }]}
           pointerEvents="none"
@@ -788,12 +803,25 @@ const styles = StyleSheet.create({
   markerWrap: {
     position: 'absolute',
     width: MARKER,
-    height: MARKER,
+    height: MARKER + PIN_SHADOW,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    // مقیاس معکوس حول نوک پین، تا با زوم روی همان نقطه‌ی عکس بماند.
+    transformOrigin: '50% 100%',
   },
+  pinShadow: {
+    position: 'absolute',
+    bottom: 0,
+    width: 18,
+    height: PIN_SHADOW,
+    borderRadius: PIN_SHADOW,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  markerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: CINE.accent },
+  markerDotToday: { backgroundColor: '#FFFFFF' },
   halo: {
     position: 'absolute',
+    top: 0,
     width: MARKER,
     height: MARKER,
     borderRadius: MARKER / 2,
@@ -850,13 +878,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: SPACING.l,
   },
+  // دکمه‌ی بستن کم‌رنگ و نیمه‌شفاف، تا تمرکز روی خود نقشه بماند.
   iconBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    borderWidth: 1,
-    borderColor: CINE.border,
+    backgroundColor: 'rgba(26,29,38,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },

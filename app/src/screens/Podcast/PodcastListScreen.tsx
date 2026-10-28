@@ -2,14 +2,14 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Headphones, Play, X } from 'lucide-react-native';
+import { Play, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
 import { getPodcasts, atOrBelowLevel, type Podcast } from '../../api/podcasts';
-import { BannerCard, ListHero } from '../../components/ContentVisuals';
+import { BannerCard } from '../../components/ContentVisuals';
 import { getMyLevel } from '../../api/assessment';
 
 const LEVEL_META: Record<string, { labelKey: string; bg: string }> = {
@@ -43,10 +43,13 @@ export const PodcastListScreen: React.FC = () => {
   // فقط سطح کاربر و پایین‌تر (درسی و منتخب)؛ سطح بالاتر هرگز.
   const [myLevel, setMyLevel] = useState<string | null>(null);
   const scoped = allPodcasts ? atOrBelowLevel(allPodcasts, myLevel) : allPodcasts;
-  const podcasts =
+  // هم‌سطح کاربر اول، بعد سطح‌های پایین‌تر.
+  const levelRank = (l: string) => ['starter', 'beginner', 'intermediate', 'advanced', 'proficient'].indexOf(l);
+  const podcasts = (
     scoped && kind !== 'all'
       ? scoped.filter((p) => (p.kind === 'featured' ? 'featured' : 'lesson') === kind)
-      : scoped;
+      : scoped
+  )?.slice().sort((a, b) => levelRank(b.level) - levelRank(a.level));
 
   const load = useCallback(() => {
     setError(false);
@@ -62,16 +65,12 @@ export const PodcastListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
+      {/* سربرگ جمع‌وجور: دکمه‌ی بستن و عنوان در یک ردیف؛ لیست پادکست‌ها از همان بالای صفحه. */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <ListHero
-          icon={<Headphones size={26} color={COLORS.white} />}
-          color={COLORS.pink}
-          title={t('podcastTitle')}
-          subtitle={t('podcastSubtitle')}
-        />
+        <Text style={styles.title}>{t('podcastTitle')}</Text>
       </View>
 
       {hasFeatured && (
@@ -156,8 +155,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  // فیلتر فعال با رنگ کم‌رنگ؛ مرجانی پررنگ فقط برای اقدام اصلی.
   tabActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
   },
   tabText: {
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   tabTextActive: {
-    color: COLORS.white,
+    color: COLORS.primary,
   },
   container: {
     flex: 1,
@@ -174,18 +174,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.s,
     marginBottom: SPACING.m,
   },
+  title: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
+    lineHeight: 28,
+    color: COLORS.text,
+    textAlign: 'right',
+  },
   closeBtn: {
-    alignSelf: 'flex-start',
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.s,
   },
   center: {
     flex: 1,

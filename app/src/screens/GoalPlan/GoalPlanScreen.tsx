@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Map as MapIcon, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
+import { Briefcase, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Map as MapIcon, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -298,7 +298,6 @@ export const GoalPlanScreen: React.FC = () => {
   const nextLabel = f?.next_level ? t(LEVEL_KEY[f.next_level] || 'levelBeginner') : '';
   const goalMeta = GOALS.find((g) => g.id === view.plan.goal) || GOALS[0];
   const goalLabel = t(goalMeta.labelKey);
-  const inPlan = view.situations.filter((s) => s.in_plan);
   const openScene = (sceneId?: string) =>
     sceneId && navigation.navigate('Shadowing', { scenarioId: sceneId, returnTo: 'GoalPlan' });
   const todayExtra = view.today_extra;
@@ -310,10 +309,6 @@ export const GoalPlanScreen: React.FC = () => {
         <View style={styles.flex1}>
           <Text style={cine.kicker}>{t('goalPlanTitle')}</Text>
           <Text style={cine.goalTitle}>{goalLabel}</Text>
-        </View>
-        <View style={cine.pill}>
-          <CalendarDays size={14} color={CINE.gold} />
-          <Text style={cine.pillText}>{f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}</Text>
         </View>
         {hasMap && (
           <TouchableOpacity
@@ -358,9 +353,6 @@ export const GoalPlanScreen: React.FC = () => {
               <View style={cine.heroBadge}>
                 <Text style={cine.heroBadgeText}>{t('goalPlanToday')}</Text>
               </View>
-              <View style={cine.playFab}>
-                <Play size={18} color={CINE.bg} fill={CINE.bg} />
-              </View>
             </View>
             <View style={cine.heroBody}>
               <Text style={cine.heroTitle}>{today.title_fa}</Text>
@@ -369,6 +361,11 @@ export const GoalPlanScreen: React.FC = () => {
                 {' · '}
                 {t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}
               </Text>
+              {/* اقدام اصلی صفحه، با اسم؛ قبلاً فقط یک آیکون پخش روی لبه‌ی عکس بود. */}
+              <View style={cine.startBtn}>
+                <Play size={16} color={CINE.bg} fill={CINE.bg} />
+                <Text style={cine.startBtnText}>{t('goalPlanStartToday')}</Text>
+              </View>
             </View>
           </TouchableOpacity>
         ) : (
@@ -405,29 +402,18 @@ export const GoalPlanScreen: React.FC = () => {
             <Text style={cine.sectionTitle}>{t('goalPlanSituations')}</Text>
             <Text style={cine.sectionMeta}>
               {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
+              {' · '}
+              {f ? t('goalPlanDaysLeft').replace('{n}', num(f.days_left)) : t('goalPlanNoDate')}
             </Text>
           </View>
-          <View style={cine.strip}>
-            {inPlan.map((s, i) => {
-              const isToday = s.id === view.today_id;
-              const open = s.has_content && !!s.scene_id;
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[cine.stripCell, s.ready && cine.stripDone, isToday && cine.stripToday, !open && cine.stripLocked]}
-                  disabled={!open}
-                  onPress={() => openScene(s.scene_id)}
-                  activeOpacity={0.85}
-                  accessibilityLabel={s.title_fa}
-                >
-                  {s.ready ? (
-                    <Check size={14} color={CINE.bg} />
-                  ) : (
-                    <Text style={[cine.stripText, isToday && { color: CINE.accentText }]}>{num(i + 1)}</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+          {/* پیشرفت کلی؛ اسم تک‌تک موقعیت‌ها در فهرست پایین آمده (خانه‌های شماره‌دار بی‌نام حذف شد). */}
+          <View style={cine.progressTrack}>
+            <View
+              style={[
+                cine.progressFill,
+                { width: `${view.in_plan_count > 0 ? Math.round((view.ready / view.in_plan_count) * 100) : 0}%` },
+              ]}
+            />
           </View>
           {f && (
             <Text style={cine.forecast}>
@@ -684,7 +670,20 @@ const cine = StyleSheet.create({
   stripToday: { backgroundColor: 'transparent', borderWidth: 2, borderColor: CINE.accent },
   stripLocked: { opacity: 0.45 },
   stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.dim },
-  forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: CINE.muted },
+  forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: CINE.text },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: CINE.strip, overflow: 'hidden' },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: CINE.success },
+  startBtn: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: CINE.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  startBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.bg },
   rail: { gap: 12, paddingRight: 2 },
   railCard: { width: 128, gap: 4 },
   railImg: { width: 128, height: 80, borderRadius: 12 },

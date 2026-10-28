@@ -80,8 +80,9 @@ export const BannerCard: React.FC<BannerCardProps> = ({
           {title}
         </Text>
         {!!badgeLabel && (
-          <View style={[styles.badge, { backgroundColor: accent }]}>
-            <Text style={styles.badgeText}>{badgeLabel}</Text>
+          // برچسب سطح: پس‌زمینه‌ی کم‌رنگ و متن رنگی، نه پس‌زمینه‌ی پررنگ که با عکس رقابت کند.
+          <View style={[styles.badge, { backgroundColor: hexToRgba(accent, 0.12) }]}>
+            <Text style={[styles.badgeText, { color: accent }]}>{badgeLabel}</Text>
           </View>
         )}
       </View>

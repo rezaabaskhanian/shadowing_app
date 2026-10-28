@@ -72,6 +72,7 @@ export const PlacementV2Flow: React.FC<Props> = ({ test, onSkip, onDone }) => {
         onSkip={onSkip}
         bullets={[t('placementV2IntroBullet1'), t('placementV2IntroBullet2'), t('placementV2IntroBullet3')]}
         timeEstimate={t('placementV2IntroTime')}
+        body={t('placementV2IntroBody')}
       />
     );
   }

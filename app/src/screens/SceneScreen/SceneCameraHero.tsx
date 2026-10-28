@@ -40,12 +40,17 @@ interface SceneCamera {
  * هم انیمیشن دوربین و هم محاسبه‌ی موقعیت حباب دیالوگ از همین تابع استفاده
  * می‌کنند تا همیشه با هم هماهنگ بمانند.
  */
+const CAMERA_ZOOM_ENABLED = false;
+
 function computeSceneCamera(
   target: { x: number; y: number },
   screenWidth: number,
   topViewHeight: number,
   imageHeight: number
 ): SceneCamera {
+  // عکس صحنه همیشه کامل دیده می‌شود (درخواست کاربر، ۱۴۰۵/۰۸/۰۶): زوم روی هات‌اسپات
+  // بخشی از عکس را می‌برید. نقطه‌ی هات‌اسپات با پالس روی همان عکس کامل نشان داده می‌شود.
+  if (!CAMERA_ZOOM_ENABLED) return { scale: 1, panX: 0, panY: 0 };
   // اگر کادر بلندتر از ارتفاعِ واقعیِ رندرشده‌ی عکس باشد (letterbox عمودی —
   // مثلاً در مرحله‌ی شدو که کادر عمداً حداقل نصفِ صفحه است)، y نرمال‌شده‌ی
   // هدف باید نسبت به خودِ عکس حساب شود، نه کل کادر؛ وگرنه دوربین روی نقطه‌ای

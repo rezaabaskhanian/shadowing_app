@@ -6,7 +6,8 @@ import TrackPlayer, { Event, State } from 'react-native-track-player';
 import Sound from 'react-native-nitro-sound';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { Headphones, Mic, Music, Pause, Play, RotateCcw, Square, X } from 'lucide-react-native';
+import { Download, Headphones, ListMusic, Mic, Music, Pause, Play, RotateCcw, RotateCw, SkipBack, SkipForward, Square, X } from 'lucide-react-native';
+import { formatDuration } from '../Podcast/PodcastListScreen';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -15,11 +16,25 @@ import { absUrl } from '../../api/config';
 import { getSong, type Song } from '../../api/songs';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { ensureMicPermission } from '../../services/micPermission';
+import { addTake, exportTake, getTake, type SongTake } from '../../services/songTakes';
 import { track } from '../../services/analytics';
 import { KaraokeText } from '../../components/KaraokeText';
 import { levelColor } from '../../components/ContentVisuals';
 
 const SONG_TRACK_ID = 'song';
+
+// play() زودتر از شروع واقعی صدا برمی‌گردد (آهنگ هنوز از شبکه بافر می‌شود)؛ تا وقتی
+// واقعاً پخش نشده، ضبط یا پخش صدای کاربر را شروع نمی‌کنیم وگرنه از موزیک جلو می‌افتد.
+async function waitUntilPlaying(timeoutMs = 15000): Promise<boolean> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const { state } = await TrackPlayer.getPlaybackState();
+    if (state === State.Playing) return true;
+    if (state === State.Error) return false;
+    await new Promise<void>((r) => setTimeout(r, 80));
+  }
+  return false;
+}
 // صدای خود کاربر روی موزیک: موزیک کمی آرام‌تر تا صدایش شنیده شود.
 const BACKING_VOLUME_ON_REPLAY = 0.6;
 
@@ -41,6 +56,8 @@ export const SongScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const songId: string | undefined = route.params?.songId;
+  // از «ضبط‌های من»: همان ضبط آماده‌ی پخش باز می‌شود.
+  const takeId: string | undefined = route.params?.takeId;
 
   const [song, setSong] = useState<Song | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -52,8 +69,15 @@ export const SongScreen: React.FC = () => {
   const [shownFa, setShownFa] = useState<Set<number>>(new Set());
   const [singStep, setSingStep] = useState<SingStep>('idle');
   const [micDenied, setMicDenied] = useState(false);
+  // بین زدن دکمه و شروع واقعی موزیک (بافر شدن)؛ دکمه‌ها غیرفعال و چرخنده.
+  const [starting, setStarting] = useState(false);
 
-  const takeRef = useRef<{ path: string; offsetMs: number } | null>(null);
+  // ضبطِ در حال انجام (قبل از ذخیره) و آخرین ضبط ذخیره‌شده.
+  const recRef = useRef<{ path: string; offsetMs: number; startedAt: number } | null>(null);
+  const takeRef = useRef<SongTake | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportedTo, setExportedTo] = useState<string | null>(null);
+  const [exportFailed, setExportFailed] = useState(false);
   const singStepRef = useRef<SingStep>('idle');
   singStepRef.current = singStep;
 
@@ -83,7 +107,16 @@ export const SongScreen: React.FC = () => {
     };
   }, [songId]);
 
-  const backingUrl = song ? song.instrumental_url || song.audio_url : '';
+  useEffect(() => {
+    if (!takeId) return;
+    getTake(takeId).then((tk) => {
+      if (!tk) return;
+      takeRef.current = tk;
+      setExportedTo(tk.exportedPath ?? null);
+      setMode('sing');
+      setSingStep('recorded');
+    });
+  }, [takeId]);
 
   // یک پخش‌کننده‌ی سراسری داریم؛ هر بار فقط آهنگی که این حالت لازم دارد در صف است.
   const loadTrack = useCallback(
@@ -123,7 +156,20 @@ export const SongScreen: React.FC = () => {
     await TrackPlayer.pause().catch(() => {});
     try {
       const path = await Sound.stopRecorder();
-      if (takeRef.current) takeRef.current.path = path || takeRef.current.path;
+      const rec = recRef.current;
+      if (rec && song) {
+        // هر ضبط جدا در «ضبط‌های من» می‌ماند؛ طولش برای اینکه پخش همان‌جا تمام شود.
+        takeRef.current = await addTake(path || rec.path, {
+          songId: song.id,
+          title: song.title,
+          artist: song.artist,
+          coverUrl: song.cover_url,
+          offsetMs: rec.offsetMs,
+          durationMs: Math.max(500, Date.now() - rec.startedAt),
+        });
+        setExportedTo(null);
+        setExportFailed(false);
+      }
       setSingStep('recorded');
       track('song_sing_recorded', song?.id);
     } catch {
@@ -137,12 +183,32 @@ export const SongScreen: React.FC = () => {
     await Sound.stopPlayer().catch(() => {});
     setSingStep('recorded');
   }, []);
+  const stopReplayRef = useRef(stopReplay);
+  stopReplayRef.current = stopReplay;
+
+  const saveToPhone = async () => {
+    const tk = takeRef.current;
+    if (!tk || exporting) return;
+    setExporting(true);
+    setExportFailed(false);
+    try {
+      setExportedTo(await exportTake(tk));
+      track('song_take_exported', tk.songId);
+    } catch {
+      setExportFailed(true);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
       const ms = Math.round(d.position * 1000);
       positionSV.value = ms;
       setPositionMs(ms);
+      // نسخه‌ی خودم فقط تا جایی که کاربر خوانده پخش می‌شود، نه تا آخر آهنگ.
+      const tk = takeRef.current;
+      if (singStepRef.current === 'replaying' && tk && ms >= tk.offsetMs + tk.durationMs) stopReplayRef.current();
     });
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
       playingSV.value = d.state === State.Playing;
@@ -199,6 +265,35 @@ export const SongScreen: React.FC = () => {
     if (!playing) await TrackPlayer.play();
   };
 
+  // ---------- جابه‌جایی در آهنگ ----------
+  const [trackWidth, setTrackWidth] = useState(1);
+  const durationMs = (song?.duration_seconds ?? 0) * 1000;
+  const progress = durationMs > 0 ? Math.min(1, positionMs / durationMs) : 0;
+  const seekToMs = async (ms: number) => {
+    if (!song || mode !== 'listen') return;
+    if (loadedUrl !== song.audio_url) await loadTrack(song.audio_url);
+    const target = Math.max(0, Math.min(durationMs, ms));
+    followRef.current = true;
+    lastActive.current = -1;
+    await TrackPlayer.seekTo(target / 1000);
+    positionSV.value = target;
+    setPositionMs(target);
+  };
+  const seekBy = (sec: number) => seekToMs(positionMs + sec * 1000);
+  const seekToFraction = (x: number) => seekToMs((x / trackWidth) * durationMs);
+  const songLines = song?.lines ?? [];
+  // خط قبلی: اگر بیش از یک ثانیه از خط فعلی گذشته، همین خط از اول.
+  const prevLine = () => {
+    const idx = songLines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 250);
+    if (idx >= 0 && positionMs - songLines[idx].start_ms > 1000) return seekToMs(songLines[idx].start_ms);
+    const before = [...songLines].reverse().find((l) => l.start_ms < positionMs - 300 && l !== songLines[idx]);
+    return seekToMs(before ? before.start_ms : 0);
+  };
+  const nextLine = () => {
+    const after = songLines.find((l) => l.start_ms > positionMs + 100);
+    if (after) seekToMs(after.start_ms);
+  };
+
   const toggleFa = (i: number) =>
     setShownFa((prev) => {
       const next = new Set(prev);
@@ -209,7 +304,7 @@ export const SongScreen: React.FC = () => {
 
   // ---------- با آهنگ بخوان ----------
   const switchMode = async (m: Mode) => {
-    if (m === mode || singStep === 'recording') return;
+    if (m === mode || singStep === 'recording' || starting) return;
     await TrackPlayer.pause().catch(() => {});
     await Sound.stopPlayer().catch(() => {});
     await TrackPlayer.setVolume(1).catch(() => {});
@@ -222,50 +317,63 @@ export const SongScreen: React.FC = () => {
   };
 
   const startSinging = async () => {
-    if (!song) return;
+    if (!song || !song.instrumental_url || starting) return;
     if (!(await ensureMicPermission())) {
       setMicDenied(true);
       return;
     }
     setMicDenied(false);
-    await Sound.stopPlayer().catch(() => {});
-    await loadTrack(backingUrl);
-    await TrackPlayer.setVolume(1).catch(() => {});
-    const path = `${RNFS.DocumentDirectoryPath}/song_take_${song.id}.m4a`;
+    setStarting(true);
     try {
-      await Sound.startRecorder(path, undefined, false);
-    } catch {
-      setMicDenied(true);
-      return;
+      await Sound.stopPlayer().catch(() => {});
+      await loadTrack(song.instrumental_url);
+      await TrackPlayer.setVolume(1).catch(() => {});
+      await TrackPlayer.seekTo(0);
+      await TrackPlayer.play();
+      if (!(await waitUntilPlaying())) return;
+      const path = `${RNFS.CachesDirectoryPath}/song_rec_${Date.now()}.m4a`;
+      try {
+        await Sound.startRecorder(path, undefined, false);
+      } catch {
+        await TrackPlayer.pause().catch(() => {});
+        setMicDenied(true);
+        return;
+      }
+      // ضبط از این لحظه‌ی موزیک شروع شده؛ موقع پخش، موزیک از همین‌جا شروع می‌شود.
+      const { position } = await TrackPlayer.getProgress();
+      recRef.current = { path, offsetMs: Math.round(position * 1000), startedAt: Date.now() };
+      followRef.current = true;
+      lastActive.current = -1;
+      setSingStep('recording');
+      track('song_sing_started', song.id);
+    } finally {
+      setStarting(false);
     }
-    const recStartedAt = Date.now();
-    await TrackPlayer.seekTo(0);
-    await TrackPlayer.play();
-    // ضبط کمی زودتر از موزیک شروع شده؛ موقع پخش، ضبط را به همین اندازه جلو می‌بریم تا هم‌زمان شوند.
-    takeRef.current = { path, offsetMs: Date.now() - recStartedAt };
-    followRef.current = true;
-    lastActive.current = -1;
-    setSingStep('recording');
-    track('song_sing_started', song.id);
   };
 
   const replayMine = async () => {
     const take = takeRef.current;
-    if (!take) return;
-    await loadTrack(backingUrl);
-    await TrackPlayer.setVolume(BACKING_VOLUME_ON_REPLAY).catch(() => {});
+    if (!take || !song?.instrumental_url || starting) return;
+    setStarting(true);
     try {
-      await Sound.startPlayer(take.path);
-      if (take.offsetMs > 0) await Sound.seekToPlayer(take.offsetMs);
-    } catch {
-      return;
+      await loadTrack(song.instrumental_url);
+      await TrackPlayer.setVolume(BACKING_VOLUME_ON_REPLAY).catch(() => {});
+      await TrackPlayer.seekTo(take.offsetMs / 1000);
+      await TrackPlayer.play();
+      if (!(await waitUntilPlaying())) return;
+      try {
+        await Sound.startPlayer(take.path);
+      } catch {
+        await TrackPlayer.pause().catch(() => {});
+        return;
+      }
+      followRef.current = true;
+      lastActive.current = -1;
+      setSingStep('replaying');
+      track('song_sing_replayed', song.id);
+    } finally {
+      setStarting(false);
     }
-    await TrackPlayer.seekTo(0);
-    await TrackPlayer.play();
-    followRef.current = true;
-    lastActive.current = -1;
-    setSingStep('replaying');
-    track('song_sing_replayed', song?.id);
   };
 
   // ---------- متن ----------
@@ -387,7 +495,7 @@ export const SongScreen: React.FC = () => {
           <View style={[styles.singCard, { backgroundColor: hexToRgba(accent, 0.08) }]}>
             <Headphones size={16} color={accent} />
             <Text style={styles.singHint}>
-              {song.instrumental_url ? t('songSingHint') : t('songSingHintNoInstrumental')}
+              {song.instrumental_url ? t('songSingHint') : t('songNoInstrumental')}
             </Text>
           </View>
         )}
@@ -438,11 +546,52 @@ export const SongScreen: React.FC = () => {
       {/* نوار پایین */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + SPACING.s }]}>
         {mode === 'listen' ? (
-          <TouchableOpacity style={[styles.mainBtn, { backgroundColor: accent }]} onPress={togglePlay} activeOpacity={0.85}>
-            {playing ? <Pause size={22} color={COLORS.white} /> : <Play size={22} color={COLORS.white} fill={COLORS.white} />}
-          </TouchableOpacity>
+          // پخش‌کننده‌ی کامل مثل پادکست: نوار زمان قابل لمس، ۱۰ ثانیه عقب/جلو، خط قبلی/بعدی.
+          <View style={styles.playerWrap}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width || 1)}
+              onPress={(e) => seekToFraction(e.nativeEvent.locationX)}
+              style={styles.progressHit}
+            >
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
+              </View>
+            </TouchableOpacity>
+            <View style={styles.timeRow}>
+              <Text style={styles.time}>{formatDuration(positionMs / 1000)}</Text>
+              <Text style={styles.time}>{formatDuration(song.duration_seconds)}</Text>
+            </View>
+            <View style={styles.controls}>
+              <TouchableOpacity onPress={prevLine} activeOpacity={0.8} hitSlop={8}>
+                <SkipBack size={22} color={COLORS.text} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => seekBy(-10)} activeOpacity={0.8} hitSlop={8}>
+                <RotateCcw size={22} color={COLORS.text} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.mainBtn, { backgroundColor: accent }]} onPress={togglePlay} activeOpacity={0.85}>
+                {playing ? <Pause size={22} color={COLORS.white} /> : <Play size={22} color={COLORS.white} fill={COLORS.white} />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => seekBy(10)} activeOpacity={0.8} hitSlop={8}>
+                <RotateCw size={22} color={COLORS.text} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextLine} activeOpacity={0.8} hitSlop={8}>
+                <SkipForward size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : starting ? (
+          <View style={[styles.wideBtn, { backgroundColor: hexToRgba(accent, 0.6) }]}>
+            <ActivityIndicator color={COLORS.white} />
+            <Text style={styles.wideBtnText}>{t('songGettingReady')}</Text>
+          </View>
         ) : singStep === 'idle' ? (
-          <TouchableOpacity style={[styles.wideBtn, { backgroundColor: accent }]} onPress={startSinging} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.wideBtn, { backgroundColor: song.instrumental_url ? accent : COLORS.border }]}
+            onPress={startSinging}
+            disabled={!song.instrumental_url}
+            activeOpacity={0.85}
+          >
             <Mic size={18} color={COLORS.white} />
             <Text style={styles.wideBtnText}>{t('songStartSinging')}</Text>
           </TouchableOpacity>
@@ -478,6 +627,20 @@ export const SongScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
+        {mode === 'sing' && (singStep === 'recorded' || singStep === 'replaying') && (
+          <View style={[styles.row, styles.saveRow]}>
+            <TouchableOpacity style={[styles.ghostBtn, styles.flex]} onPress={saveToPhone} disabled={exporting} activeOpacity={0.85}>
+              {exporting ? <ActivityIndicator size="small" color={COLORS.text} /> : <Download size={16} color={COLORS.text} />}
+              <Text style={styles.ghostBtnText}>{exportedTo ? t('songSavedToPhone') : t('songSaveToPhone')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.ghostBtn, styles.flex]} onPress={() => navigation.navigate('SongTakes')} activeOpacity={0.85}>
+              <ListMusic size={16} color={COLORS.text} />
+              <Text style={styles.ghostBtnText}>{t('songMyTakes')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {exportFailed && <Text style={styles.error}>{t('songSaveFailed')}</Text>}
+        {!!exportedTo && <Text style={styles.savedHint}>{t('songSavedWhere')}</Text>}
       </View>
     </View>
   );
@@ -545,6 +708,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     alignItems: 'center',
   },
+  playerWrap: { alignSelf: 'stretch', gap: 4 },
+  progressHit: { paddingVertical: 8 },
+  progressTrack: { height: 5, borderRadius: 3, backgroundColor: COLORS.surfaceHigh, overflow: 'hidden' },
+  progressFill: { height: '100%' },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  time: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.textSecondary },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.l },
   mainBtn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', gap: SPACING.s, alignSelf: 'stretch' },
   wideBtn: {
@@ -557,6 +727,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   recBtn: { backgroundColor: COLORS.error },
+  saveRow: { marginTop: SPACING.s },
+  savedHint: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 },
   wideBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.white },
   ghostBtn: {
     flexDirection: 'row',

@@ -35,7 +35,9 @@ import {
   Target,
   TrendingUp,
   User as UserIcon,
-  Zap,
+  Music,
+  PlusCircle,
+  SpellCheck,
 } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -221,7 +223,8 @@ export const AppDrawer = ({
               <Text style={styles.pointsValue}>
                 {points} · {t('myPoints')}
               </Text>
-              <Text style={styles.pointsSub}>{t('myPointsSub')}</Text>
+              {/* با امتیاز صفر، به‌جای قانون تبدیل، راه گرفتن امتیاز را می‌گوییم. */}
+              <Text style={styles.pointsSub}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
             </View>
             <ChevronRight color={COLORS.muted} size={18} />
           </TouchableOpacity>
@@ -234,10 +237,9 @@ export const AppDrawer = ({
               زیاد بشه، و روی گوشی‌های صفحه‌کوچیک (مثل Galaxy J5) بدون اسکرول
               ردیف‌ها روی هم می‌ریزن یا از صفحه بیرون می‌زنن. */}
           <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.sectionHeaderRow}>
-            <Zap color={COLORS.secondary} size={18} />
-            <Text style={styles.sectionTitle}>{t('habitCardTitle')}</Text>
-          </View>
+          {/* سه گروه با تیتر کوچک: یادگیری روزانه، تمرین بیشتر، پشتیبانی. قبلاً ۱۱ ردیف هم‌وزن
+              پشت هم بود و کاربر تازه‌کار نمی‌فهمید از کجا شروع کند. */}
+          <Text style={styles.groupTitle}>{t('drawerGroupLearn')}</Text>
 
           {/* هر ردیف رنگ اختصاصی خودش را دارد — هم برای تشخیص سریع‌تر، هم تا
               وقتی از این ردیف وارد صفحه‌اش می‌شوی، همون رنگ آنجا هم ادامه پیدا
@@ -271,6 +273,23 @@ export const AppDrawer = ({
             <Text style={styles.rowText}>{t('drawerConversationTitle')}</Text>
           </TouchableOpacity>
 
+          {onOpenPlacementTest && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => {
+                onClose();
+                onOpenPlacementTest();
+              }}
+            >
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                <Mic color={COLORS.primary} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('placementDrawerTitle')}</Text>
+            </TouchableOpacity>
+          )}
+
+
           {available.course && (
             <TouchableOpacity
               style={styles.row}
@@ -283,6 +302,8 @@ export const AppDrawer = ({
               <Text style={styles.rowText}>{t('courseTitle')}</Text>
             </TouchableOpacity>
           )}
+
+          <Text style={styles.groupTitle}>{t('drawerGroupPractice')}</Text>
 
           {available.videoClips && (
             <TouchableOpacity
@@ -304,6 +325,13 @@ export const AppDrawer = ({
             <Text style={styles.rowText}>{t('storyTitle')}</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SongList')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
+              <Music color={COLORS.pink} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('songTitle')}</Text>
+          </TouchableOpacity>
+
           {available.podcasts && (
             <TouchableOpacity
               style={styles.row}
@@ -314,6 +342,15 @@ export const AppDrawer = ({
                 <Headphones color={COLORS.primary} size={18} />
               </View>
               <Text style={styles.rowText}>{t('podcastTitle')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {available.podcasts && (
+            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('DictationList')}>
+              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
+                <SpellCheck color={COLORS.success} size={18} />
+              </View>
+              <Text style={styles.rowText}>{t('dictationTitle')}</Text>
             </TouchableOpacity>
           )}
 
@@ -361,6 +398,16 @@ export const AppDrawer = ({
             </TouchableOpacity>
           )}
 
+          <Text style={styles.groupTitle}>{t('drawerGroupSupport')}</Text>
+
+          {/* پیشنهاد یک صحنه قبلاً بنر بالای لیست صحنه‌ها بود و جلوی شروع تمرین را می‌گرفت. */}
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SubmitScene')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <PlusCircle color={COLORS.primary} size={18} />
+            </View>
+            <Text style={styles.rowText}>{t('submitSceneTitle')}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.row}
             activeOpacity={0.7}
@@ -385,21 +432,6 @@ export const AppDrawer = ({
             <Text style={styles.rowText}>{t('habitContactUs')}</Text>
           </TouchableOpacity>
 
-          {onOpenPlacementTest && (
-            <TouchableOpacity
-              style={styles.row}
-              activeOpacity={0.7}
-              onPress={() => {
-                onClose();
-                onOpenPlacementTest();
-              }}
-            >
-              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
-                <Mic color={COLORS.primary} size={18} />
-              </View>
-              <Text style={styles.rowText}>{t('placementDrawerTitle')}</Text>
-            </TouchableOpacity>
-          )}
 
           <View style={styles.dividerLine} />
 
@@ -673,6 +705,13 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 12,
+  },
+  groupTitle: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 11,
+    marginTop: 14,
+    marginBottom: 4,
   },
   sectionHeaderRow: {
     flexDirection: 'row',

@@ -1,7 +1,9 @@
 import React from 'react';
 import {
   Alert,
+  FlatList,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,8 +12,9 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { getPaths } from '../api/path';
 import { useQueryClient } from '@tanstack/react-query';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, PlusCircle, Search, Settings, TrendingUp, User as UserIcon, X, Zap } from 'lucide-react-native';
+import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, Search, Settings, TrendingUp, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { SceneListCardSkeleton } from '../components/SceneListCardSkeleton';
 import { StreakInfoModal } from '../components/StreakInfoModal';
@@ -44,6 +47,8 @@ type LevelFilter = string | 'all';
 
 // دسته‌بندی‌های قدیمی متن آزاد بودند؛ «Shop» و «shop » باید یک دسته حساب شوند.
 const categoryKey = (c?: string) => (c || '').trim().toLowerCase();
+
+const SceneGap = () => <View style={{ height: 4 }} />;
 
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
@@ -112,130 +117,123 @@ export const ScenesScreen = () => {
   });
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.topBar}>
-        <Text style={styles.kicker}>{t('worlds')}</Text>
-        <View style={styles.topBarActions}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('CurriculumMap')}>
-            <MapIcon color={COLORS.text} size={20} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
-            <Settings color={COLORS.text} size={20} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <Text style={styles.pageTitle}>{t('chooseScenarioTitle')}</Text>
-      <Text style={styles.pageSub}>{t('chooseScenarioSub')}</Text>
+    // FlatList به‌جای ScrollView: با صدها صحنه، ساختن همه‌ی کارت‌ها (هر کدام با عکس) در یک
+    // ScrollView باز شدن تب را چند ثانیه کند می‌کرد؛ حالا فقط کارت‌های نزدیک صفحه ساخته می‌شوند.
+    <FlatList
+      style={styles.screen}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      data={loading ? [] : filteredScenes}
+      keyExtractor={(item) => item.id}
+      initialNumToRender={6}
+      maxToRenderPerBatch={6}
+      windowSize={7}
+      removeClippedSubviews
+      ItemSeparatorComponent={SceneGap}
+      ListHeaderComponent={
+        <>
+          {/* سربرگ یک‌ردیفه: دکمه‌ها چپ، عنوان راست؛ زیرعنوان و تیتر دوم حذف شد تا صحنه‌ها زودتر دیده شوند. */}
+          <View style={styles.topBar}>
+            <View style={styles.topBarActions}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('CurriculumMap')}>
+                <MapIcon color={COLORS.text} size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
+                <Settings color={COLORS.text} size={20} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.topTitle}>{t('worlds')}</Text>
+          </View>
 
-      <View style={styles.searchBox}>
-        <Search color={COLORS.muted} size={17} />
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('searchScenesPlaceholder')}
-          placeholderTextColor={COLORS.muted}
-          returnKeyType="search"
-        />
-        {!!searchQuery && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-            <X color={COLORS.muted} size={16} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {!loading && categories.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryRowWrapper}
-          contentContainerStyle={styles.categoryRow}
-        >
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
-              onPress={() => setActiveCategory(cat.id)}
-            >
-              <Text
-                style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}
-              >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {!loading && levels.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryRowWrapper}
-          contentContainerStyle={styles.categoryRow}
-        >
-          {levels.map((lvl) => (
-            <TouchableOpacity
-              key={lvl.id}
-              style={[styles.categoryChip, activeLevel === lvl.id && styles.categoryChipActive]}
-              onPress={() => setActiveLevel(lvl.id)}
-            >
-              <Text
-                style={[styles.categoryChipText, activeLevel === lvl.id && styles.categoryChipTextActive]}
-              >
-                {lvl.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      <TouchableOpacity
-        style={styles.suggestSceneCard}
-        onPress={() => navigation.navigate('SubmitScene')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.suggestSceneIcon}>
-          <PlusCircle color={COLORS.primary} size={20} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.suggestSceneTitle}>{t('submitSceneTitle')}</Text>
-          <Text style={styles.suggestSceneSub}>{t('submitSceneSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
-
-      {loading ? (
-        <View style={styles.featuredList}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SceneListCardSkeleton key={i} />
-          ))}
-        </View>
-      ) : filteredScenes.length === 0 ? (
-        <Text style={styles.emptyCategoryText}>{t('noScenariosMatch')}</Text>
-      ) : (
-        <View style={styles.featuredList}>
-          {filteredScenes.map((scenario) => (
-            <SceneListCard
-              key={scenario.id}
-              title={scenario.title}
-              level={scenario.level}
-              time={scenario.time}
-              imageUri={scenario.imageUri}
-              isLocked={scenario.isLocked}
-              isCompleted={scenario.isCompleted}
-              onPress={() => {
-                if (scenario.isLocked) {
-                  navigation.navigate('Paywall');
-                  return;
-                }
-                navigation.navigate('Shadowing', { scenarioId: scenario.id, returnTo: 'Scenes' });
-              }}
+          <View style={styles.searchBox}>
+            <Search color={COLORS.muted} size={17} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('searchScenesPlaceholder')}
+              placeholderTextColor={COLORS.muted}
+              returnKeyType="search"
             />
-          ))}
-        </View>
+            {!!searchQuery && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <X color={COLORS.muted} size={16} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* یک ردیف فیلتر: سطح‌ها، بعد موضوع‌ها. بدون «همه»؛ زدن دوباره روی فیلتر فعال، خاموشش می‌کند. */}
+          {!loading && (levels.length > 2 || categories.length > 2) && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.categoryRowWrapper}
+              contentContainerStyle={styles.categoryRow}
+            >
+              {levels.length > 2 &&
+                levels
+                  .filter((lvl) => lvl.id !== 'all')
+                  .map((lvl) => (
+                    <TouchableOpacity
+                      key={`l-${lvl.id}`}
+                      style={[styles.categoryChip, activeLevel === lvl.id && styles.categoryChipActive]}
+                      onPress={() => setActiveLevel(activeLevel === lvl.id ? 'all' : lvl.id)}
+                    >
+                      <Text style={[styles.categoryChipText, activeLevel === lvl.id && styles.categoryChipTextActive]}>
+                        {lvl.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              {levels.length > 2 && categories.length > 2 && <View style={styles.filterDivider} />}
+              {categories.length > 2 &&
+                categories
+                  .filter((cat) => cat.id !== 'all')
+                  .map((cat) => (
+                    <TouchableOpacity
+                      key={`c-${cat.id}`}
+                      style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
+                      onPress={() => setActiveCategory(activeCategory === cat.id ? 'all' : cat.id)}
+                    >
+                      <Text style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+            </ScrollView>
+          )}
+
+        </>
+      }
+      ListEmptyComponent={
+        loading ? (
+          <View style={styles.featuredList}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SceneListCardSkeleton key={i} />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyCategoryText}>{t('noScenariosMatch')}</Text>
+        )
+      }
+      renderItem={({ item: scenario }) => (
+        <SceneListCard
+          title={scenario.title}
+          level={scenario.level}
+          time={scenario.time}
+          imageUri={scenario.imageUri}
+          isLocked={scenario.isLocked}
+          isCompleted={scenario.isCompleted}
+          onPress={() => {
+            if (scenario.isLocked) {
+              navigation.navigate('Paywall');
+              return;
+            }
+            navigation.navigate('Shadowing', { scenarioId: scenario.id, returnTo: 'Scenes' });
+          }}
+        />
       )}
-    </ScrollView>
+    />
   );
 };
 
@@ -260,6 +258,9 @@ const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary' | 'grammar
 
 export const ProgressScreen = () => {
   const { t, language } = useLanguage();
+  const navigation = useNavigation<any>();
+  // «ادامه‌ی یادگیری»: اگر مسیری شروع شده، جلسه‌ی بعدی همان؛ وگرنه لیست صحنه‌ها.
+  const [startedPathLevel, setStartedPathLevel] = React.useState<string | null>(null);
   const { user } = useAuth();
   const [overallProgress, setOverallProgress] = React.useState(0);
   const [streak, setStreak] = React.useState(0);
@@ -301,6 +302,9 @@ export const ProgressScreen = () => {
       getProgressTrend()
         .then((weeks) => active && setTrend(weeks))
         .catch(() => {});
+      getPaths()
+        .then((list) => active && setStartedPathLevel(list.find((p) => p.started)?.level ?? null))
+        .catch(() => {});
       return () => {
         active = false;
       };
@@ -317,8 +321,21 @@ export const ProgressScreen = () => {
   const todayStr = new Date().toISOString().slice(0, 10);
   const trendHasData = trend.some((w) => w.sessions > 0);
 
+  // پیشنهاد عملی بر اساس ضعیف‌ترین مهارت گفتاری واقعیِ کاربر (فقط وقتی داده دارد).
+  const weakest =
+    skills.pronunciation > 0 || skills.fluency > 0
+      ? skills.pronunciation <= skills.fluency
+        ? { key: 'pronunciation', pct: skills.pronunciation }
+        : { key: 'fluency', pct: skills.fluency }
+      : null;
+  const tipKey = weakest && weakest.pct < 70 ? (weakest.key === 'pronunciation' ? 'progressTipPronunciation' : 'progressTipFluency') : null;
+
+  const continueLearning = () =>
+    startedPathLevel ? navigation.navigate('PathHome', { level: startedPathLevel }) : navigation.navigate('Scenes');
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={[styles.scrollContent, styles.scrollWithCta]} showsVerticalScrollIndicator={false}>
       <Text style={styles.pageTitle}>{t('greatJobTitle')}</Text>
       <Text style={styles.pageSub}>{t('greatJobSub')}</Text>
 
@@ -326,12 +343,17 @@ export const ProgressScreen = () => {
           (همون الگوی StreakInfoModal برای XpInfoModal هم تکرار شده). خودِ
           «سطح» توضیح جدا ندارد چون مستقیماً از همون XP محاسبه می‌شود. */}
       <View style={styles.statsCard}>
-        <TouchableOpacity style={styles.statsTile} onPress={() => setStreakInfoVisible(true)}>
-          <Flame size={20} color={COLORS.secondary} fill={COLORS.secondary} />
-          <Text style={styles.statsValue}>{streak}</Text>
-          <Text style={styles.statsLabel}>{t('statsStreakLabel')}</Text>
-        </TouchableOpacity>
-        <View style={styles.statsDivider} />
+        {/* استریک صفر پیام موفقیت را ضعیف می‌کرد؛ فقط وقتی بیشتر از صفر است دیده می‌شود. */}
+        {streak > 0 && (
+          <>
+            <TouchableOpacity style={styles.statsTile} onPress={() => setStreakInfoVisible(true)}>
+              <Flame size={20} color={COLORS.secondary} fill={COLORS.secondary} />
+              <Text style={styles.statsValue}>{streak}</Text>
+              <Text style={styles.statsLabel}>{t('statsStreakLabel')}</Text>
+            </TouchableOpacity>
+            <View style={styles.statsDivider} />
+          </>
+        )}
         <View style={styles.statsTile}>
           <Award size={20} color={COLORS.primary} />
           <Text style={styles.statsValue} numberOfLines={1}>
@@ -379,6 +401,7 @@ export const ProgressScreen = () => {
             <Text style={styles.metricLabel}>{t('fluency')}</Text>
           </View>
         </View>
+        {!!tipKey && <Text style={styles.progressTip}>💡 {t(tipKey)}</Text>}
       </View>
 
       {/* Weekly Activity */}
@@ -401,7 +424,8 @@ export const ProgressScreen = () => {
                   <View
                     style={[
                       styles.weekBarFill,
-                      { height: `${heightPct}%`, backgroundColor: isToday ? COLORS.primary : COLORS.primaryLight },
+                      // روز با فعالیت مرجانی پررنگ، بی‌فعالیت خاکستری؛ قبلاً هر دو کم‌رنگ بودند.
+                      { height: `${heightPct}%`, backgroundColor: day.minutes > 0 ? '#D95D39' : '#E5E2DC' },
                     ]}
                   />
                 </View>
@@ -501,6 +525,13 @@ export const ProgressScreen = () => {
         )}
       </View>
     </ScrollView>
+    {/* اقدام اصلی صفحه، بالای نوار پایین: صفحه‌ی نتیجه باید به قدم بعدی ببرد. */}
+    <View style={styles.ctaFloat} pointerEvents="box-none">
+      <TouchableOpacity style={styles.ctaBtn} onPress={continueLearning} activeOpacity={0.88}>
+        <Text style={styles.ctaText}>{t('continueLearning')}</Text>
+      </TouchableOpacity>
+    </View>
+    </View>
   );
 };
 
@@ -586,6 +617,8 @@ const TimePickerModal: React.FC<{
     </Modal>
   );
 };
+
+const displayName = (name: string) => name.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
@@ -681,14 +714,16 @@ export const ProfileScreen = () => {
         <View style={styles.avatarCircle}>
           <UserIcon size={36} color={COLORS.primary} />
         </View>
-        <Text style={styles.profileName}>{user?.nickname || ''}</Text>
+        {/* فقط نمایش: حرف اول هر بخش اسم لاتین بزرگ؛ اسم ذخیره‌شده دست نمی‌خورد. */}
+        <Text style={styles.profileName}>{displayName(user?.nickname || '')}</Text>
         <Text style={styles.profileSub}>{user?.phone || t('learnerLevel')}</Text>
       </View>
 
       {/* Language Setting Card */}
-      <View style={styles.settingCard}>
-        <Text style={styles.settingLabel}>{t('appLanguage')}</Text>
-        <View style={styles.langToggleRow}>
+      {/* زبان اپ در یک ردیف جمع‌وجور: برچسب و کلید دوگزینه‌ای کنار هم. */}
+      <View style={[styles.settingCard, styles.langCardRow]}>
+        <Text style={[styles.settingLabel, styles.langLabelInline]}>{t('appLanguage')}</Text>
+        <View style={[styles.langToggleRow, styles.langToggleCompact]}>
           <TouchableOpacity
             style={[styles.langBtn, language === 'en' ? styles.langBtnActive : null]}
             onPress={() => setLanguage('en')}
@@ -822,6 +857,14 @@ export const ProfileScreen = () => {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* پیش‌نمایش زنده: همان هایلایتی که روی جمله‌ی در حال پخش می‌نشیند. */}
+        <View style={styles.highlightPreview}>
+          <Text style={styles.highlightPreviewEn}>
+            <Text style={{ backgroundColor: hexToRgba(highlightColor, 0.28), color: highlightColor }}>Nice to meet</Text> you.
+          </Text>
+          <Text style={styles.highlightPreviewFa}>{t('highlightPreviewFa')}</Text>
+        </View>
       </View>
 
       {/* Notifications & Reminders Card */}
@@ -923,12 +966,12 @@ export const ProfileScreen = () => {
           </View>
         )}
 
-        {/* Test Notification Trigger Button */}
+        {/* دکمه‌ی ثانویه و خنثی؛ نارنجی پر برای اقدام‌های اصلی کاربر می‌ماند. */}
         <TouchableOpacity
           style={styles.testBtn}
           onPress={handleSendTestNotification}
         >
-          <Sparkles color={COLORS.white} size={16} />
+          <Sparkles color={COLORS.textSecondary} size={16} />
           <Text style={styles.testBtnText}>{t('sendTestNotification')}</Text>
         </TouchableOpacity>
 
@@ -982,17 +1025,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  topTitle: {
+    flex: 1,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 20,
+    lineHeight: 30,
+    textAlign: 'right',
+  },
+  // عنوان و زیرعنوان صفحه هر دو راست‌چین، زیرعنوان در خط بعد.
   pageTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 26,
-    marginBottom: 4,
+    fontSize: 20,
+    lineHeight: 30,
+    textAlign: 'right',
   },
+  filterDivider: { width: 1, alignSelf: 'stretch', marginVertical: 6, backgroundColor: COLORS.border },
   pageSub: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    marginBottom: 24,
+    fontSize: 13,
+    textAlign: 'right',
+    marginBottom: 20,
   },
   featuredList: {
     gap: 4,
@@ -1017,7 +1072,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   categoryRowWrapper: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -1089,6 +1144,21 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingVertical: 16,
     marginTop: 16,
+    marginBottom: 16,
+  },
+  // فضای اضافه برای دکمه‌ی ثابت «ادامه‌ی یادگیری» بالای نوار پایین.
+  scrollWithCta: { paddingBottom: 210 },
+  ctaFloat: { position: 'absolute', left: 20, right: 20, bottom: Platform.OS === 'ios' ? 106 : 98 },
+  ctaBtn: { height: 52, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  ctaText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.white },
+  progressTip: {
+    marginTop: 12,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    lineHeight: 20,
+    color: COLORS.text,
+    textAlign: 'right',
+    alignSelf: 'stretch',
   },
   statsTile: {
     flex: 1,
@@ -1228,6 +1298,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 12,
   },
+  langCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  langLabelInline: { marginBottom: 0 },
+  langToggleCompact: { width: 170 },
   langToggleRow: {
     flexDirection: 'row',
     backgroundColor: COLORS.surfaceLight,
@@ -1236,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   langBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 7,
     alignItems: 'center',
     borderRadius: 10,
   },
@@ -1320,9 +1393,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  // همه‌ی انتخاب‌های تنظیمات سبز تیره (مثل تعداد تکرار)؛ نارنجی فقط برای اقدام اصلی.
   pillBtnWideActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.tertiary,
+    borderColor: COLORS.tertiary,
   },
   pillText: {
     color: COLORS.textSecondary,
@@ -1438,18 +1512,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  highlightPreview: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceLight,
+    gap: 4,
+  },
+  highlightPreviewEn: { fontFamily: FONT_FAMILY.bold, fontSize: 17, color: COLORS.text },
+  highlightPreviewFa: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
   testBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: 16,
-    height: 48,
+    height: 44,
     marginTop: 16,
     gap: 8,
   },
   testBtnText: {
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
   },

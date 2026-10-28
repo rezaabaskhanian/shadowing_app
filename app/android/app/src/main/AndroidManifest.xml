@@ -7,11 +7,15 @@
          requestPermission) رو بی‌صدا رد می‌کنه و توکن FCM هیچ‌وقت ثبت نمی‌شه. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- ذخیره‌ی «نسخه‌ی من» از آهنگ در پوشه‌ی Music گوشی؛ فقط اندروید ۹ و پایین‌تر این
+         مجوز را لازم دارد (از ۱۰ به بعد نوشتن فایل صوتی در Music بدون مجوز ممکن است). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <!-- پرمیژن‌های پخش پس‌زمینه‌ی react-native-track-player را خودِ کتابخانه
          با manifest merge اضافه می‌کند؛ اینجا لازم نیست تکرار شود. -->
 
     <application
       android:name=".MainApplication"
+      android:requestLegacyExternalStorage="true"
       android:label="@string/app_name"
       android:icon="@mipmap/ic_launcher"
       android:roundIcon="@mipmap/ic_launcher_round"

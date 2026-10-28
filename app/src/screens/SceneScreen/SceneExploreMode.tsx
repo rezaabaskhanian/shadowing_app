@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Mic } from 'lucide-react-native';
+import { Mic } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -38,32 +38,6 @@ export const SceneExploreMode: React.FC<SceneExploreModeProps> = ({
       <Text style={styles.englishText}>{currentDialogue.dialogue || 'Great. Can I pay by card?'}</Text>
       <Text style={styles.translationText}>{currentDialogue.translation}</Text>
 
-      {/* Hotspot Prev/Next Navigation */}
-      <View style={styles.hotspotNavRow}>
-        <TouchableOpacity
-          style={styles.hotspotNavBtn}
-          disabled={activeHotspotIndex === 0}
-          onPress={() => onGoToHotspot(activeHotspotIndex - 1)}
-        >
-          <ChevronLeft size={18} color={activeHotspotIndex === 0 ? COLORS.border : COLORS.text} />
-        </TouchableOpacity>
-
-        <Text style={styles.hotspotSelectTitle}>
-          {t('hotspots')} {activeHotspotIndex + 1} / {sceneHotspots.length}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.hotspotNavBtn}
-          disabled={activeHotspotIndex >= sceneHotspots.length - 1}
-          onPress={() => onGoToHotspot(activeHotspotIndex + 1)}
-        >
-          <ChevronRight
-            size={18}
-            color={activeHotspotIndex >= sceneHotspots.length - 1 ? COLORS.border : COLORS.text}
-          />
-        </TouchableOpacity>
-      </View>
-
       {/* Hotspots Selector Row */}
       <ScrollView
         horizontal
@@ -92,7 +66,7 @@ export const SceneExploreMode: React.FC<SceneExploreModeProps> = ({
       {/* Primary CTA: Start 4-Step Shadowing Practice */}
       <TouchableOpacity activeOpacity={0.88} style={styles.startShadowingCtaBtn} onPress={onStartShadowing}>
         <Mic size={20} color={COLORS.white} />
-        <Text style={styles.startShadowingCtaText}>Start 4-Step Shadowing Practice 🎙️</Text>
+        <Text style={styles.startShadowingCtaText}>{t('startFourStepPractice')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -178,9 +152,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderColor: COLORS.border,
   },
+  // انتخاب‌شده با کادر نارنجی، نه پس‌زمینه‌ی پر؛ تا با دکمه‌ی اصلی تمرین رقابت نکند.
   hotspotChipActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
+    borderWidth: 1.5,
   },
   hotspotChipText: {
     color: COLORS.textSecondary,
@@ -188,7 +164,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   hotspotChipTextActive: {
-    color: COLORS.white,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
   },
   startShadowingCtaBtn: {
     flexDirection: 'row',

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -54,6 +56,24 @@ export const AuthScreens = () => {
 };
 
 // PASSWORD LOGIN SCREEN
+/**
+ * اسکرولِ صفحه‌های ورود/ثبت‌نام. اپ edge-to-edge است و روی اندروید جدید
+ * adjustResize دیگر صفحه را کوچک نمی‌کند؛ بدون KeyboardAvoidingView کیبورد روی
+ * فیلدها و دکمه‌ها می‌نشست و صفحه اسکرول نمی‌شد.
+ */
+const AuthScroll = ({ children }: { children: React.ReactNode }) => (
+  <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.authContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
+
 const LoginScreen = ({
   onRegister,
   onReset,
@@ -86,14 +106,13 @@ const LoginScreen = ({
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+    <AuthScroll>
       {/* Brand Header */}
       <View style={styles.brandHeader}>
         <View style={styles.brandBadge}>
           <Mic color={COLORS.white} size={28} />
         </View>
         <Text style={styles.authTitle}>{t('welcomeBack')}</Text>
-        <Text style={styles.authSub}>{t('loginSub')}</Text>
       </View>
 
       {/* Input Fields */}
@@ -132,7 +151,7 @@ const LoginScreen = ({
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.forgotButton} onPress={onReset}>
+      <TouchableOpacity style={styles.forgotButton} onPress={onReset} hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}>
         <Text style={styles.linkText}>{t('forgotPassword')}</Text>
       </TouchableOpacity>
 
@@ -145,17 +164,14 @@ const LoginScreen = ({
         )}
       </TouchableOpacity>
 
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
+      {/* ثبت‌نام یک لینک متنی است تا «ورود» تنها دکمه‌ی پررنگ صفحه بماند. */}
+      <View style={styles.registerRow}>
+        <Text style={styles.registerHint}>{t('noAccountYet')}</Text>
+        <TouchableOpacity onPress={onRegister} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.linkText}>{t('signUp')}</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.secondaryButton} onPress={onRegister}>
-        <User color={COLORS.primary} size={18} />
-        <Text style={styles.secondaryButtonText}>{t('signUp')}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </AuthScroll>
   );
 };
 
@@ -235,7 +251,7 @@ const OtpStep = ({
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+    <AuthScroll>
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
         <ArrowLeft color={COLORS.text} size={22} />
       </TouchableOpacity>
@@ -293,7 +309,7 @@ const OtpStep = ({
       <TouchableOpacity style={styles.forgotButton} onPress={handleResend} disabled={resending}>
         <Text style={styles.linkText}>{resending ? '...' : t('resendCode')}</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </AuthScroll>
   );
 };
 
@@ -360,7 +376,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+    <AuthScroll>
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
         <ArrowLeft color={COLORS.text} size={22} />
       </TouchableOpacity>
@@ -445,7 +461,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
           <Text style={styles.linkText}>{t('login')}</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </AuthScroll>
   );
 };
 
@@ -517,7 +533,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.authContent} showsVerticalScrollIndicator={false}>
+    <AuthScroll>
       {step !== 'success' && (
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <ArrowLeft color={COLORS.text} size={22} />
@@ -647,7 +663,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+    </AuthScroll>
   );
 };
 
@@ -657,8 +673,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   authContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingBottom: 40,
   },
   backButton: {
@@ -767,7 +784,20 @@ const styles = StyleSheet.create({
   },
   forgotButton: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  registerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 20,
+  },
+  registerHint: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 14,
   },
   linkText: {
     color: COLORS.primary,

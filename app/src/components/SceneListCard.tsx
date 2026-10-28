@@ -34,7 +34,6 @@ export const LEVEL_BADGE_STYLE: Record<string, { bg: string; text: string; Icon:
 export function SceneListCard({ title, level, time, imageUri, isLocked, isCompleted, onPress }: SceneListCardProps) {
   const { t } = useLanguage();
   const levelStyle = LEVEL_BADGE_STYLE[level] || LEVEL_BADGE_STYLE.Beginner;
-  const LevelIcon = levelStyle.Icon;
   const levelLabel = t(LEVEL_LABEL_KEY[level] || LEVEL_LABEL_KEY.Beginner);
 
   return (
@@ -55,7 +54,7 @@ export function SceneListCard({ title, level, time, imageUri, isLocked, isComple
         </View>
       ) : (
         <View style={[styles.levelBadge, { backgroundColor: levelStyle.bg }]}>
-          <LevelIcon size={12} color={levelStyle.text} />
+          {/* فقط متن سطح؛ آیکون‌ها (مثل هواپیما برای «متوسط») به موضوع صحنه ربطی نداشتند. */}
           <Text style={[styles.levelBadgeText, { color: levelStyle.text }]}>{levelLabel}</Text>
         </View>
       )}

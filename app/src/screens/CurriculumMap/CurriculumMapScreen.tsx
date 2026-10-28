@@ -50,14 +50,16 @@ interface SectionBand {
   allCompleted: boolean;
 }
 
-type NodeState = 'completed' | 'current' | 'subLocked';
+// فقط یک «فعلی» داریم (اولین صحنه‌ی باز و ناتمام از آسان به سخت)؛ بقیه‌ی ناتمام‌ها «بعدی»اند.
+// قبلاً همه‌ی ناتمام‌ها دکمه‌ی پخش نارنجی داشتند و کاربر نمی‌فهمید از کجا ادامه دهد.
+type NodeState = 'completed' | 'current' | 'upcoming' | 'subLocked';
 
 // هر صحنه‌ی باز-و-ناتمام «فعلی» حساب می‌شود (قفل ترتیبی وجود ندارد؛ فقط
 // قفلِ اشتراک).
-function nodeState(scenario: Scenario): NodeState {
+function baseState(scenario: Scenario): Exclude<NodeState, 'current'> {
   if (scenario.isLocked) return 'subLocked';
   if (scenario.isCompleted) return 'completed';
-  return 'current';
+  return 'upcoming';
 }
 
 export const CurriculumMapScreen = () => {
@@ -75,6 +77,7 @@ export const CurriculumMapScreen = () => {
     return (a.order ?? 0) - (b.order ?? 0);
   });
   const completedCount = ordered.filter((s) => s.isCompleted).length;
+  const currentId = ordered.find((s) => baseState(s) === 'upcoming')?.id;
 
   // چیدمانِ ردیف‌ها: هر بار که سطح عوض می‌شود یک تیترِ بخش («مبتدی»/«متوسط»/
   // «پیشرفته») اضافه می‌شود و شمارنده‌ی زیگزاگ از نو شروع می‌شود — تا مسیر هر
@@ -139,7 +142,7 @@ export const CurriculumMapScreen = () => {
   // جای شروع یک بار حساب می‌شود و اسکرول از همان‌جا باز می‌شود (contentOffset)،
   // تا پنجره‌ی ردیف‌های ساخته‌شده هم از اول همان‌جا باشد.
   const startY = useMemo(() => {
-    const current = nodeItems.find((item) => nodeState(item.scenario) === 'current');
+    const current = nodeItems.find((item) => item.scenario.id === currentId);
     return current ? Math.max(0, current.top - 180) : 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordered.length > 0]);
@@ -261,15 +264,15 @@ export const CurriculumMapScreen = () => {
               const LevelIcon = levelStyle.Icon;
               return (
                 <View key={`header-${item.level}`} style={[styles.sectionHeader, { top: item.top }]}>
-                  <View style={[styles.sectionHeaderPill, { backgroundColor: levelStyle.bg }]}>
-                    <LevelIcon color={levelStyle.text} size={14} />
-                    <Text style={styles.sectionHeaderText}>{t(LEVEL_LABEL_KEY[item.level] || LEVEL_LABEL_KEY.Beginner)}</Text>
+                  <View style={[styles.sectionHeaderPill, { borderColor: hexToRgba(levelStyle.bg, 0.4), backgroundColor: hexToRgba(levelStyle.bg, 0.08) }]}>
+                    <LevelIcon color={levelStyle.bg} size={13} />
+                    <Text style={[styles.sectionHeaderText, { color: levelStyle.bg }]}>{t(LEVEL_LABEL_KEY[item.level] || LEVEL_LABEL_KEY.Beginner)}</Text>
                   </View>
                 </View>
               );
             }
 
-            const state = nodeState(item.scenario);
+            const state: NodeState = item.scenario.id === currentId ? 'current' : baseState(item.scenario);
             const levelStyle = LEVEL_BADGE_STYLE[item.scenario.level] || LEVEL_BADGE_STYLE.Beginner;
             const LevelIcon = levelStyle.Icon;
             return (
@@ -311,29 +314,33 @@ export const CurriculumMapScreen = () => {
 
 // قفلِ اشتراک (subLocked) طلایی با تاج — چون معنیش «محتوای ویژه»ست.
 const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state, onPress }) => {
-  const bg =
-    state === 'completed'
-      ? COLORS.tertiary
-      : state === 'current'
-      ? COLORS.primary
-      : hexToRgba(COLORS.secondary, 0.16);
-  const iconColor =
-    state === 'completed' || state === 'current'
-      ? COLORS.white
-      : COLORS.secondaryContainer;
-
+  const look = {
+    completed: { bg: COLORS.success, border: COLORS.surface, icon: COLORS.white },
+    current: { bg: COLORS.primary, border: COLORS.primaryLight, icon: COLORS.white },
+    upcoming: { bg: COLORS.surface, border: COLORS.borderLight, icon: COLORS.muted },
+    subLocked: { bg: hexToRgba(COLORS.secondary, 0.16), border: COLORS.surface, icon: COLORS.secondaryContainer },
+  }[state];
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.node, { backgroundColor: bg }, state === 'current' && styles.nodeCurrent]}
+      style={[
+        styles.node,
+        state !== 'current' && styles.nodeSmall,
+        { backgroundColor: look.bg, borderColor: look.border },
+        state === 'current' && styles.nodeCurrent,
+      ]}
+      accessibilityLabel={state}
     >
       {state === 'completed' ? (
-        <Check color={iconColor} size={26} />
+        <Check color={look.icon} size={22} strokeWidth={3} />
       ) : state === 'current' ? (
-        <Play color={iconColor} size={24} fill={iconColor} />
+        <Play color={look.icon} size={26} fill={look.icon} />
+      ) : state === 'upcoming' ? (
+        // باز است ولی هنوز نوبتش نرسیده؛ قفل نیست، فقط کم‌رنگ.
+        <View style={[styles.upcomingDot, { backgroundColor: look.icon }]} />
       ) : (
-        <Crown color={iconColor} size={22} />
+        <Crown color={look.icon} size={20} />
       )}
     </TouchableOpacity>
   );
@@ -444,8 +451,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   nodeCurrent: {
-    borderColor: COLORS.primaryLight,
-    borderWidth: 4,
+    borderWidth: 5,
+  },
+  upcomingDot: { width: 12, height: 12, borderRadius: 6, opacity: 0.6 },
+  // فقط «فعلی» بزرگ است تا یک نقطه‌ی اصلی روی مسیر باشد.
+  nodeSmall: {
+    transform: [{ scale: 0.8 }],
+    elevation: 0,
+    shadowOpacity: 0,
   },
   label: {
     flexDirection: 'row',
@@ -477,22 +490,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: HEADER_HEIGHT,
   },
+  // تیتر سطح باید برچسب باشد، نه دکمه: بدون سایه و پس‌زمینه‌ی پر.
   sectionHeaderPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
-    elevation: 2,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   sectionHeaderText: {
-    color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 13,
+    fontSize: 12,
   },
 });

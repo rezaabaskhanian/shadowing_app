@@ -16,6 +16,8 @@ interface PlacementTestIntroScreenProps {
   bullets?: string[];
   /** متن زمان تقریبی؛ پیش‌فرض نسخه‌ی ۱ */
   timeEstimate?: string;
+  /** متن معرفی؛ باید با تعداد بخش‌ها و زمانِ همین نسخه‌ی تست جور باشد. */
+  body?: string;
 }
 
 const ICON_CIRCLE_SIZE = 96;
@@ -37,6 +39,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
   onSkip,
   bullets: customBullets,
   timeEstimate,
+  body,
 }) => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -74,7 +77,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
         </View>
 
         <Text style={styles.title}>{t('placementIntroTitle')}</Text>
-        <Text style={styles.body}>{t('placementIntroBody')}</Text>
+        <Text style={styles.body}>{body ?? t('placementIntroBody')}</Text>
 
         <View style={styles.timePill}>
           <Clock size={14} color={COLORS.textSecondary} />
@@ -87,7 +90,8 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
             return (
               <View
                 key={index}
-                style={[styles.bulletRow, { backgroundColor: hexToRgba(color, 0.08), borderColor: hexToRgba(color, 0.25) }]}
+                // پس‌زمینه‌ی یکسان و خنثی برای همه‌ی مرحله‌ها؛ رنگ فقط روی آیکون می‌ماند.
+                style={[styles.bulletRow, styles.bulletRowNeutral]}
               >
                 <View style={[styles.bulletIconWrap, { backgroundColor: color }]}>
                   <Icon size={18} color={COLORS.white} />
@@ -113,6 +117,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
 };
 
 const styles = StyleSheet.create({
+  bulletRowNeutral: { backgroundColor: COLORS.surface, borderColor: COLORS.borderLight },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mic, Music, X } from 'lucide-react-native';
+import { ListMusic, Mic, Music, X } from 'lucide-react-native';
 
 import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -41,9 +41,16 @@ export const SongListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-        <X size={20} color={COLORS.text} />
-      </TouchableOpacity>
+      <View style={styles.topRow}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <X size={20} color={COLORS.text} />
+        </TouchableOpacity>
+        {/* ضبط‌هایی که کاربر با آهنگ‌ها خوانده (فقط روی همین گوشی). */}
+        <TouchableOpacity style={styles.takesBtn} onPress={() => navigation.navigate('SongTakes')} activeOpacity={0.85}>
+          <ListMusic size={16} color={COLORS.primary} />
+          <Text style={styles.takesText}>{t('songMyTakes')}</Text>
+        </TouchableOpacity>
+      </View>
       <ListHero
         icon={<Music size={26} color={COLORS.white} />}
         color={COLORS.pink}
@@ -101,15 +108,26 @@ export const SongListScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.s },
+  takesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  takesText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.primary },
   closeBtn: {
-    alignSelf: 'flex-start',
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.s,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.s },
   mutedText: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
