@@ -3,6 +3,7 @@ package postgressubscription
 import (
 	"context"
 	"errors"
+	"time"
 
 	"shadowing-backend/internal/pkg/richerror"
 
@@ -182,6 +183,28 @@ func (r DB) HasActiveSubscription(ctx context.Context, userID string) (bool, err
 		return false, richerror.New(op).WithErr(err).WithMessage("خطا در بررسی وضعیت اشتراک")
 	}
 	return exists, nil
+}
+
+// ActiveSubscription دیرترین تاریخ پایانِ اشتراک‌های فعالِ کاربر و نام پلنش
+// را برمی‌گرداند؛ اگر اشتراک فعالی نباشد active=false است.
+func (r DB) ActiveSubscription(ctx context.Context, userID string) (active bool, expiresAt time.Time, planName string, err error) {
+	const op = "postgressubscription.ActiveSubscription"
+
+	err = r.conn.QueryRow(ctx, `
+		SELECT us.expires_at, COALESCE(sp.name, '')
+		FROM user_subscriptions us
+		LEFT JOIN subscription_plans sp ON sp.id = us.plan_id
+		WHERE us.user_id = $1 AND us.status = 'active' AND us.expires_at > now()
+		ORDER BY us.expires_at DESC
+		LIMIT 1
+	`, userID).Scan(&expiresAt, &planName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, time.Time{}, "", nil
+	}
+	if err != nil {
+		return false, time.Time{}, "", richerror.New(op).WithErr(err).WithMessage("خطا در خواندن وضعیت اشتراک")
+	}
+	return true, expiresAt, planName, nil
 }
 
 // PurchaseTokenUsed می‌گوید آیا این purchaseToken قبلاً verify و اشتراک برایش

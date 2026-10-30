@@ -21,6 +21,7 @@ import {
   BookMarked,
   Briefcase,
   Coins,
+  Crown,
   Compass,
   GraduationCap,
   Headphones,
@@ -48,6 +49,7 @@ import { useNotifications } from '../data/NotificationContext';
 import { useScenes } from '../data/ScenesContext';
 import { useToast } from '../data/ToastContext';
 import { getMyPoints } from '../api/submissions';
+import { formatSubscriptionEnd, getSubscriptionStatus, type SubscriptionStatus } from '../api/billing';
 import type { LearningGoal } from '../api/notifications';
 import { setMyLevel, type MyLevel, type SceneLevel } from '../api/assessment';
 import { getCachedAvailability, loadContentAvailability } from '../data/contentAvailability';
@@ -130,6 +132,7 @@ export const AppDrawer = ({
     setWeeklyDigestEnabled,
   } = useNotifications();
   const [points, setPoints] = useState(0);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   // بخش‌های تازه فقط وقتی در منو می‌آیند که ادمین برایشان محتوا ساخته باشد.
   const [available, setAvailable] = useState(getCachedAvailability);
   const translateX = useRef(new Animated.Value(DRAWER_WIDTH)).current;
@@ -143,6 +146,9 @@ export const AppDrawer = ({
     if (modalVisible) {
       getMyPoints()
         .then(setPoints)
+        .catch(() => {});
+      getSubscriptionStatus()
+        .then(setSubscription)
         .catch(() => {});
       loadContentAvailability()
         .then(setAvailable)
@@ -229,6 +235,28 @@ export const AppDrawer = ({
               </Text>
               {/* با امتیاز صفر، به‌جای قانون تبدیل، راه گرفتن امتیاز را می‌گوییم. */}
               <Text style={[styles.pointsSub, ta]}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
+            </View>
+            {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
+          </TouchableOpacity>
+
+          {/* اشتراک: بدون اشتراک دعوت به خرید، با اشتراک تاریخ پایان. */}
+          <TouchableOpacity
+            style={[styles.pointsCard, rtl && styles.rowReverse]}
+            activeOpacity={0.85}
+            onPress={() => go('Paywall')}
+          >
+            <View style={[styles.pointsIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <Crown color={COLORS.primary} size={22} />
+            </View>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.pointsValue, ta]}>
+                {subscription?.active ? t('subscriptionActive') : t('subscriptionBuy')}
+              </Text>
+              <Text style={[styles.pointsSub, ta]}>
+                {subscription?.active
+                  ? t('subscriptionUntil').replace('{date}', formatSubscriptionEnd(subscription, language))
+                  : t('subscriptionBuySub')}
+              </Text>
             </View>
             {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
           </TouchableOpacity>

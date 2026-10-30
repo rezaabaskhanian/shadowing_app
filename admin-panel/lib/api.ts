@@ -27,6 +27,7 @@ import type {
   AssessmentItem,
   AssessmentItemPayload,
   BroadcastItem,
+  BroadcastTarget,
   CreateScenePayload,
   Difficulty,
   Feedback,
@@ -293,12 +294,14 @@ export async function getNotificationStats(): Promise<NotificationStatsResp> {
 
 export async function sendBroadcast(
   title: string,
-  body: string
-): Promise<{ sent_count: number; message: string }> {
+  body: string,
+  target: BroadcastTarget = "opted_in",
+  phone = ""
+): Promise<{ sent_count: number; device_count: number; message: string }> {
   const res = await authFetch("/v1/admin/notifications/broadcast", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, body }),
+    body: JSON.stringify({ title, body, target, phone }),
   });
   return jsonOrThrow(res);
 }

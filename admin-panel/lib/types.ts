@@ -184,11 +184,15 @@ export interface NotificationStatsResp {
   fcm_configured: boolean;
 }
 
+export type BroadcastTarget = "opted_in" | "all" | "phone";
+
 export interface BroadcastItem {
   id: string;
   title: string;
   body: string;
   sent_count: number;
+  target?: BroadcastTarget;
+  target_phone?: string;
   created_at: string;
 }
 

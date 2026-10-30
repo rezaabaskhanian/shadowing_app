@@ -2,6 +2,7 @@ package postgresnotification
 
 import (
 	"context"
+	"errors"
 
 	"shadowing-backend/internal/pkg/richerror"
 
@@ -31,11 +32,13 @@ type Settings struct {
 }
 
 type Broadcast struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	SentCount int    `json:"sent_count"`
-	CreatedAt string `json:"created_at"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	SentCount   int    `json:"sent_count"`
+	Target      string `json:"target"`
+	TargetPhone string `json:"target_phone"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // GetSettings تنظیمات نوتیفیکیشن کاربر را برمی‌گرداند؛ اگر هنوز ردیفی ثبت نشده
@@ -145,6 +148,48 @@ func (r DB) TokensForUser(ctx context.Context, userID string) ([]string, error) 
 	rows, err := r.conn.Query(ctx, `SELECT token FROM device_push_tokens WHERE user_id = $1`, userID)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن توکن‌های کاربر")
+	}
+	defer rows.Close()
+
+	var tokens []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		tokens = append(tokens, t)
+	}
+	return tokens, nil
+}
+
+// AllTokens توکن همه‌ی دستگاه‌های ثبت‌شده، بدون توجه به تنظیمات نوتیف کاربر
+// (برای اطلاعیه‌های مهم از پنل ادمین).
+func (r DB) AllTokens(ctx context.Context) ([]string, error) {
+	const op = "postgresnotification.AllTokens"
+	return r.queryTokens(ctx, op, `SELECT token FROM device_push_tokens`)
+}
+
+// TokensForPhone توکن‌های دستگاه‌های کاربری که این شماره را دارد. userFound
+// می‌گوید اصلاً کاربری با این شماره هست یا نه (برای پیام خطای دقیق در پنل).
+func (r DB) TokensForPhone(ctx context.Context, phone string) (tokens []string, userFound bool, err error) {
+	const op = "postgresnotification.TokensForPhone"
+
+	var userID string
+	err = r.conn.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, richerror.New(op).WithErr(err).WithMessage("خطا در پیدا کردن کاربر")
+	}
+	tokens, err = r.TokensForUser(ctx, userID)
+	return tokens, true, err
+}
+
+func (r DB) queryTokens(ctx context.Context, op richerror.Op, query string, args ...any) ([]string, error) {
+	rows, err := r.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err).WithMessage("خطا در خواندن توکن‌ها")
 	}
 	defer rows.Close()
 
@@ -316,14 +361,14 @@ func (r DB) Stats(ctx context.Context) (dailyReminder, contentNotif, totalUsers 
 }
 
 // SaveBroadcast یک پیام همگانی ارسال‌شده را برای تاریخچه ثبت می‌کند.
-func (r DB) SaveBroadcast(ctx context.Context, title, body string, createdBy string, sentCount int) error {
+func (r DB) SaveBroadcast(ctx context.Context, title, body string, createdBy string, sentCount int, target, targetPhone string) error {
 	const op = "postgresnotification.SaveBroadcast"
 
 	const query = `
-		INSERT INTO admin_broadcasts (title, body, sent_count, created_by, created_at)
-		VALUES ($1, $2, $3, NULLIF($4, '')::uuid, now())
+		INSERT INTO admin_broadcasts (title, body, sent_count, created_by, created_at, target, target_phone)
+		VALUES ($1, $2, $3, NULLIF($4, '')::uuid, now(), $5, $6)
 	`
-	_, err := r.conn.Exec(ctx, query, title, body, sentCount, createdBy)
+	_, err := r.conn.Exec(ctx, query, title, body, sentCount, createdBy, target, targetPhone)
 	if err != nil {
 		return richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره تاریخچه پیام همگانی")
 	}
@@ -335,7 +380,7 @@ func (r DB) ListBroadcasts(ctx context.Context, limit int) ([]Broadcast, error) 
 	const op = "postgresnotification.ListBroadcasts"
 
 	const query = `
-		SELECT id::text, title, body, sent_count, created_at::text
+		SELECT id::text, title, body, sent_count, target, target_phone, created_at::text
 		FROM admin_broadcasts ORDER BY created_at DESC LIMIT $1
 	`
 	rows, err := r.conn.Query(ctx, query, limit)
@@ -347,7 +392,7 @@ func (r DB) ListBroadcasts(ctx context.Context, limit int) ([]Broadcast, error) 
 	var list []Broadcast
 	for rows.Next() {
 		var b Broadcast
-		if err := rows.Scan(&b.ID, &b.Title, &b.Body, &b.SentCount, &b.CreatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.Title, &b.Body, &b.SentCount, &b.Target, &b.TargetPhone, &b.CreatedAt); err != nil {
 			return nil, richerror.New(op).WithErr(err)
 		}
 		list = append(list, b)

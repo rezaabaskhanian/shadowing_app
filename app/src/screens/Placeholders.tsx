@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { getPaths } from '../api/path';
+import { formatSubscriptionEnd, getSubscriptionStatus, type SubscriptionStatus } from '../api/billing';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight, Flame, HelpCircle, Languages, Lightbulb, Map as MapIcon, Search, Settings, TrendingUp, Trophy, User as UserIcon, X, Zap } from 'lucide-react-native';
 import { ProgressRing } from '../components/ProgressRing';
@@ -651,7 +652,7 @@ import {
   MAX_REMINDER_TIMES,
 } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Check, Clock, MessageSquare, Mic, Pencil, Plus, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Check, Clock, Crown, MessageSquare, Mic, Pencil, Plus, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
 
 /**
@@ -765,12 +766,16 @@ export const ProfileScreen = () => {
   const { scenes } = useScenes();
   // سطح کاربر برای برچسب زیر اسم.
   const [levelName, setLevelName] = React.useState('');
+  const [subscription, setSubscription] = React.useState<SubscriptionStatus | null>(null);
   useFocusEffect(
     React.useCallback(() => {
       if (!user?.id) return;
       let active = true;
       getUserSummary(user.id)
         .then((sum) => active && setLevelName(sum.level_name))
+        .catch(() => {});
+      getSubscriptionStatus()
+        .then((s) => active && setSubscription(s))
         .catch(() => {});
       return () => {
         active = false;
@@ -933,6 +938,17 @@ export const ProfileScreen = () => {
         title: t('profileEditMenu'),
         sub: t('profileEditMenuSub'),
         onPress: () => navigation.navigate('ProfileEdit'),
+      })}
+      {menuRow({
+        key: 'sub',
+        icon: <Crown color={COLORS.secondary} size={20} />,
+        iconBg: COLORS.secondaryLight,
+        title: subscription?.active ? t('subscriptionActive') : t('subscriptionBuy'),
+        sub: subscription?.active
+          ? t('subscriptionUntil').replace('{date}', formatSubscriptionEnd(subscription, language))
+          : t('subscriptionBuySub'),
+        // با اشتراک فعال هم صفحه‌ی خرید باز می‌شود تا تمدید و بازیابی خرید در دسترس باشد.
+        onPress: () => navigation.navigate('Paywall'),
       })}
       {menuRow({
         key: 'rec',

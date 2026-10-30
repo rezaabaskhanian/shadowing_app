@@ -2,6 +2,7 @@ package notificationservice
 
 import (
 	"context"
+	"errors"
 
 	postgresrecording "shadowing-backend/internal/repository/postgres/shadowing/recording"
 
@@ -17,11 +18,13 @@ type repository interface {
 	UpsertDeviceToken(ctx context.Context, userID, token, platform string) error
 	TokensForUser(ctx context.Context, userID string) ([]string, error)
 	OptedInTokens(ctx context.Context) ([]string, error)
+	AllTokens(ctx context.Context) ([]string, error)
+	TokensForPhone(ctx context.Context, phone string) ([]string, bool, error)
 	StreakReminderTokens(ctx context.Context) ([]string, error)
 	VocabReminderTokens(ctx context.Context) ([]string, error)
 	WeeklyDigestOptedInUserIDs(ctx context.Context) ([]uuid.UUID, error)
 	Stats(ctx context.Context) (dailyReminder, contentNotif, totalUsers int, err error)
-	SaveBroadcast(ctx context.Context, title, body, createdBy string, sentCount int) error
+	SaveBroadcast(ctx context.Context, title, body, createdBy string, sentCount int, target, targetPhone string) error
 	ListBroadcasts(ctx context.Context, limit int) ([]postgresnotification.Broadcast, error)
 }
 
@@ -87,24 +90,68 @@ func (s Service) ListBroadcasts(ctx context.Context, limit int) ([]Broadcast, er
 	return s.repo.ListBroadcasts(ctx, limit)
 }
 
-// Broadcast یک پیام را به همه‌ی کاربرانی که نوتیفیکیشن محتوایی را فعال کرده‌اند
-// می‌فرستد و آن را برای تاریخچه ذخیره می‌کند.
-func (s Service) Broadcast(ctx context.Context, title, body, createdBy string) (int, error) {
-	tokens, err := s.repo.OptedInTokens(ctx)
-	if err != nil {
-		return 0, err
+// گیرنده‌های پیام پنل ادمین.
+const (
+	TargetOptedIn = "opted_in" // فقط کسانی که نوتیف محتوایی را روشن کرده‌اند
+	TargetAll     = "all"      // همه‌ی دستگاه‌های ثبت‌شده
+	TargetPhone   = "phone"    // یک کاربر، با شماره تلفن
+)
+
+// ErrUserNotFound و ErrNoDevice برای پیام خطای روشن در پنل وقتی گیرنده یک
+// شماره‌ی خاص است.
+var (
+	ErrUserNotFound = errors.New("کاربری با این شماره تلفن پیدا نشد")
+	ErrNoDevice     = errors.New("این کاربر هنوز دستگاهی برای نوتیف ثبت نکرده (اپ را باز نکرده یا اجازه‌ی نوتیف نداده)")
+)
+
+// BroadcastResult تعداد دستگاه‌های هدف و تعداد ارسال‌های موفق.
+type BroadcastResult struct {
+	DeviceCount int
+	SentCount   int
+}
+
+// Broadcast پیام پنل ادمین را به گیرنده‌ی انتخاب‌شده می‌فرستد و برای تاریخچه
+// ذخیره می‌کند.
+func (s Service) Broadcast(ctx context.Context, target, phone, title, body, createdBy string) (BroadcastResult, error) {
+	var (
+		tokens []string
+		err    error
+	)
+	switch target {
+	case TargetAll:
+		tokens, err = s.repo.AllTokens(ctx)
+	case TargetPhone:
+		var found bool
+		tokens, found, err = s.repo.TokensForPhone(ctx, phone)
+		if err == nil && !found {
+			return BroadcastResult{}, ErrUserNotFound
+		}
+		if err == nil && len(tokens) == 0 {
+			return BroadcastResult{}, ErrNoDevice
+		}
+	default:
+		target = TargetOptedIn
+		phone = ""
+		tokens, err = s.repo.OptedInTokens(ctx)
 	}
-	sent := 0
+	if err != nil {
+		return BroadcastResult{}, err
+	}
+	if target != TargetPhone {
+		phone = ""
+	}
+
+	res := BroadcastResult{DeviceCount: len(tokens)}
 	if s.push.Enabled() && len(tokens) > 0 {
-		sent, err = s.push.SendToTokens(ctx, tokens, title, body)
+		res.SentCount, err = s.push.SendToTokens(ctx, tokens, title, body)
 		if err != nil {
-			return 0, err
+			return res, err
 		}
 	}
-	if err := s.repo.SaveBroadcast(ctx, title, body, createdBy, sent); err != nil {
-		return sent, err
+	if err := s.repo.SaveBroadcast(ctx, title, body, createdBy, res.SentCount, target, phone); err != nil {
+		return res, err
 	}
-	return sent, nil
+	return res, nil
 }
 
 // SendToUser یک نوتیف اختصاصی به همه‌ی دستگاه‌های یک کاربر می‌فرستد (مثلاً جواب پشتیبانی).

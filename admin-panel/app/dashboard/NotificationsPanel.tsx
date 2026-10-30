@@ -2,7 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { getNotificationStats, listBroadcasts, sendBroadcast } from "@/lib/api";
-import type { BroadcastItem, NotificationStatsResp } from "@/lib/types";
+import type { BroadcastItem, BroadcastTarget, NotificationStatsResp } from "@/lib/types";
+
+const TARGETS: { id: BroadcastTarget; label: string; hint: string }[] = [
+  {
+    id: "opted_in",
+    label: "کاربرانی که نوتیف محتوایی را روشن کرده‌اند",
+    hint: "پیشنهادی برای خبر محتوای تازه؛ به انتخاب کاربر احترام می‌گذارد.",
+  },
+  {
+    id: "all",
+    label: "همه‌ی دستگاه‌ها",
+    hint: "به هر دستگاهی که توکن نوتیف ثبت کرده، حتی اگر نوتیف محتوایی را خاموش کرده باشد. فقط برای اطلاعیه‌های مهم.",
+  },
+  {
+    id: "phone",
+    label: "یک کاربر (با شماره تلفن)",
+    hint: "به همه‌ی دستگاه‌های همان کاربر.",
+  },
+];
+
+const TARGET_LABEL: Record<BroadcastTarget, string> = {
+  opted_in: "نوتیف محتوایی روشن",
+  all: "همه‌ی دستگاه‌ها",
+  phone: "یک کاربر",
+};
 
 export default function NotificationsPanel({
   notify,
@@ -13,6 +37,8 @@ export default function NotificationsPanel({
   const [broadcasts, setBroadcasts] = useState<BroadcastItem[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [target, setTarget] = useState<BroadcastTarget>("opted_in");
+  const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -39,10 +65,17 @@ export default function NotificationsPanel({
       notify("عنوان و متن پیام را وارد کن", "err");
       return;
     }
+    if (target === "phone" && !phone.trim()) {
+      notify("شماره تلفن کاربر را وارد کن", "err");
+      return;
+    }
+    if (target === "all" && !window.confirm("این پیام به همه‌ی دستگاه‌ها فرستاده می‌شود، حتی کسانی که نوتیف محتوایی را خاموش کرده‌اند. مطمئنی؟")) {
+      return;
+    }
     setSending(true);
     try {
-      const res = await sendBroadcast(title.trim(), body.trim());
-      notify(`پیام همگانی به ${res.sent_count} دستگاه ارسال شد ✅`, "ok");
+      const res = await sendBroadcast(title.trim(), body.trim(), target, phone.trim());
+      notify(`ارسال موفق به ${res.sent_count} از ${res.device_count} دستگاه ✅`, "ok");
       setTitle("");
       setBody("");
       load();
@@ -82,10 +115,42 @@ export default function NotificationsPanel({
       </div>
 
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>📣 ارسال پیام همگانی</h2>
-        <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
-          به همه‌ی کاربرانی که نوتیفیکیشن محتوایی را فعال کرده‌اند فرستاده می‌شود.
-        </p>
+        <h2 style={{ marginTop: 0 }}>📣 ارسال نوتیفیکیشن</h2>
+        <div style={{ marginBottom: 12 }}>
+          <label>گیرنده</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+            {TARGETS.map((opt) => (
+              <label key={opt.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="broadcast-target"
+                  checked={target === opt.id}
+                  onChange={() => setTarget(opt.id)}
+                  style={{ width: "auto", marginTop: 4 }}
+                />
+                <span>
+                  {opt.label}
+                  <span className="hint" style={{ display: "block", fontSize: 12 }}>
+                    {opt.hint}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+        {target === "phone" && (
+          <div style={{ marginBottom: 12 }}>
+            <label>شماره تلفن کاربر</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="09121234567"
+              dir="ltr"
+              inputMode="tel"
+              style={{ width: "100%" }}
+            />
+          </div>
+        )}
         <div style={{ marginBottom: 12 }}>
           <label>عنوان</label>
           <input
@@ -106,12 +171,12 @@ export default function NotificationsPanel({
           />
         </div>
         <button className="btn" onClick={handleSend} disabled={sending}>
-          {sending ? "در حال ارسال..." : "ارسال به همه"}
+          {sending ? "در حال ارسال..." : target === "phone" ? "ارسال به این کاربر" : "ارسال"}
         </button>
       </div>
 
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>🕓 تاریخچه پیام‌های همگانی</h2>
+        <h2 style={{ marginTop: 0 }}>🕓 تاریخچه‌ی نوتیفیکیشن‌ها</h2>
         {broadcasts.length === 0 ? (
           <p className="hint">هنوز پیامی ارسال نشده.</p>
         ) : (
@@ -132,7 +197,10 @@ export default function NotificationsPanel({
                   </span>
                 </div>
                 <p style={{ margin: "6px 0" }}>{b.body}</p>
-                <span className="hint">ارسال به {b.sent_count} دستگاه</span>
+                <span className="hint">
+                  {TARGET_LABEL[b.target ?? "opted_in"]}
+                  {b.target === "phone" && b.target_phone ? ` (${b.target_phone})` : ""} · ارسال موفق به {b.sent_count} دستگاه
+                </span>
               </div>
             ))}
           </div>

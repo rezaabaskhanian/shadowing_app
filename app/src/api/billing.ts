@@ -9,6 +9,27 @@ export interface SubscriptionPlan {
   product_id: string;
 }
 
+export interface SubscriptionStatus {
+  active: boolean;
+  /** ISO؛ فقط وقتی active است. */
+  expires_at?: string;
+  plan_name?: string;
+}
+
+/** وضعیت اشتراک کاربر برای ردیف «اشتراک» در پروفایل و منوی کناری. */
+export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
+  const res = await authFetch('/v1/learning/subscription', { method: 'GET' });
+  return (await jsonOrThrow(res)) as SubscriptionStatus;
+}
+
+/** متن کوتاه «تا ۱۲ آبان ۱۴۰۵» برای اشتراک فعال. */
+export function formatSubscriptionEnd(status: SubscriptionStatus, lang: 'en' | 'fa'): string {
+  if (!status.expires_at) return '';
+  const d = new Date(status.expires_at);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US', { dateStyle: 'medium' });
+}
+
 /** طرح‌های اشتراک را از سرور می‌گیرد (منبع واحد قیمت‌ها — از پنل ادمین
  * قابل‌تغییرند، اینجا هاردکد نمی‌شوند). */
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {

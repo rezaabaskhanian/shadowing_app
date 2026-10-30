@@ -102,6 +102,19 @@ func (h Handler) MyPoints(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"points": points})
 }
 
+// SubscriptionStatus وضعیت اشتراک کاربر لاگین‌شده: فعال بودن و تاریخ پایان.
+func (h Handler) SubscriptionStatus(c echo.Context) error {
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "لطفاً دوباره وارد شوید"})
+	}
+	status, err := h.subscriptionSvc.Status(c.Request().Context(), userClaims.UserID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "خطا در خواندن وضعیت اشتراک"})
+	}
+	return c.JSON(http.StatusOK, status)
+}
+
 // SubscriptionPlans طرح‌های اشتراک موجود را برمی‌گرداند (برای نمایش در اپ).
 func (h Handler) SubscriptionPlans(c echo.Context) error {
 	plans, err := h.subscriptionSvc.ListPlans(c.Request().Context())

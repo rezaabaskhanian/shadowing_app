@@ -2,6 +2,7 @@ package subscriptionservice
 
 import (
 	"context"
+	"time"
 
 	postgressubscription "shadowing-backend/internal/repository/postgres/subscription"
 )
@@ -46,6 +47,7 @@ type repository interface {
 	DeletePlan(ctx context.Context, id string) (archived bool, err error)
 	GrantSubscription(ctx context.Context, userID, planID string, pointsRedeemed, discountToman, durationDays int, provider, purchaseToken string) error
 	HasActiveSubscription(ctx context.Context, userID string) (bool, error)
+	ActiveSubscription(ctx context.Context, userID string) (bool, time.Time, string, error)
 	PurchaseTokenUsed(ctx context.Context, purchaseToken string) (bool, error)
 	RevenueStats(ctx context.Context, days int) (postgressubscription.RevenueStats, error)
 	// UserPoints موجودی امتیاز فعلی کاربر — برای محدودکردن مقدار قابل‌ریدیم به
@@ -131,6 +133,21 @@ func (s Service) GrantWithBonusDays(ctx context.Context, userID string, plan Pla
 // صحنه‌های غیررایگان.
 func (s Service) HasActiveSubscription(ctx context.Context, userID string) (bool, error) {
 	return s.repo.HasActiveSubscription(ctx, userID)
+}
+
+// Status وضعیت اشتراک کاربر برای نمایش در اپ (پروفایل و منوی کناری).
+type Status struct {
+	Active    bool       `json:"active"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	PlanName  string     `json:"plan_name,omitempty"`
+}
+
+func (s Service) Status(ctx context.Context, userID string) (Status, error) {
+	active, expiresAt, planName, err := s.repo.ActiveSubscription(ctx, userID)
+	if err != nil || !active {
+		return Status{}, err
+	}
+	return Status{Active: true, ExpiresAt: &expiresAt, PlanName: planName}, nil
 }
 
 // PurchaseTokenUsed می‌گوید آیا این purchaseToken قبلاً verify شده.

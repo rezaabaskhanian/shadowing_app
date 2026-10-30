@@ -31,6 +31,7 @@ func (h Handler) SetLearningRoutes(e *echo.Echo) {
 	// امتیاز و طرح‌های اشتراک
 	learningGroup.GET("/points", h.MyPoints, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.GET("/subscription-plans", h.SubscriptionPlans, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.GET("/subscription", h.SubscriptionStatus, middlware.Auth(h.authSvc, h.authConfig))
 
 	// تأیید خرید کافه‌بازاری (Poolakey) و فعال‌سازی اشتراک یک‌ساله
 	learningGroup.POST("/subscription/verify-purchase", h.VerifyPurchase, middlware.Auth(h.authSvc, h.authConfig))
