@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, Check, ChevronDown, ChevronLeft, ChevronUp, GraduationCap, Headphones, Home, Lock, Map as MapIcon, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GraduationCap, Headphones, Home, Lock, Map as MapIcon, Mic, PenLine, Pencil, Plane, Play, Target, Trash2, X } from 'lucide-react-native';
+import { GradientFill } from '../../components/GradientFill';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -31,13 +32,31 @@ const GOALS: {
   color: string;
   light: string;
 }[] = [
-  { id: 'travel', icon: Plane, labelKey: 'goalTravel', color: COLORS.info, light: COLORS.infoLight },
+  // ترتیب طرح: مهاجرت، سفر، کار، تحصیل (در فارسی از راست).
   { id: 'migration', icon: Home, labelKey: 'goalMigration', color: COLORS.tertiary, light: COLORS.tertiaryLight },
-  { id: 'study', icon: GraduationCap, labelKey: 'goalStudy', color: COLORS.primary, light: COLORS.primaryLight },
+  { id: 'travel', icon: Plane, labelKey: 'goalTravel', color: COLORS.info, light: COLORS.infoLight },
   { id: 'work', icon: Briefcase, labelKey: 'goalWork', color: COLORS.warning, light: COLORS.warningLight },
+  { id: 'study', icon: GraduationCap, labelKey: 'goalStudy', color: COLORS.primary, light: COLORS.primaryLight },
 ];
 // چند موقعیت اول فهرست کامل که بدون باز کردنِ کشو دیده می‌شوند.
 const SITUATIONS_PREVIEW = 4;
+
+/** ریل افقی کارت‌ها؛ در فارسی کارت اول سمت راست است و اسکرول از راست شروع می‌شود. */
+const RtlRail: React.FC<{ rtl: boolean; children: React.ReactNode }> = ({ rtl, children }) => {
+  const ref = React.useRef<ScrollView>(null);
+  return (
+    <ScrollView
+      ref={ref}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // flexGrow تا وقتی کارت‌ها کم‌اند هم از لبه‌ی راست شروع شوند.
+      contentContainerStyle={[cine.rail, rtl && styles.rowReverse, cine.railGrow]}
+      onContentSizeChange={() => rtl && ref.current?.scrollToEnd({ animated: false })}
+    >
+      {children}
+    </ScrollView>
+  );
+};
 
 // تمرین‌های غیرصحنه‌ای هدف، به همین ترتیب زیر موقعیت‌ها نشان داده می‌شوند.
 const EXTRA_KINDS: {
@@ -75,6 +94,11 @@ const isoInMonths = (months: number) => {
  */
 export const GoalPlanScreen: React.FC = () => {
   const { t, language } = useLanguage();
+  // فارسی: تیتر راست، دکمه‌ها چپ؛ ردیف‌ها و ریل‌ها از راست شروع می‌شوند.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
+  const al = rtl ? styles.alignEnd : styles.alignStart;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
 
@@ -139,6 +163,22 @@ export const GoalPlanScreen: React.FC = () => {
     }
   };
 
+  // ویرایش با برنامه‌ی فعلی شروع می‌شود؛ تاریخ هدف به نزدیک‌ترین گزینه‌ی «n ماه دیگر» گرد می‌شود.
+  const startEditing = () => {
+    if (view) {
+      setGoal(view.plan.goal);
+      setMinutes(view.plan.minutes_per_day);
+      if (view.plan.target_date) {
+        const left = (new Date(view.plan.target_date).getTime() - Date.now()) / (30 * 24 * 3600 * 1000);
+        const choices = DATE_CHOICES.filter((m): m is number => m !== null);
+        setMonths(choices.reduce((best, m) => (Math.abs(m - left) < Math.abs(best - left) ? m : best), choices[0]));
+      } else {
+        setMonths(null);
+      }
+    }
+    setEditing(true);
+  };
+
   const remove = () => {
     setDeleting(true);
     deleteGoalPlan()
@@ -178,9 +218,10 @@ export const GoalPlanScreen: React.FC = () => {
   if (!view || editing) {
     const ready = !!goal && months !== undefined && !!minutes;
     // رنگ انتخاب‌ها از هدفِ انتخاب‌شده می‌آید تا کل فرم هم‌رنگ هدف شود.
-    const pickColor = GOALS.find((g) => g.id === goal)?.color ?? COLORS.primary;
+    // انتخاب‌ها با کادر نارنجی یکدست (طرح جدید)، نه رنگِ هر هدف.
+    const pickColor = COLORS.primary;
     const step = (n: number, label: string, done: boolean) => (
-      <View style={form.stepRow}>
+      <View style={[form.stepRow, rr]}>
         <View style={[form.stepBadge, { backgroundColor: done ? CINE.success : hexToRgba(pickColor, 0.14) }]}>
           {done ? (
             <Check size={12} color={COLORS.white} />
@@ -195,19 +236,20 @@ export const GoalPlanScreen: React.FC = () => {
     const option = (key: string, label: string, active: boolean, onPress: () => void) => (
       <TouchableOpacity
         key={key}
-        style={[form.option, active && { borderColor: pickColor, backgroundColor: hexToRgba(pickColor, 0.1) }]}
+        style={[form.option, active && { borderColor: pickColor }]}
         onPress={onPress}
         activeOpacity={0.85}
         accessibilityState={{ selected: active }}
       >
-        <Text style={[form.optionText, active && { color: pickColor, fontFamily: FONT_FAMILY.bold }]}>{label}</Text>
+        <Text style={[form.optionText, active && { fontFamily: FONT_FAMILY.bold }]}>{label}</Text>
       </TouchableOpacity>
     );
     return (
       <View style={[form.container, { paddingTop: insets.top + SPACING.s }]}>
-        <View style={form.topBar}>
-          <View style={styles.flex1}>
+        <View style={[form.topBar, rr]}>
+          <View style={[styles.flex1, al]}>
             <Text style={form.title}>{t('goalPlanTitle')}</Text>
+            <Text style={form.subtitle}>{t('goalPlanFormSub')}</Text>
           </View>
           <TouchableOpacity
             style={cine.iconBtn}
@@ -219,33 +261,32 @@ export const GoalPlanScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: SPACING.l, paddingBottom: SPACING.l, gap: SPACING.m }}>
-          <View style={[form.intro, { backgroundColor: hexToRgba(pickColor, 0.08) }]}>
-            <View style={[form.introIcon, { backgroundColor: pickColor }]}>
-              <Target size={18} color={COLORS.white} />
+          <View style={[form.intro, rr]}>
+            <View style={form.introIcon}>
+              <Target size={18} color={COLORS.primary} />
             </View>
-            <Text style={form.introText}>{t('goalPlanIntro')}</Text>
+            <Text style={[form.introText, ta]}>{t('goalPlanIntro')}</Text>
           </View>
 
           <View style={form.section}>
             {step(1, t('goalPlanPickGoal'), !!goal)}
-            <View style={form.grid}>
+            <View style={[form.grid, rr]}>
               {GOALS.map((g) => {
                 const active = goal === g.id;
                 return (
                   <TouchableOpacity
                     key={g.id}
-                    style={[form.goalCard, active && { borderColor: g.color, backgroundColor: g.light }]}
+                    style={[form.goalCard, rr, active && { borderColor: COLORS.primary }]}
                     onPress={() => setGoal(g.id)}
                     activeOpacity={0.85}
                     accessibilityState={{ selected: active }}
                   >
-                    <View style={[form.goalIcon, { backgroundColor: active ? g.color : hexToRgba(g.color, 0.14) }]}>
-                      <g.icon size={16} color={active ? COLORS.white : g.color} />
+                    <View style={[form.goalIcon, { backgroundColor: hexToRgba(g.color, 0.14) }]}>
+                      <g.icon size={16} color={g.color} />
                     </View>
-                    <Text style={[form.goalText, active && { fontFamily: FONT_FAMILY.bold }]} numberOfLines={1}>
+                    <Text style={[form.goalText, ta, active && { fontFamily: FONT_FAMILY.bold }]} numberOfLines={1}>
                       {t(g.labelKey)}
                     </Text>
-                    {active && <Check size={14} color={g.color} />}
                   </TouchableOpacity>
                 );
               })}
@@ -254,7 +295,7 @@ export const GoalPlanScreen: React.FC = () => {
 
           <View style={form.section}>
             {step(2, t('goalPlanWhen'), months !== undefined)}
-            <View style={form.grid}>
+            <View style={[form.grid, rr]}>
               {DATE_CHOICES.map((m) =>
                 option(
                   String(m),
@@ -268,7 +309,7 @@ export const GoalPlanScreen: React.FC = () => {
 
           <View style={form.section}>
             {step(3, t('goalPlanMinutes'), !!minutes)}
-            <View style={form.grid}>
+            <View style={[form.grid, rr]}>
               {MINUTES.map((m) =>
                 option(String(m), t('goalPlanMinuteOption').replace('{n}', num(m)), minutes === m, () => setMinutes(m)),
               )}
@@ -280,12 +321,20 @@ export const GoalPlanScreen: React.FC = () => {
         {/* دکمه‌ی ساختن همیشه پایین صفحه دیده می‌شود */}
         <View style={[form.footer, { paddingBottom: insets.bottom + SPACING.m }]}>
           <TouchableOpacity
-            style={[form.primaryBtn, { backgroundColor: pickColor }, (!ready || busy) && form.btnDisabled]}
+            style={[form.primaryBtn, rr, (!ready || busy) && form.btnDisabled]}
             onPress={create}
             disabled={!ready || busy}
             activeOpacity={0.85}
           >
-            {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={form.primaryBtnText}>{t('goalPlanCreate')}</Text>}
+            {ready && !busy && <GradientFill from="#E8572F" to="#C24A28" horizontal />}
+            {busy ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <>
+                <Text style={form.primaryBtnText}>{t('goalPlanCreate')}</Text>
+                {rtl ? <ArrowLeft size={18} color={COLORS.white} /> : <ArrowRight size={18} color={COLORS.white} />}
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -305,14 +354,14 @@ export const GoalPlanScreen: React.FC = () => {
 
   return (
     <View style={[cine.container, { paddingTop: insets.top + SPACING.s }]}>
-      <View style={cine.topBar}>
-        <View style={styles.flex1}>
+      <View style={[cine.topBar, rr]}>
+        <View style={[styles.flex1, al]}>
           <Text style={cine.kicker}>{t('goalPlanTitle')}</Text>
           <Text style={cine.goalTitle}>{goalLabel}</Text>
         </View>
         {hasMap && (
           <TouchableOpacity
-            style={cine.mapBtn}
+            style={[cine.mapBtn, rr]}
             onPress={() => navigation.navigate('GoalMap')}
             activeOpacity={0.85}
             accessibilityLabel={t('goalMapTitle')}
@@ -350,20 +399,21 @@ export const GoalPlanScreen: React.FC = () => {
                   <goalMeta.icon size={44} color={CINE.dim} />
                 </View>
               )}
-              <View style={cine.heroBadge}>
+              <View style={[cine.heroBadge, rtl ? cine.heroBadgeLeft : cine.heroBadgeRight]}>
                 <Text style={cine.heroBadgeText}>{t('goalPlanToday')}</Text>
               </View>
             </View>
             <View style={cine.heroBody}>
-              <Text style={cine.heroTitle}>{today.title_fa}</Text>
-              <Text style={cine.heroSub}>
+              <Text style={[cine.heroTitle, ta]}>{today.title_fa}</Text>
+              <Text style={[cine.heroSub, ta]}>
                 {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
                 {' · '}
                 {t('goalPlanMinuteOption').replace('{n}', num(view.plan.minutes_per_day))}
               </Text>
               {/* اقدام اصلی صفحه، با اسم؛ قبلاً فقط یک آیکون پخش روی لبه‌ی عکس بود. */}
-              <View style={cine.startBtn}>
-                <Play size={16} color={CINE.bg} fill={CINE.bg} />
+              <View style={[cine.startBtn, rr]}>
+                <GradientFill from="#E8572F" to="#E98A4F" horizontal />
+                <Play size={16} color={COLORS.white} fill={COLORS.white} />
                 <Text style={cine.startBtnText}>{t('goalPlanStartToday')}</Text>
               </View>
             </View>
@@ -380,7 +430,7 @@ export const GoalPlanScreen: React.FC = () => {
 
         {/* تمرین دوم امروز */}
         {todayExtra && todayExtraMeta && (
-          <TouchableOpacity style={cine.extraToday} activeOpacity={0.85} onPress={() => openExtra(todayExtra)}>
+          <TouchableOpacity style={[cine.extraToday, rr]} activeOpacity={0.85} onPress={() => openExtra(todayExtra)}>
             {todayExtra.image_url ? (
               <Image source={{ uri: absUrl(todayExtra.image_url) }} style={cine.extraTodayImg} />
             ) : (
@@ -388,7 +438,7 @@ export const GoalPlanScreen: React.FC = () => {
                 <todayExtraMeta.icon size={22} color={CINE.dim} />
               </View>
             )}
-            <View style={styles.flex1}>
+            <View style={[styles.flex1, al]}>
               <Text style={cine.accentLabel}>{t('goalPlanTodayExtra').replace('{kind}', t(todayExtraMeta.labelKey))}</Text>
               <Text style={cine.cardTitle} numberOfLines={2}>{todayExtra.title}</Text>
             </View>
@@ -397,8 +447,8 @@ export const GoalPlanScreen: React.FC = () => {
         )}
 
         {/* مسیر: هر موقعیت برنامه یک خانه؛ پر = آماده، دور رنگی = امروز */}
-        <View style={cine.section}>
-          <View style={cine.sectionHead}>
+        <View style={[cine.section, cine.statusCard]}>
+          <View style={[cine.sectionHead, rr]}>
             <Text style={cine.sectionTitle}>{t('goalPlanSituations')}</Text>
             <Text style={cine.sectionMeta}>
               {t('goalPlanReadyOf').replace('{a}', num(view.ready)).replace('{b}', num(view.in_plan_count))}
@@ -407,7 +457,7 @@ export const GoalPlanScreen: React.FC = () => {
             </Text>
           </View>
           {/* پیشرفت کلی؛ اسم تک‌تک موقعیت‌ها در فهرست پایین آمده (خانه‌های شماره‌دار بی‌نام حذف شد). */}
-          <View style={cine.progressTrack}>
+          <View style={[cine.progressTrack, rr]}>
             <View
               style={[
                 cine.progressFill,
@@ -416,7 +466,7 @@ export const GoalPlanScreen: React.FC = () => {
             />
           </View>
           {f && (
-            <Text style={cine.forecast}>
+            <Text style={[cine.forecast, ta]}>
               {f.situations_target < f.situations_total
                 ? t('goalPlanHonestPartial').replace('{n}', num(f.situations_target)).replace('{m}', num(f.situations_total))
                 : t('goalPlanHonestAll').replace('{n}', num(f.situations_total))}
@@ -428,7 +478,7 @@ export const GoalPlanScreen: React.FC = () => {
                 : ''}
             </Text>
           )}
-          {!f && <Text style={cine.forecast}>{t('goalPlanNoDateNote')}</Text>}
+          {!f && <Text style={[cine.forecast, ta]}>{t('goalPlanNoDateNote')}</Text>}
         </View>
 
         {/* شنیدن / صحبت / نوشتن برای هدف: ردیف افقی کارت‌های عکس‌دار */}
@@ -437,8 +487,8 @@ export const GoalPlanScreen: React.FC = () => {
           if (items.length === 0) return null;
           return (
             <View key={k.kind} style={cine.section}>
-              <Text style={cine.sectionTitle}>{t(k.sectionKey)}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cine.rail}>
+              <Text style={[cine.sectionTitle, ta]}>{t(k.sectionKey)}</Text>
+              <RtlRail rtl={rtl}>
                 {items.map((x) => (
                   <TouchableOpacity key={x.id} style={cine.railCard} activeOpacity={0.85} onPress={() => openExtra(x)}>
                     <View>
@@ -455,14 +505,16 @@ export const GoalPlanScreen: React.FC = () => {
                         </View>
                       )}
                     </View>
-                    <Text style={cine.accentLabel}>
-                      {t(k.labelKey)}
-                      {LEVEL_KEY[x.level] ? ` · ${t(LEVEL_KEY[x.level])}` : ''}
-                    </Text>
-                    <Text style={cine.cardTitle} numberOfLines={2}>{x.title}</Text>
+                    <View style={cine.railBody}>
+                      <Text style={[cine.accentLabel, ta]}>
+                        {t(k.labelKey)}
+                        {LEVEL_KEY[x.level] ? ` · ${t(LEVEL_KEY[x.level])}` : ''}
+                      </Text>
+                      <Text style={[cine.cardTitle, ta]} numberOfLines={2}>{x.title}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </RtlRail>
             </View>
           );
         })}
@@ -475,7 +527,7 @@ export const GoalPlanScreen: React.FC = () => {
             return (
               <TouchableOpacity
                 key={s.id}
-                style={[cine.row, isToday && { borderColor: CINE.accent }, !s.in_plan && styles.dimmed]}
+                style={[cine.row, rr, isToday && cine.rowToday, !s.in_plan && styles.dimmed]}
                 disabled={!open}
                 activeOpacity={0.85}
                 onPress={() => openScene(s.scene_id)}
@@ -499,12 +551,18 @@ export const GoalPlanScreen: React.FC = () => {
                     )}
                   </View>
                 </View>
-                <View style={styles.flex1}>
-                  <Text style={cine.rowTitle}>{s.title_fa}</Text>
-                  {!open && <Text style={cine.rowSub}>{t('goalPlanComingSoon')}</Text>}
-                  {open && !s.in_plan && <Text style={cine.rowSub}>{t('goalPlanOutOfPlan')}</Text>}
+                <View style={[styles.flex1, al]}>
+                  <Text style={[cine.rowTitle, ta]}>{s.title_fa}</Text>
+                  {!open && <Text style={[cine.rowSub, ta]}>{t('goalPlanComingSoon')}</Text>}
+                  {open && !s.in_plan && <Text style={[cine.rowSub, ta]}>{t('goalPlanOutOfPlan')}</Text>}
                 </View>
-                {open && !s.ready && <ChevronLeft size={16} color={isToday ? CINE.accent : CINE.muted} />}
+                {open &&
+                  !s.ready &&
+                  (rtl ? (
+                    <ChevronLeft size={16} color={isToday ? CINE.accent : CINE.muted} />
+                  ) : (
+                    <ChevronRight size={16} color={isToday ? CINE.accent : CINE.muted} />
+                  ))}
               </TouchableOpacity>
             );
           })}
@@ -525,8 +583,8 @@ export const GoalPlanScreen: React.FC = () => {
           )}
         </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={cine.actionBtn} onPress={() => setEditing(true)} activeOpacity={0.85}>
+        <View style={[styles.actionsRow, rr]}>
+          <TouchableOpacity style={cine.actionBtn} onPress={startEditing} activeOpacity={0.85}>
             <Pencil size={16} color={CINE.text} />
             <Text style={cine.actionText}>{t('goalPlanEdit')}</Text>
           </TouchableOpacity>
@@ -555,9 +613,9 @@ export const GoalPlanScreen: React.FC = () => {
 
 // چیدمان «سینما» (docs/design/ui-directions/Cinema.dc.html) با زمینه‌ی روشن؛ فعلاً فقط برای همین صفحه.
 const CINE = {
-  bg: '#FFFFFF',
-  surface: '#F7F5F1',
-  border: '#E7E2D9',
+  bg: '#F7F7F9',
+  surface: '#FFFFFF',
+  border: '#EEEEF2',
   strip: '#EEEAE3',
   text: '#1A1D26',
   muted: '#5F6573',
@@ -569,7 +627,21 @@ const CINE = {
   success: '#2E9E6B',
 };
 
+const CARD_SHADOW = {
+  shadowColor: '#1A1D26',
+  shadowOpacity: 0.05,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 1,
+};
+
 const cine = StyleSheet.create({
+  heroBadgeLeft: { left: 20 },
+  heroBadgeRight: { right: 20 },
+  railBody: { padding: 8, gap: 2 },
+  railGrow: { flexGrow: 1 },
+  statusCard: { backgroundColor: CINE.surface, borderRadius: 18, borderWidth: 1, borderColor: CINE.border, padding: 14, ...CARD_SHADOW },
+  rowToday: { borderColor: CINE.accent, borderWidth: 1.5 },
   container: { flex: 1, backgroundColor: CINE.bg },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
   kicker: { fontFamily: FONT_FAMILY.medium, fontSize: 11, lineHeight: 16, color: CINE.muted },
@@ -608,10 +680,10 @@ const cine = StyleSheet.create({
     borderWidth: 1,
   },
   mapBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, lineHeight: 18, color: CINE.accentText },
-  heroCard: { backgroundColor: CINE.surface, borderRadius: 18, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden' },
-  heroImage: { width: '100%', height: 170 },
+  heroCard: { backgroundColor: CINE.surface, borderRadius: 20, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden', padding: 10, ...CARD_SHADOW },
+  heroImage: { width: '100%', height: 170, borderRadius: 14 },
   heroImageEmpty: { backgroundColor: CINE.strip, alignItems: 'center', justifyContent: 'center' },
-  heroBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: CINE.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  heroBadge: { position: 'absolute', top: 10, backgroundColor: COLORS.white, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   heroBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.text },
   playFab: {
     position: 'absolute',
@@ -626,7 +698,7 @@ const cine = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, gap: 2 },
+  heroBody: { paddingHorizontal: 6, paddingTop: 12, paddingBottom: 4, gap: 2 },
   heroTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: CINE.text },
   heroSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 19, color: CINE.muted },
   doneCard: {
@@ -640,16 +712,7 @@ const cine = StyleSheet.create({
     padding: SPACING.l,
   },
   bodyText: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: CINE.text },
-  extraToday: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    backgroundColor: CINE.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: CINE.border,
-    padding: 10,
-  },
+  extraToday: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m, backgroundColor: CINE.surface, borderRadius: 18, borderWidth: 1, borderColor: CINE.border, padding: 10, ...CARD_SHADOW },
   extraTodayImg: { width: 64, height: 48, borderRadius: 10 },
   accentLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.accentText },
   cardTitle: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 19, color: CINE.text },
@@ -671,22 +734,13 @@ const cine = StyleSheet.create({
   stripLocked: { opacity: 0.45 },
   stripText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.dim },
   forecast: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: CINE.text },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: CINE.strip, overflow: 'hidden' },
-  progressFill: { height: 8, borderRadius: 4, backgroundColor: CINE.success },
-  startBtn: {
-    marginTop: 10,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: CINE.accent,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  startBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: CINE.bg },
+  progressTrack: { flexDirection: 'row', height: 8, borderRadius: 4, backgroundColor: '#EEF0F4', overflow: 'hidden' },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  startBtn: { marginTop: 12, height: 48, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: COLORS.primary, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  startBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.white },
   rail: { gap: 12, paddingRight: 2 },
-  railCard: { width: 128, gap: 4 },
-  railImg: { width: 128, height: 80, borderRadius: 12 },
+  railCard: { width: 130, backgroundColor: CINE.surface, borderRadius: 16, borderWidth: 1, borderColor: CINE.border, overflow: 'hidden', ...CARD_SHADOW },
+  railImg: { width: 130, height: 84 },
   doneBadge: {
     position: 'absolute',
     top: 8,
@@ -698,17 +752,7 @@ const cine = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    backgroundColor: CINE.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: CINE.border,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m, backgroundColor: CINE.surface, borderRadius: 16, borderWidth: 1, borderColor: CINE.border, paddingVertical: 8, paddingHorizontal: 10 },
   rowThumb: { width: 64, height: 46, borderRadius: 10, backgroundColor: CINE.strip },
   rowDot: {
     position: 'absolute',
@@ -738,22 +782,16 @@ const cine = StyleSheet.create({
     borderStyle: 'dashed',
   },
   moreText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.accentText },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: CINE.surface,
-    borderWidth: 1,
-    borderColor: CINE.border,
-  },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 44, borderRadius: 14, backgroundColor: CINE.surface, borderWidth: 1, borderColor: CINE.border },
   actionText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: CINE.text },
 });
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
   container: { flex: 1, backgroundColor: COLORS.background },
   topRow: { paddingHorizontal: SPACING.l, flexDirection: 'row' },
   closeBtn: {
@@ -918,60 +956,27 @@ const styles = StyleSheet.create({
 
 // فرم ساختن/ویرایش برنامه، با همان پالت روشن «سینما»ی صفحه‌ی برنامه.
 const form = StyleSheet.create({
+  subtitle: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: CINE.muted },
   container: { flex: 1, backgroundColor: CINE.bg },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l, paddingBottom: SPACING.m },
   title: { fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 27, color: CINE.text },
-  intro: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 12 },
-  introIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  intro: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, padding: 12, backgroundColor: '#FFF4EF', borderWidth: 1, borderColor: '#FBE0D4' },
+  introIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FDE3D7', alignItems: 'center', justifyContent: 'center' },
   introText: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: CINE.muted },
-  section: {
-    gap: 10,
-    backgroundColor: CINE.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: CINE.border,
-    padding: 12,
-  },
+  section: { gap: 12, backgroundColor: '#F4F4F6', borderRadius: 18, borderWidth: 1, borderColor: CINE.border, padding: 14 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   stepBadgeText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
   stepLabel: { fontFamily: FONT_FAMILY.semiBold, fontSize: 13, lineHeight: 20, color: CINE.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  goalCard: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: CINE.bg,
-    borderWidth: 1.5,
-    borderColor: CINE.border,
-  },
-  goalIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  goalCard: { flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: 'transparent' },
+  goalIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   goalText: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 13, lineHeight: 20, color: CINE.text },
-  option: {
-    flexBasis: '30%',
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: CINE.bg,
-    borderWidth: 1.5,
-    borderColor: CINE.border,
-  },
+  option: { flexBasis: '30%', flexGrow: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 12, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: 'transparent' },
   optionText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: CINE.text },
   errorText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: COLORS.error, textAlign: 'center' },
-  footer: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.s,
-    backgroundColor: CINE.bg,
-    borderTopWidth: 1,
-    borderTopColor: CINE.border,
-  },
-  primaryBtn: { height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  btnDisabled: { backgroundColor: CINE.dim },
+  footer: { paddingHorizontal: SPACING.l, paddingTop: SPACING.s, backgroundColor: CINE.bg },
+  primaryBtn: { flexDirection: 'row', gap: 10, height: 54, borderRadius: 16, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary },
+  btnDisabled: { backgroundColor: '#E6C9BE' },
   primaryBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 14 },
 });

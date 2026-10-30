@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TrackPlayer from 'react-native-track-player';
-import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Square, Volume2, X } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, Info, Layers, Mic, Pause, Play, RotateCcw, Square, Volume2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -35,7 +35,7 @@ const scoreColor = (s: number) => (s >= 80 ? COLORS.success : s >= 60 ? COLORS.w
  * جز همان نمره‌ی تلفظ ندارد) و برای دفعه‌ی بعد نگه داشته می‌شوند.
  */
 export const PodcastMyVersionScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -45,6 +45,8 @@ export const PodcastMyVersionScreen: React.FC = () => {
   const [loadError, setLoadError] = useState(false);
   const [step, setStep] = useState<Step>('pick');
   const [speaker, setSpeaker] = useState<string>(ALL_LINES);
+  // انتخابِ نقش در مرحله‌ی pick؛ تا دکمه‌ی شروع زده نشود، ضبط‌های قبلی دست نمی‌خورند.
+  const [picked, setPicked] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0); // اندیسِ جمله در myLines
   const [takes, setTakes] = useState<Record<number, Take>>({});
   const [recState, setRecState] = useState<'idle' | 'recording' | 'scoring'>('idle');
@@ -250,6 +252,16 @@ export const PodcastMyVersionScreen: React.FC = () => {
     );
   }
 
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
+  const num = (n: number) => n.toLocaleString(rtl ? 'fa-IR' : 'en-US');
+  const selected = picked ?? speaker;
+  const roleOptions = [
+    ...speakers.map((sp) => ({ id: sp, name: sp, count: lines.filter((l) => l.speaker === sp).length })),
+    { id: ALL_LINES, name: t('myVersionAllLines'), count: lines.length },
+  ];
+
   const line = currentLine !== undefined ? lines[currentLine] : null;
   const take = currentLine !== undefined ? takes[currentLine] : undefined;
   const busy = recState !== 'idle';
@@ -268,13 +280,13 @@ export const PodcastMyVersionScreen: React.FC = () => {
         }}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, row]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} disabled={busy}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>{t('myVersionTitle')}</Text>
-          <Text style={styles.muted} numberOfLines={1}>
+        <View style={styles.headerText}>
+          <Text style={[styles.headerTitle, align]}>{t('myVersionTitle')}</Text>
+          <Text style={[styles.muted, align]} numberOfLines={1}>
             {podcast.title}
           </Text>
         </View>
@@ -283,20 +295,52 @@ export const PodcastMyVersionScreen: React.FC = () => {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + SPACING.l }]}>
         {step === 'pick' && (
           <>
-            <Text style={styles.body}>{t('myVersionPickHint')}</Text>
-            {speakers.map((sp) => (
-              <TouchableOpacity key={sp} style={styles.choice} onPress={() => choose(sp)} activeOpacity={0.85}>
-                <Mic size={18} color={COLORS.primary} />
-                <Text style={styles.choiceText}>{sp}</Text>
-                <Text style={styles.muted}>
-                  {t('myVersionLines').replace('{n}', String(lines.filter((l) => l.speaker === sp).length))}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.choice} onPress={() => choose(ALL_LINES)} activeOpacity={0.85}>
-              <Mic size={18} color={COLORS.primary} />
-              <Text style={styles.choiceText}>{t('myVersionAllLines')}</Text>
-              <Text style={styles.muted}>{t('myVersionLines').replace('{n}', String(lines.length))}</Text>
+            <View style={[styles.hintCard, row]}>
+              <View style={styles.hintIcon}>
+                <Mic size={20} color={COLORS.white} />
+              </View>
+              <Text style={[styles.hintText, align]}>{t('myVersionPickHint')}</Text>
+            </View>
+
+            <Text style={[styles.sectionTitle, align]}>{t('myVersionPickTitle')}</Text>
+            {roleOptions.map((opt) => {
+              const active = selected === opt.id;
+              const isAll = opt.id === ALL_LINES;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.choice, row, active && styles.choiceActive]}
+                  onPress={() => setPicked(opt.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.avatar, isAll && styles.avatarAll]}>
+                    {isAll ? (
+                      <Layers size={20} color={COLORS.warningDeep} />
+                    ) : (
+                      <Text style={styles.avatarText}>{opt.name.slice(0, 1).toUpperCase()}</Text>
+                    )}
+                  </View>
+                  <View style={styles.choiceBody}>
+                    <Text style={[styles.choiceText, align]}>{opt.name}</Text>
+                    <Text style={[styles.muted, align]}>
+                      {t('myVersionLines').replace('{n}', num(opt.count))}
+                    </Text>
+                  </View>
+                  <View style={[styles.radio, active && styles.radioActive]}>
+                    {active && <Check size={14} color={COLORS.white} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            <View style={[styles.noteRow, row]}>
+              <Info size={13} color={COLORS.muted} />
+              <Text style={[styles.noteText, align]}>{t('myVersionRetakeNote')}</Text>
+            </View>
+
+            <TouchableOpacity style={[styles.primaryBtn, row]} onPress={() => choose(selected)} activeOpacity={0.85}>
+              <Mic size={18} color={COLORS.white} />
+              <Text style={styles.primaryBtnText}>{t('myVersionStart')}</Text>
             </TouchableOpacity>
             {Object.keys(takes).length > 0 && (
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setStep('result')}>
@@ -447,7 +491,54 @@ export const PodcastMyVersionScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  container: { flex: 1, backgroundColor: COLORS.backgroundSoft },
+  headerText: { flex: 1 },
+  hintCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFF6F2',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 87, 47, 0.2)',
+    borderRadius: 20,
+    padding: 14,
+  },
+  hintIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintText: { flex: 1, color: COLORS.text, fontFamily: FONT_FAMILY.medium, fontSize: 13, lineHeight: 22 },
+  sectionTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
+  choiceActive: { borderColor: COLORS.primary, borderWidth: 1.5, backgroundColor: '#FFF6F2' },
+  choiceBody: { flex: 1, gap: 2 },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: COLORS.infoLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarAll: { backgroundColor: COLORS.secondaryLight },
+  avatarText: { color: COLORS.info, fontFamily: FONT_FAMILY.bold, fontSize: 18 },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  noteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  noteText: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
   center: { alignItems: 'center', justifyContent: 'center' },
   centerText: { textAlign: 'center' },
   header: {
@@ -458,14 +549,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { ...TEXT_STYLES.headlineSm, color: COLORS.text },
+  headerTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32 },
   content: { paddingHorizontal: SPACING.l, gap: SPACING.m },
   body: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, fontSize: 13 },
@@ -473,21 +566,21 @@ const styles = StyleSheet.create({
   choice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.s,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
+    borderColor: COLORS.borderLight,
+    padding: 14,
   },
   choiceText: { flex: 1, color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 15 },
   lineCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
     padding: SPACING.l,
     gap: SPACING.s,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   lineText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 20, lineHeight: 30, writingDirection: 'ltr' },
   lineFa: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 14, lineHeight: 22 },
@@ -513,8 +606,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.s,
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 15,
     paddingHorizontal: SPACING.l,
     alignSelf: 'stretch',
   },
@@ -530,16 +623,16 @@ const styles = StyleSheet.create({
   resultCard: {
     alignItems: 'center',
     gap: SPACING.s,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
     padding: SPACING.l,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   bigScore: { fontFamily: FONT_FAMILY.bold, fontSize: 48 },
   resultLine: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     padding: SPACING.m,
     borderWidth: 1,
     borderColor: COLORS.borderLight,

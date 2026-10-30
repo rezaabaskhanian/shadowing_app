@@ -11,11 +11,16 @@ import { FONT_FAMILY } from '../../../theme/typography';
 export const feedbackCardStyles = StyleSheet.create({
   feedbackCard: {
     marginTop: 12,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: COLORS.backgroundSoft,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: '#EEEAE3',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   },
   feedbackCardError: {
     backgroundColor: 'rgba(186, 26, 26, 0.08)',

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, CheckCircle2, Mic, Play, Target } from 'lucide-react-native';
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Mic, Play, Target } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -42,7 +42,7 @@ export const VerbDetailScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const verbId: string = route.params?.verbId;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { scenes } = useScenes();
   const { add } = useVocab();
   const queryClient = useQueryClient();
@@ -86,68 +86,108 @@ export const VerbDetailScreen = () => {
     }, 800);
   };
 
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
+  const num = (n: number) => n.toLocaleString(rtl ? 'fa-IR' : 'en-US');
+
+  const learnedCount = verb ? verb.meanings.filter((m) => m.learned).length : 0;
+  const total = verb ? verb.meanings.length : 0;
+
   return (
     <View style={styles.screen}>
       <AudioPlayer uri={audioUri} shouldPlay={false} actionCommand={actionCommand} actionNonce={actionNonce} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
-          <ArrowLeft color={COLORS.text} size={22} />
-        </TouchableOpacity>
+        <View style={[styles.topBar, row]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          >
+            {rtl ? <ChevronRight color={COLORS.text} size={22} /> : <ChevronLeft color={COLORS.text} size={22} />}
+          </TouchableOpacity>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{t('verbBadge')}</Text>
+          </View>
+          <View style={styles.topBarSpacer} />
+        </View>
 
         {isLoading || !verb ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={COLORS.primary} style={styles.loader} />
         ) : (
           <>
-            <Text style={styles.lemma}>{verb.lemma}</Text>
-            <Text style={styles.sub}>
-              {t('verbLearnedOf')
-                .replace('{learned}', String(verb.meanings.filter((m) => m.learned).length))
-                .replace('{total}', String(verb.meanings.length))}
-            </Text>
+            <Text style={[styles.lemma, align]}>{verb.lemma}</Text>
+            <View style={[styles.progressRow, row]}>
+              <View style={styles.progressDot} />
+              <Text style={styles.sub}>
+                {t('verbLearnedOf').replace('{learned}', num(learnedCount)).replace('{total}', num(total))}
+              </Text>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    rtl && styles.progressFillRtl,
+                    { width: `${total ? Math.max(4, (learnedCount / total) * 100) : 0}%` },
+                  ]}
+                />
+              </View>
+            </View>
 
             <TouchableOpacity
-              style={styles.quizBtn}
+              style={[styles.quizBtn, row]}
               activeOpacity={0.85}
               onPress={() => navigation.navigate('VerbQuiz', { verbId, lemma: verb.lemma })}
             >
-              <Target size={18} color={COLORS.white} />
-              <Text style={styles.quizBtnText}>{t('verbStartQuiz')}</Text>
+              <View style={styles.quizIcon}>
+                <Target size={18} color={COLORS.white} />
+              </View>
+              <Text style={[styles.quizBtnText, align]}>{t('verbStartQuiz')}</Text>
+              {rtl ? <ChevronLeft size={20} color={COLORS.white} /> : <ChevronRight size={20} color={COLORS.white} />}
             </TouchableOpacity>
-            <Text style={styles.rule}>{t('verbLearnedRule')}</Text>
 
-            <Text style={styles.sectionTitle}>{t('verbMeaningsTitle')}</Text>
-            {verb.meanings.map((m) => (
+            <View style={[styles.ruleCard, row]}>
+              <View style={styles.ruleIcon}>
+                <Lightbulb size={16} color={COLORS.warningDeep} />
+              </View>
+              <Text style={[styles.rule, align]}>{t('verbLearnedRule')}</Text>
+            </View>
+
+            <Text style={[styles.sectionTitle, align]}>{t('verbMeaningsTitle')}</Text>
+            {verb.meanings.map((m, idx) => (
               <View key={m.id} style={[styles.card, !m.seen && m.examples.length > 0 && styles.cardUnseen]}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.meaning}>{m.meaning_fa}</Text>
+                <View style={[styles.cardHeader, row]}>
+                  <View style={styles.indexCircle}>
+                    <Text style={styles.indexText}>{num(idx + 1)}</Text>
+                  </View>
+                  <Text style={[styles.meaning, align]}>{m.meaning_fa}</Text>
                   {m.learned && (
-                    <View style={styles.learnedBadge}>
-                      <CheckCircle2 size={12} color={COLORS.white} />
+                    <View style={[styles.learnedBadge, row]}>
+                      <CheckCircle2 size={12} color={COLORS.success} />
                       <Text style={styles.learnedBadgeText}>{t('verbStatusLearned')}</Text>
                     </View>
                   )}
                 </View>
-                {!!m.explanation_fa && <Text style={styles.explanation}>{m.explanation_fa}</Text>}
+                {!!m.explanation_fa && <Text style={[styles.explanation, align]}>{m.explanation_fa}</Text>}
 
                 {m.examples.length > 0 ? (
                   m.examples.slice(0, 2).map((ex, i) => (
                     <View key={i} style={styles.example}>
                       <View style={styles.exampleRow}>
+                        <SentenceWithForm sentence={ex.sentence} form={ex.form} style={styles.sentence} />
                         {!!ex.audio_url && (
                           <TouchableOpacity style={styles.playBtn} onPress={() => play(ex.audio_url)} hitSlop={8}>
-                            <Play size={14} color={COLORS.primary} fill={COLORS.primary} />
+                            <Play size={13} color={COLORS.primary} fill={COLORS.primary} />
                           </TouchableOpacity>
                         )}
-                        <SentenceWithForm sentence={ex.sentence} form={ex.form} style={styles.sentence} />
                       </View>
-                      {!!ex.translation && <Text style={styles.translation}>{ex.translation}</Text>}
-                      <View style={styles.exampleFooter}>
-                        <Text style={styles.sceneTitle} numberOfLines={1}>
+                      {!!ex.translation && <Text style={[styles.translation, align]}>{ex.translation}</Text>}
+                      <View style={[styles.exampleFooter, row]}>
+                        <Text style={[styles.sceneTitle, align]} numberOfLines={1}>
                           {t('verbHeardIn').replace('{scene}', ex.scene_title)}
                         </Text>
                         {scenes.some((s) => s.id === ex.scene_id) && (
-                          <TouchableOpacity onPress={() => openLesson(ex.scene_id)} hitSlop={8}>
+                          <TouchableOpacity style={[styles.linkRow, row]} onPress={() => openLesson(ex.scene_id)} hitSlop={8}>
                             <Text style={styles.link}>{t('verbGoToLesson')}</Text>
+                            {rtl ? <ChevronLeft size={14} color={COLORS.primaryDark} /> : <ChevronRight size={14} color={COLORS.primaryDark} />}
                           </TouchableOpacity>
                         )}
                       </View>
@@ -158,33 +198,42 @@ export const VerbDetailScreen = () => {
                     {!!m.fallback_example && (
                       <SentenceWithForm sentence={m.fallback_example} form={verb.lemma} style={styles.sentence} />
                     )}
-                    <Text style={styles.sceneTitle}>{t('verbNoLessonExample')}</Text>
+                    <Text style={[styles.sceneTitle, align]}>{t('verbNoLessonExample')}</Text>
                   </View>
                 )}
 
-                <View style={styles.statusRow}>
-                  <Text style={styles.status}>
-                    {t('verbStatusRecognition')
-                      .replace('{n}', String(Math.min(m.recognition_correct, m.recognition_target)))
-                      .replace('{target}', String(m.recognition_target))}
-                  </Text>
-                  {m.spoken_ok && <Text style={styles.status}>{t('verbStatusSpoken')}</Text>}
+                <View style={[styles.statusRow, row]}>
+                  <Text style={styles.statusLabel}>{t('verbStatusTitle')}</Text>
+                  <View style={[styles.statusChips, row]}>
+                    <View style={styles.statusChip}>
+                      <Text style={styles.statusChipText}>
+                        {t('verbStatusRecognition')
+                          .replace('{n}', num(Math.min(m.recognition_correct, m.recognition_target)))
+                          .replace('{target}', num(m.recognition_target))}
+                      </Text>
+                    </View>
+                    {m.spoken_ok && (
+                      <View style={[styles.statusChip, styles.statusChipDone]}>
+                        <Text style={[styles.statusChipText, styles.statusChipTextDone]}>{t('verbStatusSpoken')}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
-                <View style={styles.actions}>
+                <View style={[styles.actions, row]}>
                   <TouchableOpacity
-                    style={[styles.actionBtn, m.in_leitner && styles.actionBtnDone]}
+                    style={[styles.actionBtn, row, m.in_leitner && styles.actionBtnDone]}
                     disabled={m.in_leitner}
                     onPress={() => addToLeitner(m)}
                   >
-                    <BookOpen size={14} color={m.in_leitner ? COLORS.muted : COLORS.info} />
-                    <Text style={[styles.actionText, m.in_leitner && { color: COLORS.muted }]}>
+                    <BookOpen size={15} color={m.in_leitner ? COLORS.muted : COLORS.text} />
+                    <Text style={[styles.actionText, m.in_leitner && styles.actionTextDone]}>
                       {m.in_leitner ? t('verbInLeitner') : t('verbAddToLeitner')}
                     </Text>
                   </TouchableOpacity>
                   {!!m.practice_prompt_fa && (
                     <TouchableOpacity
-                      style={styles.actionBtn}
+                      style={[styles.actionBtn, row]}
                       onPress={() =>
                         navigation.navigate('VerbSpeak', {
                           meaningId: m.id,
@@ -194,7 +243,7 @@ export const VerbDetailScreen = () => {
                         })
                       }
                     >
-                      <Mic size={14} color={COLORS.primary} />
+                      <Mic size={15} color={COLORS.primary} />
                       <Text style={styles.actionText}>{t('verbSpeakPractice')}</Text>
                     </TouchableOpacity>
                   )}
@@ -209,66 +258,129 @@ export const VerbDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
-  content: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 60 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  screen: { flex: 1, backgroundColor: COLORS.backgroundSoft },
+  content: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 60 },
+  loader: { marginTop: 40 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  topBarSpacer: { width: 40 },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
-  lemma: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 32, textAlign: 'left' },
-  sub: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 13, marginTop: 2 },
+  badge: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  badgeText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 11 },
+  // خودِ فعل انگلیسی است ولی مثل ماکاپ در فارسی سمت راست می‌نشیند.
+  lemma: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 44, lineHeight: 54 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  sub: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
+  progressTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.surfaceHigh,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.primary },
+  progressFillRtl: { alignSelf: 'flex-end' },
   quizBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 12,
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    height: 48,
-    marginTop: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    height: 60,
+    marginTop: 20,
   },
-  quizBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
-  rule: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 17, marginTop: 8 },
-  sectionTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 16, marginTop: 20, marginBottom: 10 },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+  quizIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quizBtnText: { flex: 1, color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  ruleCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#FFF8E6',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
+    borderColor: '#F6E7BE',
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 12,
+  },
+  ruleIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.secondaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rule: { flex: 1, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20 },
+  sectionTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 18, marginTop: 24, marginBottom: 12 },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    padding: 16,
     marginBottom: 12,
   },
   cardUnseen: { borderColor: COLORS.primary },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  meaning: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 16, flex: 1 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  indexCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indexText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
+  meaning: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 18, flex: 1 },
   learnedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: COLORS.successLight,
     borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  learnedBadgeText: { color: COLORS.white, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
-  explanation: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 13, marginTop: 4 },
+  learnedBadgeText: { color: COLORS.success, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
+  explanation: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, marginTop: 8 },
   example: {
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    padding: 10,
-    marginTop: 10,
-    gap: 4,
+    backgroundColor: COLORS.backgroundSoft,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 12,
+    gap: 6,
   },
-  exampleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exampleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   playBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -278,27 +390,51 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 15,
+    lineHeight: 23,
     writingDirection: 'ltr',
     textAlign: 'left',
   },
-  formHighlight: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold },
-  translation: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 12 },
-  exampleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sceneTitle: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11, flex: 1 },
-  link: { color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, fontSize: 12 },
-  statusRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  status: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  actionBtn: {
+  formHighlight: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold, textDecorationLine: 'underline' },
+  translation: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20 },
+  exampleFooter: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: 8,
+    marginTop: 2,
+  },
+  sceneTitle: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11, flex: 1 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  link: { color: COLORS.primaryDark, fontFamily: FONT_FAMILY.semiBold, fontSize: 12 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 14 },
+  statusLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  statusChips: { flexDirection: 'row', gap: 6 },
+  statusChip: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusChipDone: { backgroundColor: COLORS.successLight },
+  statusChipText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
+  statusChipTextDone: { color: COLORS.success },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    height: 42,
   },
-  actionBtnDone: { backgroundColor: COLORS.surfaceLight },
-  actionText: { color: COLORS.text, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
+  actionBtnDone: { backgroundColor: COLORS.surfaceLight, borderColor: COLORS.surfaceLight },
+  actionText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 12 },
+  actionTextDone: { color: COLORS.muted },
 });

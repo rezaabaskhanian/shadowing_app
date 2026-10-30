@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mic, Headphones, MessageCircle, TrendingUp, Clock } from 'lucide-react-native';
+import { GradientFill } from '../../components/GradientFill';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
@@ -41,7 +42,9 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
   timeEstimate,
   body,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون مرحله سمت راست، شماره سمت چپ.
+  const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
 
   const bullets = customBullets ?? [
@@ -91,12 +94,22 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
               <View
                 key={index}
                 // پس‌زمینه‌ی یکسان و خنثی برای همه‌ی مرحله‌ها؛ رنگ فقط روی آیکون می‌ماند.
-                style={[styles.bulletRow, styles.bulletRowNeutral]}
+                style={[styles.bulletRow, styles.bulletRowNeutral, rtl && styles.rowReverse]}
               >
                 <View style={[styles.bulletIconWrap, { backgroundColor: color }]}>
                   <Icon size={18} color={COLORS.white} />
                 </View>
-                <Text style={styles.bulletText}>{bullet}</Text>
+                {/* بخشِ قبل از «:» (اسم مرحله) پررنگ. */}
+                <Text style={[styles.bulletText, { textAlign: rtl ? 'right' : 'left' }]}>
+                  {bullet.includes(':') ? (
+                    <>
+                      <Text style={styles.bulletLead}>{bullet.slice(0, bullet.indexOf(':') + 1)}</Text>
+                      {bullet.slice(bullet.indexOf(':') + 1)}
+                    </>
+                  ) : (
+                    bullet
+                  )}
+                </Text>
                 <Text style={[styles.stepNum, { color }]}>{index + 1}</Text>
               </View>
             );
@@ -106,6 +119,7 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.startBtn} onPress={onStart} activeOpacity={0.85}>
+          <GradientFill from="#E8572F" to="#E9774A" horizontal />
           <Text style={styles.startBtnText}>{t('placementStartBtn')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.7}>
@@ -117,13 +131,10 @@ export const PlacementTestIntroScreen: React.FC<PlacementTestIntroScreenProps> =
 };
 
 const styles = StyleSheet.create({
-  bulletRowNeutral: { backgroundColor: COLORS.surface, borderColor: COLORS.borderLight },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-    justifyContent: 'space-between',
-  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  bulletLead: { fontFamily: FONT_FAMILY.bold, color: COLORS.text },
+  bulletRowNeutral: { backgroundColor: '#F4F3EF', borderColor: '#ECEAE4' },
+  container: { flex: 1, backgroundColor: '#FAF9F6', paddingHorizontal: SPACING.l, justifyContent: 'space-between' },
   content: {
     alignItems: 'center',
     marginTop: SPACING.xl,
@@ -152,16 +163,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.m,
   },
-  timePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.surfaceHigh,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
-    marginBottom: SPACING.l,
-  },
+  timePill: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, backgroundColor: '#ECEAE4', paddingHorizontal: SPACING.m, paddingVertical: 5, borderRadius: BORDER_RADIUS.full, marginBottom: SPACING.xl },
   timePillText: {
     ...TEXT_STYLES.labelSm,
     color: COLORS.textSecondary,
@@ -177,11 +179,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 999,
   },
-  haloOuter: {
-    width: ICON_CIRCLE_SIZE + 64,
-    height: ICON_CIRCLE_SIZE + 64,
-    backgroundColor: hexToRgba(COLORS.pink, 0.08),
-  },
+  haloOuter: { width: ICON_CIRCLE_SIZE + 64, height: ICON_CIRCLE_SIZE + 64, backgroundColor: hexToRgba(COLORS.primary, 0.06) },
   haloInner: {
     width: ICON_CIRCLE_SIZE + 30,
     height: ICON_CIRCLE_SIZE + 30,
@@ -191,14 +189,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: SPACING.s,
   },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    padding: SPACING.m,
-  },
+  bulletRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m, borderRadius: 16, borderWidth: 1, padding: 14 },
   stepNum: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 18,
@@ -218,13 +209,7 @@ const styles = StyleSheet.create({
   footer: {
     gap: SPACING.s,
   },
-  startBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
-    alignItems: 'center',
-    ...SHADOWS.level2,
-  },
+  startBtn: { borderRadius: 16, height: 54, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, ...SHADOWS.level2 },
   startBtnText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,

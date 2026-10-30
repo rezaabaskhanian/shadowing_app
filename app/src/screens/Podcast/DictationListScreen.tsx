@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PenLine, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Mic, PenLine } from 'lucide-react-native';
 
 import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -27,7 +27,8 @@ const LEVEL_RANK = ['starter', 'beginner', 'intermediate', 'advanced', 'proficie
  * پخش می‌شود و کاربر هر چه می‌شنود می‌نویسد (PodcastDictationScreen).
  */
 export const DictationListScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [list, setList] = useState<Podcast[] | null>(null);
@@ -50,13 +51,21 @@ export const DictationListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
+      {/* تیتر وسط، دکمه‌ی بستن کنار؛ زیرش کارت توضیح کوتاه با آیکون. */}
+      {/* طرح: دکمه‌ی برگشت سمت چپ، تیتر وسط. */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <X size={20} color={COLORS.text} />
+          {rtl ? <ChevronRight size={20} color={COLORS.text} /> : <ChevronLeft size={20} color={COLORS.text} />}
         </TouchableOpacity>
         <Text style={styles.title}>{t('dictationTitle')}</Text>
+        <View style={styles.closeBtnSpacer} />
       </View>
-      <Text style={styles.sub}>{t('dictationSubtitle')}</Text>
+      <View style={[styles.introCard, rtl && styles.rowReverse]}>
+        <View style={styles.introIcon}>
+          <Mic size={16} color={COLORS.primary} />
+        </View>
+        <Text style={[styles.sub, { textAlign: rtl ? 'right' : 'left' }]}>{t('dictationSubtitle')}</Text>
+      </View>
 
       {list === null && !error && (
         <View style={styles.center}>
@@ -97,26 +106,34 @@ export const DictationListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
-  header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s },
+  container: { flex: 1, backgroundColor: '#F7F7F9', paddingHorizontal: SPACING.l },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.m },
+  closeBtnSpacer: { width: 36 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  introCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    marginBottom: SPACING.m,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEEF2',
+  },
+  introIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FDEBE4', alignItems: 'center', justifyContent: 'center' },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEEF2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 28, color: COLORS.text, textAlign: 'right' },
-  sub: {
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
-    lineHeight: 20,
-    color: COLORS.textSecondary,
-    textAlign: 'right',
-    marginTop: 4,
-    marginBottom: SPACING.m,
-  },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 28, color: COLORS.text, textAlign: 'center' },
+  sub: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.s },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
   link: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },

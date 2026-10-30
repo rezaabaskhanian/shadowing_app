@@ -33,7 +33,11 @@ const LISTEN_FIRST_LEVELS = ['starter', 'beginner'];
  * آخر فصل: لغت‌ها، سؤال‌های فهم و رفتن به فصل بعد.
  */
 export const StoryScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: عنوان راست و بستن چپ؛ راهنما و ترجمه‌ها راست‌چین.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -265,11 +269,12 @@ export const StoryScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
+      {/* طرح: بستن سمت چپ، عنوان و فصل سمت راست. */}
       <View style={styles.topRow}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.flex}>
+        <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
           <Text style={styles.topTitle} numberOfLines={1}>
             {story.series_title || story.title}
           </Text>
@@ -298,26 +303,28 @@ export const StoryScreen: React.FC = () => {
         </View>
         {!!story.description_fa && (
           <View style={[styles.recap, { borderColor: hexToRgba(accent, 0.3), backgroundColor: hexToRgba(accent, 0.06) }]}>
-            <Text style={styles.recapText}>{story.description_fa}</Text>
+            <Text style={[styles.recapText, ta]}>{story.description_fa}</Text>
           </View>
         )}
 
-        <View style={[styles.guide, { backgroundColor: hexToRgba(accent, 0.1) }]}>
-          {listenFirst ? <Headphones size={18} color={accent} /> : <BookOpen size={18} color={accent} />}
-          <View style={styles.flex}>
-            <Text style={[styles.guideTitle, { color: accent }]}>
+        <View style={[styles.guide, rr, { backgroundColor: hexToRgba(accent, 0.08), borderColor: hexToRgba(accent, 0.22) }]}>
+          <View style={[styles.guideIcon, { backgroundColor: hexToRgba(accent, 0.14) }]}>
+            {listenFirst ? <Headphones size={16} color={accent} /> : <BookOpen size={16} color={accent} />}
+          </View>
+          <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
+            <Text style={[styles.guideTitle, ta, { color: accent }]}>
               {listenFirst ? t('storyGuideListenTitle') : t('storyGuideSilentTitle')}
             </Text>
-            <Text style={styles.guideText}>{listenFirst ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
+            <Text style={[styles.guideText, ta]}>{listenFirst ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
           </View>
         </View>
 
         <View style={styles.switchRow}>
-          <Text style={styles.hint}>{t('storyReadHint')}</Text>
-          <View style={styles.switchInline}>
+          <View style={[styles.switchInline, rr]}>
             <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
             <Switch value={showAllTranslations} onValueChange={setShowAllTranslations} trackColor={{ true: accent }} />
           </View>
+          <Text style={[styles.hint, ta]}>{t('storyReadHint')}</Text>
         </View>
 
         <View
@@ -351,12 +358,16 @@ export const StoryScreen: React.FC = () => {
                       startMs={l.start_ms}
                       endMs={l.end_ms}
                       positionMs={positionSV}
-                      textStyle={StyleSheet.flatten([styles.sentenceText, styles.sentenceTextActive])}
+                      textStyle={StyleSheet.flatten([styles.sentenceText, styles.sentenceTextActive, ta])}
                     />
                   ) : (
-                    <Text style={styles.sentenceText}>{l.text}</Text>
+                    <Text style={[styles.sentenceText, ta]}>{l.text}</Text>
                   )}
-                  {showFa && !!l.translation_fa && <Text style={styles.translation}>{l.translation_fa}</Text>}
+                  {showFa && !!l.translation_fa && (
+                    <Text style={[styles.translation, ta, rtl ? styles.translationBarRight : styles.translationBarLeft]}>
+                      {l.translation_fa}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             );
@@ -463,7 +474,7 @@ export const StoryScreen: React.FC = () => {
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
         </View>
-        <View style={styles.playerRow}>
+        <View style={[styles.playerRow, rr]}>
           <TouchableOpacity
             style={[styles.playBtn, { backgroundColor: accent }]}
             onPress={togglePlay}
@@ -478,7 +489,10 @@ export const StoryScreen: React.FC = () => {
               <Play size={22} color={COLORS.white} fill={COLORS.white} />
             )}
           </TouchableOpacity>
-          <Text style={styles.playerLabel}>{t('storyListenAlong')}</Text>
+          <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
+            <Text style={styles.playerLabel}>{t('storyListenAlong')}</Text>
+            <Text style={styles.playerSub}>{t('storyPlayerSub')}</Text>
+          </View>
           <View style={styles.rates}>
             {RATES.map((r) => (
               <TouchableOpacity
@@ -498,7 +512,16 @@ export const StoryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
+  guideIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  translationBarRight: { borderRightWidth: 2, borderRightColor: '#E5E0D6', paddingRight: 8 },
+  translationBarLeft: { borderLeftWidth: 2, borderLeftColor: '#E5E0D6', paddingLeft: 8 },
+  playerSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  container: { flex: 1, backgroundColor: '#FAF8F4' },
   center: { alignItems: 'center', justifyContent: 'center', gap: SPACING.s },
   flex: { flex: 1 },
   mutedText: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
@@ -510,30 +533,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     paddingBottom: SPACING.s,
   },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE6', alignItems: 'center', justifyContent: 'center' },
+  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text, textAlign: 'left' },
   topSub: { ...TEXT_STYLES.labelSm, fontFamily: FONT_FAMILY.semiBold },
   content: { paddingHorizontal: SPACING.l, paddingBottom: SPACING.xl, gap: SPACING.m },
-  cover: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: BORDER_RADIUS.l,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   coverImage: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
-  recap: { borderRadius: BORDER_RADIUS.m, borderWidth: 1, padding: SPACING.m },
+  recap: { borderRadius: 16, borderWidth: 1, padding: SPACING.m },
   recapText: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
   switchRow: { gap: SPACING.xs },
-  guide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.s, borderRadius: BORDER_RADIUS.m, padding: SPACING.m },
+  guide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.s, borderRadius: 16, borderWidth: 1, padding: SPACING.m },
   guideTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
   guideText: { ...TEXT_STYLES.labelMd, color: COLORS.text, marginTop: 2 },
   speedCard: {
@@ -549,12 +558,7 @@ const styles = StyleSheet.create({
   switchInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { ...TEXT_STYLES.labelMd, color: COLORS.text },
   hint: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
-  page: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.m,
-    ...SHADOWS.level1,
-  },
+  page: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEAE2', padding: SPACING.m },
   paragraphGap: { height: SPACING.m },
   inlineImage: {
     width: '100%',
@@ -563,7 +567,7 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.s,
   },
   sentence: { borderRadius: BORDER_RADIUS.s, paddingVertical: 4, paddingHorizontal: 6 },
-  sentenceText: { fontFamily: FONT_FAMILY.regular, fontSize: 18, lineHeight: 30, color: COLORS.text, textAlign: 'left' },
+  sentenceText: { fontFamily: FONT_FAMILY.regular, fontSize: 17, lineHeight: 28, color: COLORS.text, writingDirection: 'ltr' },
   sentenceTextActive: { fontFamily: FONT_FAMILY.semiBold },
   translation: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary, marginTop: 2 },
   block: {
@@ -604,14 +608,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.level2,
   },
   nextBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 16 },
-  player: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.s,
-    gap: SPACING.s,
-  },
+  player: { borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l, paddingTop: SPACING.s, gap: SPACING.s, shadowColor: '#1A1D26', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 6 },
   progressTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceHigh, overflow: 'hidden' },
   progressFill: { height: '100%' },
   playerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
@@ -623,7 +620,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.level2,
   },
-  playerLabel: { flex: 1, ...TEXT_STYLES.labelMd, color: COLORS.textSecondary },
+  playerLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.text },
   rates: { flexDirection: 'row', gap: SPACING.xs },
   rateBtn: {
     borderRadius: BORDER_RADIUS.full,

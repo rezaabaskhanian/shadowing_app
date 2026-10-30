@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Coins, Lock, RotateCcw, Sparkles } from 'lucide-react-native';
+import { CheckCircle2, ChevronLeft, ChevronRight, Coins, Lock, RotateCcw, Sparkles } from 'lucide-react-native';
 import { useBazaar } from '@cafebazaar/react-native-poolakey';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
@@ -13,13 +13,16 @@ import { getMyPoints } from '../../api/submissions';
 import { CAFEBAZAAR_RSA_KEY } from '../../api/config';
 import { track } from '../../services/analytics';
 
-const formatToman = (n: number) => n.toLocaleString('en-US');
+const formatNumber = (n: number, lang: 'en' | 'fa') => n.toLocaleString(lang === 'fa' ? 'fa-IR' : 'en-US');
+
+/** پلن‌هایی با این طول یا بیشتر «دائمی» حساب می‌شوند و زیرنویسِ روز/ماه نمی‌گیرند. */
+const LIFETIME_DAYS = 3650;
 
 type Phase = 'loading' | 'idle' | 'buying' | 'restoring' | 'error' | 'success';
 
 export const PaywallScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { reload } = useScenes();
   const bazaar = useBazaar(CAFEBAZAAR_RSA_KEY || null);
 
@@ -58,6 +61,28 @@ export const PaywallScreen = () => {
   const selectedPlan = plans.find((p) => p.id === selectedId) || null;
   const busy = phase === 'buying' || phase === 'restoring';
   const bonusDays = bonusDaysForPoints(points);
+
+  // صرفه‌جویی هر پلن نسبت به قیمتِ روزانه‌ی کوتاه‌ترین پلن؛ از قیمت‌های واقعیِ
+  // سرور حساب می‌شود، نه عدد ثابت، تا با تغییر قیمت در پنل غلط نشود.
+  const shortest = [...plans].sort((a, b) => a.duration_days - b.duration_days)[0];
+  const basePerDay = shortest && shortest.duration_days > 0 ? shortest.price_toman / shortest.duration_days : 0;
+  const savingPercent = (p: SubscriptionPlan) => {
+    if (!basePerDay || p.duration_days <= 0 || p.duration_days >= LIFETIME_DAYS) return 0;
+    const pct = Math.round((1 - p.price_toman / p.duration_days / basePerDay) * 100);
+    return pct >= 5 ? pct : 0;
+  };
+  const planSubtitle = (p: SubscriptionPlan) => {
+    if (p.duration_days >= LIFETIME_DAYS) return t('paywallPlanForever');
+    if (p.duration_days >= 60) {
+      const perMonth = Math.round((p.price_toman / p.duration_days) * 30 / 1000) * 1000;
+      return t('paywallPlanPerMonth').replace('{price}', formatNumber(perMonth, language));
+    }
+    return t('paywallPlanDays').replace('{days}', formatNumber(p.duration_days, language));
+  };
+
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
 
   const handleBuy = async () => {
     if (!selectedPlan || !selectedPlan.product_id) return;
@@ -132,12 +157,17 @@ export const PaywallScreen = () => {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color={COLORS.text} size={22} />
-        </TouchableOpacity>
+        <View style={[styles.topBar, row]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            {rtl ? <ChevronRight color={COLORS.text} size={22} /> : <ChevronLeft color={COLORS.text} size={22} />}
+          </TouchableOpacity>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{t('paywallBadge')}</Text>
+          </View>
+        </View>
 
         <View style={styles.iconWrap}>
-          <Lock color={COLORS.primary} size={28} />
+          <Lock color={COLORS.primary} size={26} />
         </View>
         <Text style={styles.title}>{t('paywallTitle')}</Text>
         <Text style={styles.subtitle}>{t('paywallSubtitle')}</Text>
@@ -150,17 +180,36 @@ export const PaywallScreen = () => {
           <View style={styles.plansList}>
             {plans.map((p) => {
               const active = p.id === selectedId;
+              const saving = savingPercent(p);
               return (
                 <TouchableOpacity
                   key={p.id}
-                  style={[styles.planCard, active && styles.planCardActive]}
+                  style={[styles.planCard, row, active && styles.planCardActive]}
                   activeOpacity={0.85}
                   onPress={() => setSelectedId(p.id)}
                 >
-                  <Text style={[styles.planName, active && styles.planNameActive]}>{p.name}</Text>
-                  <Text style={[styles.planPrice, active && styles.planNameActive]}>
-                    {formatToman(p.price_toman)} تومان
-                  </Text>
+                  <View style={[styles.radio, active && styles.radioActive]}>
+                    {active && <View style={styles.radioDot} />}
+                  </View>
+                  <View style={styles.planInfo}>
+                    <View style={[styles.planNameRow, row]}>
+                      <Text style={[styles.planName, active && styles.planNameActive]}>{p.name}</Text>
+                      {saving > 0 && (
+                        <View style={styles.saveChip}>
+                          <Text style={styles.saveChipText}>
+                            {t('paywallPlanSave').replace('{n}', formatNumber(saving, language))}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.planSub, align]}>{planSubtitle(p)}</Text>
+                  </View>
+                  <View style={styles.priceCol}>
+                    <Text style={[styles.planPrice, active && styles.planNameActive]}>
+                      {formatNumber(p.price_toman, language)}
+                    </Text>
+                    <Text style={styles.planCurrency}>{t('paywallToman')}</Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -168,16 +217,16 @@ export const PaywallScreen = () => {
         )}
 
         {bonusDays > 0 && (
-          <View style={styles.pointsCard}>
+          <View style={[styles.pointsCard, row]}>
             <View style={styles.pointsIconWrap}>
               <Coins color={COLORS.secondary} size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.pointsTitle}>{t('paywallRedeemPointsTitle')}</Text>
-              <Text style={styles.pointsSub}>
+              <Text style={[styles.pointsTitle, align]}>{t('paywallRedeemPointsTitle')}</Text>
+              <Text style={[styles.pointsSub, align]}>
                 {t('paywallRedeemPointsSub')
-                  .replace('{points}', String(points))
-                  .replace('{days}', String(bonusDays))}
+                  .replace('{points}', formatNumber(points, language))
+                  .replace('{days}', formatNumber(bonusDays, language))}
               </Text>
             </View>
             <Switch
@@ -190,13 +239,13 @@ export const PaywallScreen = () => {
 
         {phase === 'error' && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{t('paywallErrorGeneric')}</Text>
-            {errorDetail ? <Text style={styles.errorDetailText}>{errorDetail}</Text> : null}
+            <Text style={[styles.errorText, align]}>{t('paywallErrorGeneric')}</Text>
+            {errorDetail ? <Text style={[styles.errorDetailText, align]}>{errorDetail}</Text> : null}
           </View>
         )}
 
         <TouchableOpacity
-          style={styles.buyBtn}
+          style={[styles.buyBtn, row, (busy || !selectedPlan) && styles.buyBtnDisabled]}
           activeOpacity={0.85}
           disabled={busy || !selectedPlan}
           onPress={handleBuy}
@@ -215,12 +264,12 @@ export const PaywallScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.restoreBtn}
+          style={[styles.restoreBtn, row]}
           activeOpacity={0.85}
           disabled={busy}
           onPress={handleRestore}
         >
-          <RotateCcw color={COLORS.textSecondary} size={16} />
+          <RotateCcw color={COLORS.textSecondary} size={15} />
           <Text style={styles.restoreBtnText}>
             {phase === 'restoring' ? t('paywallProcessing') : t('paywallRestoreButton')}
           </Text>
@@ -231,94 +280,171 @@ export const PaywallScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSoft,
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 54,
+    paddingTop: 48,
     paddingBottom: 60,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+  },
+  badge: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  badgeText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
   },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    alignSelf: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   title: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 22,
+    textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    marginBottom: 24,
   },
   plansList: {
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   planCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   planCardActive: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1.5,
+    backgroundColor: '#FFF6F2',
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+  planInfo: {
+    flex: 1,
+  },
+  planNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
   },
   planName: {
     color: COLORS.text,
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
+  },
+  planNameActive: {
+    color: COLORS.primaryDark,
+  },
+  planSub: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  saveChip: {
+    backgroundColor: COLORS.successLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  saveChipText: {
+    color: COLORS.success,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 10,
+  },
+  priceCol: {
+    alignItems: 'center',
   },
   planPrice: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
-  planNameActive: {
-    color: COLORS.primary,
+  planCurrency: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 10,
   },
   pointsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
     padding: 14,
     marginBottom: 16,
   },
   pointsIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.backgroundSoft,
+    borderRadius: 12,
+    backgroundColor: COLORS.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -331,10 +457,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
+    lineHeight: 18,
     marginTop: 2,
   },
   errorBox: {
-    backgroundColor: COLORS.backgroundSoft,
+    backgroundColor: COLORS.errorLight,
     borderRadius: BORDER_RADIUS.l,
     padding: 12,
     marginBottom: 16,
@@ -357,7 +484,12 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: COLORS.primary,
     borderRadius: 16,
-    height: 52,
+    height: 54,
+    paddingHorizontal: 28,
+    marginTop: 4,
+  },
+  buyBtnDisabled: {
+    opacity: 0.6,
   },
   buyBtnText: {
     color: COLORS.white,

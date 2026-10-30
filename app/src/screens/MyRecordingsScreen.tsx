@@ -9,12 +9,12 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Lock, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
 
 import { AudioPlayer } from '../components/AudioPlayer';
 import { useLanguage } from '../data/i18n';
 import { deleteRecording, listRecordings, type RecordingMeta } from '../services/RecordingsService';
-import { COLORS } from '../theme/colors';
+import { BORDER_RADIUS, COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 
 /**
@@ -161,11 +161,17 @@ export const MyRecordingsScreen = () => {
     ]);
   };
 
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
+  const locale = rtl ? 'fa-IR' : 'en-US';
+  const num = (n: number) => n.toLocaleString(locale);
+
   const formatDate = (ms: number) =>
-    new Date(ms).toLocaleString(language === 'fa' ? 'fa-IR' : 'en-US', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
+    new Date(ms).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
+  const formatDay = (ms: number) => new Date(ms).toLocaleDateString(locale, { dateStyle: 'medium' });
+
+  const totalLines = scenes ? scenes.reduce((sum, s) => sum + s.lines.length, 0) : 0;
 
   return (
     <View style={styles.screen}>
@@ -180,126 +186,168 @@ export const MyRecordingsScreen = () => {
         onRecordedPlaybackEnd={handleRecordedEnd}
       />
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, row]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ChevronLeft color={COLORS.text} size={20} />
+          {rtl ? <ChevronRight color={COLORS.text} size={22} /> : <ChevronLeft color={COLORS.text} size={22} />}
         </TouchableOpacity>
-        <Text style={styles.pageTitle}>{t('myRecordings')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageSub}>{t('myRecordingsSub')}</Text>
+        <Text style={[styles.pageTitle, align]}>{t('myRecordings')}</Text>
+        <Text style={[styles.pageSub, align]}>{t('myRecordingsSub')}</Text>
 
         {scenes === null ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 32 }} />
         ) : scenes.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Mic color={COLORS.muted} size={28} />
+            <View style={styles.emptyIcon}>
+              <Mic color={COLORS.primary} size={28} />
+            </View>
             <Text style={styles.emptyText}>{t('noRecordingsYet')}</Text>
           </View>
         ) : (
-          scenes.map((scene) => {
-            const scenePlaying = playingSceneId === scene.sceneId;
-            return (
-              <View key={scene.sceneId} style={styles.sceneGroup}>
-                <View style={styles.sceneHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.sceneTitle} numberOfLines={1}>
-                      {scene.sceneTitle}
-                    </Text>
-                    <Text style={styles.sceneMeta}>
-                      {scene.lines.length} {t('lineLabel')} · {formatDate(scene.latestAt)}
-                    </Text>
+          <>
+            <View style={[styles.statsCard, row]}>
+              <View style={styles.statsIcon}>
+                <Mic color={COLORS.primary} size={18} />
+              </View>
+              <View style={styles.statCol}>
+                <Text style={[styles.statLabel, align]}>{t('recordingsStatTotal')}</Text>
+                <Text style={[styles.statValue, align]}>
+                  {t('recordingsStatTotalValue')
+                    .replace('{scenes}', num(scenes.length))
+                    .replace('{lines}', num(totalLines))}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCol}>
+                <Text style={[styles.statLabel, align]}>{t('recordingsStatLast')}</Text>
+                <Text style={[styles.statValue, align]}>{formatDay(scenes[0].latestAt)}</Text>
+              </View>
+            </View>
+
+            {scenes.map((scene) => {
+              const scenePlaying = playingSceneId === scene.sceneId;
+              return (
+                <View key={scene.sceneId} style={styles.sceneCard}>
+                  <View style={[styles.sceneHeader, row]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.sceneTitle, align]} numberOfLines={1}>
+                        {scene.sceneTitle}
+                      </Text>
+                      <Text style={[styles.sceneMeta, align]}>
+                        {num(scene.lines.length)} {t('lineLabel')} · {formatDate(scene.latestAt)}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.playAllBtn, row, scenePlaying ? styles.playAllBtnActive : null]}
+                      onPress={() => playConversation(scene.sceneId, scene.lines)}
+                      activeOpacity={0.85}
+                    >
+                      {scenePlaying ? (
+                        <Pause size={13} color={COLORS.white} fill={COLORS.white} />
+                      ) : (
+                        <Play size={13} color={COLORS.white} fill={COLORS.white} />
+                      )}
+                      <Text style={styles.playAllText}>
+                        {scenePlaying ? t('stopPlayAll') : t('playConversation')}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    style={[styles.playAllBtn, scenePlaying ? styles.playAllBtnActive : null]}
-                    onPress={() => playConversation(scene.sceneId, scene.lines)}
-                    activeOpacity={0.85}
-                  >
-                    {scenePlaying ? (
-                      <Pause size={13} color={COLORS.white} fill={COLORS.white} />
-                    ) : (
-                      <Play size={13} color={COLORS.white} fill={COLORS.white} />
-                    )}
-                    <Text style={styles.playAllText}>
-                      {scenePlaying ? t('stopPlayAll') : t('playConversation')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {scene.lines.map((item) => {
-                  const isPlaying = playingId === item.id;
-                  return (
-                    <View
-                      key={item.id}
-                      style={[styles.recordingCard, isPlaying ? styles.recordingCardActive : null]}
-                    >
-                      <TouchableOpacity
-                        style={[styles.playBtn, isPlaying ? styles.playBtnActive : null]}
-                        onPress={() => handlePlay(item)}
-                        activeOpacity={0.85}
+                  {scene.lines.map((item) => {
+                    const isPlaying = playingId === item.id;
+                    return (
+                      <View
+                        key={item.id}
+                        style={[styles.recordingRow, row, isPlaying ? styles.recordingRowActive : null]}
                       >
-                        {isPlaying ? (
-                          <Pause size={16} color={COLORS.white} fill={COLORS.white} />
-                        ) : (
-                          <Play size={16} color={COLORS.white} fill={COLORS.white} />
-                        )}
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.playBtn, isPlaying ? styles.playBtnActive : null]}
+                          onPress={() => handlePlay(item)}
+                          activeOpacity={0.85}
+                        >
+                          {isPlaying ? (
+                            <Pause size={15} color={COLORS.white} fill={COLORS.white} />
+                          ) : (
+                            <Play size={15} color={COLORS.white} fill={COLORS.white} />
+                          )}
+                        </TouchableOpacity>
 
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.recordingText} numberOfLines={2}>
-                          <Text style={styles.recordingLineNum}>{item.lineNumber}. </Text>
-                          {item.text}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.recordingText, align]} numberOfLines={2}>
+                            <Text style={styles.recordingLineNum}>{item.lineNumber}. </Text>
+                            {item.text}
+                          </Text>
+                          {isPlaying && (
+                            <View style={[styles.wave, row]}>
+                              {WAVE_BARS.map((h, i) => (
+                                <View key={i} style={[styles.waveBar, { height: h }]} />
+                              ))}
+                            </View>
+                          )}
+                        </View>
+
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+                          <Trash2 size={15} color={COLORS.muted} />
+                        </TouchableOpacity>
                       </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
 
-                      <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                        <Trash2 size={15} color={COLORS.error} />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </View>
-            );
-          })
+            <View style={[styles.privacyNote, row]}>
+              <Lock color={COLORS.muted} size={15} />
+              <Text style={[styles.privacyText, align]}>{t('recordingsPrivacyNote')}</Text>
+            </View>
+          </>
         )}
       </ScrollView>
     </View>
   );
 };
 
+/** ارتفاع میله‌های موجِ تزئینی زیر جمله‌ی در حال پخش (موج واقعی فایل خوانده نمی‌شود). */
+const WAVE_BARS = [6, 12, 9, 16, 11, 7, 14, 10, 5, 13, 8, 15, 9, 6, 12, 10];
+
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSoft,
   },
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 8,
+    paddingTop: 48,
+    paddingBottom: 14,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceLight,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pageTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 22,
+    fontSize: 24,
+    marginBottom: 6,
   },
   pageSub: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
-    marginBottom: 16,
+    lineHeight: 20,
+    marginBottom: 18,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -307,61 +355,84 @@ const styles = StyleSheet.create({
   },
   emptyBox: {
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 48,
+    gap: 14,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
+    lineHeight: 22,
     textAlign: 'center',
   },
-  recordingCard: {
+
+  // ---- کارت آمار ----
+  statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 10,
+    borderColor: COLORS.borderLight,
+    padding: 14,
+    marginBottom: 16,
   },
-  playBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: COLORS.primary,
+  statsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playBtnActive: {
-    backgroundColor: COLORS.primaryDark,
+  statCol: {
+    flex: 1,
   },
-  recordingText: {
-    color: COLORS.textSecondary,
+  statLabel: {
+    color: COLORS.muted,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
+    fontSize: 11,
+  },
+  statValue: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
     marginTop: 2,
   },
-  deleteBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  statDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: COLORS.borderLight,
   },
 
-  // ---- گروه‌بندی بر اساس صحنه ----
-  sceneGroup: {
-    marginBottom: 22,
+  // ---- کارت هر صحنه ----
+  sceneCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    padding: 14,
+    marginBottom: 14,
   },
   sceneHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sceneTitle: {
     color: COLORS.text,
@@ -371,32 +442,99 @@ const styles = StyleSheet.create({
   sceneMeta: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 2,
   },
   playAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 999,
+    borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.primary,
   },
   playAllBtnActive: {
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.text,
   },
   playAllText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
   },
-  recordingCardActive: {
+  recordingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.backgroundSoft,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 16,
+    padding: 10,
+    marginTop: 8,
+  },
+  recordingRowActive: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF6F2',
+  },
+  playBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtnActive: {
+    backgroundColor: COLORS.primaryDark,
+  },
+  recordingText: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
+    lineHeight: 20,
   },
   recordingLineNum: {
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
     fontFamily: FONT_FAMILY.bold,
+  },
+  wave: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    height: 18,
+    marginTop: 6,
+  },
+  waveBar: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: COLORS.primary,
+  },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 4,
+  },
+  privacyText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    lineHeight: 18,
   },
 });

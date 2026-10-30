@@ -73,7 +73,7 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
   if (showSplash || isRestoring || onboardingStatus === 'checking') {
     return (
       <>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="dark-content" />
         <SplashScreen />
       </>
     );
@@ -121,13 +121,17 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
   );
 }
 
+const SPLASH_MIN_MS = 3000;
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
+  // اسپلش حداقل این مدت دیده می‌شود؛ اگر بازیابی نشست/آنبوردینگ بیشتر طول
+  // بکشد، AppContent خودش تا آماده‌شدن داده روی اسپلش می‌ماند.
   useEffect(() => {
     const splashTimer = setTimeout(() => {
       setShowSplash(false);
-    }, 1900);
+    }, SPLASH_MIN_MS);
 
     return () => clearTimeout(splashTimer);
   }, []);

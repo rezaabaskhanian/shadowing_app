@@ -1,9 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ArrowRight, RotateCcw } from 'lucide-react-native';
+import { ArrowRight, RotateCcw, Zap } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { ProgressRing } from './ProgressRing';
+import { GradientFill } from './GradientFill';
 import { useLanguage } from '../data/i18n';
 import type { EvaluationResult } from '../api/shadowing';
 import { ScoredDialogueText } from '../screens/SceneScreen/shadowing/ScoredDialogueText';
@@ -44,12 +45,18 @@ export function SessionResultScreen({
   onPracticeAgain,
   onFinishLesson,
 }: SessionResultScreenProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
   const tier = scoreTier(score);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={[styles.badge, row]}>
+          <View style={styles.badgeDot} />
+          <Text style={styles.badgeText}>{t('sessionResultBadge')}</Text>
+        </View>
         <Text style={styles.title}>{t(tier.titleKey)}</Text>
         <Text style={styles.sub}>{t(tier.subKey)}</Text>
 
@@ -60,7 +67,7 @@ export function SessionResultScreen({
           </ProgressRing>
         </View>
 
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, row]}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{pronunciation}%</Text>
             <Text style={styles.statLabel}>{t('pronunciation')}</Text>
@@ -75,7 +82,10 @@ export function SessionResultScreen({
           </View>
         </View>
 
-        <Text style={styles.cardTitle}>{t('sentenceAnalysis')}</Text>
+        <View style={[styles.cardTitleRow, row]}>
+          <Zap size={16} color={COLORS.primary} />
+          <Text style={styles.cardTitle}>{t('sentenceAnalysis')}</Text>
+        </View>
         {lines.map(({ dialogue, translation, evaluation }, idx) => (
           <View key={idx} style={styles.card}>
             {evaluation.words?.length ? (
@@ -83,7 +93,7 @@ export function SessionResultScreen({
             ) : (
               <Text style={styles.plainSentence}>{dialogue}</Text>
             )}
-            <Text style={styles.translation}>{translation}</Text>
+            <Text style={[styles.translation, rtl && styles.textRight]}>{translation}</Text>
             {!!evaluation.transcript && (
               <Text style={styles.transcriptText}>
                 {t('weHeard')} «{evaluation.transcript}»
@@ -96,52 +106,69 @@ export function SessionResultScreen({
         ))}
 
         {!!lines.length && (
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
+          <View style={[styles.legendRow, row]}>
+            <View style={[styles.legendItem, row]}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.error }]} />
               <Text style={styles.legendText}>{t('wordNeedsPractice')}</Text>
             </View>
-            <View style={styles.legendItem}>
+            <View style={[styles.legendItem, row]}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.warning }]} />
               <Text style={styles.legendText}>{t('wordGood')}</Text>
             </View>
-            <View style={styles.legendItem}>
+            <View style={[styles.legendItem, row]}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.tertiary }]} />
               <Text style={styles.legendText}>{t('wordExcellent')}</Text>
             </View>
           </View>
         )}
 
-        <View style={styles.actionsRow}>
+        <View style={[styles.actionsRow, row]}>
           <TouchableOpacity style={styles.secondaryBtn} onPress={onPracticeAgain}>
             <RotateCcw size={18} color={COLORS.text} />
             <Text style={styles.secondaryBtnText}>{t('practiceAgain')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.primaryBtn} onPress={onFinishLesson}>
+            <GradientFill from="#E8572F" to="#E2703F" horizontal />
             <Text style={styles.primaryBtnText}>{t('finishLesson')}</Text>
             <ArrowRight size={18} color={COLORS.white} />
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  bottomSpace: { height: 40 },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FAF8F4',
   },
   scroll: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 22,
+    paddingTop: 48,
   },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: COLORS.primaryLight,
+    marginBottom: 10,
+  },
+  badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  badgeText: { color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
   title: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 30,
+    fontSize: 28,
     textAlign: 'center',
   },
   sub: {
@@ -173,12 +200,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    paddingVertical: 16,
+    backgroundColor: '#F4F1EB',
+    borderRadius: 18,
+    paddingVertical: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#ECE8E0',
   },
   statValue: {
     color: COLORS.text,
@@ -192,18 +219,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    backgroundColor: '#F4F1EB',
+    borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#ECE8E0',
     marginBottom: 20,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
   },
   cardTitle: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
-    marginBottom: 14,
   },
   plainSentence: {
     color: COLORS.text,
@@ -232,10 +264,12 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: 'row',
-    gap: 14,
+    justifyContent: 'center',
+    gap: 18,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 12,
+    borderTopColor: '#ECE8E0',
+    paddingTop: 14,
+    marginBottom: 18,
   },
   legendItem: {
     flexDirection: 'row',
@@ -264,9 +298,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E4E0D8',
+    backgroundColor: COLORS.white,
   },
   secondaryBtnText: {
     color: COLORS.text,
@@ -280,8 +315,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: COLORS.primary,
+    elevation: 6,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   primaryBtnText: {
     color: COLORS.white,

@@ -8,9 +8,10 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Award, ArrowLeft, Clock, EyeOff, Flame, Mic, Sparkles, Target } from 'lucide-react-native';
+import { ChevronRight, Clock, Flame, Info, MessageSquare, Star, Zap } from 'lucide-react-native';
+import { GradientFill } from '../../components/GradientFill';
 
-import { COLORS, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { HabitActivityIcon } from '../../components/HabitActivityIcon';
@@ -96,71 +97,97 @@ export const LanguageHabitScreen = () => {
   const activityName = (name: { name_en: string; name_fa: string } | undefined) =>
     !name ? '' : language === 'fa' ? name.name_fa : name.name_en;
 
+  const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+  const num = (v: number | string) => (language === 'fa' ? toFa(v) : String(v));
+  const steps = [
+    { title: 'habitStep1', desc: 'habitHowItWorks1', color: '#E9A23B' },
+    { title: 'habitStep2', desc: 'habitHowItWorks2', color: '#2F8A5B' },
+    { title: 'habitStep3', desc: 'habitHowItWorks3', color: '#3B6EF0' },
+  ];
+  const streakDays = Math.min(7, history?.current_streak ?? 0);
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color={COLORS.text} size={22} />
-        </TouchableOpacity>
+        <View style={styles.topRow}>
+          <View style={styles.infoBtn}>
+            <Info color={COLORS.textSecondary} size={18} />
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{t('habitTag')}</Text>
+            <View style={styles.tagDot} />
+          </View>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <ChevronRight color={COLORS.text} size={20} />
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.title}>{t('habitScreenTitle')}</Text>
+        <Text style={styles.subtitle}>{t('habitScreenSub')}</Text>
 
         {loading ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={COLORS.primary} style={styles.loader} />
         ) : (
           <>
             {mission ? (
               <View style={styles.missionCard}>
                 <View style={styles.missionHeaderRow}>
-                  <View style={styles.activityIconWrap}>
-                    <HabitActivityIcon name={mission.activity?.icon} size={24} color={COLORS.tertiary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.missionKicker}>{t('habitMissionKicker')}</Text>
+                  <View style={styles.missionHeadText}>
+                    <View style={styles.dailyChip}>
+                      <Text style={styles.dailyChipText}>{t('habitDailyChip')}</Text>
+                      <Star size={11} color={COLORS.primary} fill={COLORS.primary} />
+                    </View>
                     <Text style={styles.missionActivityName}>{activityName(mission.activity)}</Text>
                   </View>
+                  <View style={styles.activityIconWrap}>
+                    <HabitActivityIcon name={mission.activity?.icon} size={24} color={COLORS.tertiary} />
+                    <View style={styles.iconDot} />
+                  </View>
                 </View>
 
-                <Text style={styles.missionSentence}>
+                <Text style={styles.missionPurpose}>
                   {t('habitPracticeWhile').replace('{activity}', activityName(mission.activity).toLowerCase())}
+                  {'. '}
+                  {t('habitPurposeText')}
                 </Text>
 
-                <Text style={styles.missionPurpose}>{t('habitPurposeText')}</Text>
-
-                <View style={styles.missionMetaRow}>
-                  <View style={styles.missionMetaItem}>
-                    <Target color={COLORS.tertiary} size={14} />
-                    <Text style={styles.missionMetaText}>
-                      {mission.dialogues?.length || 0} {t('sentences')}
+                <View style={styles.metaRow}>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaText}>
+                      {t('habitDuration').replace(
+                        '{n}',
+                        num(Math.max(1, Math.round((mission.estimated_duration_seconds || 0) / 60)))
+                      )}
                     </Text>
+                    <Clock color={COLORS.success} size={13} />
                   </View>
-                  <View style={styles.missionMetaItem}>
-                    <Clock color={COLORS.tertiary} size={14} />
-                    <Text style={styles.missionMetaText}>
-                      {Math.max(1, Math.round((mission.estimated_duration_seconds || 0) / 60))} {t('min')}
-                    </Text>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaText}>{t('habitLines').replace('{n}', num(mission.dialogues?.length || 0))}</Text>
+                    <MessageSquare color={COLORS.primary} size={13} />
                   </View>
                 </View>
 
-                <View style={styles.howItWorksBox}>
-                  <Text style={styles.howItWorksTitle}>{t('habitHowItWorksTitle')}</Text>
-                  <View style={styles.howItWorksRow}>
-                    <EyeOff color={COLORS.textSecondary} size={14} />
-                    <Text style={styles.howItWorksText}>{t('habitHowItWorks1')}</Text>
+                <View style={styles.stepsBox}>
+                  <View style={styles.stepsHead}>
+                    <Text style={styles.stepsTitle}>{t('habitHowItWorksTitle')}</Text>
+                    <View style={styles.stepsBar} />
                   </View>
-                  <View style={styles.howItWorksRow}>
-                    <Mic color={COLORS.textSecondary} size={14} />
-                    <Text style={styles.howItWorksText}>{t('habitHowItWorks2')}</Text>
-                  </View>
-                  <View style={styles.howItWorksRow}>
-                    <Award color={COLORS.textSecondary} size={14} />
-                    <Text style={styles.howItWorksText}>{t('habitHowItWorks3')}</Text>
-                  </View>
+                  {steps.map((st, i) => (
+                    <View key={st.title} style={styles.step}>
+                      <View style={[styles.stepNum, { backgroundColor: `${st.color}1F` }]}>
+                        <Text style={[styles.stepNumText, { color: st.color }]}>{num(i + 1)}</Text>
+                      </View>
+                      <View style={styles.stepText}>
+                        <Text style={styles.stepTitle}>{t(st.title)}</Text>
+                        <Text style={styles.stepDesc}>{t(st.desc)}</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
 
                 {countdown !== null ? (
                   <View style={styles.countdownWrap}>
-                    <Text style={styles.countdownText}>{countdown > 0 ? countdown : '🎬'}</Text>
+                    <Text style={styles.countdownText}>{countdown > 0 ? num(countdown) : '🎬'}</Text>
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -169,13 +196,14 @@ export const LanguageHabitScreen = () => {
                     onPress={() => setCountdown(3)}
                     activeOpacity={0.85}
                   >
+                    <GradientFill from="#F07A4A" to="#E8572F" horizontal />
                     {starting ? (
                       <ActivityIndicator color={COLORS.white} />
                     ) : (
-                      <>
-                        <Sparkles color={COLORS.white} size={18} />
-                        <Text style={styles.startBtnText}>{t('habitStartMission')}</Text>
-                      </>
+                      <View style={styles.startInner}>
+                        <Text style={styles.startBtnText}>{t('habitStartDaily')}</Text>
+                        <Zap color={COLORS.white} size={18} />
+                      </View>
                     )}
                   </TouchableOpacity>
                 )}
@@ -188,26 +216,37 @@ export const LanguageHabitScreen = () => {
 
             {history ? (
               <View style={styles.historyCard}>
-                <View style={styles.sectionHeaderRow}>
-                  <Flame color={COLORS.secondary} size={20} />
-                  <Text style={styles.historyTitle}>{t('habitHistoryTitle')}</Text>
+                <View style={styles.historyHead}>
+                  <View style={styles.liveChip}>
+                    <Text style={styles.liveText}>{t('habitLive')}</Text>
+                  </View>
+                  <View style={styles.historyTitleRow}>
+                    <Text style={styles.historyTitle}>{t('habitHistoryTitle')}</Text>
+                    <Flame color={COLORS.primary} size={20} fill={COLORS.primary} />
+                  </View>
                 </View>
-
-                <View style={styles.historyRow}>
-                  <Text style={styles.historyLabel}>{t('habitCompletedMissions')}</Text>
-                  <Text style={styles.historyValue}>{history.completed_count}</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.statTile}>
+                    <Text style={styles.statValue}>{formatDuration(history.total_duration_seconds)}</Text>
+                    <Text style={styles.statLabel}>{t('habitTotalPracticeTime')}</Text>
+                  </View>
+                  <View style={styles.statTile}>
+                    <Text style={styles.statValue}>{num(history.completed_count)}</Text>
+                    <Text style={styles.statLabel}>{t('habitCompletedMissions')}</Text>
+                  </View>
+                  <View style={[styles.statTile, styles.statTileHot]}>
+                    <Text style={[styles.statValue, styles.statValueHot]}>{num(history.current_streak)}🔥</Text>
+                    <Text style={styles.statLabel}>{t('habitCurrentStreak')}</Text>
+                  </View>
                 </View>
-                <View style={styles.historyRow}>
-                  <Text style={styles.historyLabel}>{t('habitCurrentStreak')}</Text>
-                  <Text style={styles.historyValue}>
-                    {history.current_streak} 🔥
-                  </Text>
+                <View style={styles.levelRow}>
+                  <Text style={styles.levelPct}>{num(Math.round((streakDays / 7) * 100))}٪</Text>
+                  <Text style={styles.levelLabel}>{t('habitHabitLevel').replace('{d}', num(Math.max(1, streakDays)))}</Text>
                 </View>
-                <View style={styles.historyRow}>
-                  <Text style={styles.historyLabel}>{t('habitTotalPracticeTime')}</Text>
-                  <Text style={styles.historyValue}>
-                    {formatDuration(history.total_duration_seconds)}
-                  </Text>
+                <View style={styles.levelTrack}>
+                  <View style={[styles.levelFill, { width: `${Math.max(4, (streakDays / 7) * 100)}%` }]}>
+                    <GradientFill from="#F5A15A" to="#E8572F" horizontal />
+                  </View>
                 </View>
               </View>
             ) : null}
@@ -219,194 +258,171 @@ export const LanguageHabitScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 60,
+  screen: { flex: 1, backgroundColor: '#FAF8F4' },
+  content: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 60 },
+  loader: { marginTop: 40 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  infoBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
-  title: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 24,
-    marginBottom: 20,
-  },
-  missionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 18,
-    marginBottom: 16,
-  },
-  missionHeaderRow: {
+  tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(46,158,107,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,158,107,0.25)',
   },
-  activityIconWrap: {
-    width: 48,
-    height: 48,
+  tagText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: '#2F8A5B' },
+  tagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
+  title: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, textAlign: 'right' },
+  subtitle: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, textAlign: 'right', marginTop: 4, marginBottom: 18 },
+  missionCard: {
+    backgroundColor: COLORS.white,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    padding: 18,
+    marginBottom: 16,
+    gap: 14,
+  },
+  missionHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  missionHeadText: { flex: 1, alignItems: 'flex-end', gap: 8 },
+  dailyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: '#FDEDE8',
+  },
+  dailyChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: COLORS.primary },
+  missionActivityName: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, textAlign: 'right' },
+  activityIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     backgroundColor: COLORS.tertiaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // متن فارسی خودبه‌خود راست‌چین می‌شود؛ کنار آیکن (سمت چپ) نگهش می‌داریم.
-  missionKicker: {
-    textAlign: 'left',
-    color: COLORS.tertiary,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
-  missionActivityName: {
-    textAlign: 'left',
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 17,
-    marginTop: 2,
-  },
-  missionSentence: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  missionPurpose: {
-    color: COLORS.tertiary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: -10,
-    marginBottom: 14,
-  },
-  howItWorksBox: {
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: BORDER_RADIUS.l,
-    padding: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  howItWorksTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  howItWorksRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  howItWorksText: {
-    flex: 1,
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  missionMetaRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 18,
-  },
-  missionMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  missionMetaText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-  },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  iconDot: {
+    position: 'absolute',
+    bottom: -3,
+    left: -3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    height: 50,
+    borderWidth: 2,
+    borderColor: COLORS.white,
   },
-  startBtnText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 15,
-  },
-  countdownWrap: {
+  missionPurpose: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 22, textAlign: 'right' },
+  metaRow: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
+  metaPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-  },
-  countdownText: {
-    color: COLORS.primary,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 32,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 32,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEAE3',
+  },
+  metaText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
+  stepsBox: { backgroundColor: '#F7F5F1', borderRadius: 18, padding: 12, gap: 10, borderWidth: 1, borderColor: '#EEEAE3' },
+  stepsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
+  stepsTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.text },
+  stepsBar: { width: 4, height: 14, borderRadius: 2, backgroundColor: COLORS.primary },
+  step: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+  },
+  stepNum: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  stepNumText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  stepText: { flex: 1, alignItems: 'flex-end', gap: 3 },
+  stepTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.text },
+  stepDesc: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 18, color: COLORS.textSecondary, textAlign: 'right' },
+  startBtn: {
+    height: 54,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  startInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  startBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  countdownWrap: { alignItems: 'center', justifyContent: 'center', height: 54 },
+  countdownText: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold, fontSize: 36 },
+  emptyContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    padding: 24,
+    alignItems: 'center',
     marginBottom: 16,
   },
-  emptyText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  historyCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+  emptyText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 24, textAlign: 'center' },
+  historyCard: { backgroundColor: COLORS.white, borderRadius: 24, borderWidth: 1, borderColor: '#EEEAE3', padding: 16, gap: 14 },
+  historyHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  historyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  historyTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 17 },
+  liveChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#F1EEE8' },
+  liveText: { fontFamily: FONT_FAMILY.medium, fontSize: 10, color: COLORS.textSecondary },
+  statsRow: { flexDirection: 'row', gap: 8 },
+  statTile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    backgroundColor: '#F7F5F1',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 18,
+    borderColor: '#EEEAE3',
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
-  },
-  historyTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-  },
-  historyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  historyLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 13,
-  },
-  historyValue: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 14,
-  },
+  statTileHot: { backgroundColor: '#FFF4EF', borderColor: '#F6D9CC' },
+  statValue: { fontFamily: FONT_FAMILY.bold, fontSize: 18, color: COLORS.text },
+  statValueHot: { color: COLORS.primary },
+  statLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 10, color: COLORS.textSecondary, textAlign: 'center' },
+  levelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  levelPct: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.primary },
+  levelLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.textSecondary },
+  levelTrack: { height: 8, borderRadius: 4, backgroundColor: '#F1EEE8', overflow: 'hidden', flexDirection: 'row-reverse' },
+  levelFill: { height: '100%', borderRadius: 4, overflow: 'hidden' },
 });

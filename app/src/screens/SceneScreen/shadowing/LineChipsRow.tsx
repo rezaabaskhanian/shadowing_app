@@ -1,13 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Lock } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 
-const CHIP_SIZE = 30;
+const CHIP_SIZE = 34;
 const CHIP_GAP = 8;
 const CHIP_PITCH = CHIP_SIZE + CHIP_GAP;
+const toFa = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 
 /**
  * نوار افقیِ شماره‌ی جمله‌ها، همیشه بالای صفحه و بدون نیاز به اسکرول.
@@ -33,6 +34,8 @@ export const LineChipsRow: React.FC<{
   accentColor?: string;
   /** نسخه‌ی کم‌رنگِ همون accentColor، برای پس‌زمینه‌ی نرمِ چیپِ انتخاب‌شده. */
   accentLightColor?: string;
+  /** در فارسی جمله‌ی ۱ سمت راست است و نوار از راست شروع می‌شود. */
+  rtl?: boolean;
 }> = ({
   lineCount,
   recordedLines,
@@ -40,9 +43,11 @@ export const LineChipsRow: React.FC<{
   onSelectLine,
   sequentialLockEnabled,
   accentColor = COLORS.primary,
-  accentLightColor = COLORS.primaryLight,
+  rtl = false,
 }) => {
   const scrollRef = useRef<ScrollView>(null);
+  const [viewW, setViewW] = useState(0);
+  const contentW = lineCount * CHIP_PITCH - CHIP_GAP + 4;
 
   let firstUnrecorded = lineCount;
   for (let i = 0; i < lineCount; i++) {
@@ -55,9 +60,13 @@ export const LineChipsRow: React.FC<{
   useEffect(() => {
     // چیپِ فعال را وسطِ نوار نگه می‌داریم تا با جلورفتنِ جمله‌ها (دستی یا با
     // «پخش همه») کاربر مجبور نباشد خودش این نوار را هم اسکرول کند.
-    const offset = Math.max(0, activeLineIndex * CHIP_PITCH - CHIP_PITCH * 2);
+    const ltrOffset = Math.max(0, activeLineIndex * CHIP_PITCH - CHIP_PITCH * 2);
+    // در فارسی ترتیب چیپ‌ها برعکس است، پس از انتهای نوار حساب می‌کنیم.
+    const offset = rtl ? Math.max(0, contentW - viewW - ltrOffset) : ltrOffset;
     scrollRef.current?.scrollTo({ x: offset, animated: true });
-  }, [activeLineIndex]);
+  }, [activeLineIndex, rtl, contentW, viewW]);
+
+  const indexes = Array.from({ length: lineCount }, (_, i) => i);
 
   return (
     <ScrollView
@@ -65,9 +74,10 @@ export const LineChipsRow: React.FC<{
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.row}
-      contentContainerStyle={styles.rowContent}
+      onLayout={(e) => setViewW(e.nativeEvent.layout.width)}
+      contentContainerStyle={[styles.rowContent, rtl && styles.rowContentRtl]}
     >
-      {Array.from({ length: lineCount }).map((_, idx) => {
+      {(rtl ? [...indexes].reverse() : indexes).map((idx) => {
         const recorded = recordedLines.includes(idx);
         const active = idx === activeLineIndex;
         const locked = !!sequentialLockEnabled && idx >= firstUnrecorded;
@@ -77,13 +87,13 @@ export const LineChipsRow: React.FC<{
             style={[
               styles.chip,
               recorded ? styles.chipRecorded : null,
-              active ? [styles.chipActiveBase, { borderColor: accentColor, backgroundColor: accentLightColor }] : null,
+              active ? [styles.chipActiveBase, { borderColor: accentColor, backgroundColor: COLORS.white }] : null,
               locked ? styles.chipLocked : null,
             ]}
             onPress={() => onSelectLine(idx)}
           >
             {locked ? (
-              <Lock size={12} color={COLORS.muted} />
+              <Lock size={13} color={COLORS.muted} />
             ) : (
               <Text
                 style={[
@@ -92,7 +102,7 @@ export const LineChipsRow: React.FC<{
                   active ? { color: accentColor } : null,
                 ]}
               >
-                {idx + 1}
+                {rtl ? toFa(idx + 1) : idx + 1}
               </Text>
             )}
           </TouchableOpacity>
@@ -104,7 +114,11 @@ export const LineChipsRow: React.FC<{
 
 const styles = StyleSheet.create({
   row: {
-    marginBottom: 8,
+    marginBottom: 14,
+  },
+  rowContentRtl: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
   },
   rowContent: {
     flexDirection: 'row',
@@ -118,9 +132,9 @@ const styles = StyleSheet.create({
     borderRadius: CHIP_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E6E2DA',
   },
   chipRecorded: {
     backgroundColor: COLORS.tertiaryLight,
@@ -130,14 +144,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   chipLocked: {
-    backgroundColor: COLORS.surfaceLight,
-    borderColor: COLORS.border,
-    opacity: 0.6,
+    backgroundColor: COLORS.white,
+    borderColor: '#E6E2DA',
   },
   chipText: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
+    fontSize: 13,
   },
   chipTextRecorded: {
     color: COLORS.tertiary,

@@ -25,7 +25,8 @@ const duration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart
 
 /** بخش آهنگ: آهنگ‌های منتشرشده تا سطح کاربر؛ لمس هر کارت صفحه‌ی آهنگ را باز می‌کند. */
 export const SongListScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [songs, setSongs] = useState<Song[] | null>(null);
@@ -41,7 +42,7 @@ export const SongListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
@@ -53,7 +54,7 @@ export const SongListScreen: React.FC = () => {
       </View>
       <ListHero
         icon={<Music size={26} color={COLORS.white} />}
-        color={COLORS.pink}
+        color={COLORS.primary}
         title={t('songTitle')}
         subtitle={t('songSubtitle')}
       />
@@ -107,25 +108,28 @@ export const SongListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
+  rowReverse: { flexDirection: 'row-reverse' },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.s },
   takesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: 36,
+    height: 34,
     paddingHorizontal: 12,
-    borderRadius: 18,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    borderColor: '#F6CDBE',
+    backgroundColor: COLORS.white,
   },
   takesText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.primary },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
     alignItems: 'center',
     justifyContent: 'center',
   },

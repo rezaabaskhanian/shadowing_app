@@ -35,6 +35,8 @@ export const PlayerControlsBar: React.FC<{
   onReplay: () => void;
   hasRecordingForCurrentLine: boolean;
   onPlayMyRecording: () => void;
+  /** در فارسی ترتیب دکمه‌ها برعکس است: «قبلی» سمت راست. */
+  rtl?: boolean;
 }> = ({
   activeStepIndex,
   accentColor,
@@ -50,6 +52,7 @@ export const PlayerControlsBar: React.FC<{
   onReplay,
   hasRecordingForCurrentLine,
   onPlayMyRecording,
+  rtl = false,
 }) => {
   // مجوز میکروفن را زودتر (وقتی وارد مرحله‌ی ضبط می‌شویم) می‌گیریم تا لحظه‌ی
   // زدنِ دکمه، ensureMicPermission دیگر async/کند نباشد و ضبط بدون تأخیر
@@ -80,12 +83,12 @@ export const PlayerControlsBar: React.FC<{
   );
 
   return (
-    <View style={styles.controlsBar}>
+    <View style={[styles.controlsBar, rtl && styles.rowReverse]}>
       <TouchableOpacity style={styles.chevronBtn} onPress={onPrevDialogue}>
-        <ChevronLeft size={20} color={COLORS.textSecondary} />
+        <ChevronLeft size={20} color={COLORS.text} />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.speedPillBtn} onPress={toggleSpeed}>
+      <TouchableOpacity style={styles.chevronBtn} onPress={toggleSpeed}>
         <Text style={styles.speedPillText}>{playbackRate}x</Text>
       </TouchableOpacity>
 
@@ -153,13 +156,14 @@ export const PlayerControlsBar: React.FC<{
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.chevronBtn} onPress={onNextDialogue}>
-        <ChevronRight size={20} color={COLORS.textSecondary} />
+        <ChevronRight size={20} color={COLORS.text} />
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
   controlsBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,28 +171,22 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   chevronBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceLight,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#ECE9E3',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speedPillBtn: {
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
   speedPillText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
   },
   centerMicBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.level1,
@@ -197,10 +195,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error,
   },
   smallPlayBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceLight,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#ECE9E3',
     alignItems: 'center',
     justifyContent: 'center',
   },

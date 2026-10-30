@@ -112,13 +112,15 @@ export const StoryListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
   closeBtn: {
-    alignSelf: 'flex-start',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    alignSelf: 'flex-end',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.s,

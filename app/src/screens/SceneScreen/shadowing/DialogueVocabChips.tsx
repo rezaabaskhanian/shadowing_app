@@ -18,22 +18,24 @@ export const DialogueVocabChips: React.FC<{
   /** رنگ اختصاصیِ مرحله‌ی فعلی. */
   accentColor: string;
   accentLightColor: string;
+  rtl?: boolean;
   t: (key: string) => string;
-}> = ({ words, onOpenLeitner, accentColor, accentLightColor, t }) => {
+}> = ({ words, onOpenLeitner, accentColor, accentLightColor, rtl = false, t }) => {
+  const row = rtl && styles.rowReverse;
   const { has, add, remove, box } = useVocab();
 
   if (!words || words.length === 0) return null;
 
   return (
     <View style={styles.vocabBlock}>
-      <View style={styles.vocabChipsRow}>
+      <View style={[styles.vocabChipsRow, row]}>
         {words.map((w, idx) => {
           const added = has(w.word);
           return (
             <TouchableOpacity
               key={`${w.word}-${idx}`}
               activeOpacity={0.8}
-              style={[styles.vocabChip, added ? styles.vocabChipAdded : null]}
+              style={[styles.vocabChip, row, added ? styles.vocabChipAdded : null]}
               onPress={() => (added ? remove(w.word) : add(w))}
             >
               {added ? (
@@ -51,7 +53,7 @@ export const DialogueVocabChips: React.FC<{
       </View>
 
       {/* میان‌بر به جعبه‌ی لایتنر (جایگزین لینکی که در WordsSheet بود) */}
-      <TouchableOpacity style={[styles.leitnerBoxLink, { backgroundColor: accentLightColor }]} onPress={onOpenLeitner}>
+      <TouchableOpacity style={[styles.leitnerBoxLink, row, { backgroundColor: accentLightColor }]} onPress={onOpenLeitner}>
         <Layers size={14} color={accentColor} />
         <Text style={[styles.leitnerBoxLinkText, { color: accentColor }]}>
           {t('leitnerBoxTitle')} ({box.length})
@@ -62,6 +64,7 @@ export const DialogueVocabChips: React.FC<{
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
   vocabBlock: {
     alignItems: 'center',
     alignSelf: 'stretch',
@@ -70,9 +73,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     marginBottom: 10,
   },
   leitnerBoxLinkText: {
@@ -91,12 +94,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: '#EFECE6',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: '#E4E0D8',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   vocabChipAdded: {
     backgroundColor: COLORS.tertiaryLight,

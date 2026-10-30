@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Camera, Plus, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Camera, Plus, Trash2, X } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
@@ -24,7 +24,10 @@ interface DialogueRow {
 
 export const SubmitSceneScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: دکمه‌ی برگشت سمت راست، برچسب‌ها و ورودی‌ها راست‌چین.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
 
   const [photo, setPhoto] = useState<PickedImage | null>(null);
   const [situation, setSituation] = useState('');
@@ -74,16 +77,16 @@ export const SubmitSceneScreen = () => {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <ArrowLeft color={COLORS.text} size={22} />
+      <TouchableOpacity style={[styles.backButton, rtl && styles.selfEnd]} onPress={() => navigation.goBack()}>
+        {rtl ? <ArrowRight color={COLORS.text} size={20} /> : <ArrowLeft color={COLORS.text} size={20} />}
       </TouchableOpacity>
 
-      <Text style={styles.title}>{t('submitSceneTitle')}</Text>
-      <Text style={styles.sub}>{t('submitSceneSub')}</Text>
+      <Text style={[styles.title, ta]}>{t('submitSceneTitle')}</Text>
+      <Text style={[styles.sub, ta]}>{t('submitSceneSub')}</Text>
 
-      <Text style={styles.label}>{t('submitScenePhoto')}</Text>
+      <Text style={[styles.label, ta]}>{t('submitScenePhoto')}</Text>
       {photo ? (
-        <View style={styles.photoPreviewWrap}>
+        <View style={[styles.photoPreviewWrap, rtl && styles.selfEnd]}>
           <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
           <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => setPhoto(null)}>
             <X color={COLORS.white} size={16} />
@@ -91,16 +94,16 @@ export const SubmitSceneScreen = () => {
         </View>
       ) : (
         ImagePickerService.available() && (
-          <TouchableOpacity style={styles.photoAddBtn} onPress={handlePickPhoto}>
+          <TouchableOpacity style={[styles.photoAddBtn, rtl && styles.rowReverse]} onPress={handlePickPhoto}>
             <Camera color={COLORS.primary} size={20} />
             <Text style={styles.photoAddText}>{t('submitScenePhotoAdd')}</Text>
           </TouchableOpacity>
         )
       )}
 
-      <Text style={styles.label}>{t('submitSceneSituation')}</Text>
+      <Text style={[styles.label, ta]}>{t('submitSceneSituation')}</Text>
       <TextInput
-        style={styles.textArea}
+        style={[styles.textArea, ta]}
         placeholder={t('submitSceneSituationPlaceholder')}
         placeholderTextColor={COLORS.textSecondary}
         value={situation}
@@ -109,12 +112,12 @@ export const SubmitSceneScreen = () => {
         numberOfLines={3}
       />
 
-      <Text style={styles.label}>{t('submitSceneDialogues')}</Text>
+      <Text style={[styles.label, ta]}>{t('submitSceneDialogues')}</Text>
       {lines.map((line, i) => (
         <View key={i} style={styles.lineCard}>
-          <View style={styles.lineHeader}>
+          <View style={[styles.lineHeader, rtl && styles.rowReverse]}>
             <TextInput
-              style={styles.speakerInput}
+              style={[styles.speakerInput, ta]}
               placeholder={t('submitSceneSpeaker')}
               placeholderTextColor={COLORS.textSecondary}
               value={line.speaker}
@@ -127,7 +130,7 @@ export const SubmitSceneScreen = () => {
             )}
           </View>
           <TextInput
-            style={styles.lineInput}
+            style={[styles.lineInput, ta]}
             placeholder={t('submitSceneLine')}
             placeholderTextColor={COLORS.textSecondary}
             value={line.text}
@@ -137,7 +140,7 @@ export const SubmitSceneScreen = () => {
         </View>
       ))}
 
-      <TouchableOpacity style={styles.addLineBtn} onPress={addLine}>
+      <TouchableOpacity style={[styles.addLineBtn, rtl && styles.selfEnd]} onPress={addLine}>
         <Plus color={COLORS.primary} size={16} />
         <Text style={styles.addLineText}>{t('submitSceneAddLine')}</Text>
       </TouchableOpacity>
@@ -156,24 +159,18 @@ export const SubmitSceneScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  selfEnd: { alignSelf: 'flex-end' },
+
+  screen: { flex: 1, backgroundColor: COLORS.white },
   content: {
     paddingHorizontal: 20,
     paddingTop: 54,
     paddingBottom: 60,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   title: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -193,18 +190,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10,
   },
-  photoAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 52,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    marginBottom: 20,
-  },
+  photoAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 50, backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, marginBottom: 20 },
   photoAddText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
@@ -230,45 +216,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  textArea: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: 14,
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 20,
-  },
-  lineCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: 12,
-    marginBottom: 10,
-  },
-  lineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 10,
-  },
-  speakerInput: {
-    flex: 1,
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-  },
-  lineInput: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-  },
+  textArea: { backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, padding: 14, color: COLORS.text, fontFamily: FONT_FAMILY.regular, fontSize: 14, minHeight: 90, textAlignVertical: 'top', marginBottom: 20 },
+  lineCard: { backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 4, marginBottom: 10 },
+  lineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottomWidth: 1, borderBottomColor: '#ECEAE4', paddingVertical: 8 },
+  speakerInput: { flex: 1, color: COLORS.text, fontFamily: FONT_FAMILY.medium, fontSize: 13, padding: 0 },
+  lineInput: { color: COLORS.text, fontFamily: FONT_FAMILY.regular, fontSize: 14, paddingVertical: 10 },
   addLineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -288,13 +240,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     textAlign: 'center',
   },
-  submitBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 28,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  submitBtn: { backgroundColor: '#E2643A', borderRadius: 16, height: 54, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   submitBtnText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,

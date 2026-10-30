@@ -16,7 +16,6 @@ import { CircleCheck, CircleX, Lock, PenLine, TriangleAlert, X } from 'lucide-re
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { ForbiddenError } from '../../api/client';
 import { getAIUsageStatus } from '../../api/aiUsage';
@@ -49,7 +48,10 @@ const countWords = (text: string) => (text.trim() ? text.trim().split(/\s+/).len
  * و نسخه‌ی بهترشده. با «ویرایش و ارسال دوباره» همان متن برمی‌گردد تا درستش کند.
  */
 export const WritingScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: بستن سمت راست و برچسب‌ها راست‌چین؛ پرسش‌ها و عبارت‌های انگلیسی چپ‌چین می‌مانند.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -113,45 +115,50 @@ export const WritingScreen: React.FC = () => {
       style={[styles.container, { paddingTop: insets.top + SPACING.s, paddingBottom: insets.bottom + SPACING.m }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
           disabled={phase === 'checking'}
           activeOpacity={0.8}
         >
-          <X size={20} color={COLORS.text} />
+          <X size={18} color={COLORS.text} />
         </TouchableOpacity>
+        <View style={styles.topChip}>
+          <Text style={styles.topChipText}>{t('writingPracticeChip')}</Text>
+        </View>
+        <View style={styles.closeBtnSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <PromptHero
           image={prompt.image_url ? { uri: absUrl(prompt.image_url) } : null}
           accent={levelColor(prompt.level)}
-          icon={<PenLine size={18} color={COLORS.white} />}
+          icon={<PenLine size={14} color={COLORS.white} />}
           title={prompt.title}
           prompt={prompt.prompt_fa}
+          badgeLabel={LEVEL_LABEL[prompt.level] ? t('levelBadge').replace('{level}', t(LEVEL_LABEL[prompt.level])) : undefined}
         />
 
         {phase === 'write' && (
           <>
             {prompt.guide_questions.length > 0 && (
               <View style={[styles.card, styles.ideasCard]}>
-                <Text style={[styles.cardLabel, { color: COLORS.levelIntermediateBg }]}>💡 {t('writingIdeasTitle')}</Text>
+                <Text style={[styles.cardLabel, styles.cardLabelStrong, ta]}>💡 {t('writingIdeasTitle')}</Text>
                 {prompt.guide_questions.map((q, i) => (
-                  <View key={i} style={styles.numberedRow}>
+                  <View key={i} style={[styles.numberedRow, rtl && styles.rowReverse]}>
                     <View style={[styles.numDot, { backgroundColor: ACCENT_CYCLE[i % ACCENT_CYCLE.length] }]}>
                       <Text style={styles.numDotText}>{i + 1}</Text>
                     </View>
-                    <Text style={[styles.listItem, styles.flex1]}>{q}</Text>
+                    <Text style={[styles.listItem, styles.flex1, styles.ltrText, ta]}>{q}</Text>
                   </View>
                 ))}
               </View>
             )}
             {prompt.useful_phrases.length > 0 && (
-              <View style={styles.card}>
-                <Text style={[styles.cardLabel, { color: COLORS.pink }]}>✨ {t('writingPhrasesTitle')}</Text>
-                <View style={styles.chips}>
+              <View style={[styles.card, styles.phrasesCard]}>
+                <Text style={[styles.cardLabel, styles.cardLabelAccent, ta]}>✨ {t('writingPhrasesTitle')}</Text>
+                <View style={[styles.chips, rtl && styles.rowReverse]}>
                   {prompt.useful_phrases.map((p, i) => {
                     const c = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
                     return (
@@ -161,14 +168,15 @@ export const WritingScreen: React.FC = () => {
                         onPress={() => insertPhrase(p)}
                         activeOpacity={0.8}
                       >
-                        <Text style={[styles.chipText, { color: c }]}>{p}</Text>
+                        <Text style={[styles.chipText, { color: c }]}>+ {p}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-                <Text style={styles.mutedSmall}>{t('writingPhrasesHint')}</Text>
+                <Text style={[styles.mutedSmall, ta]}>{t('writingPhrasesHint')}</Text>
               </View>
             )}
+            <View style={styles.inputCard}>
             <TextInput
               style={styles.input}
               value={text}
@@ -180,12 +188,21 @@ export const WritingScreen: React.FC = () => {
               autoCorrect={false}
               spellCheck={false}
             />
-            <Text style={[styles.wordCount, words > maxWords && styles.wordCountOver]}>
-              {t('writingWordCount')
-                .replace('{n}', String(words))
-                .replace('{min}', String(minWords))
-                .replace('{max}', String(maxWords))}
-            </Text>
+            <View style={[styles.inputFooter, rtl && styles.rowReverse]}>
+              <View style={[styles.wordCountRow, rtl && styles.rowReverse]}>
+              <View style={[styles.wordDot, words >= minWords && styles.wordDotOk]} />
+              <Text style={[styles.wordCount, words > maxWords && styles.wordCountOver]}>
+                {t('writingWordCount')
+                  .replace('{n}', String(words))
+                  .replace('{min}', String(minWords))
+                  .replace('{max}', String(maxWords))}
+              </Text>
+              </View>
+              <TouchableOpacity onPress={() => setText('')} disabled={!text} hitSlop={8}>
+                <Text style={styles.clearText}>{t('writingClear')}</Text>
+              </TouchableOpacity>
+            </View>
+            </View>
             {!!errorText && <Text style={styles.errorText}>{errorText}</Text>}
           </>
         )}
@@ -313,12 +330,13 @@ export const WritingScreen: React.FC = () => {
 
       {phase === 'write' && (
         <TouchableOpacity
-          style={[styles.primaryBtn, !canSubmit && styles.disabled]}
+          style={[styles.primaryBtn, styles.submitBtn, rtl && styles.rowReverse, !canSubmit && styles.disabled]}
           onPress={handleSubmit}
           disabled={!canSubmit}
           activeOpacity={0.85}
         >
           <Text style={styles.primaryBtnText}>{t('writingSubmit')}</Text>
+          <CircleCheck size={18} color={COLORS.white} />
         </TouchableOpacity>
       )}
 
@@ -336,12 +354,33 @@ export const WritingScreen: React.FC = () => {
   );
 };
 
+const LEVEL_LABEL: Record<string, string> = {
+  starter: 'levelStarter',
+  beginner: 'levelBeginner',
+  intermediate: 'levelIntermediate',
+  advanced: 'levelAdvanced',
+  proficient: 'levelProficient',
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  ltrText: { writingDirection: 'ltr' },
+  wordCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  wordDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C9CCD4' },
+  wordDotOk: { backgroundColor: COLORS.success },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  closeBtnSpacer: { width: 36 },
+  topChip: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, backgroundColor: '#FDEBE4' },
+  topChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.primary },
+  cardLabelStrong: { color: COLORS.text, fontFamily: FONT_FAMILY.bold },
+  cardLabelAccent: { color: '#C2410C', fontFamily: FONT_FAMILY.bold },
+  phrasesCard: { backgroundColor: '#FFFBF3', borderColor: '#F6EAD3' },
+  inputCard: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: SPACING.m, gap: 10 },
+  inputFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F2F2F5', paddingTop: 8 },
+  clearText: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.muted },
+  submitBtn: { flexDirection: 'row', justifyContent: 'center', gap: 8, borderRadius: 16, backgroundColor: '#E2643A' },
+  container: { flex: 1, backgroundColor: '#FAF9F6', paddingHorizontal: SPACING.l },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -349,17 +388,8 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  topRow: {
-    flexDirection: 'row',
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF0F4', alignItems: 'center', justifyContent: 'center' },
   content: {
     flexGrow: 1,
     paddingVertical: SPACING.m,
@@ -375,15 +405,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    gap: 6,
-    ...SHADOWS.level1,
-  },
+  card: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: SPACING.m, gap: 8 },
   cardLabel: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
@@ -399,18 +421,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  chip: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  ideasCard: {
-    backgroundColor: hexToRgba(COLORS.levelIntermediateBg, 0.05),
-    borderColor: hexToRgba(COLORS.levelIntermediateBg, 0.2),
-  },
+  chip: { backgroundColor: COLORS.primaryLight, borderRadius: 14, borderWidth: 1, borderColor: 'transparent', paddingHorizontal: 10, paddingVertical: 5 },
+  ideasCard: { backgroundColor: COLORS.white },
   numberedRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -437,25 +449,11 @@ const styles = StyleSheet.create({
   },
   chipText: {
     ...TEXT_STYLES.labelMd,
+    fontSize: 12,
     color: COLORS.text,
   },
-  input: {
-    minHeight: 200,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    ...TEXT_STYLES.bodyLg,
-    color: COLORS.text,
-    textAlign: 'left',
-    writingDirection: 'ltr',
-  },
-  wordCount: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.muted,
-    textAlign: 'right',
-  },
+  input: { minHeight: 160, ...TEXT_STYLES.bodyLg, color: COLORS.text, padding: 0 },
+  wordCount: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
   wordCountOver: {
     color: COLORS.warning,
   },

@@ -15,7 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { Pause, Play, RotateCcw, Snail, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
+import { levelColor } from '../../components/ContentVisuals';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
@@ -62,7 +63,10 @@ function markWords(words: string[], owner: number[], ok: boolean[]): Word[] {
  * مقایسه و نشان داده می‌شود.
  */
 export const PodcastDictationScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: بستن سمت راست، متن‌ها راست‌چین، نوار پیشرفت از راست پر می‌شود.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -176,13 +180,15 @@ export const PodcastDictationScreen: React.FC = () => {
       style={[styles.container, { paddingTop: insets.top + SPACING.s, paddingBottom: insets.bottom + SPACING.m }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.topRow}>
+      <View style={styles.grabber} />
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <X size={20} color={COLORS.text} />
+          <X size={18} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>
           {t('podcastDictationTitle')}
         </Text>
+        <View style={styles.closeBtnSpacer} />
       </View>
 
       {failed && (
@@ -199,10 +205,20 @@ export const PodcastDictationScreen: React.FC = () => {
       {podcast && (
         <>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text style={styles.podcastTitle}>{podcast.title}</Text>
+            <View style={[styles.podcastHead, rtl && styles.rowReverse]}>
+              <Text style={[styles.podcastTitle, ta]} numberOfLines={1}>
+                {podcast.title}
+              </Text>
+              <View style={[styles.levelChip, { backgroundColor: hexToRgba(levelColor(podcast.level), 0.12) }]}>
+                <Text style={[styles.levelChipText, { color: levelColor(podcast.level) }]}>
+                  {t(LEVEL_LABEL[podcast.level] ?? 'levelBeginner')}
+                </Text>
+              </View>
+            </View>
             {!result ? (
               <>
-                <Text style={styles.instruction}>{t('podcastDictationHint')}</Text>
+                <Text style={[styles.instruction, ta]}>{t('podcastDictationHint')}</Text>
+                <View style={styles.inputCard}>
                 <TextInput
                   style={styles.input}
                   value={answer}
@@ -213,6 +229,13 @@ export const PodcastDictationScreen: React.FC = () => {
                   autoCorrect={false}
                   multiline
                 />
+                <View style={[styles.inputFooter, rtl && styles.rowReverse]}>
+                  <Text style={styles.inputMeta}>
+                    {t('podcastDictationWords').replace('{n}', String(answer.trim() ? answer.trim().split(/\s+/).length : 0))}
+                  </Text>
+                  <Text style={styles.inputMeta}>{t('podcastDictationEnglish')}</Text>
+                </View>
+                </View>
               </>
             ) : (
               <>
@@ -243,14 +266,15 @@ export const PodcastDictationScreen: React.FC = () => {
           {/* پخش‌کننده: پخش/مکث، چند ثانیه عقب، آهسته */}
           {!result && (
             <View style={styles.player}>
-              <View style={styles.progressTrack}>
+              <View style={[styles.progressTrack, rtl && styles.rowReverse]}>
                 <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+                <View style={styles.progressThumb} />
               </View>
-              <View style={styles.timeRow}>
+              <View style={[styles.timeRow, rtl && styles.rowReverse]}>
                 <Text style={styles.time}>{formatDuration(positionMs / 1000)}</Text>
                 <Text style={styles.time}>{formatDuration(duration)}</Text>
               </View>
-              <View style={styles.controls}>
+              <View style={[styles.controls, rtl && styles.rowReverse]}>
                 <TouchableOpacity style={styles.sideBtn} onPress={back} disabled={!ready} activeOpacity={0.8}>
                   <RotateCcw size={18} color={COLORS.text} />
                   <Text style={styles.sideText}>{BACK_SECONDS}s</Text>
@@ -272,7 +296,7 @@ export const PodcastDictationScreen: React.FC = () => {
             </View>
           )}
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, rtl && styles.rowReverse]}>
             {!result ? (
               <TouchableOpacity
                 style={[styles.primaryBtn, !answer.trim() && styles.btnDisabled]}
@@ -300,36 +324,52 @@ export const PodcastDictationScreen: React.FC = () => {
   );
 };
 
+const LEVEL_LABEL: Record<string, string> = {
+  starter: 'levelStarter',
+  beginner: 'levelBeginner',
+  intermediate: 'levelIntermediate',
+  advanced: 'levelAdvanced',
+  proficient: 'levelProficient',
+};
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s },
-  closeBtn: {
-    width: 36,
-    height: 36,
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  grabber: { alignSelf: 'center', width: 44, height: 4, borderRadius: 2, backgroundColor: '#DDD8CE', marginBottom: 10 },
+  closeBtnSpacer: { width: 36 },
+  podcastHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  levelChip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  levelChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  inputCard: {
+    marginTop: 4,
+    padding: SPACING.m,
     borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ECE8E0',
+    backgroundColor: COLORS.white,
   },
-  title: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: COLORS.text, textAlign: 'right' },
+  inputFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  inputMeta: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  progressThumb: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary, marginHorizontal: -6 },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFECE6', alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: COLORS.text, textAlign: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
   body: { paddingVertical: SPACING.m, gap: SPACING.s },
-  podcastTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
-  instruction: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'right' },
+  podcastTitle: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  instruction: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary },
   input: {
-    minHeight: 220,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    padding: SPACING.m,
+    minHeight: 240,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 16,
     lineHeight: 24,
     color: COLORS.text,
     textAlign: 'left',
     textAlignVertical: 'top',
+    padding: 0,
   },
   scoreCard: { alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.l, padding: SPACING.m },
   score: { fontFamily: FONT_FAMILY.bold, fontSize: 36, color: COLORS.success },
@@ -348,42 +388,21 @@ const styles = StyleSheet.create({
   wordBad: { color: COLORS.error, textDecorationLine: 'line-through' },
   wordPlain: { color: COLORS.text },
   wordMissed: { color: COLORS.error, backgroundColor: COLORS.errorLight, fontFamily: FONT_FAMILY.bold },
-  player: {
-    gap: 6,
-    paddingTop: SPACING.s,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
-  },
-  progressTrack: { height: 5, borderRadius: 3, backgroundColor: COLORS.surfaceHigh, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: COLORS.primary },
+  player: { gap: 6, paddingTop: SPACING.s },
+  progressTrack: { flexDirection: 'row', alignItems: 'center', height: 5, borderRadius: 3, backgroundColor: '#E6E2DA' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.primary },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.textSecondary },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.l },
-  playBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  sideBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
+  playBtn: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  sideBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#E6E2DA', backgroundColor: COLORS.white },
   sideBtnOn: { backgroundColor: COLORS.surfaceHigh, borderColor: COLORS.textSecondary },
   sideText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.text },
   footer: { flexDirection: 'row', gap: SPACING.s, marginTop: SPACING.s },
   flex: { flex: 1 },
-  primaryBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 48,
-    borderRadius: BORDER_RADIUS.l,
-    backgroundColor: COLORS.primary,
-  },
+  primaryBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 16, backgroundColor: '#E2643A' },
   primaryBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.white },
-  btnDisabled: { backgroundColor: COLORS.border },
+  btnDisabled: { backgroundColor: '#E6E1D8' },
   ghostBtn: {
     alignItems: 'center',
     justifyContent: 'center',

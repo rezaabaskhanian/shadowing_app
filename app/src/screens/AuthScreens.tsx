@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft,
+  ArrowRight,
   Eye,
   EyeOff,
   Lock,
@@ -21,6 +22,7 @@ import {
   User,
 } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
+import { GradientFill } from '../components/GradientFill';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
@@ -81,7 +83,11 @@ const LoginScreen = ({
   onRegister: () => void;
   onReset: () => void;
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون فیلد سمت راست، متن راست‌چین، دکمه‌ی برگشت سمت راست.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
@@ -110,18 +116,25 @@ const LoginScreen = ({
       {/* Brand Header */}
       <View style={styles.brandHeader}>
         <View style={styles.brandBadge}>
-          <Mic color={COLORS.white} size={28} />
+          <GradientFill from="#F28A55" to="#E2502A" />
+          <Mic color={COLORS.white} size={30} />
         </View>
-        <Text style={styles.authTitle}>{t('welcomeBack')}</Text>
+        {/* اسم برند نارنجی، بقیه‌ی تیتر تیره. */}
+        <Text style={styles.authTitle}>
+          {t('welcomeBack').replace('LingoFlow', '')}
+          <Text style={styles.brandWord}>LingoFlow</Text>
+        </Text>
+        <Text style={styles.authSub}>{t('loginSub')}</Text>
       </View>
 
       {/* Input Fields */}
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldPhoneLabel')}</Text>
+      <View style={[styles.inputWrap, rr]}>
         <Phone color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('phoneNumber')}
           placeholderTextColor={COLORS.textSecondary}
-          style={styles.input}
+          style={[styles.input, ta]}
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
@@ -129,13 +142,15 @@ const LoginScreen = ({
         />
       </View>
 
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldPasswordLabel')}</Text>
+
+      <View style={[styles.inputWrap, rr]}>
         <Lock color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('password')}
           placeholderTextColor={COLORS.textSecondary}
           secureTextEntry={!showPassword}
-          style={styles.input}
+          style={[styles.input, ta]}
           autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
@@ -151,24 +166,28 @@ const LoginScreen = ({
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.forgotButton} onPress={onReset} hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}>
+      <TouchableOpacity style={[styles.forgotButton, rtl ? styles.selfEnd : styles.selfStart]} onPress={onReset} hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}>
         <Text style={styles.linkText}>{t('forgotPassword')}</Text>
       </TouchableOpacity>
 
       {/* Password Login CTA */}
       <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loading}>
+        <GradientFill from="#E8572F" to="#EC7A4C" horizontal />
         {loading ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
-          <Text style={styles.primaryButtonText}>{t('login')}</Text>
+          <View style={[styles.primaryInner, rr]}>
+            <Text style={styles.primaryButtonText}>{t('login')}</Text>
+            {rtl ? <ArrowLeft color={COLORS.white} size={18} /> : <ArrowRight color={COLORS.white} size={18} />}
+          </View>
         )}
       </TouchableOpacity>
 
       {/* ثبت‌نام یک لینک متنی است تا «ورود» تنها دکمه‌ی پررنگ صفحه بماند. */}
-      <View style={styles.registerRow}>
+      <View style={[styles.registerRow, rr]}>
         <Text style={styles.registerHint}>{t('noAccountYet')}</Text>
         <TouchableOpacity onPress={onRegister} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.linkText}>{t('signUp')}</Text>
+          <Text style={[styles.linkText, styles.underline]}>{t('signUp')}</Text>
         </TouchableOpacity>
       </View>
     </AuthScroll>
@@ -191,7 +210,9 @@ const OtpStep = ({
   onVerified: (token: string) => void;
   onBack: () => void;
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون فیلد سمت راست، متن راست‌چین، دکمه‌ی برگشت سمت راست.
+  const rtl = language === 'fa';
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -252,8 +273,8 @@ const OtpStep = ({
 
   return (
     <AuthScroll>
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <ArrowLeft color={COLORS.text} size={22} />
+      <TouchableOpacity style={[styles.backButton, rtl && styles.selfEnd]} onPress={onBack}>
+        {rtl ? <ArrowRight color={COLORS.text} size={20} /> : <ArrowLeft color={COLORS.text} size={20} />}
       </TouchableOpacity>
 
       <View style={styles.brandHeader}>
@@ -315,7 +336,11 @@ const OtpStep = ({
 
 // REGISTRATION SCREEN
 const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون فیلد سمت راست، متن راست‌چین، دکمه‌ی برگشت سمت راست.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const { register } = useAuth();
   const [step, setStep] = useState<'form' | 'otp'>('form');
   const [nickname, setNickname] = useState('');
@@ -377,8 +402,8 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
 
   return (
     <AuthScroll>
-      <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <ArrowLeft color={COLORS.text} size={22} />
+      <TouchableOpacity style={[styles.backButton, rtl && styles.selfEnd]} onPress={onBack}>
+        {rtl ? <ArrowRight color={COLORS.text} size={20} /> : <ArrowLeft color={COLORS.text} size={20} />}
       </TouchableOpacity>
 
       <View style={styles.brandHeader}>
@@ -389,36 +414,42 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
         <Text style={styles.authSub}>{t('registerSub')}</Text>
       </View>
 
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldNameLabel')}</Text>
+
+      <View style={[styles.inputWrap, rr]}>
         <User color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('nicknameLabel')}
           placeholderTextColor={COLORS.textSecondary}
-          style={styles.input}
+          style={[styles.input, ta]}
           value={nickname}
           onChangeText={setNickname}
         />
       </View>
 
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldPhoneLabel')}</Text>
+
+      <View style={[styles.inputWrap, rr]}>
         <Phone color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('phoneNumber')}
           placeholderTextColor={COLORS.textSecondary}
-          style={styles.input}
+          style={[styles.input, ta]}
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
         />
       </View>
 
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldPasswordLabel')}</Text>
+
+      <View style={[styles.inputWrap, rr]}>
         <Lock color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('password')}
           placeholderTextColor={COLORS.textSecondary}
           secureTextEntry={!showPassword}
-          style={styles.input}
+          style={[styles.input, ta]}
           autoCapitalize="none"
           value={password}
           onChangeText={setPassword}
@@ -432,13 +463,15 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.inputWrap}>
+      <Text style={[styles.fieldLabel, ta]}>{t('fieldConfirmLabel')}</Text>
+
+      <View style={[styles.inputWrap, rr]}>
         <Lock color={COLORS.textSecondary} size={20} />
         <TextInput
           placeholder={t('confirmNewPassword')}
           placeholderTextColor={COLORS.textSecondary}
           secureTextEntry={!showPassword}
-          style={styles.input}
+          style={[styles.input, ta]}
           autoCapitalize="none"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -448,6 +481,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <TouchableOpacity style={styles.primaryButton} onPress={handleContinue} disabled={loading}>
+        <GradientFill from="#E8572F" to="#EC7A4C" horizontal />
         {loading ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
@@ -455,7 +489,7 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
         )}
       </TouchableOpacity>
 
-      <View style={styles.bottomPrompt}>
+      <View style={[styles.bottomPrompt, rr]}>
         <Text style={styles.promptText}>{t('alreadyHaveAccount')} </Text>
         <TouchableOpacity onPress={onBack}>
           <Text style={styles.linkText}>{t('login')}</Text>
@@ -467,7 +501,11 @@ const RegisterScreen = ({ onBack }: { onBack: () => void }) => {
 
 // RESET PASSWORD SCREEN (3-step: phone -> otp -> new password -> success)
 const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون فیلد سمت راست، متن راست‌چین، دکمه‌ی برگشت سمت راست.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const [step, setStep] = useState<'phone' | 'otp' | 'form' | 'success'>('phone');
   const [phone, setPhone] = useState('');
   const [otpToken, setOtpToken] = useState('');
@@ -535,8 +573,8 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
   return (
     <AuthScroll>
       {step !== 'success' && (
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <ArrowLeft color={COLORS.text} size={22} />
+        <TouchableOpacity style={[styles.backButton, rtl && styles.selfEnd]} onPress={onBack}>
+          {rtl ? <ArrowRight color={COLORS.text} size={20} /> : <ArrowLeft color={COLORS.text} size={20} />}
         </TouchableOpacity>
       )}
 
@@ -550,12 +588,14 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
             <Text style={styles.authSub}>{t('resetPasswordSub')}</Text>
           </View>
 
-          <View style={styles.inputWrap}>
+          <Text style={[styles.fieldLabel, ta]}>{t('fieldPhoneLabel')}</Text>
+
+          <View style={[styles.inputWrap, rr]}>
             <Phone color={COLORS.textSecondary} size={20} />
             <TextInput
               placeholder={t('phoneNumber')}
               placeholderTextColor={COLORS.textSecondary}
-              style={styles.input}
+              style={[styles.input, ta]}
               keyboardType="phone-pad"
               value={phone}
               onChangeText={setPhone}
@@ -566,6 +606,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity style={styles.primaryButton} onPress={handleSendCode} disabled={loading}>
+            <GradientFill from="#E8572F" to="#EC7A4C" horizontal />
             {loading ? (
               <ActivityIndicator color={COLORS.white} />
             ) : (
@@ -588,13 +629,15 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
             <Text style={styles.authTitle}>{t('resetPasswordTitle')}</Text>
           </View>
 
-          <View style={styles.inputWrap}>
+          <Text style={[styles.fieldLabel, ta]}>{t('fieldNewPasswordLabel')}</Text>
+
+          <View style={[styles.inputWrap, rr]}>
             <Lock color={COLORS.textSecondary} size={20} />
             <TextInput
               placeholder={t('newPassword')}
               placeholderTextColor={COLORS.textSecondary}
               secureTextEntry={!showNewPass}
-              style={styles.input}
+              style={[styles.input, ta]}
               value={newPassword}
               onChangeText={setNewPassword}
               autoCapitalize="none"
@@ -608,13 +651,15 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.inputWrap}>
+          <Text style={[styles.fieldLabel, ta]}>{t('fieldConfirmLabel')}</Text>
+
+          <View style={[styles.inputWrap, rr]}>
             <Lock color={COLORS.textSecondary} size={20} />
             <TextInput
               placeholder={t('confirmNewPassword')}
               placeholderTextColor={COLORS.textSecondary}
               secureTextEntry={!showConfirmPass}
-              style={styles.input}
+              style={[styles.input, ta]}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               autoCapitalize="none"
@@ -631,6 +676,7 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity style={styles.primaryButton} onPress={handleUpdatePassword} disabled={loading}>
+            <GradientFill from="#E8572F" to="#EC7A4C" horizontal />
             {loading ? (
               <ActivityIndicator color={COLORS.white} />
             ) : (
@@ -668,70 +714,31 @@ const ResetPasswordScreen = ({ onBack }: { onBack: () => void }) => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  selfEnd: { alignSelf: 'flex-end' },
+  selfStart: { alignSelf: 'flex-start' },
+  brandWord: { color: COLORS.primary },
+  underline: { textDecorationLine: 'underline' },
+  primaryInner: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fieldLabel: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 12, marginBottom: 8 },
+  screen: { flex: 1, backgroundColor: '#FAF8F4' },
   authContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 48,
     paddingBottom: 40,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EFECE6', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   brandHeader: {
     alignItems: 'center',
     marginBottom: 32,
   },
-  brandBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  authTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 26,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  authSub: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 10,
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    height: 56,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-  },
+  brandBadge: { width: 76, height: 76, borderRadius: 38, overflow: 'hidden', backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 18, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 8 },
+  authTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, textAlign: 'center', marginBottom: 6 },
+  authSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 13, textAlign: 'center', lineHeight: 20, paddingHorizontal: 10 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1EFEA', borderRadius: 16, paddingHorizontal: 16, height: 54, marginBottom: 14, borderWidth: 1, borderColor: '#E7E3DB', gap: 12 },
   input: {
     flex: 1,
     color: COLORS.text,
@@ -787,13 +794,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 16,
   },
-  registerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 20,
-  },
+  registerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 'auto', paddingTop: 28 },
   registerHint: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
@@ -804,14 +805,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
   },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 28,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
+  primaryButton: { borderRadius: 16, height: 56, overflow: 'hidden', backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 5 },
   primaryButtonText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,

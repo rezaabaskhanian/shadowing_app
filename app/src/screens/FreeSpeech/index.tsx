@@ -2,11 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleCheck, CircleX, Lock, Mic, Square, TriangleAlert } from 'lucide-react-native';
+import { CircleCheck, CircleX, Clock, Lock, Mic, Square, TriangleAlert, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
@@ -75,7 +74,7 @@ const relevanceMeta = (answered: string) => {
  * بازخوردِ ربط + تصحیحِ گرامری برمی‌گردد، تمام — بدون پاسخِ AI، بدون ادامه.
  */
 export const FreeSpeechScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -192,6 +191,12 @@ export const FreeSpeechScreen: React.FC = () => {
     setPhase('idle');
   }, []);
 
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
+  const timerSeconds = phase === 'recording' ? elapsedSeconds : MAX_RECORD_SECONDS;
+  const timerLabel = `00:${String(timerSeconds).padStart(2, '0')}`;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s, paddingBottom: insets.bottom + SPACING.l }]}>
       <AudioPlayer
@@ -203,18 +208,39 @@ export const FreeSpeechScreen: React.FC = () => {
         onRecordingStatusUpdate={handleRecordingStatus}
       />
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('freeSpeechTitle')}</Text>
-        {!!sceneTitle && <Text style={styles.headerSub}>{sceneTitle}</Text>}
+      <View style={[styles.topBar, row]}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} hitSlop={8}>
+          <X size={20} color={COLORS.text} />
+        </TouchableOpacity>
+        <View style={[styles.timerPill, row, phase === 'recording' && styles.timerPillActive]}>
+          <Text style={[styles.timerText, phase === 'recording' && styles.timerTextActive]}>{timerLabel}</Text>
+          <Clock size={14} color={phase === 'recording' ? COLORS.error : COLORS.primary} />
+        </View>
+        <View style={styles.topBarSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {phase !== 'result' && (
-          <>
-            <Text style={styles.promptText}>{t('freeSpeechPrompt')}</Text>
+        <View style={styles.header}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{t('freeSpeechBadge')}</Text>
+          </View>
+          <Text style={styles.headerTitle}>{t('freeSpeechTitle')}</Text>
+          {phase !== 'result' && <Text style={styles.promptText}>{t('freeSpeechPrompt')}</Text>}
+        </View>
+
+        {phase !== 'result' && (!!sceneTitle || sceneLines.length > 0) && (
+          <View style={styles.situationCard}>
+            {!!sceneTitle && (
+              <View style={[styles.situationHead, row]}>
+                <View style={styles.situationDot} />
+                <Text style={[styles.situationTitle, align]} numberOfLines={2}>
+                  {t('freeSpeechSituation')} {sceneTitle}
+                </Text>
+              </View>
+            )}
             {sceneLines.length > 0 && (
               <View style={styles.recapCard}>
-                <Text style={styles.recapLabel}>{t('freeSpeechRecapLabel')}</Text>
+                <Text style={[styles.recapLabel, align]}>{t('freeSpeechRecapLabel')}</Text>
                 {sceneLines.map((line, idx) => (
                   <Text key={idx} style={styles.recapLine}>
                     <Text style={styles.recapSpeaker}>{line.speaker}: </Text>
@@ -223,7 +249,7 @@ export const FreeSpeechScreen: React.FC = () => {
                 ))}
               </View>
             )}
-          </>
+          </View>
         )}
 
         {phase === 'transcribing' && <AnalyzingBlock message={t('freeSpeechAnalyzing')} />}
@@ -240,7 +266,7 @@ export const FreeSpeechScreen: React.FC = () => {
 
         {phase === 'result' && transcript !== null && (
           <View style={styles.resultCard}>
-            <Text style={styles.transcriptLabel}>{t('freeSpeechYourAnswer')}</Text>
+            <Text style={[styles.transcriptLabel, align]}>{t('freeSpeechYourAnswer')}</Text>
             <Text style={styles.transcriptText}>{transcript}</Text>
 
             {feedbackState === 'loading' && (
@@ -314,17 +340,27 @@ export const FreeSpeechScreen: React.FC = () => {
         </TouchableOpacity>
       ) : phase !== 'transcribing' && phase !== 'error' ? (
         <View style={styles.recordArea}>
-          <TouchableOpacity
-            style={[styles.recordBtn, phase === 'recording' && styles.recordBtnActive]}
-            onPress={phase === 'recording' ? handleStopRecord : handleStartRecord}
-            activeOpacity={0.85}
-          >
-            {phase === 'recording' ? (
-              <Square size={26} color={COLORS.white} fill={COLORS.white} />
-            ) : (
-              <Mic size={28} color={COLORS.white} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.wave}>
+            {WAVE_BARS.map((h, i) => (
+              <View
+                key={i}
+                style={[styles.waveBar, { height: h }, phase === 'recording' && styles.waveBarActive]}
+              />
+            ))}
+          </View>
+          <View style={[styles.recordRing, phase === 'recording' && styles.recordRingActive]}>
+            <TouchableOpacity
+              style={[styles.recordBtn, phase === 'recording' && styles.recordBtnActive]}
+              onPress={phase === 'recording' ? handleStopRecord : handleStartRecord}
+              activeOpacity={0.85}
+            >
+              {phase === 'recording' ? (
+                <Square size={26} color={COLORS.white} fill={COLORS.white} />
+              ) : (
+                <Mic size={30} color={COLORS.white} />
+              )}
+            </TouchableOpacity>
+          </View>
           <Text style={styles.recordHint}>
             {phase === 'recording' ? t('placementStopRecordBtn') : t('freeSpeechRecordHint')}
           </Text>
@@ -345,40 +381,96 @@ export const FreeSpeechScreen: React.FC = () => {
   );
 };
 
+/** ارتفاع میله‌های موجِ تزئینیِ بالای دکمه‌ی ضبط. */
+const WAVE_BARS = [8, 14, 10, 20, 26, 18, 30, 18, 26, 20, 10, 14, 8];
+
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSoft,
     paddingHorizontal: SPACING.l,
   },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: SPACING.s,
+  },
+  topBarSpacer: { width: 40 },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  timerPillActive: { borderColor: COLORS.error, backgroundColor: COLORS.errorLight },
+  timerText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 14, letterSpacing: 0.5 },
+  timerTextActive: { color: COLORS.error },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.s,
+    marginBottom: SPACING.m,
   },
+  badge: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  badgeText: { color: COLORS.primaryDark, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
   headerTitle: {
-    ...TEXT_STYLES.headlineSm,
     color: COLORS.text,
-  },
-  headerSub: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 24,
+    lineHeight: 34,
   },
   content: {
     flexGrow: 1,
     paddingVertical: SPACING.m,
   },
   promptText: {
-    ...TEXT_STYLES.bodyLg,
-    color: COLORS.text,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 14,
+    lineHeight: 23,
     textAlign: 'center',
-    marginBottom: SPACING.l,
+    marginTop: 6,
+    paddingHorizontal: SPACING.s,
   },
-  recapCard: {
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.l,
+  situationCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     padding: SPACING.m,
-    marginBottom: SPACING.l,
+    gap: 12,
+  },
+  situationHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  situationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success },
+  situationTitle: { flex: 1, color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 14 },
+  recapCard: {
+    backgroundColor: COLORS.backgroundSoft,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 16,
+    padding: 12,
     gap: 4,
   },
   recapLabel: {
@@ -419,12 +511,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   resultCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
     padding: SPACING.l,
-    ...SHADOWS.level1,
   },
   transcriptLabel: {
     ...TEXT_STYLES.labelSm,
@@ -477,14 +568,39 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
     paddingTop: SPACING.s,
   },
+  wave: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 32,
+    marginBottom: 4,
+  },
+  waveBar: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: COLORS.surfaceHighest,
+  },
+  waveBarActive: {
+    backgroundColor: COLORS.primary,
+  },
+  recordRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordRingActive: {
+    backgroundColor: COLORS.errorLight,
+  },
   recordBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.level2,
   },
   recordBtnActive: {
     backgroundColor: COLORS.error,
@@ -537,12 +653,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
   },
   recordHint: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 14,
   },
   confirmBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
+    borderRadius: 16,
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.l,
     alignItems: 'center',

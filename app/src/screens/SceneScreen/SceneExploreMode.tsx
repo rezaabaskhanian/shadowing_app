@@ -1,9 +1,10 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Mic } from 'lucide-react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Mic, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
+import { GradientFill } from '../../components/GradientFill';
 import type { DialogueItem, Hotspot } from '../../data/scenarios';
 
 interface SceneExploreModeProps {
@@ -12,12 +13,17 @@ interface SceneExploreModeProps {
   activeHotspotIndex: number;
   onGoToHotspot: (hotspotIdx: number) => void;
   onStartShadowing: () => void;
+  /** پخش دوباره‌ی جمله‌ی نمایش‌داده‌شده. */
+  onPlayLine: () => void;
+  rtl: boolean;
   t: (key: string) => string;
 }
 
+const toFa = (s: string) => s.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+
 /**
- * حالت «اکسپلور»: قبل از شروع تمرین ۴مرحله‌ای، کاربر می‌تواند بین
- * هات‌اسپات‌های صحنه جابه‌جا شود و متن/ترجمه‌ی هر کدام را ببیند.
+ * حالت «اکسپلور»: قبل از شروع تمرین ۴مرحله‌ای، کاربر بین شخصیت‌های صحنه
+ * جابه‌جا می‌شود، جمله‌ی اول هر کدام را می‌بیند/می‌شنود و نقشش را انتخاب می‌کند.
  */
 export const SceneExploreMode: React.FC<SceneExploreModeProps> = ({
   currentDialogue,
@@ -25,161 +31,173 @@ export const SceneExploreMode: React.FC<SceneExploreModeProps> = ({
   activeHotspotIndex,
   onGoToHotspot,
   onStartShadowing,
+  onPlayLine,
+  rtl,
   t,
 }) => {
+  const row = rtl && styles.rowReverse;
+  const count = String(sceneHotspots.length);
   return (
     <View style={styles.exploreModeContainer}>
-      <View style={styles.exploreHeaderRow}>
-        <View style={styles.speakerPill}>
-          <Text style={styles.speakerText}>{(currentDialogue.speaker || 'SPEAKER').toUpperCase()}</Text>
+      <View style={styles.lineCard}>
+        <View style={[styles.cardHeader, row]}>
+          <View style={[styles.speakerGroup, row]}>
+            <View style={styles.speakerPill}>
+              <Text style={styles.speakerText}>{(currentDialogue.speaker || 'SPEAKER').toUpperCase()}</Text>
+            </View>
+            <Text style={styles.firstLineLabel}>{t('exploreFirstLine')}</Text>
+          </View>
+          <TouchableOpacity style={styles.speakerBtn} onPress={onPlayLine} activeOpacity={0.8}>
+            <Volume2 size={18} color={COLORS.primary} fill={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.englishText}>{currentDialogue.dialogue}</Text>
+        <Text style={[styles.translationText, rtl && styles.textRight]}>{currentDialogue.translation}</Text>
+      </View>
+
+      <View>
+        <View style={[styles.roleHeader, row]}>
+          <Text style={styles.roleTitle}>{t('exploreChooseRole')}</Text>
+          <Text style={styles.roleCount}>
+            {t('exploreCharacters').replace('{n}', rtl ? toFa(count) : count)}
+          </Text>
+        </View>
+        <View style={[styles.roleRow, row]}>
+          {sceneHotspots.map((hs, i) => {
+            const on = activeHotspotIndex === i;
+            return (
+              <TouchableOpacity
+                key={hs.id || i}
+                style={[styles.roleBtn, on && styles.roleBtnActive]}
+                onPress={() => onGoToHotspot(i)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.roleBtnText, on && styles.roleBtnTextActive]} numberOfLines={1}>
+                  #{i + 1} {hs.speaker}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      <Text style={styles.englishText}>{currentDialogue.dialogue || 'Great. Can I pay by card?'}</Text>
-      <Text style={styles.translationText}>{currentDialogue.translation}</Text>
-
-      {/* Hotspots Selector Row */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.hotspotChipContent}
-        style={styles.hotspotChipScroll}
-      >
-        {sceneHotspots.map((hs, i) => (
-          <TouchableOpacity
-            key={hs.id || i}
-            style={[styles.hotspotChip, activeHotspotIndex === i ? styles.hotspotChipActive : null]}
-            onPress={() => onGoToHotspot(i)}
-          >
-            <Text
-              style={[
-                styles.hotspotChipText,
-                activeHotspotIndex === i ? styles.hotspotChipTextActive : null,
-              ]}
-            >
-              #{i + 1} {hs.speaker}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Primary CTA: Start 4-Step Shadowing Practice */}
       <TouchableOpacity activeOpacity={0.88} style={styles.startShadowingCtaBtn} onPress={onStartShadowing}>
-        <Mic size={20} color={COLORS.white} />
-        <Text style={styles.startShadowingCtaText}>{t('startFourStepPractice')}</Text>
+        <GradientFill from="#E8572F" to="#E2703F" horizontal />
+        <View style={[styles.ctaInner, row]}>
+          <Mic size={20} color={COLORS.white} />
+          <Text style={styles.startShadowingCtaText}>{t('startFourStepPractice')}</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
   exploreModeContainer: {
     flex: 1,
-    paddingVertical: 4,
-    justifyContent: 'space-between',
-   
+    paddingTop: 6,
+    gap: 28,
   },
-  exploreHeaderRow: {
+  lineCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EEECE8',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 14,
   },
+  speakerGroup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   speakerPill: {
     backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   speakerText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.8,
+  },
+  firstLineLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  speakerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   englishText: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 19,
-    lineHeight: 26,
-    marginBottom: 4,
+    fontSize: 22,
+    lineHeight: 30,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    marginBottom: 2,
   },
   translationText: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 8,
   },
-  hotspotNavRow: {
+  roleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginTop: 12,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  hotspotNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.surfaceLight,
+  roleTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
+  roleCount: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  roleBtn: {
+    flexGrow: 1,
+    flexBasis: '28%',
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E4E1DB',
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  hotspotSelectTitle: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  hotspotChipScroll: {
-    marginVertical: 20,
-  },
-  hotspotChipContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  hotspotChip: {
-    height: 35,
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    marginRight: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignSelf: 'center',
-    borderColor: COLORS.border,
+    paddingHorizontal: 8,
   },
   // انتخاب‌شده با کادر نارنجی، نه پس‌زمینه‌ی پر؛ تا با دکمه‌ی اصلی تمرین رقابت نکند.
-  hotspotChipActive: {
+  roleBtnActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
     borderWidth: 1.5,
   },
-  hotspotChipText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
-  },
-  hotspotChipTextActive: {
-    color: COLORS.primary,
-    fontFamily: FONT_FAMILY.bold,
-  },
+  roleBtnText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.semiBold, fontSize: 13 },
+  roleBtnTextActive: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold },
   startShadowingCtaBtn: {
-    flexDirection: 'row',
+    marginTop: 'auto',
+    height: 52,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 22,
-    gap: 8,
-    marginTop: 6,
+    elevation: 6,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  startShadowingCtaText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 15,
-  },
+  ctaInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  startShadowingCtaText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
 });

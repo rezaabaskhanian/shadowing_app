@@ -28,7 +28,8 @@ export const formatDuration = (seconds: number) => {
 
 /** لیست پادکست‌ها؛ ورودی از منوی کناری. */
 export const PodcastListScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -66,15 +67,16 @@ export const PodcastListScreen: React.FC = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       {/* سربرگ جمع‌وجور: دکمه‌ی بستن و عنوان در یک ردیف؛ لیست پادکست‌ها از همان بالای صفحه. */}
-      <View style={styles.header}>
+      <View style={[styles.header, rtl && styles.rowReverse]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{t('podcastTitle')}</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       {hasFeatured && (
-        <View style={styles.tabs}>
+        <View style={[styles.tabs, rtl && styles.rowReverse]}>
           {(
             [
               ['all', 'podcastFilterAll'],
@@ -141,6 +143,8 @@ export const PodcastListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  headerSpacer: { width: 40 },
   tabs: {
     flexDirection: 'row',
     gap: SPACING.s,
@@ -148,12 +152,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tab: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     paddingVertical: 6,
     borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E7E2D9',
   },
   // فیلتر فعال با رنگ کم‌رنگ؛ مرجانی پررنگ فقط برای اقدام اصلی.
   tabActive: {
@@ -170,7 +174,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FAF8F4',
     paddingHorizontal: SPACING.l,
   },
   header: {
@@ -182,16 +186,18 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 30,
     color: COLORS.text,
-    textAlign: 'right',
+    textAlign: 'center',
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
     alignItems: 'center',
     justifyContent: 'center',
   },

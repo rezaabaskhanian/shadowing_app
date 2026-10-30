@@ -51,7 +51,7 @@ export const TopicListScreen: React.FC = () => {
         </TouchableOpacity>
         <ListHero
           icon={<Mic size={26} color={COLORS.white} />}
-          color={COLORS.warning}
+          color={COLORS.primary}
           title={t('topicSpeakingTitle')}
           subtitle={t('topicSpeakingSubtitle')}
         />
@@ -125,19 +125,22 @@ export const TopicListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FAF8F4',
     paddingHorizontal: SPACING.l,
   },
   header: {
     alignItems: 'center',
     marginBottom: SPACING.m,
   },
+  // دکمه‌ی بستن در فارسی سمت راست بالا (مثل بقیه‌ی صفحه‌های بازطراحی‌شده).
   closeBtn: {
-    alignSelf: 'flex-start',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    alignSelf: 'flex-end',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.s,

@@ -7,9 +7,10 @@ import Sound from 'react-native-nitro-sound';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { Download, Headphones, ListMusic, Mic, Music, Pause, Play, RotateCcw, RotateCw, SkipBack, SkipForward, Square, X } from 'lucide-react-native';
+import { GradientFill } from '../../components/GradientFill';
 import { formatDuration } from '../Podcast/PodcastListScreen';
 
-import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
+import { COLORS, SPACING, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
@@ -20,6 +21,14 @@ import { addTake, exportTake, getTake, type SongTake } from '../../services/song
 import { track } from '../../services/analytics';
 import { KaraokeText } from '../../components/KaraokeText';
 import { levelColor } from '../../components/ContentVisuals';
+import {
+  HiddenLineBar,
+  MaskedLine,
+  MemorizePicker,
+  hiddenWordIndexes,
+  useMemorizeLevel,
+  type MemorizeLevel,
+} from '../../components/SongMemorize';
 
 const SONG_TRACK_ID = 'song';
 
@@ -51,7 +60,10 @@ type SingStep = 'idle' | 'recording' | 'recorded' | 'replaying';
  *   ضبط فقط روی گوشی می‌ماند.
  */
 export const SongScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: دکمه‌ی بستن سمت راست، زبانه‌ی «گوش بده» راست، ترجمه و توضیح راست‌چین.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -68,6 +80,8 @@ export const SongScreen: React.FC = () => {
   const [showAllFa, setShowAllFa] = useState(false);
   const [shownFa, setShownFa] = useState<Set<number>>(new Set());
   const [singStep, setSingStep] = useState<SingStep>('idle');
+  // حالت «حفظ کردن»: چند درصد کلمه‌ها پنهان باشند (برای هر آهنگ روی گوشی می‌ماند).
+  const [memorize, setMemorize] = useMemorizeLevel(songId);
   const [micDenied, setMicDenied] = useState(false);
   // بین زدن دکمه و شروع واقعی موزیک (بافر شدن)؛ دکمه‌ها غیرفعال و چرخنده.
   const [starting, setStarting] = useState(false);
@@ -383,6 +397,13 @@ export const SongScreen: React.FC = () => {
       ? lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 250)
       : -1;
 
+  // مرحله‌ی «از حفظ»: خطی که تا ~۱.۲ ثانیه‌ی دیگر شروع می‌شود، نشانه‌ی «آماده باش» می‌گیرد.
+  const upcomingIdx =
+    memorize === 100 && (playing || positionMs > 0)
+      ? lines.findIndex((l) => positionMs >= l.start_ms - 1200 && positionMs < l.start_ms)
+      : -1;
+  const longestLine = Math.max(1, ...lines.map((l) => l.text.length));
+
   useEffect(() => {
     if (activeIdx < 0 || activeIdx === lastActive.current) return;
     lastActive.current = activeIdx;
@@ -422,11 +443,11 @@ export const SongScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, rr]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8} disabled={singing}>
           <X size={18} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.flex}>
+        <View style={[styles.flex, styles.alignStart]}>
           <Text style={styles.title} numberOfLines={1}>
             {song.title}
           </Text>
@@ -439,7 +460,7 @@ export const SongScreen: React.FC = () => {
       </View>
 
       {/* دو حالت صفحه */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, rr]}>
         {(['listen', 'sing'] as Mode[]).map((m) => {
           const on = mode === m;
           const Icon = m === 'listen' ? Headphones : Mic;
@@ -479,27 +500,51 @@ export const SongScreen: React.FC = () => {
               {song.cover_url ? (
                 <Image source={{ uri: absUrl(song.cover_url) }} style={styles.coverImage} resizeMode="cover" />
               ) : (
-                <Music size={36} color={hexToRgba(COLORS.white, 0.9)} />
+                <>
+                  <GradientFill from={hexToRgba(accent, 0.75)} to={accent} />
+                  <View style={styles.coverIcon}>
+                    <Music size={26} color={COLORS.white} />
+                  </View>
+                </>
               )}
+              <View style={[styles.coverChip, rtl ? styles.coverChipLeft : styles.coverChipRight]}>
+                <Text style={styles.coverChipText}>{t('songCoverChip')}</Text>
+              </View>
             </View>
             {!!song.description_fa && <Text style={styles.desc}>{song.description_fa}</Text>}
-            <View style={styles.switchRow}>
-              <Text style={styles.hint}>{t('songListenHint')}</Text>
-              <View style={styles.switchInline}>
+            <View style={[styles.switchRow, rr]}>
+              <View style={[styles.switchInline, rr]}>
                 <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
                 <Switch value={showAllFa} onValueChange={setShowAllFa} trackColor={{ true: accent }} />
               </View>
+              <Text style={[styles.hint, { textAlign: rtl ? 'left' : 'right' }]}>{t('songListenHint')}</Text>
             </View>
           </>
         ) : (
-          <View style={[styles.singCard, { backgroundColor: hexToRgba(accent, 0.08) }]}>
-            <Headphones size={16} color={accent} />
+          <View style={[styles.singCard, rr, { backgroundColor: hexToRgba(accent, 0.08) }]}>
+            <View style={[styles.singIcon, { backgroundColor: hexToRgba(accent, 0.14) }]}>
+              <Music size={16} color={accent} />
+            </View>
             <Text style={styles.singHint}>
               {song.instrumental_url ? t('songSingHint') : t('songNoInstrumental')}
             </Text>
           </View>
         )}
         {micDenied && <Text style={styles.error}>{t('songNoMic')}</Text>}
+
+        <MemorizePicker
+          level={memorize}
+          onChange={setMemorize}
+          title={t('songMemorizeTitle')}
+          labels={{
+            0: t('songMemorizeFull'),
+            50: t('songMemorizeHalf'),
+            70: t('songMemorizeMost'),
+            100: t('songMemorizeAll'),
+          }}
+          accent={accent}
+          rtl={rtl}
+        />
 
         <View
           style={styles.page}
@@ -524,7 +569,29 @@ export const SongScreen: React.FC = () => {
                   disabled={mode !== 'listen'}
                   activeOpacity={0.75}
                 >
-                  {isActive ? (
+                  {memorize === 100 ? (
+                    <HiddenLineBar
+                      startMs={l.start_ms}
+                      endMs={l.end_ms}
+                      positionMs={positionSV}
+                      active={isActive}
+                      upcoming={i === upcomingIdx}
+                      accent={accent}
+                      lengthRatio={0.25 + 0.75 * (l.text.length / longestLine)}
+                      rtl={rtl}
+                    />
+                  ) : memorize > 0 ? (
+                    <MaskedLine
+                      text={l.text}
+                      hidden={hiddenWordIndexes(l.text.split(/\s+/).filter(Boolean), memorize as MemorizeLevel, `${song.id}:${i}`)}
+                      textStyle={StyleSheet.flatten([
+                        styles.lineText,
+                        mode === 'sing' && styles.lineTextSing,
+                        isActive && styles.lineTextActive,
+                      ])}
+                      accent={accent}
+                    />
+                  ) : isActive ? (
                     <KaraokeText
                       text={l.text}
                       startMs={l.start_ms}
@@ -556,6 +623,7 @@ export const SongScreen: React.FC = () => {
             >
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
+                <View style={[styles.progressThumb, { backgroundColor: accent }]} />
               </View>
             </TouchableOpacity>
             <View style={styles.timeRow}>
@@ -601,9 +669,9 @@ export const SongScreen: React.FC = () => {
             <Text style={styles.wideBtnText}>{t('songStopSinging')}</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.row}>
+          <View style={[styles.row, rr]}>
             <TouchableOpacity
-              style={[styles.wideBtn, styles.flex, { backgroundColor: accent }]}
+              style={[styles.wideBtn, styles.flex, rr, styles.mineBtn]}
               onPress={singStep === 'replaying' ? stopReplay : replayMine}
               activeOpacity={0.85}
             >
@@ -628,7 +696,7 @@ export const SongScreen: React.FC = () => {
           </View>
         )}
         {mode === 'sing' && (singStep === 'recorded' || singStep === 'replaying') && (
-          <View style={[styles.row, styles.saveRow]}>
+          <View style={[styles.row, styles.saveRow, rr]}>
             <TouchableOpacity style={[styles.ghostBtn, styles.flex]} onPress={saveToPhone} disabled={exporting} activeOpacity={0.85}>
               {exporting ? <ActivityIndicator size="small" color={COLORS.text} /> : <Download size={16} color={COLORS.text} />}
               <Text style={styles.ghostBtnText}>{exportedTo ? t('songSavedToPhone') : t('songSaveToPhone')}</Text>
@@ -647,70 +715,50 @@ export const SongScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  rowReverse: { flexDirection: 'row-reverse' },
+  progressThumb: { width: 14, height: 14, borderRadius: 7, marginHorizontal: -7 },
+  alignStart: { alignItems: 'flex-start' },
+  coverIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
+  coverChip: { position: 'absolute', bottom: 10, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.35)' },
+  coverChipLeft: { left: 10 },
+  coverChipRight: { right: 10 },
+  coverChipText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 10, color: COLORS.white },
+  singIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  mineBtn: { backgroundColor: '#E2643A' },
+  container: { flex: 1, backgroundColor: COLORS.white },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.s, backgroundColor: COLORS.background },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
   link: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
   flex: { flex: 1 },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, paddingHorizontal: SPACING.l },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { fontFamily: FONT_FAMILY.bold, fontSize: 16, lineHeight: 24, color: COLORS.text, textAlign: 'right' },
-  artist: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, textAlign: 'right' },
-  tabs: {
-    flexDirection: 'row',
-    gap: 6,
-    marginHorizontal: SPACING.l,
-    marginTop: SPACING.m,
-    padding: 4,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surface,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.full,
-  },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: COLORS.text, textAlign: 'left' },
+  artist: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, textAlign: 'left' },
+  tabs: { flexDirection: 'row', gap: 6, marginHorizontal: SPACING.l, marginTop: SPACING.m, padding: 4, borderRadius: 14, backgroundColor: '#F2F2F5' },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 11 },
   tabText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.textSecondary },
   tabTextOn: { color: COLORS.white, fontFamily: FONT_FAMILY.bold },
   content: { padding: SPACING.l, paddingBottom: SPACING.xl, gap: SPACING.m },
-  cover: { height: 160, borderRadius: BORDER_RADIUS.l, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  cover: { height: 150, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   coverImage: { width: '100%', height: '100%' },
   desc: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: COLORS.textSecondary, textAlign: 'right' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.s },
   hint: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 17, color: COLORS.muted, textAlign: 'right' },
   switchInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   switchLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.textSecondary },
-  singCard: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12 },
+  singCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 12 },
   singHint: { flex: 1, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 19, color: COLORS.textSecondary, textAlign: 'right' },
   error: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.error, textAlign: 'center' },
   page: { gap: 4 },
   line: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
-  lineText: { fontFamily: FONT_FAMILY.medium, fontSize: 17, lineHeight: 27, color: COLORS.text, textAlign: 'left' },
+  lineText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 17, lineHeight: 27, color: COLORS.text, textAlign: 'center' },
   lineTextSing: { fontSize: 20, lineHeight: 31, textAlign: 'center' },
   lineTextActive: { fontFamily: FONT_FAMILY.bold },
-  translation: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'right', marginTop: 2 },
-  bottomBar: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.s,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-  },
+  translation: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'center', marginTop: 2 },
+  bottomBar: { paddingHorizontal: SPACING.l, paddingTop: SPACING.s, borderTopWidth: 1, borderTopColor: '#F0F0F3', backgroundColor: COLORS.white, alignItems: 'center' },
   playerWrap: { alignSelf: 'stretch', gap: 4 },
   progressHit: { paddingVertical: 8 },
-  progressTrack: { height: 5, borderRadius: 3, backgroundColor: COLORS.surfaceHigh, overflow: 'hidden' },
+  progressTrack: { flexDirection: 'row', alignItems: 'center', height: 5, borderRadius: 3, backgroundColor: '#ECEEF2' },
   progressFill: { height: '100%' },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.textSecondary },

@@ -14,7 +14,8 @@ import {
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { getPaths } from '../api/path';
 import { useQueryClient } from '@tanstack/react-query';
-import { Award, BarChart2, CheckCircle2, ChevronRight, Flame, HelpCircle, Map as MapIcon, Search, Settings, TrendingUp, User as UserIcon, X, Zap } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight, Flame, HelpCircle, Languages, Lightbulb, Map as MapIcon, Search, Settings, TrendingUp, Trophy, User as UserIcon, X, Zap } from 'lucide-react-native';
+import { ProgressRing } from '../components/ProgressRing';
 import { SceneListCard, LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { SceneListCardSkeleton } from '../components/SceneListCardSkeleton';
 import { StreakInfoModal } from '../components/StreakInfoModal';
@@ -50,12 +51,47 @@ const categoryKey = (c?: string) => (c || '').trim().toLowerCase();
 
 const SceneGap = () => <View style={{ height: 4 }} />;
 
+/** یک ردیف چیپ افقی؛ در فارسی از راست شروع می‌شود. */
+const FilterRow: React.FC<{
+  rtl: boolean;
+  items: { id: string; label: string }[];
+  active: string;
+  onPick: (id: string) => void;
+}> = ({ rtl, items, active, onPick }) => {
+  const ref = React.useRef<ScrollView>(null);
+  return (
+    <ScrollView
+      ref={ref}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.categoryRowWrapper}
+      contentContainerStyle={[styles.categoryRow, rtl && styles.rowReverse, styles.filterGrow]}
+      onContentSizeChange={() => rtl && ref.current?.scrollToEnd({ animated: false })}
+    >
+      {items.map((it) => {
+        const on = active === it.id;
+        return (
+          <TouchableOpacity
+            key={it.id}
+            style={[styles.categoryChip, on && styles.categoryChipActive]}
+            onPress={() => onPick(it.id)}
+          >
+            {on && <View style={styles.chipDot} />}
+            <Text style={[styles.categoryChipText, on && styles.categoryChipTextActive]}>{it.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+};
+
 export const ScenesScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
   const { scenes, loading } = useScenes();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
   const [activeCategory, setActiveCategory] = React.useState<CategoryFilter>('all');
   const [activeLevel, setActiveLevel] = React.useState<LevelFilter>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -84,8 +120,10 @@ export const ScenesScreen = () => {
 
   // فقط دسته‌هایی که واقعاً صحنه دارند چیپ می‌گیرند، به ترتیب ثابت لیست
   // دسته‌بندی‌ها؛ دسته‌ی قدیمیِ خارج از لیست (تا ادمین اصلاحش کند) آخر می‌آید.
+  // موضوع‌ها فقط از صحنه‌های سطحِ انتخاب‌شده ساخته می‌شوند تا چیپی که نتیجه‌ای ندارد دیده نشود.
   const categories: { id: CategoryFilter; label: string }[] = React.useMemo(() => {
-    const present = new Set(scenes.map((s) => categoryKey(s.category)).filter(Boolean));
+    const pool = activeLevel === 'all' ? scenes : scenes.filter((s) => s.level === activeLevel);
+    const present = new Set(pool.map((s) => categoryKey(s.category)).filter(Boolean));
     const known = Object.keys(SCENE_CATEGORY_LABEL_KEY).filter((c) => present.has(c));
     const legacy = Array.from(present).filter((c) => !SCENE_CATEGORY_LABEL_KEY[c]);
     return [
@@ -93,7 +131,12 @@ export const ScenesScreen = () => {
       ...known.map((id) => ({ id, label: t(SCENE_CATEGORY_LABEL_KEY[id]) })),
       ...legacy.map((id) => ({ id, label: id })),
     ];
-  }, [scenes, t]);
+  }, [scenes, t, activeLevel]);
+
+  // اگر موضوعِ انتخاب‌شده در سطح جدید صحنه‌ای ندارد، فیلتر موضوع برمی‌گردد به «همه».
+  React.useEffect(() => {
+    if (activeCategory !== 'all' && !categories.some((c) => c.id === activeCategory)) setActiveCategory('all');
+  }, [categories, activeCategory]);
 
   // سطح‌ها هم مثل دسته‌بندی از روی داده‌ی واقعی صحنه‌ها ساخته می‌شوند، ولی
   // ترتیبشان ثابت (مبتدی→متوسط→پیشرفته) است، نه ترتیب برخورد در لیست.
@@ -134,22 +177,22 @@ export const ScenesScreen = () => {
       ListHeaderComponent={
         <>
           {/* سربرگ یک‌ردیفه: دکمه‌ها چپ، عنوان راست؛ زیرعنوان و تیتر دوم حذف شد تا صحنه‌ها زودتر دیده شوند. */}
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, !rtl && styles.rowReverse]}>
             <View style={styles.topBarActions}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('CurriculumMap')}>
-                <MapIcon color={COLORS.text} size={20} />
-              </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Profile')}>
-                <Settings color={COLORS.text} size={20} />
+                <Settings color={COLORS.text} size={18} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('CurriculumMap')}>
+                <MapIcon color={COLORS.text} size={18} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.topTitle}>{t('worlds')}</Text>
+            <Text style={[styles.topTitle, !rtl && styles.textLeft]}>{t('worlds')}</Text>
           </View>
 
-          <View style={styles.searchBox}>
+          <View style={[styles.searchBox, rtl && styles.rowReverse]}>
             <Search color={COLORS.muted} size={17} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { textAlign: rtl ? 'right' : 'left' }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder={t('searchScenesPlaceholder')}
@@ -163,46 +206,23 @@ export const ScenesScreen = () => {
             )}
           </View>
 
-          {/* یک ردیف فیلتر: سطح‌ها، بعد موضوع‌ها. بدون «همه»؛ زدن دوباره روی فیلتر فعال، خاموشش می‌کند. */}
-          {!loading && (levels.length > 2 || categories.length > 2) && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryRowWrapper}
-              contentContainerStyle={styles.categoryRow}
-            >
-              {levels.length > 2 &&
-                levels
-                  .filter((lvl) => lvl.id !== 'all')
-                  .map((lvl) => (
-                    <TouchableOpacity
-                      key={`l-${lvl.id}`}
-                      style={[styles.categoryChip, activeLevel === lvl.id && styles.categoryChipActive]}
-                      onPress={() => setActiveLevel(activeLevel === lvl.id ? 'all' : lvl.id)}
-                    >
-                      <Text style={[styles.categoryChipText, activeLevel === lvl.id && styles.categoryChipTextActive]}>
-                        {lvl.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-              {levels.length > 2 && categories.length > 2 && <View style={styles.filterDivider} />}
-              {categories.length > 2 &&
-                categories
-                  .filter((cat) => cat.id !== 'all')
-                  .map((cat) => (
-                    <TouchableOpacity
-                      key={`c-${cat.id}`}
-                      style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
-                      onPress={() => setActiveCategory(activeCategory === cat.id ? 'all' : cat.id)}
-                    >
-                      <Text style={[styles.categoryChipText, activeCategory === cat.id && styles.categoryChipTextActive]}>
-                        {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-            </ScrollView>
+          {/* دو ردیف فیلتر: بالا سطح، زیرش موضوع؛ هر ردیف «همه» دارد و فقط یک انتخاب. */}
+          {!loading && levels.length > 2 && (
+            <FilterRow
+              rtl={rtl}
+              items={levels}
+              active={activeLevel}
+              onPick={(id) => setActiveLevel(id)}
+            />
           )}
-
+          {!loading && categories.length > 2 && (
+            <FilterRow
+              rtl={rtl}
+              items={categories}
+              active={activeCategory}
+              onPick={(id) => setActiveCategory(id as CategoryFilter)}
+            />
+          )}
         </>
       }
       ListEmptyComponent={
@@ -222,6 +242,11 @@ export const ScenesScreen = () => {
           level={scenario.level}
           time={scenario.time}
           imageUri={scenario.imageUri}
+          subtitle={
+            scenario.category && SCENE_CATEGORY_LABEL_KEY[categoryKey(scenario.category)]
+              ? t(SCENE_CATEGORY_LABEL_KEY[categoryKey(scenario.category)])
+              : undefined
+          }
           isLocked={scenario.isLocked}
           isCompleted={scenario.isCompleted}
           onPress={() => {
@@ -258,6 +283,10 @@ const SKILL_COLORS: Record<'pronunciation' | 'fluency' | 'vocabulary' | 'grammar
 
 export const ProgressScreen = () => {
   const { t, language } = useLanguage();
+  const rtl = language === 'fa';
+  // در فارسی همه‌ی عددهای این صفحه با رقم فارسی و «٪» فارسی نوشته می‌شوند.
+  const num = (n: number | string) => (rtl ? String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(n));
+  const pct = (n: number) => (rtl ? `${num(n)}٪` : `${n}%`);
   const navigation = useNavigation<any>();
   // «ادامه‌ی یادگیری»: اگر مسیری شروع شده، جلسه‌ی بعدی همان؛ وگرنه لیست صحنه‌ها.
   const [startedPathLevel, setStartedPathLevel] = React.useState<string | null>(null);
@@ -333,40 +362,69 @@ export const ProgressScreen = () => {
   const continueLearning = () =>
     startedPathLevel ? navigation.navigate('PathHome', { level: startedPathLevel }) : navigation.navigate('Scenes');
 
+  // نوار روزهای هفته‌ی جاری (شنبه تا جمعه): روز با فعالیت تیک سبز، امروز حلقه‌ی نارنجی، آینده خط تیره.
+  const minutesByDate = new Map(weeklyActivity.map((d) => [d.date, d.minutes]));
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 1) % 7)); // شنبه
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { iso, weekday: d.getDay(), future: d > today && iso !== todayStr, active: (minutesByDate.get(iso) || 0) > 0 };
+  });
+    // رشد: آخرین هفته‌ی دارای داده نسبت به هفته‌ی دارای داده‌ی قبلی.
+  const trendWithData = trend.filter((w) => w.sessions > 0);
+  const growth =
+    trendWithData.length >= 2
+      ? trendWithData[trendWithData.length - 1].speaking - trendWithData[trendWithData.length - 2].speaking
+      : 0;
+  const row = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
+
   return (
     <View style={styles.screen}>
     <ScrollView style={styles.screen} contentContainerStyle={[styles.scrollContent, styles.scrollWithCta]} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>{t('greatJobTitle')}</Text>
-      <Text style={styles.pageSub}>{t('greatJobSub')}</Text>
+      <View style={styles.heroHeader}>
+        <View style={styles.heroIcon}>
+          <Trophy size={26} color={COLORS.primary} />
+        </View>
+        <Text style={styles.heroTitle}>{t('greatJobTitle')}</Text>
+        <Text style={styles.heroSub}>{t('greatJobSub')}</Text>
+      </View>
 
-      {/* Streak/Level/XP — لمس بج استریک و بج XP توضیح می‌دهد از کجا می‌آیند
-          (همون الگوی StreakInfoModal برای XpInfoModal هم تکرار شده). خودِ
-          «سطح» توضیح جدا ندارد چون مستقیماً از همون XP محاسبه می‌شود. */}
-      <View style={styles.statsCard}>
+      {/* Streak/Level/XP — لمس بج استریک و بج XP توضیح می‌دهد از کجا می‌آیند. */}
+      <View style={[styles.statsCard, row]}>
         {/* استریک صفر پیام موفقیت را ضعیف می‌کرد؛ فقط وقتی بیشتر از صفر است دیده می‌شود. */}
         {streak > 0 && (
           <>
             <TouchableOpacity style={styles.statsTile} onPress={() => setStreakInfoVisible(true)}>
-              <Flame size={20} color={COLORS.secondary} fill={COLORS.secondary} />
-              <Text style={styles.statsValue}>{streak}</Text>
+              <View style={[styles.statsIcon, { backgroundColor: '#FFF4DE' }]}>
+                <Flame size={18} color={COLORS.secondary} fill={COLORS.secondary} />
+              </View>
+              <Text style={styles.statsValue}>{num(streak)}</Text>
               <Text style={styles.statsLabel}>{t('statsStreakLabel')}</Text>
             </TouchableOpacity>
             <View style={styles.statsDivider} />
           </>
         )}
+        <TouchableOpacity style={styles.statsTile} onPress={() => setXpInfoVisible(true)}>
+          <View style={[styles.statsIcon, { backgroundColor: '#E6F6EE' }]}>
+            <Zap size={18} color={COLORS.tertiary} />
+          </View>
+          <Text style={styles.statsValue}>{num(totalXP)}</Text>
+          <Text style={styles.statsLabel}>{t('statsXPLabel')}</Text>
+        </TouchableOpacity>
+        <View style={styles.statsDivider} />
         <View style={styles.statsTile}>
-          <Award size={20} color={COLORS.primary} />
+          <View style={[styles.statsIcon, { backgroundColor: '#FFF0E8' }]}>
+            <Award size={18} color={COLORS.primary} />
+          </View>
           <Text style={styles.statsValue} numberOfLines={1}>
             {levelName || '—'}
           </Text>
           <Text style={styles.statsLabel}>{t('statsLevelLabel')}</Text>
         </View>
-        <View style={styles.statsDivider} />
-        <TouchableOpacity style={styles.statsTile} onPress={() => setXpInfoVisible(true)}>
-          <Zap size={20} color={COLORS.tertiary} fill={COLORS.tertiary} />
-          <Text style={styles.statsValue}>{totalXP}</Text>
-          <Text style={styles.statsLabel}>{t('statsXPLabel')}</Text>
-        </TouchableOpacity>
       </View>
 
       <StreakInfoModal
@@ -383,38 +441,45 @@ export const ProgressScreen = () => {
       />
 
       <View style={styles.scoreCard}>
-        <View style={styles.scoreRing}>
-          <Text style={styles.scoreValue}>{overallProgress}</Text>
+        <ProgressRing percent={overallProgress} size={150} strokeWidth={10} color={COLORS.primary} trackColor="#EEF0F4">
+          <Text style={styles.scoreValue}>{num(overallProgress)}</Text>
           <Text style={styles.scoreLabel}>{t('overallScore')}</Text>
-        </View>
-        <View style={styles.scoreRow}>
+        </ProgressRing>
+        <View style={styles.scoreDivider} />
+        <View style={[styles.scoreRow, row]}>
           <View style={styles.scoreMetric}>
-            <Text style={[styles.metricValue, { color: SKILL_COLORS.pronunciation }]}>
-              {skills.pronunciation}%
-            </Text>
-            <Text style={styles.metricLabel}>{t('pronunciation')}</Text>
-          </View>
-          <View style={styles.scoreMetric}>
-            <Text style={[styles.metricValue, { color: SKILL_COLORS.fluency }]}>
-              {skills.fluency}%
-            </Text>
+            <Text style={[styles.metricValue, { color: COLORS.tertiary }]}>{pct(skills.fluency)}</Text>
             <Text style={styles.metricLabel}>{t('fluency')}</Text>
           </View>
+          <View style={styles.scoreMetric}>
+            <Text style={[styles.metricValue, { color: COLORS.primary }]}>{pct(skills.pronunciation)}</Text>
+            <Text style={styles.metricLabel}>{t('pronunciation')}</Text>
+          </View>
         </View>
-        {!!tipKey && <Text style={styles.progressTip}>💡 {t(tipKey)}</Text>}
+        {!!tipKey && (
+          <View style={[styles.tipBox, row]}>
+            <View style={styles.tipIcon}>
+              <Lightbulb size={16} color={COLORS.secondary} />
+            </View>
+            <Text style={[styles.progressTip, ta]}>{t(tipKey)}</Text>
+          </View>
+        )}
       </View>
 
       {/* Weekly Activity */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <BarChart2 color={COLORS.primary} size={20} />
-          <Text style={styles.settingCardTitle}>{t('weeklyActivity')}</Text>
+      <View style={styles.settingCard}>
+        <View style={[styles.cardHeadRow, row]}>
+          <View style={[styles.titleWithDot, row]}>
+            <View style={styles.titleDot} />
+            <Text style={styles.settingCardTitle}>{t('weeklyActivity')}</Text>
+          </View>
+          <Text style={styles.cardHeadMeta}>{t('last7Days')}</Text>
         </View>
-        <Text style={styles.optionSub}>{t('weeklyActivitySub')}</Text>
+        <Text style={[styles.optionSub, ta]}>{t('weeklyActivitySub')}</Text>
 
-        <View style={styles.weekChartRow}>
+        <View style={[styles.weekChartRow, row]}>
           {weeklyActivity.map((day) => {
-            const heightPct = Math.max(6, (day.minutes / weeklyActivityMax) * 100);
+            const heightPct = Math.max(12, (day.minutes / weeklyActivityMax) * 100);
             const isToday = day.date === todayStr;
             const weekday = new Date(day.date + 'T00:00:00').getDay();
             const label = WEEKDAY_LABELS[weekday] || WEEKDAY_LABELS[0];
@@ -424,8 +489,7 @@ export const ProgressScreen = () => {
                   <View
                     style={[
                       styles.weekBarFill,
-                      // روز با فعالیت مرجانی پررنگ، بی‌فعالیت خاکستری؛ قبلاً هر دو کم‌رنگ بودند.
-                      { height: `${heightPct}%`, backgroundColor: day.minutes > 0 ? '#D95D39' : '#E5E2DC' },
+                      { height: `${heightPct}%`, backgroundColor: day.minutes > 0 ? '#D95D39' : '#EEF0F4' },
                     ]}
                   />
                 </View>
@@ -438,35 +502,70 @@ export const ProgressScreen = () => {
         </View>
       </View>
 
+      {/* روزهای هفته‌ی جاری */}
+      <View style={[styles.weekStrip, row]}>
+        {weekDays.map((d) => {
+          const isToday = d.iso === todayStr;
+          const label = WEEKDAY_LABELS[d.weekday] || WEEKDAY_LABELS[0];
+          return (
+            <View key={d.iso} style={styles.weekStripCol}>
+              <Text style={[styles.weekStripLabel, isToday && styles.weekBarLabelActive]}>
+                {language === 'fa' ? label.fa : label.en}
+              </Text>
+              <View
+                style={[
+                  styles.weekStripDot,
+                  d.active && styles.weekStripDotDone,
+                  isToday && styles.weekStripDotToday,
+                ]}
+              >
+                {isToday ? (
+                  <View style={styles.weekStripTodayInner} />
+                ) : d.active ? (
+                  <Check size={14} color={COLORS.tertiary} strokeWidth={3} />
+                ) : (
+                  <Text style={styles.weekStripDash}>–</Text>
+                )}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
       {/* Progress Over Time */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <TrendingUp color={COLORS.tertiary} size={20} />
-          <Text style={styles.settingCardTitle}>{t('progressTrend')}</Text>
+      <View style={styles.settingCard}>
+        <View style={[styles.cardHeadRow, row]}>
+          <View style={[styles.titleWithDot, row]}>
+            <View style={[styles.cardIcon, { backgroundColor: '#E6F6EE' }]}>
+              <TrendingUp color={COLORS.tertiary} size={16} />
+            </View>
+            <Text style={styles.settingCardTitle}>{t('progressTrend')}</Text>
+          </View>
+          {growth > 0 && (
+            <View style={styles.growthChip}>
+              <Text style={styles.growthChipText}>{t('progressGrowth').replace('{n}', num(growth))}</Text>
+            </View>
+          )}
         </View>
-        <Text style={styles.optionSub}>{t('progressTrendSub')}</Text>
+        <Text style={[styles.optionSub, ta]}>{t('progressTrendSub')}</Text>
 
         {trendHasData ? (
-          <View style={styles.weekChartRow}>
+          <View style={[styles.weekChartRow, styles.trendChartRow, row]}>
             {trend.map((week, i) => {
-              const heightPct = Math.max(4, week.speaking);
+              const heightPct = Math.max(8, week.speaking);
               const hasData = week.sessions > 0;
               const isLast = i === trend.length - 1;
               const d = new Date(week.week_start + 'T00:00:00');
-              const label = `${d.getMonth() + 1}/${d.getDate()}`;
+              const label = num(`${d.getMonth() + 1}/${d.getDate()}`);
               return (
                 <View key={week.week_start} style={styles.weekBarCol}>
-                  <View style={styles.weekBarTrack}>
+                  <View style={[styles.weekBarTrack, styles.trendBarTrack]}>
                     <View
                       style={[
                         styles.weekBarFill,
                         {
                           height: `${heightPct}%`,
-                          backgroundColor: !hasData
-                            ? COLORS.border
-                            : isLast
-                            ? COLORS.tertiary
-                            : hexToRgba(COLORS.tertiary, 0.45),
+                          backgroundColor: !hasData ? '#D9DCE3' : isLast ? '#D95D39' : '#5BB8A4',
                         },
                       ]}
                     />
@@ -477,24 +576,26 @@ export const ProgressScreen = () => {
             })}
           </View>
         ) : (
-          <Text style={styles.optionSub}>{t('progressTrendEmpty')}</Text>
+          <Text style={[styles.optionSub, ta]}>{t('progressTrendEmpty')}</Text>
         )}
       </View>
 
       {/* Skill Breakdown */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <CheckCircle2 color={COLORS.tertiary} size={20} />
+      <View style={styles.settingCard}>
+        <View style={[styles.sectionHeaderRow, row]}>
+          <View style={[styles.cardIcon, { backgroundColor: '#E6F6EE' }]}>
+            <CheckCircle2 color={COLORS.tertiary} size={16} />
+          </View>
           <Text style={styles.settingCardTitle}>{t('skillBreakdown')}</Text>
         </View>
 
         {skillItems.map((skill) => (
           <View key={skill.key} style={styles.skillRow}>
-            <View style={styles.skillLabelRow}>
+            <View style={[styles.skillLabelRow, row]}>
               <Text style={styles.skillLabel}>{t(skill.key)}</Text>
-              <Text style={styles.skillPercent}>{skill.percent}%</Text>
+              <Text style={styles.skillPercent}>{pct(skill.percent)}</Text>
             </View>
-            <View style={styles.skillTrack}>
+            <View style={[styles.skillTrack, row]}>
               <View style={[styles.skillFill, { width: `${skill.percent}%`, backgroundColor: skill.color }]} />
             </View>
           </View>
@@ -502,23 +603,30 @@ export const ProgressScreen = () => {
       </View>
 
       {/* Achievements */}
-      <View style={[styles.settingCard, { marginTop: 16, marginBottom: 20 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <Award color={COLORS.secondary} size={20} />
+      <View style={[styles.settingCard, { marginBottom: 20 }]}>
+        <View style={[styles.sectionHeaderRow, row]}>
+          <View style={[styles.cardIcon, { backgroundColor: '#FFF6E0' }]}>
+            <Award color={COLORS.secondary} size={16} />
+          </View>
           <Text style={styles.settingCardTitle}>{t('achievementsTitle')}</Text>
         </View>
 
         {achievements.length === 0 ? (
-          <Text style={styles.optionSub}>{t('achievementsEmpty')}</Text>
+          <Text style={[styles.optionSub, ta]}>{t('achievementsEmpty')}</Text>
         ) : (
-          <View style={styles.achievementGrid}>
+          <View style={styles.achievementList}>
             {achievements.map((a) => (
-              <View key={a.id} style={styles.achievementCard}>
+              <View key={a.id} style={[styles.achievementCard, row]}>
                 <View style={styles.achievementBadge}>
                   <Text style={{ fontSize: 20 }}>{a.icon || '🏆'}</Text>
                 </View>
-                <Text style={styles.achievementTitle}>{a.name}</Text>
-                <Text style={styles.achievementSub}>{a.description}</Text>
+                <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                  <Text style={[styles.achievementTitle, ta]}>{a.name}</Text>
+                  <Text style={[styles.achievementSub, ta]}>{a.description}</Text>
+                </View>
+                <View style={styles.doneChip}>
+                  <Text style={styles.doneChipText}>{t('achievementDone')}</Text>
+                </View>
               </View>
             ))}
           </View>
@@ -527,8 +635,9 @@ export const ProgressScreen = () => {
     </ScrollView>
     {/* اقدام اصلی صفحه، بالای نوار پایین: صفحه‌ی نتیجه باید به قدم بعدی ببرد. */}
     <View style={styles.ctaFloat} pointerEvents="box-none">
-      <TouchableOpacity style={styles.ctaBtn} onPress={continueLearning} activeOpacity={0.88}>
+      <TouchableOpacity style={[styles.ctaBtn, row]} onPress={continueLearning} activeOpacity={0.88}>
         <Text style={styles.ctaText}>{t('continueLearning')}</Text>
+        {rtl ? <ArrowLeft size={18} color={COLORS.white} /> : <ArrowRight size={18} color={COLORS.white} />}
       </TouchableOpacity>
     </View>
     </View>
@@ -654,6 +763,20 @@ export const ProfileScreen = () => {
   };
   const { box } = useVocab();
   const { scenes } = useScenes();
+  // سطح کاربر برای برچسب زیر اسم.
+  const [levelName, setLevelName] = React.useState('');
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user?.id) return;
+      let active = true;
+      getUserSummary(user.id)
+        .then((sum) => active && setLevelName(sum.level_name))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [user?.id])
+  );
 
   // یه آیتم واقعی (کلمه‌ی سررسیده‌ی جعبه‌ی لایتنر یا جمله‌ی یکی از صحنه‌ها)
   // انتخاب می‌کند تا دکمه‌ی «ارسال نوتیفیکیشن آزمایشی» دقیقاً همون چیزی که
@@ -705,24 +828,88 @@ export const ProfileScreen = () => {
     }
   };
 
+  const rtl = language === 'fa';
+  const row = rtl ? styles.rowReverse : null;
+  const ta = rtl ? styles.textRight : styles.textLeft;
+  const Chevron = rtl ? ChevronLeft : ChevronRight;
+  // دکمه‌ی چرخ‌دنده‌ی سربرگ به بخش تنظیمات تمرین پایین صفحه می‌پرد.
+  const scrollRef = React.useRef<ScrollView>(null);
+  const [settingsY, setSettingsY] = React.useState(0);
+
+  const menuRow = (opts: {
+    key: string;
+    icon: React.ReactNode;
+    iconBg: string;
+    title: string;
+    sub: string;
+    onPress: () => void;
+    tag?: string;
+    dev?: boolean;
+  }) => (
+    <TouchableOpacity
+      key={opts.key}
+      style={[styles.pointsCard, row, opts.dev && styles.pointsCardDev]}
+      onPress={opts.onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.pointsIconWrap, { backgroundColor: opts.iconBg }]}>{opts.icon}</View>
+      <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+        <View style={[styles.menuTitleRow, row]}>
+          <Text style={styles.pointsValue}>{opts.title}</Text>
+          {!!opts.tag && (
+            <View style={styles.menuTag}>
+              <Text style={styles.menuTagText}>{opts.tag}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.pointsSub, ta]} numberOfLines={1}>
+          {opts.sub}
+        </Text>
+      </View>
+      <Chevron color={COLORS.muted} size={18} />
+    </TouchableOpacity>
+  );
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>{t('profileTitle')}</Text>
-      <Text style={styles.pageSub}>{t('profileSub')}</Text>
+    <ScrollView ref={scrollRef} style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={[styles.pageHeadRow, row]}>
+        <View style={rtl ? styles.alignEnd : styles.alignStart}>
+          <Text style={[styles.pageTitle, ta]}>{t('profileTitle')}</Text>
+          <Text style={[styles.pageSubTight, ta]}>{t('profileSub')}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => scrollRef.current?.scrollTo({ y: settingsY, animated: true })}
+        >
+          <Settings color={COLORS.text} size={18} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.profileHeader}>
         <View style={styles.avatarCircle}>
-          <UserIcon size={36} color={COLORS.primary} />
+          <UserIcon size={34} color={COLORS.primary} />
+          <View style={styles.avatarCheck}>
+            <Check size={11} color={COLORS.white} strokeWidth={3} />
+          </View>
         </View>
         {/* فقط نمایش: حرف اول هر بخش اسم لاتین بزرگ؛ اسم ذخیره‌شده دست نمی‌خورد. */}
         <Text style={styles.profileName}>{displayName(user?.nickname || '')}</Text>
         <Text style={styles.profileSub}>{user?.phone || t('learnerLevel')}</Text>
+        {!!levelName && (
+          <View style={styles.levelChip}>
+            <Text style={styles.levelChipText}>{t('profileLevelChip').replace('{level}', levelName)}</Text>
+          </View>
+        )}
       </View>
 
-      {/* Language Setting Card */}
-      {/* زبان اپ در یک ردیف جمع‌وجور: برچسب و کلید دوگزینه‌ای کنار هم. */}
-      <View style={[styles.settingCard, styles.langCardRow]}>
-        <Text style={[styles.settingLabel, styles.langLabelInline]}>{t('appLanguage')}</Text>
+      {/* زبان اپ در یک ردیف جمع‌وجور: آیکون و برچسب، و کلید دوگزینه‌ای. */}
+      <View style={[styles.settingCard, styles.langCardRow, row]}>
+        <View style={[styles.langLabelGroup, row]}>
+          <View style={[styles.pointsIconWrapSm, { backgroundColor: '#EEF2FF' }]}>
+            <Languages size={16} color="#5B6CF0" />
+          </View>
+          <Text style={[styles.settingLabel, styles.langLabelInline]}>{t('appLanguage')}</Text>
+        </View>
         <View style={[styles.langToggleRow, styles.langToggleCompact]}>
           <TouchableOpacity
             style={[styles.langBtn, language === 'en' ? styles.langBtnActive : null]}
@@ -739,100 +926,70 @@ export const ProfileScreen = () => {
         </View>
       </View>
 
-      {/* میان‌بر به صداهای ضبط‌شده‌ی کاربر روی گوشی */}
-      <TouchableOpacity
-        style={[styles.pointsCard, { marginTop: 12 }]}
-        onPress={() => navigation.navigate('MyRecordings')}
-        activeOpacity={0.85}
-      >
-        {/* audioMine همون توکن اختصاصی «صدای خودت» تو مقایسه‌ی A/B است — اینجا
-            هم دقیقاً همون معنی رو داره. */}
-        <View style={[styles.pointsIconWrap, { backgroundColor: hexToRgba(COLORS.audioMine, 0.12) }]}>
-          <Mic color={COLORS.audioMine} size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pointsValue}>{t('myRecordings')}</Text>
-          <Text style={styles.pointsSub}>{t('myRecordingsSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.pointsCard}
-        onPress={() => navigation.navigate('HelpFaq')}
-        activeOpacity={0.85}
-      >
-        <View style={[styles.pointsIconWrap, { backgroundColor: COLORS.primaryLight }]}>
-          <HelpCircle color={COLORS.primary} size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pointsValue}>{t('helpFaq')}</Text>
-          <Text style={styles.pointsSub}>{t('helpFaqSub')}</Text>
-        </View>
-        <ChevronRight color={COLORS.muted} size={18} />
-      </TouchableOpacity>
+      {menuRow({
+        key: 'rec',
+        icon: <Mic color={COLORS.audioMine} size={20} />,
+        iconBg: hexToRgba(COLORS.audioMine, 0.12),
+        title: t('myRecordings'),
+        sub: t('myRecordingsSub'),
+        onPress: () => navigation.navigate('MyRecordings'),
+      })}
+      {menuRow({
+        key: 'help',
+        icon: <HelpCircle color={COLORS.error} size={20} />,
+        iconBg: COLORS.errorLight,
+        title: t('helpFaq'),
+        sub: t('helpFaqSub'),
+        onPress: () => navigation.navigate('HelpFaq'),
+      })}
 
       {/* ابزارهای فقط-توسعه (پیش‌نمایش توست + PoC مکالمه‌ی زنده) — در بیلد
-          ریلیز برای کاربر نمایش داده نمی‌شوند. */}
+          ریلیز برای کاربر نمایش داده نمی‌شوند؛ کادر خط‌چین نشان می‌دهد قابلیت واقعی نیستند. */}
       {__DEV__ && (
         <>
-          {/* فقط برای توسعه: پیش‌نمایش استایل‌های توست — عمداً خاکستری/کم‌رنگ‌تر
-              از بقیه‌ی ردیف‌ها، چون یک قابلیت واقعی برای کاربر نیست. */}
-          <TouchableOpacity
-            style={styles.pointsCard}
-            onPress={() => navigation.navigate('ToastDemo')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.pointsIconWrap}>
-              <MessageSquare color={COLORS.muted} size={22} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pointsValue}>{t('toastDemoMenuLabel')}</Text>
-              <Text style={styles.pointsSub}>{t('toastDemoMenuSub')}</Text>
-            </View>
-            <ChevronRight color={COLORS.muted} size={18} />
-          </TouchableOpacity>
-
-          {/* فقط برای توسعه: PoC معماریِ Realtime Voice (Gemini Live) — نگاه
-              کنید به PRODUCTION_CHECKLIST.md. مثل ردیفِ بالا عمداً کم‌رنگ است. */}
-          <TouchableOpacity
-            style={styles.pointsCard}
-            onPress={() => navigation.navigate('RealtimePoC')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.pointsIconWrap}>
-              <Mic color={COLORS.muted} size={22} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pointsValue}>{t('realtimePoCMenuLabel')}</Text>
-              <Text style={styles.pointsSub}>{t('realtimePoCMenuSub')}</Text>
-            </View>
-            <ChevronRight color={COLORS.muted} size={18} />
-          </TouchableOpacity>
+          {menuRow({
+            key: 'toast',
+            icon: <MessageSquare color={COLORS.tertiary} size={20} />,
+            iconBg: '#E6F6EE',
+            title: t('toastDemoMenuLabel'),
+            sub: t('toastDemoMenuSub'),
+            onPress: () => navigation.navigate('ToastDemo'),
+            tag: 'Dev',
+            dev: true,
+          })}
+          {menuRow({
+            key: 'rt',
+            icon: <Sparkles color={COLORS.secondary} size={20} />,
+            iconBg: '#FFF6E0',
+            title: t('realtimePoCMenuLabel'),
+            sub: t('realtimePoCMenuSub'),
+            onPress: () => navigation.navigate('RealtimePoC'),
+            tag: 'Gemini',
+            dev: true,
+          })}
         </>
       )}
 
       {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <Repeat color={COLORS.tertiary} size={20} />
+      <View style={[styles.settingCard, { marginTop: 4 }]} onLayout={(e) => setSettingsY(e.nativeEvent.layout.y - 12)}>
+        <View style={[styles.sectionHeaderRow, row]}>
+          <View style={[styles.cardIcon, { backgroundColor: '#E6F6EE' }]}>
+            <Repeat color={COLORS.tertiary} size={16} />
+          </View>
           <Text style={styles.settingCardTitle}>{t('practiceSettingsTitle')}</Text>
         </View>
 
-        <Text style={styles.optionTitle}>{t('repeatsPerStepLabel')}</Text>
-        <Text style={styles.optionSub}>{t('repeatsPerStepSub')}</Text>
+        <Text style={[styles.optionTitle, ta]}>{t('repeatsPerStepLabel')}</Text>
+        <Text style={[styles.optionSub, ta]}>{t('repeatsPerStepSub')}</Text>
 
-        <View style={[styles.pillGroup, { marginTop: 10 }]}>
+        <View style={[styles.segmented, row]}>
           {REPEAT_OPTIONS.map((option) => (
             <TouchableOpacity
               key={option}
-              style={[
-                styles.pillBtn,
-                repeatsPerStep === option && { backgroundColor: COLORS.tertiary, borderColor: COLORS.tertiary },
-              ]}
+              style={[styles.segment, repeatsPerStep === option && styles.segmentActive]}
               onPress={() => setRepeatsPerStep(option)}
             >
-              <Text style={[styles.pillText, repeatsPerStep === option && styles.pillTextActive]}>
+              <Text style={[styles.segmentText, repeatsPerStep === option && styles.pillTextActive]}>
                 {option === 0 ? '∞' : `${option}×`}
               </Text>
             </TouchableOpacity>
@@ -841,19 +998,21 @@ export const ProfileScreen = () => {
 
         <View style={styles.dividerLine} />
 
-        <Text style={styles.optionTitle}>{t('highlightColorLabel')}</Text>
-        <Text style={styles.optionSub}>{t('highlightColorSub')}</Text>
+        <Text style={[styles.optionTitle, ta]}>{t('highlightColorLabel')}</Text>
+        <Text style={[styles.optionSub, ta]}>{t('highlightColorSub')}</Text>
 
-        <View style={[styles.colorSwatchRow, { marginTop: 10 }]}>
+        <View style={[styles.colorSwatchRow, row, { marginTop: 12 }]}>
           {HIGHLIGHT_COLOR_OPTIONS.map((color) => (
             <TouchableOpacity
               key={color}
-              style={[styles.colorSwatch, { backgroundColor: color }]}
+              style={[styles.colorSwatchRing, highlightColor === color && { borderColor: color }]}
               onPress={() => setHighlightColor(color)}
               accessibilityRole="radio"
               accessibilityState={{ selected: highlightColor === color }}
             >
-              {highlightColor === color && <Check color={COLORS.white} size={18} strokeWidth={3} />}
+              <View style={[styles.colorSwatch, { backgroundColor: color }]}>
+                {highlightColor === color && <Check color={COLORS.white} size={16} strokeWidth={3} />}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -869,36 +1028,38 @@ export const ProfileScreen = () => {
 
       {/* Notifications & Reminders Card */}
       <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <Bell color={COLORS.primary} size={20} />
+        <View style={[styles.sectionHeaderRow, row]}>
+          <View style={[styles.cardIcon, { backgroundColor: '#FFF6E0' }]}>
+            <Bell color={COLORS.secondary} size={16} />
+          </View>
           <Text style={styles.settingCardTitle}>{t('notificationsTitle')}</Text>
         </View>
 
         {/* Option 1: Daily Study Reminder */}
-        <View style={styles.toggleRow}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={styles.optionTitle}>{t('studyReminder')}</Text>
-            <Text style={styles.optionSub}>{t('studyReminderSub')}</Text>
+        <View style={[styles.toggleRow, row]}>
+          <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+            <Text style={[styles.optionTitle, ta]}>{t('studyReminder')}</Text>
+            <Text style={[styles.optionSub, ta]}>{t('studyReminderSub')}</Text>
           </View>
           <Switch
             value={studyReminderEnabled}
             onValueChange={setStudyReminderEnabled}
-            trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
-            thumbColor={studyReminderEnabled ? COLORS.white : COLORS.textSecondary}
+            trackColor={{ false: '#E3E5EA', true: COLORS.tertiary }}
+            thumbColor={COLORS.white}
           />
         </View>
 
         {studyReminderEnabled && (
           <View style={styles.subOptionGroup}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+            <View style={[styles.subOptionHead, row]}>
               <Clock color={COLORS.textSecondary} size={14} />
               <Text style={styles.subOptionLabel}>{t('reminderTime')}</Text>
             </View>
 
             {studyReminderTimes.length === 0 ? (
-              <Text style={styles.optionSub}>{t('reminderTimesEmpty')}</Text>
+              <Text style={[styles.optionSub, ta]}>{t('reminderTimesEmpty')}</Text>
             ) : (
-              <View style={styles.timeChipRow}>
+              <View style={[styles.timeChipRow, row]}>
                 {studyReminderTimes.map((time) => (
                   <View key={time} style={styles.timeChip}>
                     <Text style={styles.timeChipText}>{time}</Text>
@@ -914,7 +1075,10 @@ export const ProfileScreen = () => {
             )}
 
             {studyReminderTimes.length < MAX_REMINDER_TIMES && (
-              <TouchableOpacity style={styles.addTimeBtn} onPress={() => setTimePickerOpen(true)}>
+              <TouchableOpacity
+                style={[styles.addTimeBtn, rtl && styles.selfEnd]}
+                onPress={() => setTimePickerOpen(true)}
+              >
                 <Plus color={COLORS.primary} size={14} />
                 <Text style={styles.addTimeText}>{t('addReminderTime')}</Text>
               </TouchableOpacity>
@@ -925,22 +1089,22 @@ export const ProfileScreen = () => {
         <View style={styles.dividerLine} />
 
         {/* Option 2: Leitner & Lesson Sentences Alerts */}
-        <View style={styles.toggleRow}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={styles.optionTitle}>{t('contentNotification')}</Text>
-            <Text style={styles.optionSub}>{t('contentNotificationSub')}</Text>
+        <View style={[styles.toggleRow, row]}>
+          <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+            <Text style={[styles.optionTitle, ta]}>{t('contentNotification')}</Text>
+            <Text style={[styles.optionSub, ta]}>{t('contentNotificationSub')}</Text>
           </View>
           <Switch
             value={contentNotificationEnabled}
             onValueChange={setContentNotificationEnabled}
-            trackColor={{ false: COLORS.surfaceLight, true: COLORS.tertiary }}
-            thumbColor={contentNotificationEnabled ? COLORS.white : COLORS.textSecondary}
+            trackColor={{ false: '#E3E5EA', true: COLORS.tertiary }}
+            thumbColor={COLORS.white}
           />
         </View>
 
         {contentNotificationEnabled && (
           <View style={styles.subOptionGroup}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+            <View style={[styles.subOptionHead, row]}>
               <BookOpen color={COLORS.tertiary} size={14} />
               <Text style={styles.subOptionLabel}>{t('notificationSource')}</Text>
             </View>
@@ -967,11 +1131,8 @@ export const ProfileScreen = () => {
         )}
 
         {/* دکمه‌ی ثانویه و خنثی؛ نارنجی پر برای اقدام‌های اصلی کاربر می‌ماند. */}
-        <TouchableOpacity
-          style={styles.testBtn}
-          onPress={handleSendTestNotification}
-        >
-          <Sparkles color={COLORS.textSecondary} size={16} />
+        <TouchableOpacity style={[styles.testBtn, row]} onPress={handleSendTestNotification}>
+          <Sparkles color={COLORS.tertiary} size={16} />
           <Text style={styles.testBtnText}>{t('sendTestNotification')}</Text>
         </TouchableOpacity>
 
@@ -981,16 +1142,116 @@ export const ProfileScreen = () => {
           onConfirm={handleAddReminderTime}
         />
       </View>
-
     </ScrollView>
   );
 };
 
+// رنگ‌های طرح جدید: پس‌زمینه‌ی خاکستریِ خیلی روشن و کارت‌های سفید با کادر و سایه‌ی نرم.
+const PAGE_BG = '#F7F7F9';
+const CARD_BORDER = '#EEEEF2';
+const CARD_SHADOW = {
+  shadowColor: '#1A1D26',
+  shadowOpacity: 0.05,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 1,
+};
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
+  selfEnd: { alignSelf: 'flex-end' },
+  flex1: { flex: 1 },
+  chipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  filterGrow: { flexGrow: 1 },
+  heroHeader: { alignItems: 'center', gap: 6, marginBottom: 18 },
+  heroIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: '#FFEFE6', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  heroTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, lineHeight: 34 },
+  heroSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 13 },
+  statsIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  scoreDivider: { alignSelf: 'stretch', height: 1, backgroundColor: CARD_BORDER, marginVertical: 18 },
+  tipBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    alignSelf: 'stretch',
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#FFF9EB',
+    borderWidth: 1,
+    borderColor: '#F7E7BE',
   },
+  tipIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFEFC7', alignItems: 'center', justifyContent: 'center' },
+  cardHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  titleWithDot: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  titleDot: { width: 10, height: 18, borderRadius: 5, backgroundColor: '#D95D39' },
+  cardHeadMeta: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  cardIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  growthChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#E6F6EE' },
+  growthChipText: { color: COLORS.tertiary, fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  trendChartRow: { height: 170 },
+  trendBarTrack: { width: 22 },
+  weekStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 12,
+    marginBottom: 14,
+    borderRadius: 20,
+    backgroundColor: '#F0F1F4',
+  },
+  weekStripCol: { alignItems: 'center', gap: 6, flex: 1 },
+  weekStripLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.medium, fontSize: 11 },
+  weekStripDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekStripDotDone: { backgroundColor: '#E3F4EB', borderColor: '#BFE3CF' },
+  weekStripDotToday: { backgroundColor: '#D95D39', borderColor: '#F6C9B8', borderWidth: 3 },
+  weekStripTodayInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.white },
+  weekStripDash: { color: COLORS.muted, fontSize: 12 },
+  achievementList: { gap: 10 },
+  doneChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#FCEFC7' },
+  doneChipText: { color: '#9A6A00', fontFamily: FONT_FAMILY.bold, fontSize: 10 },
+  pageHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  pageSubTight: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12 },
+  avatarCheck: {
+    position: 'absolute',
+    right: 0,
+    bottom: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#3DAE74',
+    borderWidth: 2,
+    borderColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelChip: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, backgroundColor: '#FFF6DE', borderWidth: 1, borderColor: '#F6E3AE' },
+  levelChipText: { color: '#9A6A00', fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  langLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pointsIconWrapSm: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  pointsCardDev: { borderStyle: 'dashed', borderColor: '#DADCE3', shadowOpacity: 0, elevation: 0 },
+  menuTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  menuTag: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: '#F2F2F5' },
+  menuTagText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.bold, fontSize: 9 },
+  segmented: { flexDirection: 'row', marginTop: 12, padding: 4, borderRadius: 14, backgroundColor: '#F2F2F5' },
+  segment: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
+  segmentActive: { backgroundColor: '#2F6B4F' },
+  segmentText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
+  colorSwatchRing: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  subOptionHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
+  screen: { flex: 1, backgroundColor: PAGE_BG },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 54,
@@ -1001,46 +1262,21 @@ const styles = StyleSheet.create({
     // زیرش گم می‌شد.
     paddingBottom: 130,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   kicker: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
     letterSpacing: 1,
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  iconButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.white, borderWidth: 1, borderColor: CARD_BORDER, alignItems: 'center', justifyContent: 'center' },
   topBarActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  topTitle: {
-    flex: 1,
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 20,
-    lineHeight: 30,
-    textAlign: 'right',
-  },
+  topTitle: { flex: 1, color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32, textAlign: 'right' },
   // عنوان و زیرعنوان صفحه هر دو راست‌چین، زیرعنوان در خط بعد.
-  pageTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 20,
-    lineHeight: 30,
-    textAlign: 'right',
-  },
+  pageTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, lineHeight: 32 },
   filterDivider: { width: 1, alignSelf: 'stretch', marginVertical: 6, backgroundColor: COLORS.border },
   pageSub: {
     color: COLORS.textSecondary,
@@ -1056,12 +1292,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: CARD_BORDER,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     marginBottom: 14,
   },
   searchInput: {
@@ -1072,32 +1308,26 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   categoryRowWrapper: {
-    marginBottom: 14,
+    marginBottom: 10,
   },
   categoryRow: {
     flexDirection: 'row',
     gap: 8,
   },
   categoryChip: {
-    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: CARD_BORDER,
   },
-  categoryChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  categoryChipText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
-  },
-  categoryChipTextActive: {
-    color: COLORS.white,
-  },
+  categoryChipActive: { backgroundColor: '#FFF0E8', borderColor: COLORS.primary },
+  categoryChipText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.semiBold, fontSize: 13 },
+  categoryChipTextActive: { color: COLORS.primary },
   emptyCategoryText: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
@@ -1138,56 +1368,33 @@ const styles = StyleSheet.create({
   statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: CARD_BORDER,
+    ...CARD_SHADOW,
     paddingVertical: 16,
-    marginTop: 16,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   // فضای اضافه برای دکمه‌ی ثابت «ادامه‌ی یادگیری» بالای نوار پایین.
   scrollWithCta: { paddingBottom: 210 },
   ctaFloat: { position: 'absolute', left: 20, right: 20, bottom: Platform.OS === 'ios' ? 106 : 98 },
-  ctaBtn: { height: 52, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  ctaBtn: { flexDirection: 'row', gap: 10, height: 54, borderRadius: 16, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   ctaText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.white },
-  progressTip: {
-    marginTop: 12,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
-    lineHeight: 20,
-    color: COLORS.text,
-    textAlign: 'right',
-    alignSelf: 'stretch',
-  },
-  statsTile: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statsDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: COLORS.border,
-  },
-  statsValue: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 15,
-  },
-  statsLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 11,
-  },
+  progressTip: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 21, color: COLORS.text },
+  statsTile: { flex: 1, alignItems: 'center', gap: 6 },
+  statsDivider: { width: 1, height: 56, backgroundColor: CARD_BORDER },
+  statsValue: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 17 },
+  statsLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
   scoreCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
+    borderColor: CARD_BORDER,
+    ...CARD_SHADOW,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 14,
   },
   scoreRing: {
     width: 100,
@@ -1200,46 +1407,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  scoreValue: {
-    color: COLORS.text,
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  scoreLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    gap: 40,
-  },
-  scoreMetric: {
-    alignItems: 'center',
-  },
-  metricValue: {
-    color: COLORS.tertiary,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  metricLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
+  scoreValue: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 40, lineHeight: 50 },
+  scoreLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12 },
+  scoreRow: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
+  scoreMetric: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 14, backgroundColor: '#F7F8FA' },
+  metricValue: { fontFamily: FONT_FAMILY.bold, fontSize: 22 },
+  metricLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, marginTop: 2 },
   profileHeader: {
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
+    borderColor: CARD_BORDER,
+    ...CARD_SHADOW,
+    padding: 22,
+    marginBottom: 14,
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.primaryLight,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#FFEFE6',
+    borderWidth: 3,
+    borderColor: '#FFE1D2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -1259,54 +1449,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
-    padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
+    borderColor: CARD_BORDER,
+    ...CARD_SHADOW,
+    padding: 14,
+    marginBottom: 12,
   },
-  pointsIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.backgroundSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  pointsIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center' },
   pointsValue: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
-  pointsSub: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
-    marginTop: 2,
-  },
+  pointsSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, marginTop: 2 },
   settingCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 18,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: CARD_BORDER,
+    ...CARD_SHADOW,
+    padding: 18,
+    marginBottom: 14,
   },
-  settingLabel: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 15,
-    marginBottom: 12,
-  },
+  settingLabel: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 14, marginBottom: 12 },
   langCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   langLabelInline: { marginBottom: 0 },
   langToggleCompact: { width: 170 },
-  langToggleRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 14,
-    padding: 4,
-  },
+  langToggleRow: { flexDirection: 'row', backgroundColor: '#F2F2F5', borderRadius: 14, padding: 4 },
   langBtn: {
     flex: 1,
     paddingVertical: 7,
@@ -1324,17 +1495,8 @@ const styles = StyleSheet.create({
   langBtnTextActive: {
     color: COLORS.white,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  settingCardTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-  },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  settingCardTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 16 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1353,11 +1515,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  subOptionGroup: {
-    marginTop: 10,
-    marginBottom: 10,
-    paddingLeft: 4,
-  },
+  subOptionGroup: { marginTop: 10, marginBottom: 10 },
   subOptionLabel: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.medium,
@@ -1496,48 +1654,25 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 16,
   },
-  dividerLine: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 14,
-  },
-  colorSwatchRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  colorSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  highlightPreview: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceLight,
-    gap: 4,
-  },
+  dividerLine: { height: 1, backgroundColor: CARD_BORDER, marginVertical: 16 },
+  colorSwatchRow: { flexDirection: 'row', gap: 10 },
+  colorSwatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  highlightPreview: { marginTop: 14, padding: 14, borderRadius: 14, backgroundColor: '#FFF9EE', borderWidth: 1, borderColor: '#F7ECD3', gap: 4 },
   highlightPreviewEn: { fontFamily: FONT_FAMILY.bold, fontSize: 17, color: COLORS.text },
   highlightPreviewFa: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.textSecondary, textAlign: 'right' },
   testBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: CARD_BORDER,
     borderRadius: 16,
-    height: 44,
+    height: 46,
     marginTop: 16,
     gap: 8,
   },
-  testBtnText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 14,
-  },
+  testBtnText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
   helpRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1553,30 +1688,14 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 14,
   },
-  weekChartRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 120,
-    marginTop: 16,
-  },
+  weekChartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 130, marginTop: 18 },
   weekBarCol: {
     alignItems: 'center',
     flex: 1,
     height: '100%',
   },
-  weekBarTrack: {
-    flex: 1,
-    width: 14,
-    borderRadius: 7,
-    backgroundColor: COLORS.backgroundSoft,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  weekBarFill: {
-    width: '100%',
-    borderRadius: 7,
-  },
+  weekBarTrack: { flex: 1, width: 20, borderRadius: 10, backgroundColor: '#F2F3F6', justifyContent: 'flex-end', overflow: 'hidden' },
+  weekBarFill: { width: '100%', borderRadius: 10 },
   weekBarLabel: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.medium,
@@ -1587,30 +1706,15 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
   },
-  skillRow: {
-    marginTop: 14,
-  },
+  skillRow: { marginTop: 14 },
   skillLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  skillLabel: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
-  },
-  skillPercent: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
-  },
-  skillTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.backgroundSoft,
-    overflow: 'hidden',
-  },
+  skillLabel: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 13 },
+  skillPercent: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
+  skillTrack: { flexDirection: 'row', height: 8, borderRadius: 4, backgroundColor: '#F0F1F4', overflow: 'hidden' },
   skillFill: {
     height: '100%',
     borderRadius: 4,
@@ -1621,32 +1725,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   achievementCard: {
-    width: '47%',
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFBEF',
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#F6EBCB',
   },
-  achievementBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  achievementTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  achievementSub: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 11,
-    lineHeight: 15,
-  },
+  achievementBadge: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#FBC549', alignItems: 'center', justifyContent: 'center' },
+  achievementTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 14, marginBottom: 2 },
+  achievementSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18 },
 });

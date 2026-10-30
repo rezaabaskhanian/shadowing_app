@@ -26,8 +26,9 @@ export const PronunciationFeedback: React.FC<{
   recordingPositionSeconds?: number;
   /** true وقتی همین حالا همین ضبط در حال پخش است. */
   isPlayingRecording?: boolean;
+  rtl?: boolean;
   t: (key: string) => string;
-}> = ({ evaluation, evalState, evalError, onRetry, recordingPositionSeconds, isPlayingRecording, t }) => {
+}> = ({ evaluation, evalState, evalError, onRetry, recordingPositionSeconds, isPlayingRecording, rtl = false, t }) => {
   if (evalState === 'scoring') {
     return (
       <View style={feedbackCardStyles.feedbackCard}>
@@ -63,7 +64,7 @@ export const PronunciationFeedback: React.FC<{
   if (evaluation.is_estimated) {
     return (
       <View style={feedbackCardStyles.feedbackCard}>
-        <View style={styles.scoreRow}>
+        <View style={[styles.scoreRow, rtl && styles.rowReverse]}>
           <ScorePill label={t('scoreOverall')} value={evaluation.overall_score} />
           <ScorePill label={t('scorePronunciation')} value={evaluation.pronunciation_score} />
           <ScorePill label={t('scoreFluency')} value={evaluation.fluency_score} />
@@ -75,7 +76,7 @@ export const PronunciationFeedback: React.FC<{
 
   return (
     <View style={feedbackCardStyles.feedbackCard}>
-      <View style={styles.scoreRow}>
+      <View style={[styles.scoreRow, rtl && styles.rowReverse]}>
         <ScorePill label={t('scoreOverall')} value={evaluation.overall_score} />
         <ScorePill label={t('scorePronunciation')} value={evaluation.pronunciation_score} />
         <ScorePill label={t('scoreFluency')} value={evaluation.fluency_score} />
@@ -98,10 +99,14 @@ export const PronunciationFeedback: React.FC<{
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
   scoreRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 10,
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EDE7',
   },
   transcriptText: {
     marginTop: 8,

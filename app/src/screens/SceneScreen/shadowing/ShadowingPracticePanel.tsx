@@ -149,6 +149,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   textDisplayMode,
   onChangeTextDisplayMode,
 }) => {
+  const rtl = language === 'fa';
   return (
     <View>
       <StepTabs
@@ -168,6 +169,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
           sequentialLockEnabled={activeStepIndex === 3}
           accentColor={accentColor}
           accentLightColor={accentLightColor}
+          rtl={rtl}
         />
       )}
 
@@ -178,6 +180,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onNextStep={onNextStep}
         accentColor={accentColor}
         accentLightColor={accentLightColor}
+        rtl={rtl}
         t={t}
       />
 
@@ -192,6 +195,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onChangeTextDisplayMode={onChangeTextDisplayMode}
         accentColor={accentColor}
         accentLightColor={accentLightColor}
+        rtl={rtl}
         t={t}
       />
 
@@ -209,6 +213,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onScoreCurrentLine={onScoreCurrentLine}
         recordingPositionSeconds={recordingPositionSeconds}
         isPlayingRecording={actionCommand === 'play_recording'}
+        rtl={rtl}
         t={t}
       />
 
@@ -232,6 +237,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
           onPlayAll={onPlayAllRecordings}
           onStopPlayAll={onStopPlayAll}
           isPlayingAll={isPlayingAll}
+          rtl={rtl}
           t={t}
         />
       )}

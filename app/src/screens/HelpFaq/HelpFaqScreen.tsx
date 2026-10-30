@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
   Award,
   Bell,
   BookOpen,
-  ArrowLeft,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Flame,
   Gift,
+  Headphones,
   ListChecks,
   Map as MapIcon,
+  MessageSquare,
   Mic,
+  Search,
   Shield,
   Ticket,
   Unlock,
+  X,
 } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
@@ -191,69 +196,198 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
+
+type FaqCategory = 'practice' | 'progress' | 'subscription';
+
+/** دسته‌ی هر سوال برای چیپ‌های فیلتر بالای لیست. */
+const FAQ_CATEGORY: Record<string, FaqCategory> = {
+  'what-is-shadowing': 'practice',
+  'recording-privacy': 'practice',
+  'comprehension-quiz': 'practice',
+  'leitner-box': 'practice',
+  'streak-meaning': 'progress',
+  'what-counts-as-practice': 'progress',
+  'xp-level': 'progress',
+  'points-vs-xp': 'progress',
+  reminders: 'progress',
+  'redeem-points-subscription': 'subscription',
+  'curriculum-path': 'subscription',
+  'free-sample-scenes': 'subscription',
+};
+
+const CATEGORY_TABS: { id: 'all' | FaqCategory; key: string }[] = [
+  { id: 'all', key: 'faqCatAll' },
+  { id: 'practice', key: 'faqCatPractice' },
+  { id: 'progress', key: 'faqCatProgress' },
+  { id: 'subscription', key: 'faqCatSubscription' },
+];
+
 export const HelpFaqScreen = () => {
   const navigation = useNavigation<any>();
   const { t, language } = useLanguage();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [category, setCategory] = useState<'all' | FaqCategory>('all');
+  const [query, setQuery] = useState('');
+
+  const rtl = language === 'fa';
+  const row = rtl && styles.rowReverse;
+  const align = rtl && styles.textRight;
 
   const toggle = (id: string) => setOpenId((prev) => (prev === id ? null : id));
 
+  const q = query.trim().toLowerCase();
+  const visible = FAQ_ITEMS.filter((item) => {
+    if (category !== 'all' && FAQ_CATEGORY[item.id] !== category) return false;
+    if (!q) return true;
+    return (
+      item.question[language].toLowerCase().includes(q) ||
+      item.answer[language].toLowerCase().includes(q)
+    );
+  });
+
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <ArrowLeft color={COLORS.text} size={22} />
-      </TouchableOpacity>
+      <View style={[styles.topBar, row]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          {rtl ? <ChevronRight color={COLORS.text} size={22} /> : <ChevronLeft color={COLORS.text} size={22} />}
+        </TouchableOpacity>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{t('faqSupportBadge')}</Text>
+        </View>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{t('helpFaq')}</Text>
-        <Text style={styles.sub}>{t('helpFaqSub')}</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={[styles.title, align]}>{t('helpFaq')}</Text>
+        <Text style={[styles.sub, align]}>{t('helpFaqSub')}</Text>
 
-        {FAQ_ITEMS.map((item) => {
-          const isOpen = openId === item.id;
-          const { icon: Icon, color } = FAQ_ICON[item.id] || FAQ_ICON['what-is-shadowing'];
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.card, isOpen && { borderColor: color, backgroundColor: hexToRgba(color, 0.06) }]}
-              activeOpacity={0.85}
-              onPress={() => toggle(item.id)}
-            >
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconWrap, { backgroundColor: hexToRgba(color, 0.12) }]}>
-                  <Icon color={color} size={18} />
-                </View>
-                <Text style={styles.question}>{item.question[language]}</Text>
-                <View style={[styles.chevronWrap, isOpen && styles.chevronWrapOpen]}>
-                  <ChevronDown color={isOpen ? color : COLORS.muted} size={18} />
-                </View>
-              </View>
-              {isOpen && <Text style={styles.answer}>{item.answer[language]}</Text>}
+        <View style={[styles.searchBox, row]}>
+          <Search color={COLORS.muted} size={18} />
+          <TextInput
+            style={[styles.searchInput, align]}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('faqSearchPlaceholder')}
+            placeholderTextColor={COLORS.muted}
+            returnKeyType="search"
+          />
+          {query ? (
+            <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+              <X color={COLORS.muted} size={16} />
             </TouchableOpacity>
-          );
-        })}
+          ) : null}
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScroll}
+          contentContainerStyle={[styles.tabs, row]}
+        >
+          {CATEGORY_TABS.map((tab) => {
+            const active = category === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.tab, active && styles.tabActive]}
+                activeOpacity={0.85}
+                onPress={() => setCategory(tab.id)}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{t(tab.key)}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {visible.length === 0 ? (
+          <Text style={styles.noResults}>{t('faqNoResults')}</Text>
+        ) : (
+          visible.map((item) => {
+            const isOpen = openId === item.id;
+            const { icon: Icon, color } = FAQ_ICON[item.id] || FAQ_ICON['what-is-shadowing'];
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.card, isOpen && { borderColor: hexToRgba(color, 0.45) }]}
+                activeOpacity={0.85}
+                onPress={() => toggle(item.id)}
+              >
+                <View style={[styles.cardHeader, row]}>
+                  <View style={[styles.iconWrap, { backgroundColor: hexToRgba(color, 0.12) }]}>
+                    <Icon color={color} size={18} />
+                  </View>
+                  <Text style={[styles.question, align]}>{item.question[language]}</Text>
+                  <View style={isOpen && styles.chevronOpen}>
+                    <ChevronDown color={isOpen ? color : COLORS.muted} size={18} />
+                  </View>
+                </View>
+                {isOpen && <Text style={[styles.answer, align]}>{item.answer[language]}</Text>}
+              </TouchableOpacity>
+            );
+          })
+        )}
+
+        <View style={styles.contactCard}>
+          <View style={styles.contactIcon}>
+            <MessageSquare color={COLORS.primary} size={22} />
+          </View>
+          <Text style={styles.contactTitle}>{t('faqContactTitle')}</Text>
+          <Text style={styles.contactSub}>{t('faqContactSub')}</Text>
+          <TouchableOpacity
+            style={[styles.contactBtn, row]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ContactUs')}
+          >
+            <Headphones color={COLORS.white} size={18} />
+            <Text style={styles.contactBtnText}>{t('faqContactBtn')}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    paddingTop: 54,
+    backgroundColor: COLORS.backgroundSoft,
+    paddingTop: 48,
     paddingHorizontal: 20,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+  },
+  badge: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  badgeText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
   },
   content: {
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   title: {
     color: COLORS.text,
@@ -264,27 +398,82 @@ const styles = StyleSheet.create({
   sub: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    marginBottom: 24,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 18,
   },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  tabsScroll: {
+    marginTop: 12,
+    marginBottom: 16,
+    flexGrow: 0,
+  },
+  tabs: {
+    flexDirection: 'row',
+    gap: 8,
+    flexGrow: 1,
+  },
+  tab: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  tabActive: {
+    backgroundColor: COLORS.text,
+    borderColor: COLORS.text,
+  },
+  tabText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+  },
+  tabTextActive: {
+    color: COLORS.white,
+  },
+  noResults: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 28,
+  },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    padding: 14,
+    marginBottom: 10,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 12,
   },
   iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -293,18 +482,66 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 14,
+    lineHeight: 22,
   },
-  chevronWrap: {
-    transform: [{ rotate: '0deg' }],
-  },
-  chevronWrapOpen: {
+  chevronOpen: {
     transform: [{ rotate: '180deg' }],
   },
   answer: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 22,
     marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  contactCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    padding: 20,
+    marginTop: 14,
+  },
+  contactIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  contactTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  contactSub: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  contactBtn: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.text,
+    borderRadius: 14,
+    height: 48,
+  },
+  contactBtnText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
   },
 });

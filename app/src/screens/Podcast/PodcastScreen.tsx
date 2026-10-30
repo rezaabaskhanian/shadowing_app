@@ -32,7 +32,10 @@ const PODCAST_TRACK_ID = 'podcast';
  * AudioPlayer ندارد)؛ با ترک صفحه پخش متوقف می‌شود.
  */
 export const PodcastScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: بستن سمت راست، نام گوینده راست، ترجمه‌ها راست‌چین.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -272,13 +275,17 @@ export const PodcastScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rr]}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <X size={20} color={COLORS.text} />
+          <X size={18} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.topTitle} numberOfLines={1}>
-          {podcast.title}
-        </Text>
+        <View style={styles.topTitleWrap}>
+          <Text style={styles.topTitle} numberOfLines={1}>
+            {podcast.title}
+          </Text>
+          <Text style={styles.topSub}>{t('podcastPlayerSub')}</Text>
+        </View>
+        <View style={styles.closeBtnSpacer} />
       </View>
 
       <ScrollView
@@ -299,11 +306,15 @@ export const PodcastScreen: React.FC = () => {
             <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
           )
         )}
-        {!!podcast.description_fa && <Text style={styles.desc}>{podcast.description_fa}</Text>}
-
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>{t('podcastShowAllTranslations')}</Text>
-          <Switch value={showTranslation} onValueChange={setShowTranslation} trackColor={{ true: COLORS.primary }} />
+        {/* توضیح و کلید ترجمه در یک کارت سفید */}
+        <View style={styles.infoCard}>
+          {!!podcast.description_fa && (
+            <Text style={[styles.desc, { textAlign: rtl ? 'right' : 'left' }]}>{podcast.description_fa}</Text>
+          )}
+          <View style={[styles.switchRow, rr]}>
+            <Text style={styles.switchLabel}>{t('podcastShowAllTranslations')}</Text>
+            <Switch value={showTranslation} onValueChange={setShowTranslation} trackColor={{ true: COLORS.primary }} />
+          </View>
         </View>
 
         {lines.map((l, i) => {
@@ -319,18 +330,16 @@ export const PodcastScreen: React.FC = () => {
               }}
               style={[
                 styles.line,
-                tone.alt && styles.lineAlt,
-                { backgroundColor: hexToRgba(tone.color, isActive ? 0.16 : 0.06) },
-                isActive && { borderColor: tone.color },
+                isActive && { backgroundColor: hexToRgba(tone.color, 0.07), borderColor: tone.color },
               ]}
               onPress={() => seekToLine(l.start_ms)}
               activeOpacity={0.8}
             >
-              <View style={styles.speakerRow}>
+              <View style={[styles.speakerRow, rr]}>
                 <View style={[styles.avatar, { backgroundColor: tone.color }]}>
                   <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
                 </View>
-                <Text style={[styles.speaker, styles.flex1, { color: tone.color }]}>{l.speaker}</Text>
+                <Text style={[styles.speaker, styles.flex1, { color: tone.color, textAlign: rtl ? 'right' : 'left' }]}>{l.speaker}</Text>
                 {/* نشانه‌ی اینکه لمس هر جمله همان جمله را پخش می‌کند. */}
                 <Play size={12} color={isActive ? tone.color : COLORS.muted} fill={isActive ? tone.color : 'transparent'} />
               </View>
@@ -345,7 +354,9 @@ export const PodcastScreen: React.FC = () => {
               ) : (
                 <Text style={styles.lineText}>{l.text}</Text>
               )}
-              {showTranslation && !!l.translation_fa && <Text style={styles.translation}>{l.translation_fa}</Text>}
+              {showTranslation && !!l.translation_fa && (
+                <Text style={[styles.translation, { textAlign: rtl ? 'right' : 'left' }]}>{l.translation_fa}</Text>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -367,7 +378,7 @@ export const PodcastScreen: React.FC = () => {
 
         {podcast.vocabulary.length > 0 && (
           <View style={styles.vocabCard}>
-            <Text style={styles.vocabTitle}>{t('podcastVocabulary')}</Text>
+            <Text style={[styles.vocabTitle, { textAlign: rtl ? 'right' : 'left' }]}>{t('podcastVocabulary')}</Text>
             <View style={styles.vocabChips}>
               {podcast.vocabulary.map((v, i) => {
                 const c = VOCAB_COLORS[i % VOCAB_COLORS.length];
@@ -421,7 +432,7 @@ export const PodcastScreen: React.FC = () => {
             <SkipForward size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
-        <View style={styles.rates}>
+        <View style={[styles.rates, rr]}>
           <TouchableOpacity
             style={[styles.rateBtn, repeatLine && styles.rateBtnActive]}
             onPress={toggleRepeat}
@@ -447,6 +458,11 @@ export const PodcastScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  closeBtnSpacer: { width: 38 },
+  topTitleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  topSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  infoCard: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: 14, gap: 10 },
   flex1: { flex: 1 },
   myVersionBtn: {
     flexDirection: 'row',
@@ -474,10 +490,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     marginBottom: SPACING.m,
   },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: '#F7F7F9' },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -493,27 +506,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.s,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topTitle: {
-    flex: 1,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-    color: COLORS.text,
-  },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.l, paddingBottom: SPACING.s },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#ECECF0', alignItems: 'center', justifyContent: 'center' },
+  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text, textAlign: 'center' },
   content: {
     paddingHorizontal: SPACING.l,
     paddingBottom: SPACING.l,
@@ -532,24 +527,11 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.labelMd,
     color: COLORS.text,
   },
-  line: {
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    padding: SPACING.s,
-    paddingHorizontal: SPACING.m,
-    gap: 4,
-    maxWidth: '90%',
-    alignSelf: 'flex-start',
-  },
+  line: { borderRadius: 16, borderWidth: 1.5, borderColor: '#EEEEF2', backgroundColor: COLORS.white, padding: 12, gap: 6 },
   lineAlt: {
     alignSelf: 'flex-end',
   },
-  speakerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  speakerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#F2F2F5' },
   avatar: {
     width: 22,
     height: 22,
@@ -566,28 +548,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
   },
-  lineText: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-  },
+  lineText: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
   lineTextActive: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.semiBold,
   },
-  translation: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.muted,
-  },
-  vocabCard: {
-    marginTop: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-    gap: SPACING.s,
-    ...SHADOWS.level1,
-  },
+  translation: { ...TEXT_STYLES.labelMd, color: COLORS.muted },
+  vocabCard: { marginTop: SPACING.m, backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: SPACING.m, gap: SPACING.s },
   vocabTitle: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
@@ -616,14 +583,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     flexShrink: 1,
   },
-  player: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.s,
-    gap: 6,
-  },
+  player: { borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l, paddingTop: SPACING.s, gap: 6, shadowColor: '#1A1D26', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 6 },
   progressTrack: {
     height: 6,
     borderRadius: 3,
@@ -651,38 +611,18 @@ const styles = StyleSheet.create({
   progressHit: {
     paddingVertical: 8,
   },
-  playBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.level2,
-  },
+  playBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', ...SHADOWS.level2 },
   rates: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: SPACING.s,
   },
-  rateBtn: {
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
+  rateBtn: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: '#EEF0F4' },
   // سرعت انتخاب‌شده خنثی است؛ مرجانی فقط برای دکمه‌ی پخش.
-  rateBtnActive: {
-    backgroundColor: COLORS.surfaceHigh,
-    borderColor: COLORS.textSecondary,
-  },
+  rateBtnActive: { backgroundColor: '#1F2430' },
   rateText: {
     ...TEXT_STYLES.labelMd,
     color: COLORS.text,
   },
-  rateTextActive: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-  },
+  rateTextActive: { color: COLORS.white, fontFamily: FONT_FAMILY.bold },
 });

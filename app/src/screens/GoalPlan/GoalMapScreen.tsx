@@ -20,7 +20,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { Check, ChevronLeft, Lock, Pause, Play, X } from 'lucide-react-native';
+import { ArrowLeft, Check, Hand, Lock, MapPin, Pause, Volume2, X } from 'lucide-react-native';
 
 import { SPACING } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -40,6 +40,7 @@ import {
   type DialogueItem,
 } from '../../data/scenarios';
 import { AudioPlayer } from '../../components/AudioPlayer';
+import { GradientFill } from '../../components/GradientFill';
 
 // همان پالت «سینما»ی برنامه‌ی من.
 const CINE = {
@@ -68,6 +69,14 @@ const HIT_RADIUS = 30; // شعاع لمس هر نقطه روی صفحه (پیک�
 const PIN_SHADOW = 8;
 const LIFT = MARKER / 2 + PIN_SHADOW / 2;
 const PREVIEW_LINES = 2;
+const LABEL_W = 170;
+
+const GOAL_LABEL_KEY: Record<string, string> = {
+  migration: 'goalMigration',
+  travel: 'goalTravel',
+  work: 'goalWork',
+  study: 'goalStudy',
+};
 
 const LEVEL_KEY: Record<string, string> = {
   starter: 'levelStarter',
@@ -261,6 +270,7 @@ export const GoalMapScreen = () => {
     const today =
       points.find(p => p.situation.id === plan?.today_id) ?? points[0];
     focusOn(today.x, today.y, OPEN_SCALE, false);
+    setSelected(today);
     setFocused(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, box, points]);
@@ -529,7 +539,8 @@ export const GoalMapScreen = () => {
                           st === 'today' && styles.markerToday,
                           st === 'done' && styles.markerDone,
                           st === 'empty' && styles.markerEmpty,
-                          selected?.position === p.position &&
+                          st !== 'today' &&
+                            selected?.position === p.position &&
                             styles.markerSelected,
                         ]}
                       >
@@ -547,12 +558,28 @@ export const GoalMapScreen = () => {
                           />
                         )}
                       </View>
-                      {(st === 'today' ||
-                        selected?.position === p.position) && (
-                        <View style={styles.label}>
-                          <Text style={styles.labelText} numberOfLines={1}>
-                            {p.situation.title_fa}
-                          </Text>
+                      {st === 'today' && (
+                        <View style={styles.calloutWrap}>
+                          <View style={styles.callout}>
+                            <View style={styles.calloutDot} />
+                            <Text style={styles.calloutText} numberOfLines={1}>
+                              {p.situation.title_fa} · {t('goalMapReady')}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {st !== 'today' && (
+                        <View style={styles.labelWrap}>
+                          <View
+                            style={[
+                              styles.label,
+                              selected?.position === p.position && styles.labelSelected,
+                            ]}
+                          >
+                            <Text style={styles.labelText} numberOfLines={1}>
+                              {p.situation.title_fa}
+                            </Text>
+                          </View>
                         </View>
                       )}
                     </Animated.View>
@@ -569,6 +596,19 @@ export const GoalMapScreen = () => {
         style={[styles.topBar, { paddingTop: insets.top + SPACING.s }]}
         pointerEvents="box-none"
       >
+        <View style={styles.headerPill}>
+          {!!plan.plan.start_level && (
+            <View style={styles.headerLevel}>
+              <Text style={styles.headerLevelText}>
+                {t(LEVEL_KEY[plan.plan.start_level] || 'levelBeginner')}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.headerText} numberOfLines={1}>
+            {t('goalMapHeader').replace('{goal}', t(GOAL_LABEL_KEY[plan.plan.goal] || 'goalMigration'))}
+          </Text>
+          <View style={styles.headerDot} />
+        </View>
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={() =>
@@ -582,12 +622,11 @@ export const GoalMapScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {!selected && !hintGone && (
-        <View
-          style={[styles.hint, { bottom: insets.bottom + SPACING.l }]}
-          pointerEvents="none"
-        >
-          <Text style={styles.hintText}>{t('goalMapHint')}</Text>
+      <View style={[styles.bottomStack, { paddingBottom: insets.bottom + SPACING.m }]} pointerEvents="box-none">
+      {!hintGone && (
+        <View style={styles.hint} pointerEvents="none">
+          <Text style={styles.hintText}>{t('goalMapHint2')}</Text>
+          <Hand size={14} color="#FFB08F" />
         </View>
       )}
 
@@ -596,7 +635,6 @@ export const GoalMapScreen = () => {
           key={selected.position}
           point={selected}
           todayId={plan.today_id}
-          bottomInset={insets.bottom}
           getScene={getScene}
           onClose={() => setSelected(null)}
           onEnter={sceneId => {
@@ -609,6 +647,7 @@ export const GoalMapScreen = () => {
           t={t}
         />
       )}
+      </View>
     </View>
   );
 };
@@ -617,7 +656,6 @@ export const GoalMapScreen = () => {
 const SpotCard = ({
   point,
   todayId,
-  bottomInset,
   getScene,
   onClose,
   onEnter,
@@ -625,7 +663,6 @@ const SpotCard = ({
 }: {
   point: MapPoint;
   todayId?: string;
-  bottomInset: number;
   getScene: (id: string) => Promise<any>;
   onClose: () => void;
   onEnter: (sceneId: string) => void;
@@ -651,13 +688,8 @@ const SpotCard = ({
     };
   }, [s.scene_id, getScene]);
 
-  // با باز شدن کارت، دو جمله‌ی اول خودکار پشت هم پخش می‌شوند.
-  useEffect(() => {
-    if (lines && lines.length && lines[0].audioUrl) {
-      setPlayIdx(0);
-      setNonce(n => n + 1);
-    }
-  }, [lines]);
+  // کارتِ «جای امروز» با باز شدن صفحه خودش باز است؛ برای همین صدا خودکار پخش
+  // نمی‌شود و فقط با دکمه‌ی بلندگو دو جمله‌ی اول شنیده می‌شوند.
 
   const togglePlay = () => {
     if (playIdx !== null) {
@@ -673,7 +705,7 @@ const SpotCard = ({
   const playing = playIdx !== null && lines?.[playIdx];
 
   return (
-    <View style={[styles.card, { paddingBottom: bottomInset + SPACING.m }]}>
+    <View style={styles.card}>
       <AudioPlayer
         uri={playing ? lines![playIdx!].audioUrl : null}
         shouldPlay={false}
@@ -694,79 +726,60 @@ const SpotCard = ({
         }}
       />
       <View style={styles.cardHead}>
-        {s.scene_image_url ? (
-          <Image
-            source={{ uri: absUrl(s.scene_image_url) }}
-            style={styles.cardImg}
-          />
-        ) : (
-          <View style={[styles.cardImg, styles.cardImgEmpty]} />
-        )}
-        <View style={styles.flex1}>
-          {st === 'today' && (
-            <Text style={styles.todayTag}>{t('goalMapToday')}</Text>
+        <View style={styles.cardIcon}>
+          {s.scene_image_url ? (
+            <Image source={{ uri: absUrl(s.scene_image_url) }} style={styles.cardImg} />
+          ) : (
+            <MapPin size={22} color={CINE.accentText} />
           )}
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {s.title_fa}
-          </Text>
-          {!!s.scene_level && (
-            <Text style={styles.cardSub}>
-              {t(LEVEL_KEY[s.scene_level] || 'levelBeginner')}
+        </View>
+        <View style={styles.cardText}>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {s.title_fa}
+            </Text>
+            {st !== 'empty' && (
+              <View style={[styles.statusChip, st === 'done' && styles.statusChipDone]}>
+                <Text style={[styles.statusChipText, st === 'done' && styles.statusChipTextDone]}>
+                  {st === 'done' ? t('goalMapDone') : t('goalMapActive')}
+                </Text>
+              </View>
+            )}
+          </View>
+          {!s.scene_id ? (
+            <Text style={styles.cardSub}>{t('goalMapSoon')}</Text>
+          ) : (
+            <Text style={styles.cardSub} numberOfLines={1}>
+              {playing ? lines![playIdx!].dialogue : s.scene_level ? t(LEVEL_KEY[s.scene_level] || 'levelBeginner') : ''}
             </Text>
           )}
         </View>
-        <TouchableOpacity
-          onPress={onClose}
-          style={styles.cardClose}
-          accessibilityLabel={t('close')}
-        >
-          <X size={18} color={CINE.muted} />
+        <TouchableOpacity onPress={onClose} style={styles.cardClose} accessibilityLabel={t('close')}>
+          <X size={16} color={CINE.muted} />
         </TouchableOpacity>
       </View>
 
-      {!s.scene_id ? (
-        <Text style={styles.soon}>{t('goalMapSoon')}</Text>
-      ) : (
-        <>
-          <View style={styles.lines}>
-            {lines === null ? (
-              <ActivityIndicator color={CINE.accent} />
-            ) : (
-              lines.map((l, i) => (
-                <View
-                  key={l.id}
-                  style={[styles.line, playIdx === i && styles.lineActive]}
-                >
-                  <Text style={styles.lineEn}>{l.dialogue}</Text>
-                  <Text style={styles.lineFa}>{l.translation}</Text>
-                </View>
-              ))
-            )}
-          </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              style={styles.playBtn}
-              onPress={togglePlay}
-              disabled={!lines?.length}
-            >
-              {playIdx !== null ? (
-                <Pause size={18} color={CINE.accentText} />
-              ) : (
-                <Play size={18} color={CINE.accentText} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.enterBtn}
-              onPress={() => onEnter(s.scene_id!)}
-              activeOpacity={0.9}
-            >
+      {!!s.scene_id && (
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.enterBtn} onPress={() => onEnter(s.scene_id!)} activeOpacity={0.9}>
+            <GradientFill from="#F07A4A" to="#E8572F" horizontal />
+            <View style={styles.enterInner}>
               <Text style={styles.enterText}>
-                {st === 'done' ? t('goalMapPracticeAgain') : t('enterScene')}
+                {st === 'done' ? t('goalMapPracticeAgain') : t('goalMapEnter')}
               </Text>
-              <ChevronLeft size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </>
+              <ArrowLeft size={18} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.playBtn} onPress={togglePlay} disabled={!lines?.length}>
+            {lines === null ? (
+              <ActivityIndicator size="small" color={CINE.accent} />
+            ) : playIdx !== null ? (
+              <Pause size={18} color={CINE.accentText} />
+            ) : (
+              <Volume2 size={18} color={CINE.accentText} />
+            )}
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -818,7 +831,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.28)',
   },
   markerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: CINE.accent },
-  markerDotToday: { backgroundColor: '#FFFFFF' },
+  markerDotToday: { backgroundColor: CINE.accent },
   halo: {
     position: 'absolute',
     top: 0,
@@ -837,7 +850,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  markerToday: { backgroundColor: CINE.accent, borderColor: '#FFFFFF' },
+  // جای امروز: حلقه‌ی پهن نارنجی با مرکز سفید، کمی بزرگ‌تر از بقیه.
+  markerToday: {
+    backgroundColor: '#FFFFFF',
+    borderColor: CINE.accent,
+    borderWidth: 7,
+    transform: [{ scale: 1.35 }],
+  },
   // کامل‌شده: توپُر سبز با تیک و کمی بزرگ‌تر؛ باز: توخالی سفید با شماره.
   markerDone: {
     backgroundColor: CINE.success,
@@ -852,21 +871,50 @@ const styles = StyleSheet.create({
     color: CINE.accentText,
   },
   markerNumToday: { color: '#FFFFFF' },
-  label: {
+  // برچسب در کادری پهن‌تر از خودِ نشانه وسط‌چین می‌شود؛ قبلاً هم‌عرضِ دایره بود و اسم «م...» بریده می‌شد.
+  labelWrap: {
     position: 'absolute',
     top: MARKER + 4,
-    backgroundColor: CINE.text,
+    left: (MARKER - LABEL_W) / 2,
+    width: LABEL_W,
+    alignItems: 'center',
+  },
+  label: {
+    backgroundColor: 'rgba(26,29,38,0.78)',
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    maxWidth: 170,
+    paddingVertical: 2,
   },
+  labelSelected: { backgroundColor: CINE.accent },
   labelText: {
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 11,
     lineHeight: 17,
     color: '#FFFFFF',
   },
+  calloutWrap: {
+    position: 'absolute',
+    bottom: MARKER + PIN_SHADOW + 10,
+    left: (MARKER - 240) / 2,
+    width: 240,
+    alignItems: 'center',
+  },
+  callout: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  calloutDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: CINE.accent },
+  calloutText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: CINE.text },
 
   topBar: {
     position: 'absolute',
@@ -876,118 +924,137 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: 10,
     paddingHorizontal: SPACING.l,
   },
+  headerPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(26,29,38,0.62)',
+  },
+  headerDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: CINE.accent },
+  headerText: { flexShrink: 1, fontFamily: FONT_FAMILY.bold, fontSize: 13, color: '#FFFFFF' },
+  headerLevel: {
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,122,89,0.25)',
+  },
+  headerLevelText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: '#FFB08F' },
   // دکمه‌ی بستن کم‌رنگ و نیمه‌شفاف، تا تمرکز روی خود نقشه بماند.
   iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(26,29,38,0.55)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(26,29,38,0.62)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hint: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(26,29,38,0.82)',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  hintText: {
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#FFFFFF',
-  },
-
-  card: {
+  bottomStack: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: CINE.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: CINE.border,
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.l,
+    paddingHorizontal: SPACING.m,
+    gap: 10,
+  },
+  hint: {
+    alignSelf: 'center',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(26,29,38,0.78)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  hintText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#FFFFFF',
+  },
+
+  card: {
+    backgroundColor: '#FBF9F6',
+    borderRadius: 24,
+    padding: SPACING.m,
     gap: SPACING.m,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
   },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
-  cardImg: { width: 84, height: 56, borderRadius: 12 },
-  cardImgEmpty: { backgroundColor: CINE.surface },
-  todayTag: {
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 11,
-    lineHeight: 17,
-    color: CINE.accentText,
+  cardHead: { flexDirection: 'row-reverse', alignItems: 'center', gap: SPACING.m },
+  cardIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,122,89,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,89,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  cardImg: { width: '100%', height: '100%' },
+  cardText: { flex: 1, alignItems: 'flex-end' },
+  cardTitleRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
   cardTitle: {
+    flexShrink: 1,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
     lineHeight: 25,
     color: CINE.text,
+    textAlign: 'right',
   },
+  statusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(46,158,107,0.12)',
+  },
+  statusChipDone: { backgroundColor: 'rgba(46,158,107,0.2)' },
+  statusChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: CINE.success },
+  statusChipTextDone: { color: CINE.success },
   cardSub: {
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    color: CINE.muted,
-  },
-  cardClose: { padding: 6 },
-  soon: {
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 14,
-    lineHeight: 22,
-    color: CINE.muted,
-    paddingBottom: SPACING.s,
-  },
-  lines: { gap: SPACING.s, minHeight: 60, justifyContent: 'center' },
-  line: {
-    backgroundColor: CINE.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: CINE.surface,
-  },
-  lineActive: { borderColor: CINE.accent },
-  lineEn: {
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 15,
-    lineHeight: 22,
-    color: CINE.text,
-    textAlign: 'left',
-    writingDirection: 'ltr',
-  },
-  lineFa: {
     fontFamily: FONT_FAMILY.regular,
-    fontSize: 13,
-    lineHeight: 21,
+    fontSize: 12,
+    lineHeight: 19,
     color: CINE.muted,
+    textAlign: 'right',
   },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
+  cardClose: { alignSelf: 'flex-start', padding: 4 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s },
   playBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: CINE.accent,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F1EDE6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   enterBtn: {
     flex: 1,
-    height: 50,
-    borderRadius: 25,
+    height: 52,
+    borderRadius: 16,
+    overflow: 'hidden',
     backgroundColor: CINE.accent,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    elevation: 6,
+    shadowColor: CINE.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
   },
+  enterInner: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
   enterText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: '#FFFFFF' },
 });

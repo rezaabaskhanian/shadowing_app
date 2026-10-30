@@ -25,6 +25,7 @@ export const RecordingsList: React.FC<{
   onPlayAll: () => void;
   onStopPlayAll: () => void;
   isPlayingAll: boolean;
+  rtl?: boolean;
   t: (key: string) => string;
 }> = ({
   lines,
@@ -35,29 +36,30 @@ export const RecordingsList: React.FC<{
   onPlayAll,
   onStopPlayAll,
   isPlayingAll,
+  rtl = false,
   t,
 }) => {
   const recordedCount = recordedLines.length;
 
   return (
     <View style={styles.recListCard}>
-      <View style={styles.recListHeader}>
+      <View style={[styles.recListHeader, rtl && styles.rowReverse]}>
         <Text style={styles.recListTitle}>
           {t('myLinesTitle')} ({recordedCount}/{lines.length})
         </Text>
         <TouchableOpacity
           style={[
             styles.recPlayAllBtn,
-            { backgroundColor: RECORD_ACCENT },
+            rtl && styles.rowReverse,
             recordedCount === 0 ? styles.recBtnDisabled : null,
           ]}
           disabled={recordedCount === 0}
           onPress={isPlayingAll ? onStopPlayAll : onPlayAll}
         >
           {isPlayingAll ? (
-            <Pause size={12} color={COLORS.white} fill={COLORS.white} />
+            <Pause size={11} color={RECORD_ACCENT} fill={RECORD_ACCENT} />
           ) : (
-            <Play size={12} color={COLORS.white} fill={COLORS.white} />
+            <Play size={11} color={RECORD_ACCENT} fill={RECORD_ACCENT} />
           )}
           <Text style={styles.recPlayAllText}>
             {isPlayingAll ? t('stopPlayAll') : t('playAllMine')}
@@ -98,37 +100,41 @@ export const RecordingsList: React.FC<{
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
   recListCard: {
     marginTop: 12,
-    padding: 10,
-    borderRadius: 16,
-    backgroundColor: COLORS.backgroundSoft,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: '#EEEAE3',
   },
   recListHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingHorizontal: 6,
+    marginBottom: 10,
   },
   recListTitle: {
     color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
   },
   recPlayAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 999,
+    backgroundColor: COLORS.primaryLight,
   },
   recPlayAllText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 10,
+    color: RECORD_ACCENT,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
   },
   recBtnDisabled: {
     opacity: 0.4,
@@ -137,12 +143,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 9,
     paddingHorizontal: 6,
     borderRadius: 10,
   },
   recRowActive: {
-    backgroundColor: COLORS.secondaryLight,
+    backgroundColor: '#FDF6E9',
   },
   recRowTextWrap: {
     flex: 1,
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 10,
+    fontSize: 12,
   },
   recRowNumDone: {
     color: COLORS.tertiary,
@@ -163,8 +169,8 @@ const styles = StyleSheet.create({
   recRowText: {
     flex: 1,
     color: COLORS.text,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
     writingDirection: 'ltr',
   },
   recRowTextPending: {

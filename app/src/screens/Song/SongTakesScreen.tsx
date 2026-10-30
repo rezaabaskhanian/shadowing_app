@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, Download, Music, Play, Trash2, X } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
@@ -53,6 +53,9 @@ export const SongTakesScreen: React.FC = () => {
       },
     ]);
 
+  // فارسی: کاور سمت راست، دکمه‌ی پخش سمت چپ؛ «ذخیره» راست و «حذف» چپ.
+  const rtl = language === 'fa';
+  const rr = rtl ? styles.rowReverse : null;
   const dateText = (ms: number) =>
     new Date(ms).toLocaleDateString(language === 'fa' ? 'fa-IR' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -60,10 +63,12 @@ export const SongTakesScreen: React.FC = () => {
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <X size={20} color={COLORS.text} />
+          <X size={18} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{t('songMyTakes')}</Text>
+        <View style={styles.closeBtnSpacer} />
       </View>
+      <Text style={styles.subtitle}>{t('songMyTakesSub')}</Text>
 
       {takes === null ? (
         <View style={styles.center}>
@@ -79,7 +84,7 @@ export const SongTakesScreen: React.FC = () => {
           {takes.map((tk) => (
             <View key={tk.id} style={styles.row}>
               <TouchableOpacity
-                style={styles.main}
+                style={[styles.main, rr]}
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('Song', { songId: tk.songId, takeId: tk.id, openedAt: Date.now() })}
               >
@@ -90,7 +95,7 @@ export const SongTakesScreen: React.FC = () => {
                     <Music size={18} color={COLORS.muted} />
                   </View>
                 )}
-                <View style={styles.flex}>
+                <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
                   <Text style={styles.songTitle} numberOfLines={1}>
                     {tk.title}
                   </Text>
@@ -102,7 +107,8 @@ export const SongTakesScreen: React.FC = () => {
                   <Play size={14} color={COLORS.white} fill={COLORS.white} />
                 </View>
               </TouchableOpacity>
-              <View style={styles.actions}>
+              <View style={styles.actionsDivider} />
+              <View style={[styles.actions, rr]}>
                 <TouchableOpacity style={styles.action} onPress={() => save(tk)} disabled={busyId === tk.id} activeOpacity={0.8}>
                   {busyId === tk.id ? (
                     <ActivityIndicator size="small" color={COLORS.text} />
@@ -113,7 +119,7 @@ export const SongTakesScreen: React.FC = () => {
                   )}
                   <Text style={styles.actionText}>{tk.exportedPath ? t('songSavedToPhone') : t('songSaveToPhone')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.action} onPress={() => remove(tk)} activeOpacity={0.8}>
+                <TouchableOpacity style={[styles.action, styles.actionDanger]} onPress={() => remove(tk)} activeOpacity={0.8}>
                   <Trash2 size={15} color={COLORS.error} />
                   <Text style={[styles.actionText, { color: COLORS.error }]}>{t('delete')}</Text>
                 </TouchableOpacity>
@@ -127,46 +133,29 @@ export const SongTakesScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
-  header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, marginBottom: SPACING.m },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 28, color: COLORS.text, textAlign: 'right' },
+  rowReverse: { flexDirection: 'row-reverse' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
+  closeBtnSpacer: { width: 38 },
+  subtitle: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.muted, textAlign: 'center', marginTop: 4, marginBottom: SPACING.m },
+  actionsDivider: { height: 1, backgroundColor: '#F2EEE8' },
+  actionDanger: { backgroundColor: '#FDF0F0' },
+  container: { flex: 1, backgroundColor: '#FBF8F4', paddingHorizontal: SPACING.l },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE6', alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 18, lineHeight: 28, color: COLORS.text, textAlign: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.s },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: SPACING.l },
-  list: { gap: SPACING.s },
-  row: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    padding: 10,
-    gap: 8,
-  },
+  list: { gap: 12 },
+  row: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EFEAE2', padding: 12, gap: 10 },
   main: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  thumb: { width: 52, height: 52, borderRadius: 10 },
-  thumbEmpty: { backgroundColor: COLORS.surfaceHigh, alignItems: 'center', justifyContent: 'center' },
+  thumb: { width: 46, height: 46, borderRadius: 12 },
+  thumbEmpty: { backgroundColor: '#F2EEE8', alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   songTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.text },
   meta: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  play: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  play: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center' },
   actions: { flexDirection: 'row', gap: 8 },
-  action: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
+  action: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 36, borderRadius: 10, backgroundColor: '#F5F5F7' },
   actionText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.text },
 });

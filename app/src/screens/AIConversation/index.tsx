@@ -376,13 +376,18 @@ export const AIConversationScreen: React.FC = () => {
       />
 
       <View style={styles.header}>
+        <View style={styles.grabber} />
         <Text style={styles.headerTitle}>{t('aiConversationTitle')}</Text>
         <Text style={styles.headerSub}>{sceneTitle}</Text>
-        <Text style={styles.progressText}>
-          {t('aiConversationTurnProgress')
-            .replace('{current}', String(turnNumber))
-            .replace('{total}', String(maxUserTurns))}
-        </Text>
+        {/* نوبت فعلی در یک کپسول کوچک با نقطه‌ی سبز */}
+        <View style={styles.turnChip}>
+          <View style={styles.turnDot} />
+          <Text style={styles.progressText}>
+            {t('aiConversationTurnProgress')
+              .replace('{current}', String(turnNumber))
+              .replace('{total}', String(maxUserTurns))}
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -400,6 +405,7 @@ export const AIConversationScreen: React.FC = () => {
             {msg.role === 'assistant' && !!msg.textFa && (
               <>
                 {!!shownTranslations[i] && <Text style={styles.translationText}>{msg.textFa}</Text>}
+                <View style={styles.bubbleDivider} />
                 <TouchableOpacity
                   style={styles.translateBtn}
                   onPress={() => setShownTranslations((prev) => ({ ...prev, [i]: !prev[i] }))}
@@ -486,6 +492,9 @@ export const AIConversationScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           )}
+          {/* هاله‌های نرم دور دکمه‌ی میکروفون */}
+          <View style={styles.micHaloOuter}>
+          <View style={styles.micHaloInner}>
           <TouchableOpacity
             style={[styles.recordBtn, recordPhase === 'recording' && styles.recordBtnActive]}
             onPress={recordPhase === 'recording' ? handleStopRecord : handleStartRecord}
@@ -498,6 +507,8 @@ export const AIConversationScreen: React.FC = () => {
               <Mic size={28} color={COLORS.white} />
             )}
           </TouchableOpacity>
+          </View>
+          </View>
           <Text style={styles.recordHint}>
             {recordPhase === 'recording'
               ? t('placementStopRecordBtn')
@@ -525,11 +536,13 @@ export const AIConversationScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-  },
+  grabber: { width: 44, height: 4, borderRadius: 2, backgroundColor: '#DDD8CE', marginBottom: 14 },
+  turnChip: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: '#EFECE6' },
+  turnDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#3DAE74' },
+  bubbleDivider: { height: 1, backgroundColor: '#E5E0D6', marginTop: 12, marginBottom: 2 },
+  micHaloOuter: { width: 128, height: 128, borderRadius: 64, backgroundColor: 'rgba(232,87,47,0.07)', alignItems: 'center', justifyContent: 'center' },
+  micHaloInner: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(232,87,47,0.12)', alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
   centerScreen: {
     flex: 1,
     alignItems: 'center',
@@ -578,19 +591,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     gap: SPACING.s,
   },
-  bubble: {
-    maxWidth: '80%',
-    borderRadius: BORDER_RADIUS.l,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    marginBottom: SPACING.s,
-  },
-  bubbleAssistant: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  bubble: { maxWidth: '86%', borderRadius: 20, paddingHorizontal: SPACING.m, paddingVertical: 14, marginBottom: SPACING.s },
+  bubbleAssistant: { alignSelf: 'flex-start', backgroundColor: '#F3F0EA', borderWidth: 1, borderColor: '#E8E3DA', shadowColor: '#1A1D26', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   bubbleUser: {
     alignSelf: 'flex-end',
     backgroundColor: COLORS.primary,

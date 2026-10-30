@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
@@ -36,6 +36,8 @@ interface SceneIntroScreenProps {
   /** خودِ صحنه از سرور نیامد؛ به‌جای چرخش بی‌پایان، پیام و تلاش دوباره. */
   loadFailed: boolean;
   onRetryLoad: () => void;
+  /** فارسی: چیدمان راست‌به‌چپ. */
+  rtl?: boolean;
   t: (key: string) => string;
 }
 
@@ -57,9 +59,12 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onRetryAudio,
   loadFailed,
   onRetryLoad,
+  rtl = false,
   t,
 }) => {
   const insets = useSafeAreaInsets();
+  const row = rtl && styles.rowReverse;
+  const tr = rtl && styles.textRight;
   const levelInfo = LEVEL_BADGE_STYLE[scenario?.level || 'Beginner'] || LEVEL_BADGE_STYLE.Beginner;
   const LevelIcon = levelInfo.Icon;
   const levelLabel = t(LEVEL_LABEL_KEY[scenario?.level || 'Beginner'] || LEVEL_LABEL_KEY.Beginner);
@@ -137,9 +142,9 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
 
         {/* Scenario Meta Header */}
         <View style={styles.introHeader}>
-          <View style={styles.introTitleRow}>
-            <Text style={styles.introTitle}>{scenario?.title ?? ''}</Text>
-            <View style={[styles.introLevelBadge, { backgroundColor: levelInfo.bg }]}>
+          <View style={[styles.introTitleRow, row]}>
+            <Text style={[styles.introTitle, tr]}>{scenario?.title ?? ''}</Text>
+            <View style={[styles.introLevelBadge, row, { backgroundColor: levelInfo.bg }]}>
               <LevelIcon size={12} color={levelInfo.text} />
               <Text style={[styles.introLevelBadgeText, { color: levelInfo.text }]}>
                 {levelLabel}
@@ -153,7 +158,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
         </View>
 
         {/* 3 Metric Pills Row */}
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, row]}>
           <View style={styles.statPill}>
             <Text style={styles.statNumber}>{hotspotsCount}</Text>
             <Text style={styles.statLabel}>{t('hotspots')}</Text>
@@ -175,15 +180,15 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           <View style={styles.infoCard}>
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.infoCardHeader}
+              style={[styles.infoCardHeader, row]}
               onPress={() => setGrammarOpen((v) => !v)}
             >
               <View style={styles.infoIconCircle}>
                 <BookOpen size={16} color={COLORS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.infoCardTitle}>{t('sceneGrammarTitle')}</Text>
-                {!!grammarNote.topic && <Text style={styles.grammarTopic}>{grammarNote.topic}</Text>}
+                <Text style={[styles.infoCardTitle, tr]}>{t('sceneGrammarTitle')}</Text>
+                {!!grammarNote.topic && <Text style={[styles.grammarTopic, tr]}>{grammarNote.topic}</Text>}
               </View>
               {grammarOpen ? (
                 <ChevronUp size={18} color={COLORS.textSecondary} />
@@ -195,8 +200,8 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
             {grammarOpen && (
               <View style={styles.infoCardBody}>
                 {!!grammarNote.explanation && (
-                  <View style={styles.grammarExplanationRow}>
-                    <Text style={styles.grammarExplanation}>{grammarNote.explanation}</Text>
+                  <View style={[styles.grammarExplanationRow, row]}>
+                    <Text style={[styles.grammarExplanation, tr]}>{grammarNote.explanation}</Text>
                     {!!grammarNote.audioUrl && (
                       <TouchableOpacity
                         activeOpacity={0.8}
@@ -214,12 +219,12 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
                 )}
                 {grammarNote.examples.length > 0 && (
                   <>
-                    <Text style={styles.grammarExamplesLabel}>{t('sceneGrammarExamples')}</Text>
+                    <Text style={[styles.grammarExamplesLabel, tr]}>{t('sceneGrammarExamples')}</Text>
                     {grammarNote.examples.map((ex, i) => (
                       <View key={i} style={styles.grammarExample}>
-                        <Text style={styles.grammarExampleText}>{ex.text}</Text>
+                        <Text style={[styles.grammarExampleText, tr]}>{ex.text}</Text>
                         {!!ex.translation && (
-                          <Text style={styles.grammarExampleTranslation}>{ex.translation}</Text>
+                          <Text style={[styles.grammarExampleTranslation, tr]}>{ex.translation}</Text>
                         )}
                       </View>
                     ))}
@@ -233,7 +238,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
         {/* Words per hotspot */}
         {hotspotWordGroups.length > 0 && (
           <View style={styles.infoCard}>
-            <View style={styles.infoCardHeader}>
+            <View style={[styles.infoCardHeader, row]}>
               <View style={styles.infoIconCircle}>
                 <MessageCircle size={16} color={COLORS.primary} />
               </View>
@@ -248,12 +253,12 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
                 return (
                   <View key={group.id} style={styles.wordGroup}>
                     {!!group.name && (
-                      <View style={styles.wordGroupHeader}>
+                      <View style={[styles.wordGroupHeader, row]}>
                         <MapPin size={13} color={COLORS.textSecondary} />
                         <Text style={styles.wordGroupName}>{group.name}</Text>
                       </View>
                     )}
-                    <View style={styles.wordChips}>
+                    <View style={[styles.wordChips, row]}>
                       {visible.map((w) => (
                         <View key={w.word} style={styles.wordChip}>
                           <Text style={styles.wordChipWord}>{w.word}</Text>
@@ -268,7 +273,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
                         }
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
-                        <Text style={styles.wordsToggle}>
+                        <Text style={[styles.wordsToggle, tr]}>
                           {expanded
                             ? t('sceneWordsLess')
                             : t('sceneWordsMore').replace('{count}', String(hiddenCount))}
@@ -283,25 +288,25 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
         )}
 
         {/* 4-Step Method Tip Banner */}
-        <View style={styles.tipBanner}>
+        <View style={[styles.tipBanner, row]}>
           <View style={styles.tipIconCircle}>
-            <Lightbulb size={18} color={COLORS.primary} />
+            <Lightbulb size={18} color="#F5A623" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.tipTitle}>{t('fourStepMethodTitle')}</Text>
-            <Text style={styles.tipText}>{t('sceneRuleTip')}</Text>
+            <Text style={[styles.tipTitle, tr]}>{t('fourStepMethodTitle')}</Text>
+            <Text style={[styles.tipText, tr]}>{t('sceneRuleTip')}</Text>
           </View>
         </View>
 
         {/* Dialogue Preview */}
-        <Text style={styles.conversationsLabel}>{t('dialoguePreview')}</Text>
+        <Text style={[styles.conversationsLabel, tr]}>{t('dialoguePreview')}</Text>
 
         <View style={styles.conversationsList}>
           {previewDialogues.map((item, index) => (
             <TouchableOpacity
               key={item.id || index}
               activeOpacity={0.8}
-              style={styles.convCard}
+              style={[styles.convCard, row]}
               onPress={onEnterScene}
               disabled={!audioPrep.finished}
             >
@@ -310,18 +315,22 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={styles.convTitle}>{item.dialogue}</Text>
-                <Text style={styles.convFaTitle}>{item.translation}</Text>
+                <Text style={[styles.convTitle, tr]}>{item.dialogue}</Text>
+                <Text style={[styles.convFaTitle, tr]}>{item.translation}</Text>
               </View>
             </TouchableOpacity>
           ))}
 
           {moreSentencesCount > 0 && (
-            <TouchableOpacity style={styles.moreSentencesRow} onPress={onShowAllDialogues}>
+            <TouchableOpacity style={[styles.moreSentencesRow, row]} onPress={onShowAllDialogues}>
               <Text style={styles.moreSentencesText}>
                 {moreSentencesCount} {t('moreSentencesSuffix')}
               </Text>
-              <ChevronRight size={16} color={COLORS.textSecondary} />
+              {rtl ? (
+                <ChevronLeft size={16} color={COLORS.textSecondary} />
+              ) : (
+                <ChevronRight size={16} color={COLORS.textSecondary} />
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -353,13 +362,15 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
         {/* Enter Scene CTA Button — تا صدای جمله‌ها دانلود نشده منتظر می‌ماند */}
         <TouchableOpacity
           activeOpacity={0.88}
-          style={[styles.enterCtaBtn, !audioPrep.finished && styles.enterCtaBtnWaiting]}
+          style={[styles.enterCtaBtn, row, !audioPrep.finished && styles.enterCtaBtnWaiting]}
           onPress={onEnterScene}
           disabled={!audioPrep.finished}
           accessibilityState={{ disabled: !audioPrep.finished, busy: !audioPrep.finished }}
         >
           {audioPrep.finished ? (
-            <Play size={20} color={COLORS.white} fill={COLORS.white} />
+            <View style={rtl ? styles.flipX : undefined}>
+              <Play size={20} color={COLORS.white} fill={COLORS.white} />
+            </View>
           ) : (
             <ActivityIndicator size="small" color={COLORS.white} />
           )}
@@ -377,11 +388,15 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  // مثلث پخش در فارسی رو به چپ (جهت «جلو»).
+  flipX: { transform: [{ scaleX: -1 }] },
   infoCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEAE3',
     padding: 16,
     marginBottom: 16,
   },
@@ -441,7 +456,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   grammarExample: {
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: '#F6F4F0',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -476,7 +491,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   wordChip: {
-    backgroundColor: COLORS.surfaceLight,
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#ECE8E0',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -499,7 +517,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FAF8F4',
   },
   introScroll: {
     paddingHorizontal: 20,
@@ -577,13 +595,13 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEAE3',
   },
   statNumber: {
     color: COLORS.text,
@@ -610,11 +628,12 @@ const styles = StyleSheet.create({
   convCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.surface,
+    gap: 12,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEAE3',
   },
   convNumCircle: {
     width: 34,
@@ -623,7 +642,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   convTitle: {
     color: COLORS.text,
@@ -651,11 +669,11 @@ const styles = StyleSheet.create({
   tipBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: '#EEEAE3',
     gap: 12,
     marginBottom: 24,
   },
@@ -663,7 +681,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(245, 166, 35, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -683,7 +701,7 @@ const styles = StyleSheet.create({
   ctaBar: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FAF8F4',
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
   },

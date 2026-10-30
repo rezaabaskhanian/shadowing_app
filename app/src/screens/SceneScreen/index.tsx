@@ -240,22 +240,22 @@ export const SceneScreen = () => {
     playAllQueue,
   } = pb;
 
-  // ارتفاع ناحیه‌ی بالای صفحه (کادر عکس صحنه). پایه‌اش دقیقاً از روی نسبتِ
-  // خودِ تصویر ساخته می‌شود تا هیچ بخشی از عرضش بریده نشود (سقفِ ۰.۶ صفحه
-  // فقط برای تصویرهای خیلی کشیده‌ی عمودی است).
+  // ارتفاع ناحیه‌ی بالای صفحه (کادر عکس صحنه) دقیقاً از روی نسبتِ خودِ تصویر
+  // ساخته می‌شود تا عکس کل کادر را پر کند و هیچ بخشی از عرضش بریده نشود (سقفِ
+  // ۰.۶ صفحه فقط برای تصویرهای خیلی کشیده‌ی عمودی است). قبلاً کف «نصف صفحه»
+  // داشت و برای عکس‌های ۱۶:۹ بالا/پایین عکس خالی می‌ماند (درخواست کاربر،
+  // ۱۴۰۵/۰۸/۰۷).
   //
-  // کف را در همه‌ی مراحل حداقل نصفِ صفحه می‌کنیم — حتی اگر تصویر (که معمولاً
-  // landscape است) به‌تنهایی این‌قدر بلند نشود. فضای اضافه با letterbox
-  // (پس‌زمینه‌ی هم‌رنگ بالا/پایین تصویر) پر می‌شود، نه با کِش‌آمدنِ تصویر.
+  // کادر ۳۰ پیکسل بلندتر از اندازه‌ی «فقط‌عرض» عکس است و عکس با همان نسبت
+  // بزرگ می‌شود تا کادر را پر کند (کمی از دو طرفش بیرون می‌زند).
   //
-  // heroImageHeight ارتفاعِ واقعیِ رندرشده‌ی خودِ عکس (بدون احتساب letterbox)
-  // است — SceneCameraHero موقعیتِ هات‌اسپات/حباب را باید نسبت به همین محاسبه
-  // کند، نه نسبت به کل کادر، وگرنه با letterbox، دوربین روی نقطه‌ی اشتباه
-  // زوم می‌کند.
-  const imageFitHeight = Math.round(screenWidth / imageAspectRatio);
-  const baseTopViewHeight = Math.min(imageFitHeight, Math.round(screenHeight * 0.6));
-  const topViewHeight = Math.max(baseTopViewHeight, Math.round(screenHeight * 0.5));
-  const heroImageHeight = Math.min(imageFitHeight, topViewHeight);
+  // heroImageWidth/Height اندازه‌ی واقعیِ رندرشده‌ی خودِ عکس است — SceneCameraHero
+  // موقعیتِ هات‌اسپات/حباب را نسبت به همین حساب می‌کند.
+  const HERO_EXTRA_HEIGHT = 60;
+  const imageFitHeight = Math.round(screenWidth / imageAspectRatio) + HERO_EXTRA_HEIGHT;
+  const topViewHeight = Math.min(imageFitHeight, Math.round(screenHeight * 0.6));
+  const heroImageHeight = topViewHeight;
+  const heroImageWidth = Math.round(heroImageHeight * imageAspectRatio);
 
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const autoMode = true;
@@ -1059,6 +1059,7 @@ export const SceneScreen = () => {
         onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
         loadFailed={loadFailed}
         onRetryLoad={() => setLoadRun((n) => n + 1)}
+        rtl={language === 'fa'}
         t={t}
       />
     );
@@ -1184,6 +1185,7 @@ export const SceneScreen = () => {
           onCoverLoad={handleCoverLoad}
           topViewHeight={topViewHeight}
           imageHeight={heroImageHeight}
+          imageWidth={heroImageWidth}
           screenWidth={screenWidth}
           insetsTop={insets.top}
           activeTarget={activeCameraTarget}
@@ -1220,6 +1222,7 @@ export const SceneScreen = () => {
             // پس خودِ کارت باید فاصله‌ی امن پایین صفحه (دکمه‌ی خانه/نوار حرکتی) را
             // رعایت کند وگرنه دکمه‌ی «شروع تمرین» زیرش پنهان می‌شود.
             !isShadowingMode && { paddingBottom: Math.max(insets.bottom, 16) + 16 },
+            !isShadowingMode && styles.playerSheetExplore,
           ]}
         >
           <View style={styles.dragHandle} />
@@ -1231,6 +1234,8 @@ export const SceneScreen = () => {
               activeHotspotIndex={activeHotspotIndex}
               onGoToHotspot={goToHotspot}
               onStartShadowing={() => dispatch({ type: 'START_SHADOWING', items: dialogueItems })}
+              onPlayLine={handleReplay}
+              rtl={language === 'fa'}
               t={t}
             />
           ) : (
@@ -1308,6 +1313,7 @@ export const SceneScreen = () => {
             onReplay={handleReplay}
             hasRecordingForCurrentLine={!!recordings[activeIndex]}
             onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
+            rtl={language === 'fa'}
           />
           {lineAudioMissing && <Text style={styles.noAudioHint}>{t('lineHasNoAudio')}</Text>}
           {activeStepIndex === 2 && canRecord && (
@@ -1371,6 +1377,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'flex-start',
+  },
+  playerSheetExplore: {
+    backgroundColor: COLORS.white,
   },
   dragHandle: {
     width: 36,

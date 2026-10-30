@@ -40,7 +40,7 @@ interface SceneCamera {
  * هم انیمیشن دوربین و هم محاسبه‌ی موقعیت حباب دیالوگ از همین تابع استفاده
  * می‌کنند تا همیشه با هم هماهنگ بمانند.
  */
-const CAMERA_ZOOM_ENABLED = false;
+const CAMERA_ZOOM_ENABLED = true;
 
 function computeSceneCamera(
   target: { x: number; y: number },
@@ -90,6 +90,9 @@ interface SceneCameraHeroProps {
   /** ارتفاعِ واقعیِ رندرشده‌ی خودِ عکس داخل کادر (بدون letterbox). وقتی کادر
    * بلندتر از این باشد، فضای اضافه بالا/پایینِ عکس با letterbox پر می‌شود. */
   imageHeight: number;
+  /** عرضِ واقعیِ رندرشده‌ی عکس — ممکن است از عرض صفحه بیشتر باشد (دو طرف
+   * عکس بیرون از کادر، وسط‌چین). */
+  imageWidth: number;
   screenWidth: number;
   insetsTop: number;
   activeTarget: ActiveCameraTarget | undefined;
@@ -129,6 +132,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   onCoverLoad,
   topViewHeight,
   imageHeight,
+  imageWidth,
   screenWidth,
   insetsTop,
   activeTarget,
@@ -161,13 +165,15 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
     if (!activeTarget) return null;
     const { scale, panX, panY } = computeSceneCamera(activeTarget, screenWidth, topViewHeight, imageHeight);
     const verticalMargin = (topViewHeight - imageHeight) / 2;
-    const offsetX = activeTarget.x * screenWidth - screenWidth / 2;
+    // عکس وسط‌چین است و ممکن است از دو طرف کادر بیرون بزند.
+    const horizontalMargin = (screenWidth - imageWidth) / 2;
+    const offsetX = horizontalMargin + activeTarget.x * imageWidth - screenWidth / 2;
     const offsetY = verticalMargin + activeTarget.y * imageHeight - topViewHeight / 2;
     return {
       x: screenWidth / 2 + scale * (offsetX + panX),
       y: topViewHeight / 2 + scale * (offsetY + panY),
     };
-  }, [activeTarget, screenWidth, topViewHeight, imageHeight]);
+  }, [activeTarget, screenWidth, topViewHeight, imageHeight, imageWidth]);
 
   // موقعیت نهایی جعبه‌ی حباب: نوکِ حباب دقیقاً روی خودِ هات‌اسپات می‌نشیند
   // (بدون هیچ جابه‌جایی مصنوعی)؛ فقط افقی کمی محدود می‌شود که جعبه از لبه‌ی
@@ -290,8 +296,12 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
           source={coverImage}
           onLoad={onCoverLoad}
           style={[
-            styles.topSceneImage,
             {
+              position: 'absolute',
+              width: imageWidth,
+              height: imageHeight,
+              left: (screenWidth - imageWidth) / 2,
+              top: (topViewHeight - imageHeight) / 2,
               transform: [
                 { scale: zoomAnim },
                 { translateX: panXAnim },
@@ -299,9 +309,8 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
               ],
             },
           ]}
-          // contain تضمین می‌کند حتی اگر ارتفاع کادر دقیقاً با نسبت تصویر
-          // یکی نشود، باز هم کل عرض تصویر دیده شود و از طرفین بریده نشود.
-          resizeMode="contain" 
+          // اندازه‌ی عکس دقیقاً با نسبت خودش حساب شده؛ contain فقط احتیاط است.
+          resizeMode="contain"
         />
       </View>
 
@@ -403,10 +412,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     overflow: 'hidden',
-  },
-  topSceneImage: {
-    width: '100%',
-    height: '100%',
   },
   bubbleWrap: {
     position: 'absolute',

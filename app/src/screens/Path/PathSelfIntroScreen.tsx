@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import { Mic, Play, RotateCcw, Square, X } from 'lucide-react-native';
+import { ArrowLeft, Clock, Mic, Play, RotateCcw, Sparkles, Square, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -23,6 +23,7 @@ import {
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { Celebration } from '../../components/Celebration';
 import { track } from '../../services/analytics';
+import { GradientFill } from '../../components/GradientFill';
 
 const MAX_SECONDS = 60;
 
@@ -35,7 +36,17 @@ const localPath = (level: string, stage: SelfIntroStage) =>
 
 const toFsPath = (value: string) => (value.startsWith('file://') ? value.slice('file://'.length) : value);
 
-const GUIDE = ['My name is …', "I'm … (age)", "I'm from …", 'I live in …', "I'm a … (job)", 'I like …'];
+// هر الگو با معنی فارسی کوتاهش، تا کاربر مبتدی بداند هر کدام برای گفتن چیست.
+const GUIDE: { en: string; fa: string }[] = [
+  { en: 'My name is …', fa: 'اسم من' },
+  { en: "I'm … (age)", fa: 'سن شما' },
+  { en: "I'm from …", fa: 'اصالتاً اهل' },
+  { en: 'I live in …', fa: 'محل زندگی' },
+  { en: "I'm a … (job)", fa: 'شغل من' },
+  { en: 'I like …', fa: 'علاقه‌مندی‌ها' },
+];
+const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const WAVE = [6, 10, 14, 8, 18, 12, 22, 12, 18, 8, 14, 10, 6];
 
 /**
  * «قبل و بعد» مسیر آموزشی: هفته‌ی اول کاربر یک معرفی کوتاه از خودش ضبط می‌کند
@@ -44,7 +55,9 @@ const GUIDE = ['My name is …', "I'm … (age)", "I'm from …", 'I live in …
  * می‌ماند؛ فقط متن رونویسی‌شده و آمار به سرور می‌رود.
  */
 export const PathSelfIntroScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
+  const num = (v: number | string) => (rtl ? toFa(v) : String(v));
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -52,6 +65,8 @@ export const PathSelfIntroScreen: React.FC = () => {
   const itemKey: string = route.params?.itemKey;
   const level: string = route.params?.level || 'starter';
   const stage: SelfIntroStage = route.params?.stage === 'after' ? 'after' : 'before';
+  const weekPosition: number | undefined = route.params?.weekPosition;
+  const weekCount: number | undefined = route.params?.weekCount;
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [intros, setIntros] = useState<SelfIntros>({});
@@ -165,7 +180,7 @@ export const PathSelfIntroScreen: React.FC = () => {
         onRecordingStatusUpdate={handleRecordingStatus}
       />
 
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
@@ -174,7 +189,20 @@ export const PathSelfIntroScreen: React.FC = () => {
         >
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>{t(stage === 'before' ? 'pathSelfIntroBeforeTitle' : 'pathSelfIntroAfterTitle')}</Text>
+        <View style={[styles.flex, rtl && styles.alignEnd]}>
+          <Text style={styles.topTitle}>{t(stage === 'before' ? 'pathSelfIntroBeforeTitle' : 'pathSelfIntroAfterTitle')}</Text>
+          <Text style={styles.topSub}>{t('pathSelfIntroSub')}</Text>
+        </View>
+        {!!weekPosition && (
+          <View style={[styles.weekChip, rtl && styles.rowReverse]}>
+            <View style={styles.weekDot} />
+            <Text style={styles.weekChipText}>
+              {weekCount
+                ? t('pathSelfIntroWeekOf').replace('{n}', num(weekPosition)).replace('{total}', num(weekCount))
+                : t('pathSelfIntroWeekN').replace('{n}', num(weekPosition))}
+            </Text>
+          </View>
+        )}
       </View>
 
       {phase === 'loading' && (
@@ -186,14 +214,45 @@ export const PathSelfIntroScreen: React.FC = () => {
       {(phase === 'intro' || phase === 'recording' || phase === 'processing') && (
         <>
           <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-            <Text style={styles.headline}>{t('pathSelfIntroPrompt')}</Text>
-            <Text style={styles.muted}>
-              {t(stage === 'before' ? 'pathSelfIntroBeforeNote' : before ? 'pathSelfIntroAfterNote' : 'pathSelfIntroNoBefore')}
-            </Text>
-            <View style={styles.guide}>
+            <View style={styles.introCard}>
+              <View style={[styles.introHead, rtl && styles.rowReverse]}>
+                <Text style={[styles.introTitle, rtl && styles.textRight]}>{t('pathSelfIntroHeadline')}</Text>
+                <View style={styles.sparkBox}>
+                  <Sparkles size={18} color="#E9A23B" />
+                </View>
+              </View>
+              <Text style={[styles.introNote, rtl && styles.textRight]}>
+                {t(stage === 'before' ? 'pathSelfIntroBeforeNote' : before ? 'pathSelfIntroAfterNote' : 'pathSelfIntroNoBefore')}
+              </Text>
+              <View style={[styles.timeline, rtl && styles.rowReverse]}>
+                <View style={[styles.tlStep, rtl && styles.rowReverse]}>
+                  <View style={[styles.tlNum, styles.tlNumOn]}>
+                    <Text style={[styles.tlNumText, styles.tlNumTextOn]}>{num(1)}</Text>
+                  </View>
+                  <View style={[styles.flex, rtl && styles.alignEnd]}>
+                    <Text style={styles.tlTitle}>{t('pathSelfIntroBaseTitle')}</Text>
+                    <Text style={styles.tlSub}>{t('pathSelfIntroBaseSub')}</Text>
+                  </View>
+                </View>
+                <ArrowLeft size={18} color={COLORS.primary} style={!rtl ? styles.flipX : undefined} />
+                <View style={[styles.tlStep, rtl && styles.rowReverse]}>
+                  <View style={styles.tlNum}>
+                    <Text style={styles.tlNumText}>{num(weekCount || 8)}</Text>
+                  </View>
+                  <View style={[styles.flex, rtl && styles.alignEnd]}>
+                    <Text style={styles.tlTitle}>
+                      {t('pathSelfIntroAfterStep').replace('{n}', num(weekCount || 8))}
+                    </Text>
+                    <Text style={styles.tlSub}>{t('pathSelfIntroAfterSub')}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+            <View style={[styles.guide, rtl && styles.rowReverse]}>
               {GUIDE.map((g) => (
-                <View key={g} style={styles.chip}>
-                  <Text style={styles.chipText}>{g}</Text>
+                <View key={g.en} style={[styles.chip, rtl && styles.rowReverse]}>
+                  <Text style={styles.chipText}>{g.en}</Text>
+                  {rtl && <Text style={styles.chipFa}>| {g.fa}</Text>}
                 </View>
               ))}
             </View>
@@ -208,22 +267,48 @@ export const PathSelfIntroScreen: React.FC = () => {
               </>
             ) : (
               <>
-                <TouchableOpacity
-                  style={[styles.micBtn, phase === 'recording' && styles.micBtnActive]}
-                  onPress={phase === 'recording' ? stopRecord : startRecord}
-                  activeOpacity={0.85}
-                >
-                  {phase === 'recording' ? (
-                    <Square size={28} color={COLORS.white} fill={COLORS.white} />
-                  ) : (
-                    <Mic size={32} color={COLORS.white} />
-                  )}
-                </TouchableOpacity>
-                <Text style={styles.muted}>
+                <View style={styles.wave}>
+                  {WAVE.map((h, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.waveBar,
+                        { height: h },
+                        i === 6 || phase === 'recording' ? styles.waveBarOn : null,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <View style={styles.micRings}>
+                  <View style={styles.micRingOuter} />
+                  <View style={styles.micRingInner} />
+                  <TouchableOpacity
+                    style={styles.micBtn}
+                    onPress={phase === 'recording' ? stopRecord : startRecord}
+                    activeOpacity={0.85}
+                  >
+                    <GradientFill
+                      from={phase === 'recording' ? '#E04848' : '#F07A4A'}
+                      to={phase === 'recording' ? '#BA1A1A' : '#E8572F'}
+                    />
+                    {phase === 'recording' ? (
+                      <Square size={26} color={COLORS.white} fill={COLORS.white} />
+                    ) : (
+                      <Mic size={30} color={COLORS.white} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.micLabel}>
                   {phase === 'recording'
-                    ? `${elapsed} / ${MAX_SECONDS} · ${t('courseTapWhenDone')}`
-                    : t('pathSelfIntroTapToStart')}
+                    ? `${num(elapsed)} / ${num(MAX_SECONDS)} · ${t('courseTapWhenDone')}`
+                    : t('pathSelfIntroTapShort')}
                 </Text>
+                {phase !== 'recording' && (
+                  <View style={[styles.maxRow, rtl && styles.rowReverse]}>
+                    <Clock size={13} color={COLORS.muted} />
+                    <Text style={styles.maxText}>{t('pathSelfIntroMaxTime').replace('{n}', num(MAX_SECONDS))}</Text>
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -323,9 +408,75 @@ const Stat: React.FC<{ value: number; label: string }> = ({ value, label }) => (
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.m },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
-  topTitle: { ...TEXT_STYLES.bodyLg, fontFamily: FONT_FAMILY.semiBold, color: COLORS.text, flex: 1 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  alignEnd: { alignItems: 'flex-end' },
+  textRight: { textAlign: 'right' },
+  flipX: { transform: [{ scaleX: -1 }] },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.m },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s },
+  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
+  topSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  weekChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#E8F5EE',
+    borderWidth: 1,
+    borderColor: '#CDE8D8',
+  },
+  weekDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
+  weekChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: '#2F8A5B' },
+  introCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    padding: SPACING.m,
+    gap: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  introHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  introTitle: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 19, color: COLORS.text },
+  sparkBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFF6E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introNote: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 23, color: COLORS.textSecondary },
+  timeline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F7F5F1',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    padding: 12,
+  },
+  tlStep: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tlNum: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E8E4DC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tlNumOn: { backgroundColor: COLORS.primary },
+  tlNumText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.textSecondary },
+  tlNumTextOn: { color: COLORS.white },
+  tlTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.text },
+  tlSub: { fontFamily: FONT_FAMILY.regular, fontSize: 10, color: COLORS.muted, marginTop: 2 },
   closeBtn: {
     width: 40,
     height: 40,
@@ -340,25 +491,57 @@ const styles = StyleSheet.create({
   headline: { ...TEXT_STYLES.headlineSm, color: COLORS.text, textAlign: 'center' },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.muted, textAlign: 'center' },
   error: { ...TEXT_STYLES.bodyMd, color: COLORS.error, textAlign: 'center' },
-  guide: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: SPACING.xs },
+  guide: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: SPACING.s },
   chip: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.full,
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.m,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FDF1EC',
+    borderWidth: 1,
+    borderColor: '#F6D9CC',
+    borderRadius: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
   },
-  chipText: { ...TEXT_STYLES.labelMd, color: COLORS.primary, writingDirection: 'ltr' },
-  micArea: { alignItems: 'center', gap: SPACING.s, paddingTop: SPACING.s },
+  chipText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.primary, writingDirection: 'ltr' },
+  chipFa: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  micArea: { alignItems: 'center', gap: 6, paddingTop: SPACING.s },
+  wave: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 26, marginBottom: 4 },
+  waveBar: { width: 3, borderRadius: 2, backgroundColor: '#C9CED8' },
+  waveBarOn: { backgroundColor: COLORS.primary },
+  micRings: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
+  micRingOuter: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232, 87, 47, 0.18)',
+  },
+  micRingInner: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: 'rgba(232, 87, 47, 0.08)',
+  },
   micBtn: {
-    width: 84,
-    height: 84,
-    borderRadius: BORDER_RADIUS.full,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    overflow: 'hidden',
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.level1,
+    elevation: 8,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  micBtnActive: { backgroundColor: COLORS.error },
+  micLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.text },
+  maxRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  maxText: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.muted },
   compare: { flexDirection: 'row', gap: SPACING.s, alignItems: 'flex-start' },
   column: {
     flex: 1,

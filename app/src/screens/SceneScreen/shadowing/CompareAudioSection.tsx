@@ -28,6 +28,7 @@ export const CompareAudioSection: React.FC<{
   recordingPositionSeconds?: number;
   /** true وقتی همین حالا ضبطِ کاربر در حال پخش است. */
   isPlayingRecording?: boolean;
+  rtl?: boolean;
   t: (key: string) => string;
 }> = ({
   hasRecordingForCurrentLine,
@@ -39,29 +40,31 @@ export const CompareAudioSection: React.FC<{
   onScoreCurrentLine,
   recordingPositionSeconds,
   isPlayingRecording,
+  rtl = false,
   t,
 }) => (
   <>
-    <TouchableOpacity style={styles.abRow} onPress={onPlayOriginal}>
+    <View style={styles.abCard}>
+    <TouchableOpacity style={[styles.abRow, rtl && styles.rowReverse]} onPress={onPlayOriginal}>
       <View style={styles.abPlayCircle}>
-        <Play size={14} color={COLORS.white} fill={COLORS.white} />
+        <Play size={18} color={COLORS.white} fill={COLORS.white} />
       </View>
+      <Text style={styles.compareLabel}>{t('masterAudio')}</Text>
       <View style={styles.abRowBody}>
-        <Text style={styles.compareLabel}>{t('masterAudio')}</Text>
         <WaveBars active color={COLORS.audioOriginal} />
       </View>
     </TouchableOpacity>
 
     <TouchableOpacity
-      style={[styles.abRow, hasRecordingForCurrentLine ? null : styles.abRowDisabled]}
+      style={[styles.abRow, rtl && styles.rowReverse, hasRecordingForCurrentLine ? null : styles.abRowDisabled]}
       disabled={!hasRecordingForCurrentLine}
       onPress={onPlayMyRecording}
     >
       <View style={[styles.abPlayCircle, styles.abPlayCircleMine]}>
-        <Play size={14} color={COLORS.white} fill={COLORS.white} />
+        <Play size={18} color={COLORS.white} fill={COLORS.white} />
       </View>
+      <Text style={styles.compareLabel}>{t('yourRecording')}</Text>
       <View style={styles.abRowBody}>
-        <Text style={styles.compareLabel}>{t('yourRecording')}</Text>
         {hasRecordingForCurrentLine ? (
           <WaveBars active color={COLORS.audioMine} />
         ) : (
@@ -69,6 +72,7 @@ export const CompareAudioSection: React.FC<{
         )}
       </View>
     </TouchableOpacity>
+    </View>
 
     {hasRecordingForCurrentLine && !evaluation && evalState !== 'scoring' && (
       <TouchableOpacity style={styles.scoreBtn} onPress={onScoreCurrentLine}>
@@ -85,6 +89,7 @@ export const CompareAudioSection: React.FC<{
         onRetry={onScoreCurrentLine}
         recordingPositionSeconds={recordingPositionSeconds}
         isPlayingRecording={isPlayingRecording}
+        rtl={rtl}
         t={t}
       />
     )}
@@ -92,10 +97,24 @@ export const CompareAudioSection: React.FC<{
 );
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  abCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   abRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingVertical: 8,
   },
   abRowDisabled: {
@@ -105,9 +124,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   abPlayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.audioOriginal,
@@ -121,10 +140,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   compareLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
-    marginBottom: 4,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
   },
   scoreBtn: {
     marginTop: 10,
@@ -134,7 +152,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: '#2F6B57',
   },
   scoreBtnText: {
     color: COLORS.white,

@@ -45,7 +45,10 @@ const scoreColor = (score: number) => {
  * عبارت‌های طبیعی‌تر و نسخه‌ی بهترشده‌ی صحبتش.
  */
 export const TopicSpeakingScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: بستن سمت راست، برچسب‌ها و فهرست‌ها راست‌چین.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -157,7 +160,7 @@ export const TopicSpeakingScreen: React.FC = () => {
         onRecordingStatusUpdate={handleRecordingStatus}
       />
 
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
@@ -182,16 +185,16 @@ export const TopicSpeakingScreen: React.FC = () => {
           <>
             {storyImages.length > 0 && (
               <View style={styles.storyBlock}>
-                <View style={styles.storyBadge}>
+                <View style={[styles.storyBadge, rtl && styles.selfEnd]}>
                   <Text style={styles.storyBadgeText}>🖼 {t('pictureStoryBadge')}</Text>
                 </View>
-                <Text style={styles.storyHint}>{t('pictureStoryHint')}</Text>
+                <Text style={[styles.storyHint, ta]}>{t('pictureStoryHint')}</Text>
                 <StoryPictures images={storyImages} horizontalPadding={SPACING.l} />
               </View>
             )}
             {topic.guide_questions.length > 0 && (
               <View style={[styles.card, styles.ideasCard]}>
-                <Text style={[styles.cardLabel, { color: COLORS.levelIntermediateBg }]}>💡 {t('topicSpeakingGuideTitle')}</Text>
+                <Text style={[styles.cardLabel, styles.cardLabelStrong, ta]}>💡 {t('topicSpeakingGuideTitle')}</Text>
                 {topic.guide_questions.map((q, i) => (
                   <View key={i} style={styles.numberedRow}>
                     <View style={[styles.numDot, { backgroundColor: ACCENT_CYCLE[i % ACCENT_CYCLE.length] }]}>
@@ -203,8 +206,8 @@ export const TopicSpeakingScreen: React.FC = () => {
               </View>
             )}
             {topic.useful_phrases.length > 0 && (
-              <View style={styles.card}>
-                <Text style={[styles.cardLabel, { color: COLORS.pink }]}>✨ {t('topicSpeakingPhrasesTitle')}</Text>
+              <View style={[styles.card, styles.phrasesCard]}>
+                <Text style={[styles.cardLabel, styles.cardLabelAccent, ta]}>✨ {t('topicSpeakingPhrasesTitle')}</Text>
                 <View style={styles.chips}>
                   {topic.useful_phrases.map((p, i) => {
                     const c = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
@@ -413,16 +416,17 @@ export const TopicSpeakingScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  selfEnd: { alignSelf: 'flex-end' },
+  cardLabelStrong: { color: COLORS.text, fontFamily: FONT_FAMILY.bold },
+  cardLabelAccent: { color: '#C2410C', fontFamily: FONT_FAMILY.bold },
+  phrasesCard: { backgroundColor: '#FFFBF5', borderColor: '#F6EAD8' },
   storyBlock: {
     gap: SPACING.s,
   },
-  storyBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
+  storyBadge: { alignSelf: 'flex-start', backgroundColor: '#FDEBE4', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
   storyBadgeText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
@@ -434,11 +438,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-  },
+  container: { flex: 1, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -449,14 +449,7 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
   },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center' },
   content: {
     flexGrow: 1,
     paddingVertical: SPACING.m,
@@ -473,13 +466,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#ECEDF1',
     padding: SPACING.m,
-    gap: 6,
-    ...SHADOWS.level1,
+    gap: 8,
   },
   cardLabel: {
     fontFamily: FONT_FAMILY.semiBold,
@@ -504,10 +496,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  ideasCard: {
-    backgroundColor: hexToRgba(COLORS.levelIntermediateBg, 0.05),
-    borderColor: hexToRgba(COLORS.levelIntermediateBg, 0.2),
-  },
+  ideasCard: { backgroundColor: '#FAFAFB' },
   numberedRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -631,7 +620,10 @@ const styles = StyleSheet.create({
   recordArea: {
     alignItems: 'center',
     gap: SPACING.s,
-    paddingTop: SPACING.s,
+    paddingTop: SPACING.m,
+    marginHorizontal: -SPACING.l,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F3',
   },
   recordBtn: {
     width: 72,

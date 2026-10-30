@@ -24,24 +24,25 @@ const STEP_TABS: { num: 1 | 2 | 3 | 4; key: StepKey }[] = [
 // حد قابل‌قبول است (آبی ~۳.۷:۱ ، نارنجی ~۲:۱). این‌جا چون هم به‌عنوان متن روی
 // سفید هم پس‌زمینه‌ی توپرِ زیرِ آیکون سفید استفاده می‌شوند، از نسخه‌ی تیره‌ترِ
 // همون رنگ‌ها استفاده شده (هر دو بالای ۵:۱، هم‌تراز با primary/tertiary).
-const STEP_LISTEN_BLUE = '#1D4ED8';
-const STEP_RECORD_ORANGE = '#C2410C';
+const STEP_LISTEN_BLUE = '#2453DB';
+const STEP_RECORD_ORANGE = COLORS.primary;
+const STEP_COMPARE_GREEN = '#2F6B57';
 
 export const STEP_ACCENT_COLOR: Record<number, string> = {
   0: STEP_LISTEN_BLUE,
   1: COLORS.primary,
   2: STEP_RECORD_ORANGE,
-  3: COLORS.tertiary,
+  3: STEP_COMPARE_GREEN,
 };
 
 // نسخه‌ی کم‌رنگِ همون رنگ‌ها، برای پس‌زمینه‌ی نرم پشت دکمه‌ها/چیپ‌های فعالِ
 // داخل هر مرحله (همون کاری که COLORS.primaryLight برای بنفش می‌کرد). این‌جا
 // خودِ توکن‌های info/secondary مشکلی ندارند چون فقط پس‌زمینه‌ی رقیقند، نه متن.
 export const STEP_ACCENT_LIGHT_COLOR: Record<number, string> = {
-  0: COLORS.infoLight,
+  0: 'rgba(36, 83, 219, 0.10)',
   1: COLORS.primaryLight,
-  2: COLORS.secondaryLight,
-  3: COLORS.tertiaryLight,
+  2: COLORS.primaryLight,
+  3: 'rgba(47, 107, 87, 0.12)',
 };
 
 /**
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
   },
   segmentedTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingTop: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,13 +113,14 @@ const styles = StyleSheet.create({
   segmentedTabText: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
+    fontSize: 13,
   },
   segmentedTabTextActive: {
     fontFamily: FONT_FAMILY.bold,
   },
   segmentedTabIndicator: {
-    marginTop: 6,
+    marginTop: 10,
+    marginBottom: -1,
     height: 3,
     width: '70%',
     borderRadius: 2,

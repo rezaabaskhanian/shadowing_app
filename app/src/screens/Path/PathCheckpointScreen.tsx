@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mic, Play, Square, X } from 'lucide-react-native';
+import { ArrowLeft, Check, Clock, Lock, Mic, Play, Sparkles, Square, Tag, Target, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -27,6 +27,17 @@ import {
 import { useRecordingLimit } from '../../hooks/useRecordingLimit';
 import { Celebration } from '../../components/Celebration';
 import { track } from '../../services/analytics';
+import { GradientFill } from '../../components/GradientFill';
+
+const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const ORDINAL_FA = ['', 'اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم', 'نهم', 'دهم'];
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+/** «متن اصلی (توضیح)» را به تیتر و زیرنویس جدا می‌کند. */
+const splitPrompt = (p: string) => {
+  const m = p.match(/^(.*?)\s*\((.+)\)\s*$/);
+  return m ? { main: m[1], note: m[2] } : { main: p, note: '' };
+};
 
 type Step =
   | { skill: 'vocabulary'; kind: 'choice'; q: ChoiceQuestion }
@@ -74,7 +85,9 @@ function buildSteps(cp: Checkpoint): Step[] {
  * هیچ‌وقت راه را نمی‌بندد؛ آخرش نمره‌ی هر مهارت و مرورِ پیشنهادی نشان داده می‌شود.
  */
 export const PathCheckpointScreen: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
+  const num = (v: number | string) => (rtl ? toFa(v) : String(v));
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -307,7 +320,7 @@ export const PathCheckpointScreen: React.FC = () => {
         recordingProfile={step?.kind === 'free' ? 'speech' : 'default'}
       />
 
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
@@ -317,45 +330,141 @@ export const PathCheckpointScreen: React.FC = () => {
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
         {started && !result && steps.length > 0 && (
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${((index + 1) / steps.length) * 100}%` }]} />
-          </View>
+          <>
+            <View style={[styles.progressTrack, rtl && styles.rowReverse]}>
+              <View style={[styles.progressFill, { width: `${((index + 1) / steps.length) * 100}%` }]} />
+            </View>
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>
+                {num(index + 1)} / {num(steps.length)}
+              </Text>
+            </View>
+          </>
+        )}
+        {!started && (
+          <>
+            <View style={styles.flex} />
+            {!!weekPosition && (
+              <View style={[styles.stationChip, rtl && styles.rowReverse]}>
+                <View style={styles.stationDot} />
+                <Text style={styles.stationText}>{t('pathCheckpointStation').replace('{n}', num(weekPosition))}</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
 
       {!started && (
-        <View style={styles.center}>
-          <Text style={styles.bigEmoji}>🏁</Text>
-          <Text style={styles.title}>
-            {t('pathCheckpointTitle').replace('{n}', String(weekPosition ?? ''))}
-          </Text>
-          {!!weekTitle && <Text style={styles.subtitle}>{weekTitle}</Text>}
-          <Text style={styles.muted}>{t('pathCheckpointIntro')}</Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setStarted(true)} activeOpacity={0.85}>
-            <Text style={styles.primaryBtnText}>{t('pathCheckpointStart')}</Text>
+        <>
+          <ScrollView contentContainerStyle={styles.introBody} showsVerticalScrollIndicator={false}>
+            <View style={styles.flagWrap}>
+              <View style={styles.flagBox}>
+                <Text style={styles.bigEmoji}>🏁</Text>
+              </View>
+              <Sparkles size={22} color="#F5B73B" fill="#F5B73B" style={styles.sparkTop} />
+              <Sparkles size={12} color="#F5B73B" fill="#F5B73B" style={styles.sparkBottom} />
+            </View>
+            <Text style={styles.introTitle}>
+              {t('pathCheckpointHeadline').replace(
+                '{n}',
+                rtl ? ORDINAL_FA[weekPosition ?? 0] || num(weekPosition ?? '') : String(weekPosition ?? '')
+              )}
+            </Text>
+            {!!weekTitle && (
+              <View style={[styles.weekTag, rtl && styles.rowReverse]}>
+                <Tag size={13} color={COLORS.primary} />
+                <Text style={styles.weekTagText}>{weekTitle}</Text>
+              </View>
+            )}
+            <Text style={styles.introDesc}>{t('pathCheckpointIntro2')}</Text>
+            <View style={styles.infoCard}>
+              {[
+                {
+                  Icon: Clock,
+                  color: COLORS.primary,
+                  bg: 'rgba(232,87,47,0.10)',
+                  label: t('pathCheckpointTime'),
+                  value: t('pathCheckpointTimeValue').replace('{n}', num(Math.max(2, Math.round(steps.length * 0.6)))),
+                },
+                {
+                  Icon: Target,
+                  color: '#E9A23B',
+                  bg: 'rgba(233,162,59,0.14)',
+                  label: t('pathCheckpointCount'),
+                  value: t('pathCheckpointCountValue').replace('{n}', num(steps.length)),
+                },
+                {
+                  Icon: Lock,
+                  color: COLORS.success,
+                  bg: 'rgba(46,158,107,0.12)',
+                  label: t('pathCheckpointRule'),
+                  value: t('pathCheckpointRuleValue'),
+                  good: true,
+                },
+              ].map((r, i) => (
+                <View key={r.label} style={[styles.infoRow, rtl && styles.rowReverse, i > 0 && styles.infoRowBorder]}>
+                  <View style={[styles.infoIcon, { backgroundColor: r.bg }]}>
+                    <r.Icon size={16} color={r.color} />
+                  </View>
+                  <Text style={[styles.infoLabel, rtl && styles.textRight]}>{r.label}</Text>
+                  <View style={[styles.infoValue, r.good && styles.infoValueGood]}>
+                    <Text style={[styles.infoValueText, r.good && styles.infoValueTextGood]}>{r.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+          <TouchableOpacity style={styles.gradBtn} onPress={() => setStarted(true)} activeOpacity={0.85}>
+            <GradientFill from="#F07A4A" to="#E8572F" horizontal />
+            <View style={[styles.btnInner, rtl && styles.rowReverse]}>
+              <Text style={styles.primaryBtnText}>{t('pathCheckpointStartBtn')}</Text>
+              {rtl && <ArrowLeft size={18} color={COLORS.white} />}
+            </View>
           </TouchableOpacity>
-        </View>
+          <Text style={styles.footnote}>{t('pathCheckpointFootnote')}</Text>
+        </>
       )}
 
       {started && !result && step && (
         <>
           <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-            <Text style={styles.skill}>{skillLabel(step.skill)}</Text>
+            <View style={[styles.skillChip, rtl && styles.rowReverse]}>
+              <View style={styles.skillDot} />
+              <Text style={styles.skill}>{skillLabel(step.skill)}</Text>
+            </View>
 
             {step.kind === 'choice' && (
               <>
-                <Text style={styles.prompt}>{step.q.prompt_fa}</Text>
+                <Text style={styles.prompt}>{splitPrompt(step.q.prompt_fa).main}</Text>
+                <Text style={styles.promptSub}>
+                  {[splitPrompt(step.q.prompt_fa).note, t('pathCheckpointChoiceSub')].filter(Boolean).join('، ')}
+                </Text>
                 {step.q.options.map((opt, i) => {
+                  // جواب درست همیشه نارنجی و تیک‌دار؛ اگر کاربر غلط زد، انتخابش قرمز می‌شود.
                   const correct = answered && i === step.q.answer;
                   const wrong = answered && i === picked && i !== step.q.answer;
                   return (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.option, correct && styles.optionCorrect, wrong && styles.optionWrong]}
+                      style={[styles.option, rtl && styles.rowReverse, correct && styles.optionCorrect, wrong && styles.optionWrong]}
                       onPress={() => chooseOption(step.q, i)}
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.optionText}>{opt}</Text>
+                      <View style={[styles.letterBox, correct && styles.letterBoxOn, wrong && styles.letterBoxWrong]}>
+                        <Text style={[styles.letterText, (correct || wrong) && styles.letterTextOn]}>{LETTERS[i]}</Text>
+                      </View>
+                      <Text style={[styles.optionText, rtl && styles.textRight]}>{opt}</Text>
+                      {correct ? (
+                        <View style={styles.radioOn}>
+                          <Check size={13} color={COLORS.white} strokeWidth={3} />
+                        </View>
+                      ) : wrong ? (
+                        <View style={[styles.radioOn, styles.radioWrong]}>
+                          <X size={13} color={COLORS.white} strokeWidth={3} />
+                        </View>
+                      ) : (
+                        <View style={styles.radio} />
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -434,17 +543,21 @@ export const PathCheckpointScreen: React.FC = () => {
               </View>
             )}
             <TouchableOpacity
-              style={[styles.primaryBtn, (!answered || recState !== 'idle' || submitting) && styles.disabled]}
+              style={[styles.gradBtn, (!answered || recState !== 'idle' || submitting) && styles.disabled]}
               onPress={next}
               disabled={!answered || recState !== 'idle' || submitting}
               activeOpacity={0.85}
             >
+              <GradientFill from="#F07A4A" to="#E8572F" horizontal />
               {submitting ? (
                 <ActivityIndicator color={COLORS.white} />
               ) : (
-                <Text style={styles.primaryBtnText}>
-                  {t(index + 1 < steps.length ? 'courseNext' : 'pathCheckpointSubmit')}
-                </Text>
+                <View style={[styles.btnInner, rtl && styles.rowReverse]}>
+                  <Text style={styles.primaryBtnText}>
+                    {t(index + 1 < steps.length ? 'courseNext' : 'pathCheckpointSubmit')}
+                  </Text>
+                  {rtl && <ArrowLeft size={18} color={COLORS.white} />}
+                </View>
               )}
             </TouchableOpacity>
           </View>
@@ -493,8 +606,110 @@ export const PathCheckpointScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.m },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.m },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
+  countPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: '#EEEBE5' },
+  countPillText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.textSecondary },
+  stationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#FFF6E2',
+    borderWidth: 1,
+    borderColor: '#F3E3BC',
+  },
+  stationDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#E9A23B' },
+  stationText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: '#9A6A12' },
+  introBody: { alignItems: 'center', paddingTop: SPACING.xl, paddingBottom: SPACING.l, gap: 14 },
+  flagWrap: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  flagBox: {
+    width: 116,
+    height: 116,
+    borderRadius: 28,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#E9A23B',
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  sparkTop: { position: 'absolute', top: -4, right: -6 },
+  sparkBottom: { position: 'absolute', bottom: 18, left: -4 },
+  introTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, color: COLORS.text, textAlign: 'center' },
+  weekTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#FDF1EC',
+    borderWidth: 1,
+    borderColor: '#F6D3C6',
+  },
+  weekTagText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.primary },
+  introDesc: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 23, color: COLORS.textSecondary, textAlign: 'center' },
+  infoCard: {
+    alignSelf: 'stretch',
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    paddingHorizontal: 16,
+    marginTop: 6,
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
+  infoRowBorder: { borderTopWidth: 1, borderTopColor: '#F1EDE6' },
+  infoIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  infoLabel: { flex: 1, fontFamily: FONT_FAMILY.semiBold, fontSize: 13, color: COLORS.text },
+  infoValue: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: '#F1EEE8' },
+  infoValueGood: { backgroundColor: 'rgba(46,158,107,0.12)' },
+  infoValueText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.text },
+  infoValueTextGood: { color: COLORS.success },
+  gradBtn: {
+    height: 54,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    elevation: 6,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  footnote: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted, textAlign: 'center', marginTop: 8 },
+  skillChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#FDEDE8',
+  },
+  skillDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  promptSub: { fontFamily: FONT_FAMILY.regular, fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: -6, marginBottom: 6 },
+  letterBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#F1EEE8', alignItems: 'center', justifyContent: 'center' },
+  letterBoxOn: { backgroundColor: COLORS.primary },
+  letterBoxWrong: { backgroundColor: COLORS.error },
+  letterText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.textSecondary },
+  letterTextOn: { color: COLORS.white },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#D3CEC5' },
+  radioOn: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  radioWrong: { backgroundColor: COLORS.error },
   closeBtn: {
     width: 40,
     height: 40,
@@ -514,20 +729,22 @@ const styles = StyleSheet.create({
   link: { ...TEXT_STYLES.bodyMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, textAlign: 'center' },
   error: { ...TEXT_STYLES.bodyMd, color: COLORS.error, textAlign: 'center' },
   body: { paddingVertical: SPACING.l, gap: SPACING.m },
-  skill: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, textAlign: 'center' },
-  prompt: { ...TEXT_STYLES.headlineSm, color: COLORS.text, textAlign: 'center' },
+  skill: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.primary },
+  prompt: { fontFamily: FONT_FAMILY.bold, fontSize: 24, lineHeight: 36, color: COLORS.text, textAlign: 'center' },
   option: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 2,
-    borderColor: COLORS.borderLight,
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.m,
-    ...SHADOWS.level1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#EEEAE3',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  optionCorrect: { borderColor: COLORS.success, backgroundColor: COLORS.successLight },
+  optionCorrect: { borderColor: COLORS.primary, backgroundColor: '#FFF4EF' },
   optionWrong: { borderColor: COLORS.error, backgroundColor: COLORS.errorLight },
-  optionText: { ...TEXT_STYLES.bodyLg, color: COLORS.text, textAlign: 'center' },
+  optionText: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text, writingDirection: 'ltr' },
   built: {
     minHeight: 56,
     borderRadius: BORDER_RADIUS.l,

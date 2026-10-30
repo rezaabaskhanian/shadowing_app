@@ -1,11 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BookOpen, Ear, Mic, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, BookOpen, Clock, Mic, TrendingUp, Volume2 } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
-import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
+import { COLORS, SPACING } from '../../theme/colors';
+import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import type { SubmitAssessmentV2Result } from '../../api/assessment';
 
@@ -40,21 +39,31 @@ export const PlacementResultV2Screen: React.FC<Props> = ({ result, onContinue })
   const prev = result.previous;
   const vocabGain = prev ? result.vocab_size - prev.vocab_size : 0;
 
+  const rr = language === 'fa' ? styles.rowReverse : null;
   return (
+    <View style={styles.screen}>
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + SPACING.l, paddingBottom: insets.bottom + SPACING.l }]}
+      style={styles.flex1}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + SPACING.l, paddingBottom: SPACING.l }]}
     >
+      <View style={styles.badgeChip}>
+        <Text style={styles.badgeChipText}>★ {t('placementV2ResultBadge')}</Text>
+      </View>
       <Text style={styles.title}>{t('placementV2ResultTitle')}</Text>
 
-      <View style={styles.row}>
-        <View style={[styles.levelCard, { borderColor: COLORS.info }]}>
-          <Ear size={22} color={COLORS.info} />
+      {/* فهمیدن و صحبت: دو کارت هم‌اندازه با سطح بزرگ */}
+      <View style={[styles.row, rr]}>
+        <View style={[styles.levelCard, styles.levelBlue]}>
+          <View style={[styles.levelIcon, { backgroundColor: '#E8EEFD' }]}>
+            <Volume2 size={20} color="#3B6EF0" />
+          </View>
           <Text style={styles.levelLabel}>{t('placementV2Comprehension')}</Text>
-          <Text style={[styles.levelValue, { color: COLORS.info }]}>{result.comprehension_level}</Text>
+          <Text style={[styles.levelValue, { color: '#3B6EF0' }]}>{result.comprehension_level}</Text>
         </View>
-        <View style={[styles.levelCard, { borderColor: COLORS.primary }]}>
-          <Mic size={22} color={COLORS.primary} />
+        <View style={[styles.levelCard, styles.levelOrange]}>
+          <View style={[styles.levelIcon, { backgroundColor: '#FDEBE4' }]}>
+            <Mic size={20} color={COLORS.primary} />
+          </View>
           <Text style={styles.levelLabel}>{t('placementV2Speaking')}</Text>
           <Text style={[styles.levelValue, { color: COLORS.primary }]}>
             {result.speaking_measured ? result.speaking_level : '—'}
@@ -63,17 +72,19 @@ export const PlacementResultV2Screen: React.FC<Props> = ({ result, onContinue })
       </View>
 
       {result.vocab_valid && (
-        <View style={styles.infoCard}>
-          <BookOpen size={20} color={COLORS.secondary} />
-          <Text style={styles.infoText}>
-            {t('placementV2VocabSize').replace('{n}', num(result.vocab_size))}
-          </Text>
+        <View style={[styles.infoCard, rr]}>
+          <View style={styles.infoIcon}>
+            <BookOpen size={18} color="#C98A12" />
+          </View>
+          <Text style={styles.infoText}>{t('placementV2VocabSize').replace('{n}', num(result.vocab_size))}</Text>
         </View>
       )}
 
       {prev && (
-        <View style={[styles.infoCard, { borderColor: COLORS.success }]}>
-          <TrendingUp size={20} color={COLORS.success} />
+        <View style={[styles.infoCard, rr, styles.infoGood]}>
+          <View style={[styles.infoIcon, { backgroundColor: '#E3F4EB' }]}>
+            <TrendingUp size={18} color={COLORS.success} />
+          </View>
           <Text style={styles.infoText}>
             {t('placementV2Progress')
               .replace('{before}', num(prev.vocab_size))
@@ -86,9 +97,11 @@ export const PlacementResultV2Screen: React.FC<Props> = ({ result, onContinue })
       )}
 
       <View style={styles.startCard}>
-        <Text style={styles.startLabel}>{t('placementV2StartAt')}</Text>
+        <View style={styles.startChip}>
+          <Text style={styles.startChipText}>{t('placementV2StartAt')}</Text>
+        </View>
         <Text style={styles.startValue}>
-          {startLabel} · {result.level}
+          {startLabel} • {result.level}
         </Text>
         <Text style={styles.startWhy}>
           {droppedForSpeaking ? t('placementV2WhySpeaking') : t('placementV2WhyComprehension')}
@@ -106,100 +119,48 @@ export const PlacementResultV2Screen: React.FC<Props> = ({ result, onContinue })
           </Text>
         </View>
       ) : null}
-
-      <Text style={styles.retestNote}>{t('placementV2RetestNote')}</Text>
-
-      <TouchableOpacity style={styles.continueBtn} onPress={onContinue} activeOpacity={0.85}>
-        <Text style={styles.continueBtnText}>{t('placementV2StartPathBtn')}</Text>
-      </TouchableOpacity>
     </ScrollView>
+    <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.m }]}>
+      <View style={[styles.retestRow, rr]}>
+        <Clock size={13} color={COLORS.muted} />
+        <Text style={styles.retestNote}>{t('placementV2RetestNote')}</Text>
+      </View>
+      <TouchableOpacity style={[styles.continueBtn, rr]} onPress={onContinue} activeOpacity={0.85}>
+        <Text style={styles.continueBtnText}>{t('placementV2StartPathBtn')}</Text>
+        {language === 'fa' ? <ArrowLeft size={18} color={COLORS.white} /> : <ArrowRight size={18} color={COLORS.white} />}
+      </TouchableOpacity>
+    </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: SPACING.l,
-    gap: SPACING.m,
-  },
-  title: {
-    ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-  },
-  levelCard: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1.5,
-    paddingVertical: SPACING.l,
-    ...SHADOWS.level1,
-  },
-  levelLabel: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.textSecondary,
-  },
-  levelValue: {
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 30,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
-  },
-  infoText: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.text,
-    flex: 1,
-    lineHeight: 24,
-  },
-  startCard: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  startLabel: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.primary,
-  },
-  startValue: {
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 22,
-    color: COLORS.primary,
-  },
-  startWhy: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  retestNote: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.muted,
-    textAlign: 'center',
-  },
-  continueBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
-    alignItems: 'center',
-  },
-  continueBtnText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-  },
+  screen: { flex: 1, backgroundColor: '#FBFAF7' },
+  flex1: { flex: 1 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  container: { paddingHorizontal: SPACING.l, gap: 14, alignItems: 'stretch' },
+  badgeChip: { alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: '#F2F0EC' },
+  badgeChipText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 11, color: COLORS.textSecondary },
+  title: { fontFamily: FONT_FAMILY.bold, fontSize: 24, color: COLORS.text, textAlign: 'center', marginBottom: 6 },
+  row: { flexDirection: 'row', gap: 12 },
+  levelCard: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 18, borderRadius: 20, borderWidth: 1.5, backgroundColor: COLORS.white },
+  levelBlue: { borderColor: '#C9D8FA' },
+  levelOrange: { borderColor: '#F6CDB9' },
+  levelIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  levelLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.textSecondary },
+  levelValue: { fontFamily: FONT_FAMILY.bold, fontSize: 30 },
+  infoCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#F3E7C8', backgroundColor: '#FFFCF3' },
+  infoGood: { borderColor: '#CDEBDA', backgroundColor: '#F2FAF5' },
+  infoIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FBF0D2', alignItems: 'center', justifyContent: 'center' },
+  infoText: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 13, lineHeight: 21, color: COLORS.text, textAlign: 'right' },
+  startCard: { alignItems: 'center', gap: 8, padding: 18, borderRadius: 20, borderWidth: 1, borderColor: '#F6DDD0', backgroundColor: '#FFF5F0' },
+  startChip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: '#FDE3D6' },
+  startChipText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 11, color: '#C2410C' },
+  startValue: { fontFamily: FONT_FAMILY.bold, fontSize: 20, color: COLORS.primary },
+  startWhy: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'center' },
+  footer: { paddingHorizontal: SPACING.l, paddingTop: SPACING.s, gap: 12 },
+  retestRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  retestNote: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  continueBtn: { flexDirection: 'row', gap: 10, height: 54, borderRadius: 16, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: '#B8481F' },
+  continueBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.white },
 });

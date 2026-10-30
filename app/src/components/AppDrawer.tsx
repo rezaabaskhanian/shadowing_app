@@ -15,6 +15,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import {
   Bell,
   BookOpen,
+  ChevronLeft,
   ChevronRight,
   Clapperboard,
   BookMarked,
@@ -91,7 +92,10 @@ export const AppDrawer = ({
 }: AppDrawerProps) => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: آیکون‌ها و آواتار سمت راست، متن‌ها راست‌چین، فلش‌ها به چپ.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
   const { user, logout } = useAuth();
   const { scenes } = useScenes();
   const toast = useToast();
@@ -192,11 +196,11 @@ export const AppDrawer = ({
           </TouchableOpacity> */}
 
           {/* User summary */}
-          <View style={styles.userIdentity}>
+          <View style={[styles.userIdentity, rtl && styles.rowReverse]}>
             <View style={styles.avatarCircle}>
               <UserIcon size={22} color={COLORS.primary} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
               <Text style={styles.userName} numberOfLines={1}>
                 {user?.nickname || ''}
               </Text>
@@ -212,21 +216,21 @@ export const AppDrawer = ({
 
           {/* My Points banner */}
           <TouchableOpacity
-            style={styles.pointsCard}
+            style={[styles.pointsCard, rtl && styles.rowReverse]}
             activeOpacity={0.85}
             onPress={() => go('MySubmissions')}
           >
             <View style={styles.pointsIconWrap}>
               <Coins color={COLORS.secondary} size={22} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pointsValue}>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.pointsValue, ta]}>
                 {points} · {t('myPoints')}
               </Text>
               {/* با امتیاز صفر، به‌جای قانون تبدیل، راه گرفتن امتیاز را می‌گوییم. */}
-              <Text style={styles.pointsSub}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
+              <Text style={[styles.pointsSub, ta]}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
             </View>
-            <ChevronRight color={COLORS.muted} size={18} />
+            {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
           </TouchableOpacity>
 
           <View style={styles.dividerLine} />
@@ -239,43 +243,43 @@ export const AppDrawer = ({
           <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
           {/* سه گروه با تیتر کوچک: یادگیری روزانه، تمرین بیشتر، پشتیبانی. قبلاً ۱۱ ردیف هم‌وزن
               پشت هم بود و کاربر تازه‌کار نمی‌فهمید از کجا شروع کند. */}
-          <Text style={styles.groupTitle}>{t('drawerGroupLearn')}</Text>
+          <Text style={[styles.groupTitle, ta]}>{t('drawerGroupLearn')}</Text>
 
           {/* هر ردیف رنگ اختصاصی خودش را دارد — هم برای تشخیص سریع‌تر، هم تا
               وقتی از این ردیف وارد صفحه‌اش می‌شوی، همون رنگ آنجا هم ادامه پیدا
               کند (زبانه سبز → صفحه‌ی عادت زبانی هم لهجه‌ی سبز دارد، و…). */}
           <TouchableOpacity
-            style={styles.row}
+            style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
             onPress={() => go('LanguageHabit')}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
               <Target color={COLORS.tertiary} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('habitRealSituations')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('habitRealSituations')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('GoalPlan')}>
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('GoalPlan')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.warningLight }]}>
               <Flag color={COLORS.warning} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('goalPlanTitle')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('goalPlanTitle')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.row}
+            style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
             onPress={handleOpenConversation}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
               <MessageCircle color={COLORS.primary} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('drawerConversationTitle')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('drawerConversationTitle')}</Text>
           </TouchableOpacity>
 
           {onOpenPlacementTest && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => {
                 onClose();
@@ -285,151 +289,151 @@ export const AppDrawer = ({
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
                 <Mic color={COLORS.primary} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('placementDrawerTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('placementDrawerTitle')}</Text>
             </TouchableOpacity>
           )}
 
 
           {available.course && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => go('CourseHome')}
             >
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
                 <Sprout color={COLORS.success} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('courseTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('courseTitle')}</Text>
             </TouchableOpacity>
           )}
 
-          <Text style={styles.groupTitle}>{t('drawerGroupPractice')}</Text>
+          <Text style={[styles.groupTitle, ta]}>{t('drawerGroupPractice')}</Text>
 
           {available.videoClips && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => go('VideoClipList')}
             >
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
                 <Clapperboard color={COLORS.error} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('videoClipsTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('videoClipsTitle')}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('StoryList')}>
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('StoryList')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
               <BookOpen color={COLORS.levelIntermediateBg} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('storyTitle')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('storyTitle')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SongList')}>
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('SongList')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.errorLight }]}>
               <Music color={COLORS.pink} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('songTitle')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('songTitle')}</Text>
           </TouchableOpacity>
 
           {available.podcasts && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => go('PodcastList')}
             >
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
                 <Headphones color={COLORS.primary} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('podcastTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('podcastTitle')}</Text>
             </TouchableOpacity>
           )}
 
           {available.podcasts && (
-            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('DictationList')}>
+            <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('DictationList')}>
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.successLight }]}>
                 <SpellCheck color={COLORS.success} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('dictationTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('dictationTitle')}</Text>
             </TouchableOpacity>
           )}
 
           {available.writing && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => go('WritingList')}
             >
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
                 <PenLine color={COLORS.info} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('writingTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('writingTitle')}</Text>
             </TouchableOpacity>
           )}
 
           {available.interview && (
-            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('InterviewList')}>
+            <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('InterviewList')}>
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
                 <Briefcase color={COLORS.primary} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('interviewTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('interviewTitle')}</Text>
             </TouchableOpacity>
           )}
 
           {available.specialty && (
-            <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SpecialtyHub')}>
+            <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('SpecialtyHub')}>
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
                 <BookMarked color={COLORS.levelAdvancedBg} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('specialtyTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('specialtyTitle')}</Text>
             </TouchableOpacity>
           )}
 
           {available.topicSpeaking && (
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, rtl && styles.rowReverse]}
               activeOpacity={0.7}
               onPress={() => go('TopicList')}
             >
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
                 <Mic color={COLORS.secondary} size={18} />
               </View>
-              <Text style={styles.rowText}>{t('topicSpeakingTitle')}</Text>
+              <Text style={[styles.rowText, ta]}>{t('topicSpeakingTitle')}</Text>
             </TouchableOpacity>
           )}
 
-          <Text style={styles.groupTitle}>{t('drawerGroupSupport')}</Text>
+          <Text style={[styles.groupTitle, ta]}>{t('drawerGroupSupport')}</Text>
 
           {/* پیشنهاد یک صحنه قبلاً بنر بالای لیست صحنه‌ها بود و جلوی شروع تمرین را می‌گرفت. */}
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('SubmitScene')}>
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('SubmitScene')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
               <PlusCircle color={COLORS.primary} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('submitSceneTitle')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('submitSceneTitle')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.row}
+            style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
             onPress={() => go('TopicSuggestion')}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.warningLight }]}>
               <Lightbulb color={COLORS.warning} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('habitSuggestTopic')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('habitSuggestTopic')}</Text>
           </TouchableOpacity>
 
           {/* پیشنهادات/انتقادات قبلاً ردیف جدا داشت؛ چون هر دو یک راه ارتباط
               با تیم‌اند، حالا زیر همین «ارتباط با ما» یکی شدند. */}
           <TouchableOpacity
-            style={styles.row}
+            style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
             onPress={() => go('ContactUs')}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
               <Mail color={COLORS.info} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('habitContactUs')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('habitContactUs')}</Text>
           </TouchableOpacity>
 
 
@@ -437,13 +441,13 @@ export const AppDrawer = ({
 
           {/* رضایت صریح کاربر برای پوش یادآوری استریک — پیش‌فرض خاموش. طلایی
               چون هم‌رنگ شعله‌ی استریکه، نه چون CTA اصلیه. */}
-          <View style={styles.streakReminderRow}>
+          <View style={[styles.streakReminderRow, rtl && styles.rowReverse]}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.secondaryLight }]}>
               <Bell color={COLORS.secondary} size={18} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowText}>{t('streakReminderTitle')}</Text>
-              <Text style={styles.streakReminderSub}>{t('streakReminderSub')}</Text>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.rowText, ta]}>{t('streakReminderTitle')}</Text>
+              <Text style={[styles.streakReminderSub, ta]}>{t('streakReminderSub')}</Text>
             </View>
             <Switch
               value={streakReminderEnabled}
@@ -456,13 +460,13 @@ export const AppDrawer = ({
 
           {/* رضایت صریح کاربر برای پوش یادآوری کلمه‌های سررسیده‌ی لایتنر —
               پیش‌فرض خاموش، عیناً هم‌الگوی یادآوری استریک بالا. */}
-          <View style={styles.streakReminderRow}>
+          <View style={[styles.streakReminderRow, rtl && styles.rowReverse]}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.infoLight }]}>
               <BookOpen color={COLORS.info} size={18} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowText}>{t('vocabReminderTitle')}</Text>
-              <Text style={styles.streakReminderSub}>{t('vocabReminderSub')}</Text>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.rowText, ta]}>{t('vocabReminderTitle')}</Text>
+              <Text style={[styles.streakReminderSub, ta]}>{t('vocabReminderSub')}</Text>
             </View>
             <Switch
               value={vocabReminderEnabled}
@@ -475,13 +479,13 @@ export const AppDrawer = ({
 
           {/* رضایت صریح کاربر برای پوش گزارش هفتگیِ پیشرفت گفتاری — پیش‌فرض
               خاموش، عیناً هم‌الگوی یادآوری استریک/واژگان بالا. */}
-          <View style={styles.streakReminderRow}>
+          <View style={[styles.streakReminderRow, rtl && styles.rowReverse]}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
               <TrendingUp color={COLORS.tertiary} size={18} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowText}>{t('weeklyDigestTitle')}</Text>
-              <Text style={styles.streakReminderSub}>{t('weeklyDigestSub')}</Text>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.rowText, ta]}>{t('weeklyDigestTitle')}</Text>
+              <Text style={[styles.streakReminderSub, ta]}>{t('weeklyDigestSub')}</Text>
             </View>
             <Switch
               value={weeklyDigestEnabled}
@@ -496,13 +500,13 @@ export const AppDrawer = ({
               ممکن است اشتباه کند). سطح تعیین می‌کند کدام صحنه‌ها دیده شوند. */}
           {myLevel && (
             <View style={styles.goalRow}>
-              <View style={styles.streakReminderRow}>
+              <View style={[styles.streakReminderRow, rtl && styles.rowReverse]}>
                 <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
                   <GraduationCap color={COLORS.primary} size={18} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowText}>{t('myLevelTitle')}</Text>
-                  <Text style={styles.streakReminderSub}>
+                <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                  <Text style={[styles.rowText, ta]}>{t('myLevelTitle')}</Text>
+                  <Text style={[styles.streakReminderSub, ta]}>
                     {myLevel.source === 'manual'
                       ? t('myLevelSourceManual')
                       : myLevel.source === 'test'
@@ -517,7 +521,7 @@ export const AppDrawer = ({
                   </Text>
                 </View>
               </View>
-              <View style={styles.goalPillGroup}>
+              <View style={[styles.goalPillGroup, rtl && styles.rowReverse]}>
                 {SCENE_LEVELS.map((opt) => (
                   <TouchableOpacity
                     key={opt.id}
@@ -536,7 +540,7 @@ export const AppDrawer = ({
               </View>
               {myLevel.source === 'manual' && myLevel.test_scene_level ? (
                 <TouchableOpacity disabled={savingLevel} onPress={() => changeLevel('')} hitSlop={8}>
-                  <Text style={styles.levelResetLink}>{t('myLevelResetToTest')}</Text>
+                  <Text style={[styles.levelResetLink, ta]}>{t('myLevelResetToTest')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -548,16 +552,16 @@ export const AppDrawer = ({
               Today's Mission، نه فیلتر. توگل نیست چون تک‌انتخابی از چند
               گزینه‌ی ثابت است، عیناً هم‌الگوی contentSource در تنظیمات نوتیف. */}
           <View style={styles.goalRow}>
-            <View style={styles.streakReminderRow}>
+            <View style={[styles.streakReminderRow, rtl && styles.rowReverse]}>
               <View style={[styles.rowIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
                 <Compass color={COLORS.tertiary} size={18} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowText}>{t('learningGoalTitle')}</Text>
-                <Text style={styles.streakReminderSub}>{t('learningGoalSub')}</Text>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.rowText, ta]}>{t('learningGoalTitle')}</Text>
+                <Text style={[styles.streakReminderSub, ta]}>{t('learningGoalSub')}</Text>
               </View>
             </View>
-            <View style={styles.goalPillGroup}>
+            <View style={[styles.goalPillGroup, rtl && styles.rowReverse]}>
               {(
                 [
                   { id: '', label: t('learningGoalNone') },
@@ -586,16 +590,16 @@ export const AppDrawer = ({
 
           <View style={styles.dividerLine} />
 
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => go('HelpFaq')}>
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('HelpFaq')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
               <HelpCircle color={COLORS.primary} size={18} />
             </View>
-            <Text style={styles.rowText}>{t('helpFaq')}</Text>
+            <Text style={[styles.rowText, ta]}>{t('helpFaq')}</Text>
           </TouchableOpacity>
           </ScrollView>
 
           <TouchableOpacity
-            style={styles.row}
+            style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
             onPress={() => {
               onClose();
@@ -603,7 +607,7 @@ export const AppDrawer = ({
             }}
           >
             <LogOut color={COLORS.error} size={18} />
-            <Text style={[styles.rowText, { color: COLORS.error }]}>{t('logout')}</Text>
+            <Text style={[styles.rowText, styles.logoutText]}>{t('logout')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -612,20 +616,20 @@ export const AppDrawer = ({
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
+  flex1: { flex: 1 },
+  logoutText: { color: COLORS.error },
   overlay: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  drawer: {
-    width: DRAWER_WIDTH,
-    height: '100%',
-    backgroundColor: COLORS.surface,
-    paddingTop: 56,
-    paddingHorizontal: SPACING.m,
-    paddingBottom: SPACING.l,
-  },
+  drawer: { width: DRAWER_WIDTH, height: '100%', backgroundColor: '#FBFAF7', paddingTop: 56, paddingHorizontal: SPACING.m, paddingBottom: SPACING.l },
   closeBtn: {
     position: 'absolute',
     top: 16,
@@ -643,28 +647,14 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 16,
   },
-  avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  avatarCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFEFE6', borderWidth: 2, borderColor: '#FFE1D2', alignItems: 'center', justifyContent: 'center' },
   userName: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
     flexShrink: 1,
   },
-  levelChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 4,
-  },
+  levelChip: { backgroundColor: '#FDEBE4', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4 },
   levelChipText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
@@ -674,19 +664,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EEEEF2',
     padding: 14,
     marginBottom: 16,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
-  pointsIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  pointsIconWrap: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#FFF4DE', alignItems: 'center', justifyContent: 'center' },
   pointsValue: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -701,11 +691,7 @@ const styles = StyleSheet.create({
   menuScroll: {
     flex: 1,
   },
-  dividerLine: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 12,
-  },
+  dividerLine: { height: 1, backgroundColor: '#ECEAE4', marginVertical: 12 },
   groupTitle: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
@@ -724,24 +710,9 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-  },
-  rowText: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 14,
-  },
-  rowIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  rowText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 14 },
+  rowIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   streakReminderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -768,14 +739,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
-  goalPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
+  goalPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: '#E6E3DC', backgroundColor: COLORS.white },
   goalPillActive: {
     borderColor: COLORS.tertiary,
     backgroundColor: COLORS.tertiaryLight,

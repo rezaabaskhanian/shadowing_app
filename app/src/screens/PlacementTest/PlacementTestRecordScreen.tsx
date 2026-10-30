@@ -5,7 +5,6 @@ import { Mic, RotateCcw, Square, Volume2, CircleX, Headphones, MessageCircle } f
 
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { ensureMicPermission } from '../../services/micPermission';
@@ -346,15 +345,14 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
                 .replace('{total}', String(items.length))}
             </Text>
             <View style={styles.progressDots}>
-              {items.map((item, i) => (
+              {items.map((_item, i) => (
                 <View
                   key={i}
                   style={[
                     styles.dot,
-                    i <= currentIndex && {
-                      backgroundColor: KIND_META[item.kind].color,
-                      width: i === currentIndex ? 20 : 8,
-                    },
+                    // طرح: نقطه‌های خاکستری، فعلی یک نوار نارنجی بلندتر.
+                    i < currentIndex && { backgroundColor: '#F2B9A4' },
+                    i === currentIndex && { backgroundColor: COLORS.primary, width: 22 },
                   ]}
                 />
               ))}
@@ -491,12 +489,7 @@ export const PlacementTestRecordScreen: React.FC<PlacementTestRecordScreenProps>
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-    justifyContent: 'space-between',
-  },
+  container: { flex: 1, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l },
   centerBox: {
     flex: 1,
     alignItems: 'center',
@@ -519,10 +512,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
-  progressRow: {
-    alignItems: 'center',
-    gap: SPACING.s,
-  },
+  progressRow: { alignItems: 'center', gap: 10 },
   progressText: {
     ...TEXT_STYLES.labelMd,
     color: COLORS.textSecondary,
@@ -537,44 +527,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: COLORS.border,
   },
-  promptCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.l,
-    marginTop: SPACING.l,
-    alignItems: 'center',
-    ...SHADOWS.level1,
-  },
-  kickerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
-    marginBottom: SPACING.s,
-  },
+  promptCard: { marginTop: SPACING.l, alignItems: 'center', gap: 14, padding: SPACING.l, borderRadius: 24, borderWidth: 1, borderColor: '#F1ECE4', backgroundColor: '#FBF9F6' },
+  kickerPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   kicker: {
     ...TEXT_STYLES.labelSm,
     textTransform: 'uppercase',
   },
-  promptText: {
-    ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  playRefBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.m,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.full,
-  },
+  promptText: { fontFamily: FONT_FAMILY.bold, fontSize: 16, lineHeight: 28, color: COLORS.text, textAlign: 'center' },
+  playRefBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: '#FDEBE4' },
   playRefBtnText: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.semiBold,
@@ -605,15 +565,7 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     backgroundColor: COLORS.error,
   },
-  recordBtn: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.level2,
-  },
+  recordBtn: { width: 92, height: 92, borderRadius: 46, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   recordBtnActive: {
     backgroundColor: COLORS.error,
   },
@@ -626,10 +578,7 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.labelSm,
     color: COLORS.muted,
   },
-  recordHint: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.textSecondary,
-  },
+  recordHint: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text, marginTop: 10 },
   recordedActions: {
     flexDirection: 'row',
     gap: SPACING.m,
@@ -663,15 +612,8 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 14,
   },
-  confirmBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
-    alignItems: 'center',
-  },
-  confirmBtnDisabled: {
-    backgroundColor: COLORS.border,
-  },
+  confirmBtn: { height: 54, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  confirmBtnDisabled: { backgroundColor: '#E6E3DC' },
   confirmBtnText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,

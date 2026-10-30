@@ -32,6 +32,7 @@ import {
   Layers,
   Music,
   ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { type BentoItem } from '../components/BentoGrid';
 import { HomeGroup, type HomeGroupTab } from '../components/HomeGroup';
@@ -131,6 +132,8 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const { scenes, reload: reloadScenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
+  // خانه در فارسی راست‌به‌چپ چیده می‌شود (تیترها راست، لینک «همه» چپ).
+  const rtl = language === 'fa';
   const { user } = useAuth();
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [streak, setStreak] = React.useState(0);
@@ -758,38 +761,34 @@ export const HomeScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER TOP ROW */}
+        {/* HEADER: بالا دکمه‌ی منو و کپسول‌های زبان/استریک، زیرش سلام و تیتر. */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting} numberOfLines={2}>
-              {t(getGreetingKey())}
-              {nameSuffix}
-            </Text>
-            <Text style={styles.headerTitle}>{t('readyToStepIn')}</Text>
-          </View>
-
-          {/* روی ردیف جدا و زیر متن، نه کنارش — وگرنه با اسمِ بلند، دکمه‌ی
-              باز کردنِ دراور از صفحه بیرون می‌افتاد. */}
           <View style={styles.headerActions}>
-            {/* Language Selector */}
-            <TouchableOpacity style={styles.langBadge} onPress={toggleLanguage}>
-              <Globe size={14} color={COLORS.primary} />
-              <Text style={styles.langBadgeText}>{language.toUpperCase()}</Text>
-            </TouchableOpacity>
-
-            {/* Streak Badge — لمس برای توضیح معنای استریک */}
-            <TouchableOpacity style={styles.streakBadge} onPress={() => setStreakInfoVisible(true)}>
-              <Flame size={16} color={COLORS.secondary} fill={COLORS.secondary} />
-              <Text style={styles.streakText}>{streak}</Text>
-            </TouchableOpacity>
-
-            {/* نشان XP از سربرگ برداشته شد تا سربرگ خلوت شود (XP در صفحه‌ی پیشرفت هست). */}
-
             {/* Drawer Trigger */}
             <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
-              <Menu size={18} color={COLORS.text} />
+              <Menu size={20} color={COLORS.text} />
             </TouchableOpacity>
+
+            <View style={styles.headerPills}>
+              {/* Language Selector */}
+              <TouchableOpacity style={styles.langBadge} onPress={toggleLanguage}>
+                <Text style={styles.langBadgeText}>{language.toUpperCase()}</Text>
+                <Globe size={13} color={COLORS.muted} />
+              </TouchableOpacity>
+
+              {/* Streak Badge — لمس برای توضیح معنای استریک */}
+              <TouchableOpacity style={styles.streakBadge} onPress={() => setStreakInfoVisible(true)}>
+                <Text style={styles.streakText}>{streak}</Text>
+                <Flame size={15} color={COLORS.secondary} fill={COLORS.secondary} />
+              </TouchableOpacity>
+            </View>
           </View>
+
+          <Text style={[styles.greeting, rtl && styles.textRight]} numberOfLines={2}>
+            {t(getGreetingKey())}
+            {nameSuffix}
+          </Text>
+          <Text style={[styles.headerTitle, rtl && styles.textRight]}>{t('readyToStepIn')}</Text>
         </View>
 
         <AppDrawer
@@ -976,55 +975,63 @@ export const HomeScreen = () => {
         {/* مسیرهای فرعی (برنامه‌ی هدف، تست دوباره، تمرین فعل) لینک‌های متنی کوچک زیر کارت اصلی‌اند،
             نه کارت‌های هم‌وزن آن؛ تا «ادامه‌ی جلسه» تنها اقدام اصلی صفحه بماند. */}
         <View style={styles.sideLinks}>
-          <TouchableOpacity style={styles.sideLink} onPress={() => navigation.navigate('GoalPlan')} hitSlop={6}>
-            <Flag size={15} color={COLORS.textSecondary} />
-            <Text style={styles.sideLinkText} numberOfLines={1}>
+          <TouchableOpacity style={[styles.sideLink, rtl && styles.rowReverse]} onPress={() => navigation.navigate('GoalPlan')} activeOpacity={0.85}>
+            <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.primaryLight }]}>
+              <Flag size={16} color={COLORS.primary} />
+            </View>
+            <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>
               {goalPlan
                 ? `${t('goalPlanTitle')} · ${t('goalPlanReadyOf')
                     .replace('{a}', String(goalPlan.ready))
                     .replace('{b}', String(goalPlan.in_plan_count))}`
                 : t('goalPlanHomeTitle')}
             </Text>
-            <ChevronLeft size={15} color={COLORS.primary} />
+            {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
           </TouchableOpacity>
           {retestDue && (
             <TouchableOpacity
-              style={styles.sideLink}
+              style={[styles.sideLink, rtl && styles.rowReverse]}
               onPress={() => {
                 track('retest_card_tap');
                 setPlacementModalVisible(true);
               }}
-              hitSlop={6}
+              activeOpacity={0.85}
             >
-              <TrendingUp size={15} color={COLORS.textSecondary} />
-              <Text style={styles.sideLinkText} numberOfLines={1}>{t('retestLink')}</Text>
-              <ChevronLeft size={15} color={COLORS.primary} />
+              <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.infoLight }]}>
+                <TrendingUp size={16} color={COLORS.info} />
+              </View>
+              <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>{t('retestLink')}</Text>
+              {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
             </TouchableOpacity>
           )}
           {pendingVerb && (
             <TouchableOpacity
-              style={styles.sideLink}
+              style={[styles.sideLink, rtl && styles.rowReverse]}
               onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
-              hitSlop={6}
+              activeOpacity={0.85}
             >
-              <Layers size={15} color={COLORS.textSecondary} />
-              <Text style={styles.sideLinkText} numberOfLines={1}>
+              <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.successLight }]}>
+                <Layers size={16} color={COLORS.success} />
+              </View>
+              <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>
                 {t('verbPendingTitle').replace('{verb}', pendingVerb.lemma)}
               </Text>
-              <ChevronLeft size={15} color={COLORS.primary} />
+              {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
             </TouchableOpacity>
           )}
         </View>
 
         {/* کارت‌های سریع «سایه‌زنی» و «لایتنر» برداشته شدند؛ هر دو در نوار پایین هستند. */}
         {/* ادامه‌ی یادگیری: صحنه‌های سطح (و قدم اول برای مبتدی)، با یک لینک «مسیر کامل». */}
-        <HomeGroup title={t('homeGroupLearn')} tabs={learnTabs} allLabel={t('homeSeeAll')} />
+        {/* دو کارت کنار هم (بدون اسکرول)، مثل طرح. */}
+        <HomeGroup title={t('homeGroupLearn')} tabs={learnTabs} allLabel={t('homeSeeAll')} rtl={rtl} twoUp />
 
-        {/* برای امروز: یک پادکست و یک داستان با عکس */}
+        {/* پیشنهاد امروز: یک پادکست و یک داستان با عکس؛ هر کارت یک خط زیرعنوان یکدست دارد
+            (نوع · مدت یا فصل) تا کاربر بداند چرا اینجاست و چقدر وقت می‌برد. */}
         {(todayPodcast || todayStory) && (
           <View style={styles.todayPicksCard}>
-            <Text style={styles.homeCardTitle}>{t('homeForToday')}</Text>
-            <View style={styles.todayPicksRow}>
+            <Text style={[styles.homeCardTitle, rtl ? styles.textRight : styles.textLeft]}>{t('homeForToday')}</Text>
+            <View style={[styles.todayPicksRow, rtl && styles.rowReverse]}>
               {todayPodcast && (
                 <TouchableOpacity
                   style={styles.todayPick}
@@ -1036,14 +1043,22 @@ export const HomeScreen = () => {
                     style={styles.todayPickImage}
                     imageStyle={styles.todayPickImageRadius}
                   >
-                    <View style={styles.todayPickKind}>
-                      <Headphones size={13} color={COLORS.white} />
+                    <View style={[styles.todayPickKind, rtl ? styles.selfEnd : styles.selfStart, rtl && styles.rowReverse]}>
+                      <Headphones size={12} color={COLORS.white} />
                       <Text style={styles.todayPickKindText}>{t('homePickPodcast')}</Text>
                     </View>
                   </ImageBackground>
-                  <Text style={styles.todayPickTitle} numberOfLines={2}>
-                    {todayPodcast.title}
-                  </Text>
+                  <View style={[styles.todayPickBody, rtl ? styles.alignEnd : styles.alignStart]}>
+                    <Text style={styles.todayPickTitle} numberOfLines={1}>
+                      {todayPodcast.title}
+                    </Text>
+                    <Text style={styles.todayPickSub} numberOfLines={1}>
+                      {t('homePickPodcast')}
+                      {todayPodcast.duration_seconds > 0
+                        ? ` · ${t('homePickMinutes').replace('{n}', String(Math.max(1, Math.round(todayPodcast.duration_seconds / 60))))}`
+                        : ''}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
               {todayStory && (
@@ -1057,28 +1072,30 @@ export const HomeScreen = () => {
                     style={styles.todayPickImage}
                     imageStyle={styles.todayPickImageRadius}
                   >
-                    <View style={styles.todayPickKind}>
-                      <BookOpen size={13} color={COLORS.white} />
+                    <View style={[styles.todayPickKind, rtl ? styles.selfEnd : styles.selfStart, rtl && styles.rowReverse]}>
+                      <BookOpen size={12} color={COLORS.white} />
                       <Text style={styles.todayPickKindText}>{t('homePickStory')}</Text>
                     </View>
-                    {/* اسم داستان روی خودِ عکس، روی نوار تیره تا خوانا بماند */}
-                    <View style={styles.todayPickOverlay}>
-                      <Text style={styles.todayPickOverlayTitle} numberOfLines={2}>
+                    {/* اسم داستان روی خودِ عکس، روی سایه‌ی تیره‌ی پایین تا خوانا بماند */}
+                    <View style={[styles.todayPickOverlay, rtl ? styles.alignEnd : styles.alignStart]}>
+                      <Text style={styles.todayPickOverlayTitle} numberOfLines={1}>
                         {todayStory.title}
                       </Text>
                     </View>
                   </ImageBackground>
-                  <Text style={styles.todayPickSub} numberOfLines={1}>
-                    {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))} · {todayStory.next.title}
-                  </Text>
+                  <View style={[styles.todayPickBody, rtl ? styles.alignEnd : styles.alignStart]}>
+                    <Text style={styles.todayPickStoryTitle} numberOfLines={1}>
+                      {todayStory.next.title} · {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         )}
 
-        <HomeGroup title={t('homeGroupLibrary')} tabs={libraryTabs} allLabel={t('homeSeeAll')} />
-        <HomeGroup title={t('homeGroupPractice')} tabs={practiceTabs} allLabel={t('homeSeeAll')} />
+        <HomeGroup title={t('homeGroupLibrary')} tabs={libraryTabs} allLabel={t('homeSeeAll')} rtl={rtl} />
+        <HomeGroup title={t('homeGroupPractice')} tabs={practiceTabs} allLabel={t('homeSeeAll')} rtl={rtl} />
 
         {/* Bottom padding for tab bar */}
         {/* نوار شناور پایین (۷۰ + فاصله‌ی ۱۶ + لبه‌ی گوشی) نباید روی کارت آخر بیفتد. */}
@@ -1118,39 +1135,57 @@ export const HomeScreen = () => {
   );
 };
 
+// رنگ‌های طرح خانه: پس‌زمینه‌ی خاکستریِ خیلی روشن و کارت‌های سفید با کادر و سایه‌ی نرم.
+const HOME_BG = '#F7F7F9';
+const HOME_CARD_BORDER = '#EEEEF2';
+const HOME_CARD_SHADOW = {
+  shadowColor: '#1A1D26',
+  shadowOpacity: 0.05,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 1,
+};
+
 const styles = StyleSheet.create({
   // بدون پس‌زمینه و سایه، هم‌خانواده‌ی بقیه‌ی دسته‌های خانه.
-  todayPicksCard: {
-    gap: 10,
-    marginBottom: 22,
-  },
-  homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
+  todayPicksCard: { gap: 10, marginBottom: 20 },
+  homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 17, color: COLORS.text },
   todayPicksRow: { flexDirection: 'row', gap: 12 },
-  todayPick: { flex: 1, gap: 6 },
-  todayPickImage: { height: 120, justifyContent: 'space-between', backgroundColor: COLORS.surfaceHigh, borderRadius: 16 },
-  todayPickImageRadius: { borderRadius: 16 },
+  todayPick: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: HOME_CARD_BORDER,
+    overflow: 'hidden',
+    ...HOME_CARD_SHADOW,
+  },
+  todayPickImage: { height: 124, justifyContent: 'space-between', backgroundColor: COLORS.surfaceHigh },
+  todayPickImageRadius: { borderTopLeftRadius: 18, borderTopRightRadius: 18 },
   todayPickKind: {
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     margin: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: 'rgba(16, 18, 24, 0.7)',
+    borderRadius: 10,
+    backgroundColor: 'rgba(16, 18, 24, 0.55)',
   },
   todayPickKindText: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.white },
-  todayPickOverlay: {
-    backgroundColor: 'rgba(16, 18, 24, 0.62)',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  todayPickOverlayTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, lineHeight: 21, color: COLORS.white },
-  todayPickTitle: { fontFamily: FONT_FAMILY.semiBold, fontSize: 14, lineHeight: 21, color: COLORS.text },
-  todayPickSub: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary },
+  todayPickTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 13, lineHeight: 20, color: COLORS.text },
+  todayPickBody: { paddingHorizontal: 12, paddingVertical: 10, gap: 2 },
+  todayPickStoryTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, lineHeight: 19, color: COLORS.text },
+  todayPickOverlay: { paddingHorizontal: 10, paddingVertical: 8, backgroundColor: 'rgba(16, 18, 24, 0.35)' },
+  todayPickOverlayTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 13, lineHeight: 20, color: COLORS.white },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  alignEnd: { alignItems: 'flex-end' },
+  alignStart: { alignItems: 'flex-start' },
+  selfEnd: { alignSelf: 'flex-end' },
+  selfStart: { alignSelf: 'flex-start' },
+  todayPickSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 17, color: COLORS.muted },
   freePracticeCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 22,
@@ -1163,64 +1198,53 @@ const styles = StyleSheet.create({
   freeTile: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
   freeTileIcon: { width: 58, height: 58, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   freeTileLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 13, color: COLORS.text },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 54,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  greeting: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 19,
-    marginTop: 2,
-    letterSpacing: -0.5,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 12,
-  },
+  container: { flex: 1, backgroundColor: HOME_BG },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 44 },
+  header: { marginBottom: 18 },
+  greeting: { color: COLORS.muted, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
+  headerTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, marginTop: 4 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
   // کنترل‌های سربرگ بدون کپسول و کادر؛ لمس‌پذیر می‌مانند ولی از سلام و کارت اصلی توجه نمی‌گیرند.
   langBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    gap: 4,
+    gap: 5,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: HOME_CARD_BORDER,
+    backgroundColor: COLORS.white,
   },
-  langBadgeText: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
-  },
+  langBadgeText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 11 },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 6,
     gap: 4,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FCE3B4',
+    backgroundColor: '#FFF6E3',
   },
-  sideLinks: { gap: 2, marginBottom: 20, marginTop: -4 },
-  sideLink: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  sideLinkText: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 13, color: COLORS.textSecondary, textAlign: 'right' },
-  streakText: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 15,
+  sideLinks: { gap: 10, marginBottom: 22 },
+  sideLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: HOME_CARD_BORDER,
+    ...HOME_CARD_SHADOW,
   },
+  sideLinkIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerPills: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sideLinkText: { flex: 1, fontFamily: FONT_FAMILY.semiBold, fontSize: 13, color: COLORS.text },
+  streakText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
   xpBadge: {
     flexDirection: 'row',
     alignItems: 'center',

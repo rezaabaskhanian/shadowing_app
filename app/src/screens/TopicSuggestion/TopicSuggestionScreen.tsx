@@ -9,9 +9,9 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Clock, Lightbulb, XCircle } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Lightbulb, XCircle } from 'lucide-react-native';
 
-import { COLORS, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import {
@@ -33,7 +33,10 @@ const statusMeta = (status: TopicSuggestion['status']) => {
 
 export const TopicSuggestionScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: دکمه‌ی برگشت و آیکون سمت راست، متن‌ها راست‌چین.
+  const rtl = language === 'fa';
+  const ta = rtl ? styles.textRight : styles.textLeft;
 
   const [topicText, setTopicText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -76,18 +79,18 @@ export const TopicSuggestionScreen = () => {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color={COLORS.text} size={22} />
+        <TouchableOpacity style={[styles.backButton, rtl && styles.selfEnd]} onPress={() => navigation.goBack()}>
+          {rtl ? <ArrowRight color={COLORS.text} size={20} /> : <ArrowLeft color={COLORS.text} size={20} />}
         </TouchableOpacity>
 
-        <View style={styles.iconWrap}>
-          <Lightbulb color={COLORS.warning} size={22} />
+        <View style={[styles.iconWrap, rtl && styles.selfEnd]}>
+          <Lightbulb color={COLORS.primary} size={22} />
         </View>
-        <Text style={styles.title}>{t('topicSuggestionTitle')}</Text>
-        <Text style={styles.note}>{t('topicSuggestionNote')}</Text>
+        <Text style={[styles.title, ta]}>{t('topicSuggestionTitle')}</Text>
+        <Text style={[styles.note, ta]}>{t('topicSuggestionNote')}</Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, ta]}
           placeholder={t('topicSuggestionPlaceholder')}
           placeholderTextColor={COLORS.muted}
           value={topicText}
@@ -96,7 +99,7 @@ export const TopicSuggestionScreen = () => {
           numberOfLines={4}
         />
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <Text style={[styles.errorText, ta]}>{error}</Text> : null}
 
         <TouchableOpacity
           style={styles.submitBtn}
@@ -111,7 +114,7 @@ export const TopicSuggestionScreen = () => {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.mineTitle}>{t('topicSuggestionMineTitle')}</Text>
+        <Text style={[styles.mineTitle, ta]}>{t('topicSuggestionMineTitle')}</Text>
 
         {loading ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
@@ -125,8 +128,8 @@ export const TopicSuggestionScreen = () => {
             const Icon = meta.icon;
             return (
               <View key={s.id} style={styles.card}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.topicText} numberOfLines={3}>
+                <View style={[styles.cardHeaderRow, rtl && styles.rowReverse]}>
+                  <Text style={[styles.topicText, ta]} numberOfLines={3}>
                     {s.topic_text}
                   </Text>
                   <View style={[styles.statusBadge, { borderColor: meta.color }]}>
@@ -147,33 +150,19 @@ export const TopicSuggestionScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  textLeft: { textAlign: 'left' },
+  selfEnd: { alignSelf: 'flex-end' },
+
+  screen: { flex: 1, backgroundColor: COLORS.white },
   content: {
     paddingHorizontal: 20,
     paddingTop: 54,
     paddingBottom: 60,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.warningLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  iconWrap: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFEFE6', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   title: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -187,33 +176,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 18,
   },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
+  input: { backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, padding: 14, color: COLORS.text, fontFamily: FONT_FAMILY.regular, fontSize: 14, minHeight: 110, textAlignVertical: 'top' },
   errorText: {
     color: COLORS.error,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 12,
     marginTop: 8,
   },
-  submitBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 14,
-    marginBottom: 28,
-  },
+  submitBtn: { backgroundColor: '#E2643A', borderRadius: 16, height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 16, marginBottom: 28 },
   submitBtnText: {
     color: COLORS.white,
     fontFamily: FONT_FAMILY.bold,
@@ -225,29 +195,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 32,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  emptyText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 12,
-  },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, padding: 28 },
+  emptyText: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 13, textAlign: 'center' },
+  card: { backgroundColor: '#F7F6F2', borderWidth: 1, borderColor: '#ECEAE4', borderRadius: 16, padding: 16, marginBottom: 12 },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

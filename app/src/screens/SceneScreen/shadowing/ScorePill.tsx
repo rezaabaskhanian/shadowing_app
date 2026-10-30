@@ -26,11 +26,12 @@ const styles = StyleSheet.create({
   },
   scorePillValue: {
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 20,
+    fontSize: 24,
   },
   scorePillLabel: {
-    color: COLORS.muted,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 10,
+    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
   },
 });

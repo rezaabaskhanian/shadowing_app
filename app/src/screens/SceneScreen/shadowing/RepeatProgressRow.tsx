@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronRight, Repeat } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -21,21 +21,23 @@ export const RepeatProgressRow: React.FC<{
   /** رنگ اختصاصیِ مرحله‌ی فعلی، برای نقطه‌های تکرار و دکمه‌ی مرحله‌ی بعد. */
   accentColor: string;
   accentLightColor: string;
+  rtl?: boolean;
   t: (key: string) => string;
-}> = ({ autoRepeat, repeatCount, totalRepeats, onNextStep, accentColor, accentLightColor, t }) => {
+}> = ({ autoRepeat, repeatCount, totalRepeats, onNextStep, accentColor, accentLightColor, rtl = false, t }) => {
+  const row = rtl && styles.rowReverse;
   // در حالت بی‌نهایت شمارنده‌ی نقطه‌ای معنی ندارد و فقط عدد دور را نشان می‌دهیم.
   const unlimited = totalRepeats === 0;
 
   return (
-    <View style={styles.repeatRow}>
+    <View style={[styles.repeatRow, row]}>
       {autoRepeat ? (
-        <View style={styles.repeatCounter}>
+        <View style={[styles.repeatCounter, row]}>
           <Repeat size={13} color={COLORS.textSecondary} />
           <Text style={styles.repeatText}>
             {repeatCount}/{unlimited ? '∞' : totalRepeats}
           </Text>
           {!unlimited && (
-            <View style={styles.repeatDotsRow}>
+            <View style={[styles.repeatDotsRow, row]}>
               {Array.from({ length: totalRepeats }).map((_, idx) => (
                 <View
                   key={idx}
@@ -53,24 +55,25 @@ export const RepeatProgressRow: React.FC<{
       )}
 
       <TouchableOpacity
-        style={[styles.nextStepBtn, { backgroundColor: accentLightColor }]}
+        style={[styles.nextStepBtn, row, { backgroundColor: accentLightColor }]}
         activeOpacity={0.8}
         onPress={onNextStep}
       >
         <Text style={[styles.nextStepBtnText, { color: accentColor }]}>{t('nextStep')}</Text>
-        <ChevronRight size={14} color={accentColor} />
+        {rtl ? <ChevronLeft size={14} color={accentColor} /> : <ChevronRight size={14} color={accentColor} />}
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
   repeatRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   repeatCounter: {
     flexShrink: 1,
@@ -85,9 +88,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   repeatText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
   },
   repeatDotsRow: {
     flexDirection: 'row',
@@ -106,8 +109,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   nextStepBtnText: {
     fontFamily: FONT_FAMILY.semiBold,

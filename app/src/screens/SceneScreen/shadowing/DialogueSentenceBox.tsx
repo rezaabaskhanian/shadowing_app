@@ -33,6 +33,7 @@ export const DialogueSentenceBox: React.FC<{
   /** رنگ اختصاصیِ مرحله‌ی فعلی، برای دکمه‌ها/بنرهای فعالِ همین جعبه. */
   accentColor: string;
   accentLightColor: string;
+  rtl?: boolean;
   t: (key: string) => string;
 }> = ({
   activeStepIndex,
@@ -45,6 +46,7 @@ export const DialogueSentenceBox: React.FC<{
   onChangeTextDisplayMode,
   accentColor,
   accentLightColor,
+  rtl = false,
   t,
 }) => (
   <View style={styles.dialogueBox}>
@@ -52,7 +54,7 @@ export const DialogueSentenceBox: React.FC<{
         دکمه انتخاب می‌کند کدام‌یک. */}
     <View style={styles.displayModeRow}>
       <TouchableOpacity
-        style={[styles.displayModeBtn, textDisplayMode === 'bubble' && { backgroundColor: accentLightColor }]}
+        style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnOn]}
         onPress={() => onChangeTextDisplayMode('bubble')}
       >
         <MessageCircle
@@ -66,7 +68,7 @@ export const DialogueSentenceBox: React.FC<{
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.displayModeBtn, textDisplayMode === 'card' && { backgroundColor: accentLightColor }]}
+        style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnOn]}
         onPress={() => onChangeTextDisplayMode('card')}
       >
         <AlignLeft size={13} color={textDisplayMode === 'card' ? accentColor : COLORS.muted} />
@@ -84,7 +86,9 @@ export const DialogueSentenceBox: React.FC<{
         masterPositionSeconds={masterPositionSeconds}
       />
     )}
-    <Text style={styles.translationText}>{currentDialogue.translation}</Text>
+    <Text style={[styles.translationText, activeStepIndex === 2 && !textRevealed && styles.translationRecall]}>
+      {currentDialogue.translation}
+    </Text>
 
     {activeStepIndex === 2 && (
       <TouchableOpacity style={[styles.revealBtn, { backgroundColor: accentLightColor }]} onPress={onToggleRevealText}>
@@ -108,6 +112,7 @@ export const DialogueSentenceBox: React.FC<{
         onOpenLeitner={onOpenLeitner}
         accentColor={accentColor}
         accentLightColor={accentLightColor}
+        rtl={rtl}
         t={t}
       />
     )}
@@ -157,29 +162,47 @@ const styles = StyleSheet.create({
   displayModeRow: {
     flexDirection: 'row',
     alignSelf: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 2,
+    padding: 3,
+    borderRadius: 999,
+    backgroundColor: '#ECE9E3',
+    marginBottom: 14,
   },
   displayModeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: COLORS.surfaceLight,
+  },
+  displayModeBtnOn: {
+    backgroundColor: COLORS.white,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
   },
   displayModeBtnText: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 10,
+    fontSize: 11,
   },
   translationText: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 14,
+  },
+  // در مرحله‌ی ضبط متن انگلیسی پنهان است و ترجمه نقش سرنخ اصلی را دارد.
+  translationRecall: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 19,
+    marginTop: 4,
+    marginBottom: 6,
   },
   revealBtn: {
     marginTop: 8,
@@ -187,13 +210,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
     borderRadius: 999,
   },
   revealBtnText: {
     fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 11,
+    fontSize: 12,
   },
   noXpHint: {
     marginTop: 4,

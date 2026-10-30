@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Check, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, RotateCcw, Sparkles, Star, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
+import { GradientFill } from '../../components/GradientFill';
 import { fetchSceneQuiz, submitSceneQuiz, type QuizAnswer, type QuizQuestion, type QuizResult } from '../../api/quiz';
+
+const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 
 // یک انتخاب برای هر سوال: متن گزینه‌ای که کاربر لمس کرده.
 type AnswerMap = Record<string, string>;
@@ -14,7 +17,10 @@ type AnswerMap = Record<string, string>;
 export const QuizScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rtl = language === 'fa';
+  const num = (v: number | string) => (rtl ? toFa(v) : String(v));
+  const row = rtl && styles.rowReverse;
   const { scenarioId } = route.params || {};
 
   const [loading, setLoading] = useState(true);
@@ -50,33 +56,46 @@ export const QuizScreen = () => {
   const current = questions[step];
   const isLast = step === questions.length - 1;
 
+  // انتخاب تا زدنِ «ادامه» قابل تغییر است؛ درست/غلطِ هر سوال را فقط سرور می‌داند
+  // (گزینه‌ها تصادفی‌اند)، پس اینجا فقط «پاسخ ثبت شد» نشان می‌دهیم.
   const choose = (option: string) => {
-    if (pickedThisStep) return;
+    if (submitting) return;
     setPickedThisStep(option);
-    const nextAnswers = { ...answers, [current.dialogue_id]: option };
-    setAnswers(nextAnswers);
-
-    setTimeout(async () => {
-      if (!isLast) {
-        setPickedThisStep(null);
-        setStep((s) => s + 1);
-        return;
-      }
-      setSubmitting(true);
-      const payload: QuizAnswer[] = Object.entries(nextAnswers).map(([dialogue_id, selected_text]) => ({
-        dialogue_id,
-        selected_text,
-      }));
-      try {
-        const r = await submitSceneQuiz(scenarioId, payload);
-        setResult(r);
-      } catch {
-        setResult({ correct: 0, total: payload.length });
-      } finally {
-        setSubmitting(false);
-      }
-    }, 550);
   };
+
+  const goNext = async () => {
+    if (!pickedThisStep || submitting) return;
+    const nextAnswers = { ...answers, [current.dialogue_id]: pickedThisStep };
+    setAnswers(nextAnswers);
+    if (!isLast) {
+      setPickedThisStep(null);
+      setStep((s) => s + 1);
+      return;
+    }
+    setSubmitting(true);
+    const payload: QuizAnswer[] = Object.entries(nextAnswers).map(([dialogue_id, selected_text]) => ({
+      dialogue_id,
+      selected_text,
+    }));
+    try {
+      const r = await submitSceneQuiz(scenarioId, payload);
+      setResult(r);
+    } catch {
+      setResult({ correct: 0, total: payload.length });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const restart = () => {
+    setResult(null);
+    setAnswers({});
+    setPickedThisStep(null);
+    setStep(0);
+    setReloadKey((k) => k + 1);
+  };
+
+  const BackIcon = rtl ? ChevronRight : ChevronLeft;
 
   if (loading) {
     return (
@@ -114,42 +133,80 @@ export const QuizScreen = () => {
 
   if (result) {
     const pct = result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0;
+    const titleKey = pct >= 80 ? 'quizResultHighTitle' : pct >= 50 ? 'quizResultMidTitle' : 'quizResultLowTitle';
+    const good = result.correct > 0;
     return (
       <View style={styles.screen}>
-        <View style={styles.center}>
+        <View style={styles.resultWrap}>
           <View style={styles.resultBadge}>
-            <Sparkles color={COLORS.white} size={32} />
+            <GradientFill from="#F07A4A" to="#E8572F" />
+            <Sparkles color={COLORS.white} size={34} />
           </View>
-          <Text style={styles.resultScore}>{result.correct}/{result.total}</Text>
-          <Text style={styles.resultPct}>{pct}%</Text>
-          <TouchableOpacity
-            style={styles.doneBtn}
-            activeOpacity={0.85}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.doneBtnText}>{t('quizDone')}</Text>
+          <Text style={styles.resultScore}>
+            {result.correct}/{result.total}
+          </Text>
+          <View style={styles.pctChip}>
+            <Text style={styles.pctChipText}>{t('quizSuccessPct').replace('{n}', num(pct))}</Text>
+          </View>
+          <Text style={styles.resultTitle}>{t(titleKey)}</Text>
+          <Text style={styles.resultSub}>{t('quizResultSub')}</Text>
+
+          <View style={[styles.statsRow, row]}>
+            <View style={[styles.statCard, row]}>
+              <View style={[styles.statIcon, good ? styles.statIconGood : styles.statIconBad]}>
+                {good ? <Check size={16} color={COLORS.tertiary} /> : <X size={16} color="#E53935" />}
+              </View>
+              <View style={rtl ? styles.alignEnd : null}>
+                <Text style={styles.statLabel}>{t('quizCorrectLabel')}</Text>
+                <Text style={styles.statValue}>{t('quizQuestionsN').replace('{n}', num(result.correct))}</Text>
+              </View>
+            </View>
+            <View style={[styles.statCard, row]}>
+              <View style={[styles.statIcon, styles.statIconStar]}>
+                <Star size={16} color="#F5A623" fill="#F5A623" />
+              </View>
+              <View style={rtl ? styles.alignEnd : null}>
+                <Text style={styles.statLabel}>{t('quizTotalLabel')}</Text>
+                <Text style={styles.statValue}>{t('quizQuestionsN').replace('{n}', num(result.total))}</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.primaryBtn} activeOpacity={0.85} onPress={() => navigation.goBack()}>
+            <GradientFill from="#F07A4A" to="#E8572F" horizontal />
+            <Text style={styles.primaryBtnText}>{t('quizDone')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.retryLink, row]} onPress={restart}>
+            <RotateCcw size={14} color={COLORS.textSecondary} />
+            <Text style={styles.retryLinkText}>{t('quizRetryLesson')}</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
+  const progress = (step + (pickedThisStep ? 1 : 0)) / questions.length;
+
   return (
     <View style={styles.screen}>
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, !rtl && styles.rowReverse]}>
+        <View style={styles.stepPill}>
+          <Text style={styles.stepPillText}>
+            {num(step + 1)} / {num(questions.length)}
+          </Text>
+        </View>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color={COLORS.text} size={22} />
+          <BackIcon color={COLORS.text} size={20} />
         </TouchableOpacity>
-        <Text style={styles.progressText}>{step + 1} / {questions.length}</Text>
       </View>
 
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${((step + (pickedThisStep ? 1 : 0)) / questions.length) * 100}%` }]} />
+      <View style={[styles.progressTrack, rtl && styles.progressTrackRtl]}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>{t('quizPromptKicker')}</Text>
-        <Text style={styles.prompt}>{current.prompt}</Text>
+        <Text style={[styles.kicker, rtl && styles.textRight]}>{t('quizPromptKicker')}</Text>
+        <Text style={[styles.prompt, rtl && styles.textRight]}>{current.prompt}</Text>
 
         {current.options.map((opt) => {
           const isPicked = pickedThisStep === opt;
@@ -157,35 +214,66 @@ export const QuizScreen = () => {
             <TouchableOpacity
               key={opt}
               activeOpacity={0.85}
-              disabled={!!pickedThisStep || submitting}
+              disabled={submitting}
               onPress={() => choose(opt)}
               style={[styles.optionCard, isPicked && styles.optionCardPicked]}
             >
-              <Text style={[styles.optionText, isPicked && styles.optionTextPicked]}>{opt}</Text>
-              {isPicked && (
+              {isPicked ? (
                 <View style={styles.optionIcon}>
-                  <Check color={COLORS.white} size={16} />
+                  <Check color={COLORS.white} size={14} />
                 </View>
+              ) : (
+                <View style={styles.optionRadio} />
               )}
+              <Text style={[styles.optionText, isPicked && styles.optionTextPicked]}>{opt}</Text>
             </TouchableOpacity>
           );
         })}
-
-        {submitting && (
-          <View style={styles.submittingRow}>
-            <ActivityIndicator color={COLORS.primary} size="small" />
-          </View>
-        )}
       </ScrollView>
+
+      {pickedThisStep ? (
+        <View style={styles.footerCard}>
+          <View style={[styles.footerStatus, row]}>
+            <Text style={styles.footerSaved}>{t('quizAnswerSaved')}</Text>
+            <View style={[styles.footerReady, row]}>
+              <View style={styles.footerDot} />
+              <Text style={styles.footerReadyText}>{t('quizReadyNext')}</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.primaryBtn} activeOpacity={0.85} onPress={goNext} disabled={submitting}>
+            <GradientFill from="#F07A4A" to="#E8572F" horizontal />
+            {submitting ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <View style={[styles.btnInner, row]}>
+                <Text style={styles.primaryBtnText}>{t('quizContinue')}</Text>
+                {rtl ? <ArrowLeft size={18} color={COLORS.white} /> : null}
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.footerPlain}>
+          <View style={[styles.disabledBtn, row]}>
+            <Text style={styles.disabledBtnText}>{t('quizCheckAnswer')}</Text>
+            <Check size={16} color="#A9A6A0" />
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
+const CARD_BG = '#F3F1EC';
+
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRight: { textAlign: 'right' },
+  alignEnd: { alignItems: 'flex-end' },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    paddingTop: 54,
+    backgroundColor: '#FAF8F4',
+    paddingTop: 48,
     paddingHorizontal: 20,
   },
   center: {
@@ -197,76 +285,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 18,
   },
+  stepPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#EEEBE5',
+  },
+  stepPillText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.semiBold, fontSize: 13 },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EEEBE5',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  progressText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
   },
   progressTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.borderLight,
+    backgroundColor: '#ECE9E3',
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 28,
+    flexDirection: 'row',
   },
+  // در فارسی نوار از راست پر می‌شود.
+  progressTrackRtl: { flexDirection: 'row-reverse' },
   progressFill: {
     height: '100%',
     backgroundColor: COLORS.primary,
     borderRadius: 3,
   },
   content: {
-    paddingBottom: 60,
+    paddingBottom: 24,
   },
   kicker: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
     marginBottom: 8,
-    textTransform: 'uppercase',
   },
   prompt: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 22,
+    fontSize: 24,
     marginBottom: 24,
-    lineHeight: 30,
+    lineHeight: 34,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.surface,
+    gap: 12,
+    backgroundColor: CARD_BG,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
+    borderColor: CARD_BG,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    marginBottom: 14,
   },
   optionCardPicked: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FDF0EC',
   },
   optionText: {
     flex: 1,
     color: COLORS.text,
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.semiBold,
     fontSize: 15,
-    textAlign: 'left',
+    textAlign: 'right',
+    writingDirection: 'ltr',
   },
   optionTextPicked: {
-    color: COLORS.primaryDark,
-    fontFamily: FONT_FAMILY.semiBold,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  optionRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#CFCBC3',
   },
   optionIcon: {
     width: 24,
@@ -275,12 +375,63 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 10,
   },
-  submittingRow: {
+  footerPlain: {
+    paddingTop: 14,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEBE5',
+  },
+  disabledBtn: {
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: '#E9E7E3',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'center',
+    gap: 8,
   },
+  disabledBtnText: { color: '#A9A6A0', fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  footerCard: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 28,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+  },
+  footerStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  footerSaved: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
+  footerReady: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
+  footerReadyText: { color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, fontSize: 12 },
+  primaryBtn: {
+    alignSelf: 'stretch',
+    height: 54,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  primaryBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 16 },
   emptyText: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.regular,
@@ -288,26 +439,85 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 30,
   },
+  resultWrap: {
+    alignItems: 'center',
+    paddingTop: 24,
+  },
   resultBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    overflow: 'hidden',
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   resultScore: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 36,
+    fontSize: 44,
   },
-  resultPct: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 15,
-    marginTop: 4,
+  pctChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: COLORS.primaryLight,
+    marginTop: 2,
+    marginBottom: 16,
   },
+  pctChipText: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
+  resultTitle: {
+    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 17,
+    textAlign: 'center',
+  },
+  resultSub: {
+    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 22,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EEEBE5',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  statIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statIconGood: { backgroundColor: COLORS.tertiaryLight },
+  statIconBad: { backgroundColor: 'rgba(229, 57, 53, 0.10)' },
+  statIconStar: { backgroundColor: 'rgba(245, 166, 35, 0.14)' },
+  statLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  statValue: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13, marginTop: 2 },
+  retryLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+  },
+  retryLinkText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
   doneBtn: {
     marginTop: 32,
     backgroundColor: COLORS.primary,

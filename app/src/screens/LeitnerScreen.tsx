@@ -14,7 +14,6 @@ import { BookOpen, Check, Clock, Eye, Layers, MessageCircle, MoreHorizontal, Spa
 import { ConfirmModal } from '../components/ConfirmModal';
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
-import { SHADOWS } from '../theme/elevation';
 import { ProgressRing } from '../components/ProgressRing';
 import { useVocab, MAX_LEVEL, isDue, BoxWord } from '../data/VocabContext';
 import { useLanguage } from '../data/i18n';
@@ -35,7 +34,9 @@ const levelColor = (level: number): string => {
 
 export const LeitnerScreen = () => {
   const { box, promote, demote, remove } = useVocab();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: تیتر راست، زبانه‌ی «امروز» سمت راست، شمارنده راست و منوی سه‌نقطه چپ.
+  const rtl = language === 'fa';
   const [dueOnly, setDueOnly] = useState(true);
   // تب سوم «افعال»: به‌جای کارت‌های لایتنر لیست افعال چندمعنایی نشان داده می‌شود.
   // تب‌های کنار جعبه‌ی لغت: افعال چندمعنایی و اصطلاحات
@@ -97,12 +98,12 @@ export const LeitnerScreen = () => {
       <View style={styles.scrollContent}>
         {/* Top Header */}
         {/* فقط عنوان؛ توضیح قانون لایتنر و شمارنده‌ی «n واژه» (که در زبانه‌ی «همه» هم هست) حذف شد. */}
-        <View style={styles.header}>
+        <View style={[styles.header, rtl && styles.rowReverse]}>
           <Text style={styles.headerTitle}>{t('leitnerBoxTitle')}</Text>
         </View>
 
         {/* Today vs All Filter Tabs */}
-        <View style={styles.filterRow}>
+        <View style={[styles.filterRow, rtl && styles.rowReverse]}>
           <TouchableOpacity
             style={[styles.filterTab, !showVerbs && dueOnly && styles.filterTabActive]}
             onPress={() => {
@@ -180,7 +181,7 @@ export const LeitnerScreen = () => {
           </View>
         ) : (
           <>
-            <View style={styles.progressRow}>
+            <View style={[styles.progressRow, rtl && styles.rowReverse]}>
               <ProgressRing percent={(index / list.length) * 100} size={44} strokeWidth={5}>
                 <Text style={styles.progressRingText}>
                   {index + 1}/{list.length}
@@ -357,13 +358,16 @@ const Flashcard = ({
           </View>
         ) : (
           <View style={[styles.card, styles.cardFace]}>
-            <View style={[styles.levelBadge, { borderColor: levelColor(item.level) }]}>
+            <View style={styles.levelBadge}>
               <Text style={[styles.levelText, { color: levelColor(item.level) }]}>
                 {t('level')} {item.level}/{MAX_LEVEL}
               </Text>
             </View>
             <Text style={styles.word}>{item.word}</Text>
-            <Text style={styles.tapHint}>{t('tapToReveal')}</Text>
+            <View style={styles.tapHintRow}>
+              <Sparkles size={12} color={COLORS.secondary} />
+              <Text style={styles.tapHintText}>{t('tapToReveal')}</Text>
+            </View>
           </View>
         )}
       </Animated.View>
@@ -372,6 +376,9 @@ const Flashcard = ({
 };
 
 const styles = StyleSheet.create({
+  rowReverse: { flexDirection: 'row-reverse' },
+  tapHintRow: { position: 'absolute', bottom: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tapHintText: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12 },
   revealBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,16 +387,13 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    marginTop: 16,
+    borderColor: '#E8E1D3',
+    backgroundColor: '#F3EFE6',
+    marginTop: 18,
   },
   revealText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
   backWord: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.textSecondary, marginBottom: 8, textAlign: 'center' },
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  screen: { flex: 1, backgroundColor: '#F7F7F9' },
   scrollContent: {
     flex: 1,
     paddingHorizontal: 20,
@@ -398,24 +402,14 @@ const styles = StyleSheet.create({
     // «بلد بودم / بلد نبودم» پشت نوار پنهان می‌شدند.
     paddingBottom: 120,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   kicker: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
     letterSpacing: 1,
   },
-  headerTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 26,
-    marginTop: 2,
-  },
+  headerTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, marginTop: 2 },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -439,37 +433,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20,
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 20,
-  },
+  filterRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
   filterTab: {
     flex: 1,
-    height: 42,
-    borderRadius: 21,
+    height: 38,
+    borderRadius: 19,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 4,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEEF2',
   },
   filterTabActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  filterTabActiveGreen: {
-    backgroundColor: COLORS.tertiary,
-    borderColor: COLORS.tertiary,
-  },
-  filterTabText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 13,
-  },
+  filterTabActiveGreen: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterTabText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
   filterTabTextActive: {
     color: COLORS.white,
   },
@@ -545,14 +528,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.white,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#EEEEF2',
     padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.level1,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   cardFace: {
     gap: 14,
@@ -567,12 +554,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.xl,
     backgroundColor: COLORS.primaryLight,
   },
-  word: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 30,
-    textAlign: 'center',
-  },
+  word: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 34, textAlign: 'center' },
   meaning: {
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
@@ -589,12 +571,12 @@ const styles = StyleSheet.create({
   levelBadge: {
     position: 'absolute',
     top: 20,
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: 14,
-    paddingHorizontal: 10,
+    backgroundColor: '#FFF0E8',
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: '#FAD3C4',
   },
   levelText: {
     color: COLORS.primary,

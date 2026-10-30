@@ -3,16 +3,15 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Volume2 } from 'lucide-react-native';
 
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
+import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
-import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { absUrl } from '../../api/config';
 import { CEFR_LEVELS, type CefrLevel, type ListenTestItem } from '../../api/assessment';
 
 const MAX_PLAYS = 2;
-const OPTION_COLORS = [COLORS.info, COLORS.tertiary, COLORS.secondary];
+const OPTION_COLORS = ['#3B6EF0', '#2F8A5B', '#E9A23B'];
 const START_LEVEL: CefrLevel = 'A2';
 
 interface Props {
@@ -29,7 +28,9 @@ type PlaybackState = 'idle' | 'loading' | 'playing';
  * تمام می‌شود.
  */
 export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // فارسی: حرف گزینه سمت راست؛ جمله‌ها راست‌چین.
+  const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
 
   const byLevel = useMemo(() => {
@@ -119,8 +120,14 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
         onPlaybackStatusUpdate={handleStatus}
       />
 
-      <View style={{ gap: SPACING.s }}>
-        <Text style={styles.kicker}>{t('placementV2ListenKicker')}</Text>
+      <View style={styles.header}>
+        {/* نوار پیشرفت سه‌بخشی: لغت تمام، شنیدن در حال انجام */}
+        <View style={[styles.partsTrack, rtl && styles.rowReverse]}>
+          <View style={[styles.partSeg, styles.partDone]} />
+          <View style={[styles.partSeg, styles.partActive]} />
+          <View style={styles.partSeg} />
+        </View>
+        <Text style={styles.kicker}>{t('placementV2ListenKicker').replace(' · ', ' • ')}</Text>
         <Text style={styles.hint}>
           {t('placementV2ListenStep')
             .replace('{current}', String(available.indexOf(level) + 1))
@@ -135,9 +142,10 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
           disabled={plays >= MAX_PLAYS || playback === 'loading'}
           activeOpacity={0.85}
         >
-          <Volume2 size={28} color={COLORS.white} />
+          <Volume2 size={30} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.playHint}>
+          <Text style={styles.playDot}>● </Text>
           {playback === 'playing'
             ? t('placementV2Playing')
             : t('placementV2PlaysLeft').replace('{n}', String(MAX_PLAYS - plays))}
@@ -149,7 +157,7 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
         {current.options.map((o, i) => (
           <TouchableOpacity
             key={i}
-            style={[styles.option, selected === i && styles.optionSelected]}
+            style={[styles.option, rtl && styles.rowReverse, selected === i && styles.optionSelected]}
             onPress={() => setSelected(i)}
             disabled={plays === 0}
             activeOpacity={0.85}
@@ -157,7 +165,7 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
             <View style={[styles.badge, { backgroundColor: OPTION_COLORS[i % OPTION_COLORS.length] }]}>
               <Text style={styles.badgeText}>{String.fromCharCode(65 + i)}</Text>
             </View>
-            <Text style={[styles.optionText, plays === 0 && { opacity: 0.4 }]}>{o}</Text>
+            <Text style={[styles.optionText, { textAlign: rtl ? 'right' : 'left' }, plays === 0 && { opacity: 0.4 }]}>{o}</Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity
@@ -174,99 +182,64 @@ export const PlacementListeningScreen: React.FC<Props> = ({ items, onDone }) => 
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.l,
-    justifyContent: 'space-between',
-  },
-  kicker: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.info,
-    textAlign: 'center',
-  },
-  hint: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#F7F8FB', paddingHorizontal: SPACING.l, justifyContent: 'space-between' },
+  rowReverse: { flexDirection: 'row-reverse' },
+  header: { gap: 8, alignItems: 'center' },
+  partsTrack: { flexDirection: 'row', gap: 6, width: '62%', marginBottom: 6 },
+  partSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#E3E6ED' },
+  partDone: { backgroundColor: '#B9C8F5' },
+  partActive: { backgroundColor: '#3B6EF0' },
+  kicker: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: '#2F5BD8', textAlign: 'center' },
+  hint: { ...TEXT_STYLES.labelSm, color: COLORS.textSecondary, textAlign: 'center' },
   card: {
-    backgroundColor: COLORS.infoLight,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1.5,
-    borderColor: COLORS.info,
+    backgroundColor: '#EEF3FE',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#D7E2FB',
     padding: SPACING.l,
     alignItems: 'center',
     gap: SPACING.s,
-    ...SHADOWS.level1,
   },
   playBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.info,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#3B6EF0',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#3B6EF0',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
   },
-  playBtnDisabled: {
-    backgroundColor: COLORS.border,
-  },
-  playHint: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.textSecondary,
-  },
-  prompt: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
+  playBtnDisabled: { backgroundColor: '#C7CEDC', shadowOpacity: 0 },
+  playHint: { ...TEXT_STYLES.labelSm, color: COLORS.textSecondary, marginTop: 4 },
+  playDot: { color: '#3B6EF0', fontSize: 9 },
+  prompt: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text, textAlign: 'center' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.s,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    gap: SPACING.m,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.m,
+    borderColor: '#ECEEF3',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
-  optionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-  },
-  badge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 13,
-  },
-  optionText: {
-    flex: 1,
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 15,
-    color: COLORS.text,
-    textAlign: 'right',
-  },
+  optionSelected: { borderColor: COLORS.primary, backgroundColor: '#FFF6F1' },
+  badge: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
+  optionText: { flex: 1, fontFamily: FONT_FAMILY.semiBold, fontSize: 14, color: COLORS.text },
   confirmBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
+    borderRadius: 16,
+    height: 54,
     alignItems: 'center',
-    marginTop: SPACING.xs,
+    justifyContent: 'center',
+    marginTop: SPACING.s,
   },
-  confirmBtnDisabled: {
-    backgroundColor: COLORS.border,
-  },
-  confirmBtnText: {
-    color: COLORS.white,
-    fontFamily: FONT_FAMILY.bold,
-    fontSize: 16,
-  },
+  confirmBtnDisabled: { backgroundColor: '#E6E3DC' },
+  confirmBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
 });

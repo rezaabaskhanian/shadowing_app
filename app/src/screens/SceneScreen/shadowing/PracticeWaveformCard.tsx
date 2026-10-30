@@ -31,6 +31,7 @@ export const PracticeWaveformCard: React.FC<{
   recordingPositionSeconds?: number;
   /** true وقتی همین حالا ضبطِ کاربر (نه صدای مرجع) در حال پخش است. */
   isPlayingRecording?: boolean;
+  rtl?: boolean;
   t: (key: string) => string;
 }> = ({
   activeStepIndex,
@@ -46,9 +47,16 @@ export const PracticeWaveformCard: React.FC<{
   onScoreCurrentLine,
   recordingPositionSeconds,
   isPlayingRecording,
+  rtl = false,
   t,
 }) => (
-  <View style={styles.waveformCard}>
+  <View
+    style={[
+      styles.waveformCard,
+      activeStepIndex === 0 && styles.waveformCardListen,
+      activeStepIndex === 3 && styles.waveformCardCompare,
+    ]}
+  >
     {activeStepIndex === 1 ? (
       <>
         <WaveBars active color={COLORS.audioOriginal} />
@@ -66,6 +74,7 @@ export const PracticeWaveformCard: React.FC<{
         onScoreCurrentLine={onScoreCurrentLine}
         recordingPositionSeconds={recordingPositionSeconds}
         isPlayingRecording={isPlayingRecording}
+        rtl={rtl}
         t={t}
       />
     ) : (
@@ -80,13 +89,12 @@ export const PracticeWaveformCard: React.FC<{
                   (activeStepIndex === 0 && playing) ||
                   (activeStepIndex === 2 && actionCommand === 'start_record')
                     ? 8 + ((idx * 7) % 20)
-                    : 8,
+                    : 6 + ((idx * 11) % 16),
                 backgroundColor: accentColor,
               },
             ]}
           />
         ))}
-        <View style={[styles.waveformPlayhead, { backgroundColor: accentColor }]} />
       </View>
     )}
   </View>
@@ -95,11 +103,24 @@ export const PracticeWaveformCard: React.FC<{
 const styles = StyleSheet.create({
   waveformCard: {
     width: '100%',
-    backgroundColor: COLORS.backgroundSoft,
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    marginVertical: 10,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    marginVertical: 12,
+  },
+  waveformCardListen: {
+    backgroundColor: '#EEEBE5',
+    borderColor: '#EEEBE5',
+  },
+  // در مقایسه، خودِ بخش‌ها کارت‌های جدا دارند.
+  waveformCardCompare: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   waveformRow: {
     flexDirection: 'row',
@@ -107,20 +128,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     width: '100%',
-    height: 28,
+    height: 36,
     marginVertical: 4,
   },
   waveBar: {
     width: 3,
     borderRadius: 1.5,
-  },
-  waveformPlayhead: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: '50%',
-    width: 2,
-    borderRadius: 1,
   },
   waveformDivider: {
     height: 1,
