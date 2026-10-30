@@ -213,6 +213,8 @@ export const translations: Translations = {
   },
   logout: { en: 'Log Out', fa: 'خروج از حساب کاربری' },
   profileEditTitle: { en: 'Edit profile', fa: 'ویرایش پروفایل' },
+  profileEditMenu: { en: 'Edit my info', fa: 'ویرایش اطلاعات' },
+  profileEditMenuSub: { en: 'Name and password', fa: 'نام و رمز عبور' },
   profileEditSub: { en: 'Change your display name or password.', fa: 'نام نمایشی یا رمز عبورت را عوض کن.' },
   profileEditNameLabel: { en: 'Display name', fa: 'نام نمایشی' },
   profileEditNamePlaceholder: { en: 'Your name', fa: 'نام تو' },

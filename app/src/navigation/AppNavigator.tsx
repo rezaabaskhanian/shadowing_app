@@ -164,6 +164,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'PodcastMyVersion',
   'Paywall',
   'TokenTopup',
+  'ProfileEdit',
   'ToastDemo',
   'RealtimePoC',
 ];
