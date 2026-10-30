@@ -33,7 +33,7 @@ func (s Service) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest
 		return richerror.New(op).WithErr(err).WithMessage("dont create password")
 	}
 
-	if errRepo := s.repo.ResetPassword(user.NickName, passHash); errRepo != nil {
+	if errRepo := s.repo.ResetPassword(string(user.ID), passHash); errRepo != nil {
 		return richerror.New(op).WithErr(errRepo).WithMessage("failed to reset password")
 	}
 

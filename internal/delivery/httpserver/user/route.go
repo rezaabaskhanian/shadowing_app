@@ -11,6 +11,7 @@ func (h Handler) SetUserRoutes(e *echo.Echo) {
 	userGroup := e.Group("v1/users")
 
 	userGroup.GET("/profile", h.Profile, middlware.Auth(h.authSvc, h.authConfig))
+	userGroup.PUT("/profile", h.UpdateProfile, middlware.Auth(h.authSvc, h.authConfig))
 
 	userGroup.POST("/login", h.Login)
 	userGroup.POST("/register", h.Register)

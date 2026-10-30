@@ -6,9 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"shadowing-backend/internal/pkg/claims"
+	"shadowing-backend/internal/pkg/richerror"
 )
 
 type changePasswordRequest struct {
+	// CurrentPassword اختیاری است: اپ می‌فرستد، پنل ادمین نه.
+	CurrentPassword string `json:"current_password"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
 }
@@ -42,10 +45,17 @@ func (h Handler) ChangePassword(c echo.Context) error {
 		})
 	}
 
-	if err := h.userSvc.ChangePassword(userClaims.UserID, req.Password); err != nil {
+	if err := h.userSvc.ChangePassword(userClaims.UserID, req.CurrentPassword, req.Password); err != nil {
+		code, message := "change_password_failed", err.Error()
+		if re, ok := err.(richerror.RichError); ok {
+			message = re.Message()
+			if re.Kind() == richerror.KindInvalid {
+				code = "wrong_current_password"
+			}
+		}
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error":   "change_password_failed",
-			"message": err.Error(),
+			"error":   code,
+			"message": message,
 		})
 	}
 

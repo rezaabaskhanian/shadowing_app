@@ -17,7 +17,8 @@ type Repository interface {
 	GetUserByID(ID string) (domain.User, error)
 	GetUserByPhoneNumber(phonenumber string) (domain.User, error)
 
-	ResetPassword(nikname string, hashedPassword uservalueobject.Password) error
+	ResetPassword(userID string, hashedPassword uservalueobject.Password) error
+	UpdateNickname(ctx context.Context, userID, nickname string) error
 
 	UpdateRole(ctx context.Context, userID, role string) error
 	Count(ctx context.Context) (int, error)

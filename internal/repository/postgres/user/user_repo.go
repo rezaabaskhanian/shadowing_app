@@ -2,7 +2,6 @@ package postgresuser
 
 import (
 	"context"
-	"fmt"
 	domain "shadowing-backend/internal/domain/user"
 	uservalueobject "shadowing-backend/internal/domain/user/valueobject"
 	"shadowing-backend/internal/pkg/errmesg"
@@ -151,15 +150,15 @@ func (r DB) GetUserByPhoneNumber(phoneNumber string) (domain.User, error) {
 }
 
 // ResetPassword implements [userservice.Repository].
-func (r DB) ResetPassword(nikname string, hashedPassword uservalueobject.Password) error {
+// با شناسه‌ی کاربر کار می‌کند، نه nickname: nickname یکتا نیست و قبلاً
+// عوض‌کردن رمز یک نفر رمز همه‌ی هم‌نام‌هایش را هم عوض می‌کرد.
+func (r DB) ResetPassword(userID string, hashedPassword uservalueobject.Password) error {
 
 	const op = "postgres.ResetPassword"
 
-	query := `UPDATE users SET password_hash = $1 WHERE nickname = $2`
+	query := `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`
 
-	fmt.Println(hashedPassword, nikname, "hashedPassword, nikname")
-
-	cmdTag, err := r.conn.Exec(context.Background(), query, hashedPassword.Hash(), nikname)
+	cmdTag, err := r.conn.Exec(context.Background(), query, hashedPassword.Hash(), userID)
 
 	if err != nil {
 		return richerror.New(op).WithErr(err)
@@ -171,6 +170,20 @@ func (r DB) ResetPassword(nikname string, hashedPassword uservalueobject.Passwor
 		return richerror.New(op).WithMessage("user not found")
 	}
 
+	return nil
+}
+
+// UpdateNickname نام نمایشی کاربر را عوض می‌کند (ویرایش پروفایل در اپ).
+func (d DB) UpdateNickname(ctx context.Context, userID, nickname string) error {
+	const op = "postgresuser.UpdateNickname"
+
+	result, err := d.conn.Exec(ctx, `UPDATE users SET nickname = $2, updated_at = NOW() WHERE id = $1`, userID, nickname)
+	if err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("failed to update nickname")
+	}
+	if result.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("user not found").WithKind(richerror.KindNotFound)
+	}
 	return nil
 }
 
