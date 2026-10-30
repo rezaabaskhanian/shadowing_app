@@ -651,7 +651,7 @@ import {
   MAX_REMINDER_TIMES,
 } from '../data/NotificationContext';
 import { Switch } from 'react-native';
-import { Bell, BookOpen, Check, Clock, MessageSquare, Mic, Plus, Repeat, Sparkles } from 'lucide-react-native';
+import { Bell, BookOpen, Check, Clock, MessageSquare, Mic, Pencil, Plus, Repeat, Sparkles } from 'lucide-react-native';
 import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
 
 /**
@@ -900,6 +900,14 @@ export const ProfileScreen = () => {
             <Text style={styles.levelChipText}>{t('profileLevelChip').replace('{level}', levelName)}</Text>
           </View>
         )}
+        <TouchableOpacity
+          style={[styles.editProfileBtn, row]}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('ProfileEdit')}
+        >
+          <Pencil size={14} color={COLORS.primaryDark} />
+          <Text style={styles.editProfileText}>{t('profileEditTitle')}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* زبان اپ در یک ردیف جمع‌وجور: آیکون و برچسب، و کلید دوگزینه‌ای. */}
@@ -1445,6 +1453,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: COLORS.primaryLight,
+  },
+  editProfileText: { color: COLORS.primaryDark, fontFamily: FONT_FAMILY.semiBold, fontSize: 13 },
   pointsCard: {
     flexDirection: 'row',
     alignItems: 'center',

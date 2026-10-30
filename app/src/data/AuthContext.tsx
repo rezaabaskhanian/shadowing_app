@@ -28,6 +28,7 @@ interface AuthContextType {
   register: (nickname: string, phone: string, password: string, otpToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateNickname: (nickname: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -38,6 +39,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => {},
   logout: async () => {},
   refreshProfile: async () => {},
+  updateNickname: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -100,6 +102,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await cacheProfile(profile);
   }, []);
 
+  const updateNickname = useCallback(async (nickname: string) => {
+    const profile = await authApi.updateProfile(nickname);
+    setUser(profile);
+    await cacheProfile(profile);
+  }, []);
+
   const value = useMemo<AuthContextType>(
     () => ({
       isAuthenticated: !!user,
@@ -109,8 +117,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register,
       logout,
       refreshProfile,
+      updateNickname,
     }),
-    [user, isRestoring, login, register, logout, refreshProfile]
+    [user, isRestoring, login, register, logout, refreshProfile, updateNickname]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

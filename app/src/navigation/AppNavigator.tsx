@@ -43,6 +43,7 @@ import { GoalMapScreen } from '../screens/GoalPlan/GoalMapScreen';
 import { VerbSpeakScreen } from '../screens/Verbs/VerbSpeakScreen';
 import { TopicSuggestionScreen } from '../screens/TopicSuggestion/TopicSuggestionScreen';
 import { ContactUsScreen } from '../screens/ContactUs/ContactUsScreen';
+import { ProfileEditScreen } from '../screens/ProfileEdit/ProfileEditScreen';
 import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
 import { CurriculumMapScreen } from '../screens/CurriculumMap/CurriculumMapScreen';
 import { QuizScreen } from '../screens/Quiz/QuizScreen';
@@ -430,6 +431,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="ContactUs"
         component={ContactUsScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="ProfileEdit"
+        component={ProfileEditScreen}
         options={{
           tabBarButton: () => null,
         }}

@@ -98,6 +98,27 @@ export async function fetchProfile(): Promise<UserInfo> {
   return data.user as UserInfo;
 }
 
+/** ویرایش پروفایل: فعلاً فقط نام نمایشی. پروفایل تازه را برمی‌گرداند. */
+export async function updateProfile(nickname: string): Promise<UserInfo> {
+  const res = await authFetch('/v1/users/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nickname }),
+  });
+  const data = await jsonOrThrow(res);
+  return data.user as UserInfo;
+}
+
+/** تغییر رمز از داخل اپ؛ سرور رمز فعلی را چک می‌کند. */
+export async function changePassword(currentPassword: string, password: string): Promise<void> {
+  const res = await authFetch('/v1/users/change-password', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_password: currentPassword, password, confirm_password: password }),
+  });
+  await jsonOrThrow(res);
+}
+
 export async function logout(): Promise<void> {
   await clearToken();
 }
