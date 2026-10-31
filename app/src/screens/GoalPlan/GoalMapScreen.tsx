@@ -1,14 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   LayoutChangeEvent,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -20,7 +22,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { ArrowLeft, Check, Hand, Lock, MapPin, Pause, Volume2, X } from 'lucide-react-native';
+import { ArrowLeft, Check, ChevronLeft, Hand, Lock, MapPin, Maximize2, Minimize2, Pause, Volume2, X } from 'lucide-react-native';
 
 import { SPACING } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -28,12 +30,17 @@ import { useLanguage } from '../../data/i18n';
 import { track } from '../../services/analytics';
 import { absUrl } from '../../api/config';
 import {
+  exploreGoalMap,
   getGoalMap,
+  getGoalMaps,
   getGoalPlan,
+  type GoalId,
   type GoalMap,
+  type GoalMapSummary,
   type GoalPlanView,
   type GoalSituation,
 } from '../../api/goalPlan';
+import { getMyLevel } from '../../api/assessment';
 import { useScenes } from '../../data/ScenesContext';
 import {
   expandScenarioToDialogueItems,
@@ -69,6 +76,13 @@ const HIT_RADIUS = 30; // شعاع لمس هر نقطه روی صفحه (پیک�
 const PIN_SHADOW = 8;
 const LIFT = MARKER / 2 + PIN_SHADOW / 2;
 const PREVIEW_LINES = 2;
+// نقشه در حالت عادی کارتی است که ۸۰٪ ارتفاع صفحه را از پایین می‌گیرد، با ۱۰ پیکسل فاصله.
+const CARD_HEIGHT = 0.8;
+const CARD_GAP = 10;
+// گشت آرام بین نقطه‌ها بعد از باز شدن، تا اولین لمس کاربر.
+const TOUR_STOPS = 4;
+const TOUR_EVERY_MS = 3200;
+const TOUR_MOVE_MS = 2200;
 const LABEL_W = 170;
 
 const GOAL_LABEL_KEY: Record<string, string> = {
@@ -109,9 +123,18 @@ const pointState = (p: MapPoint, todayId?: string): PointState => {
  */
 export const GoalMapScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const { t } = useLanguage();
   const { getScene } = useScenes();
+
+  // هدفی که کاربر از دراور/انتخاب‌گر باز کرده؛ بدون آن، نقشه‌ی برنامه‌اش (یا انتخاب‌گر).
+  const routeGoal: GoalId | undefined = route.params?.goal;
+  const [pickedGoal, setPickedGoal] = useState<GoalId | null>(routeGoal ?? null);
+  // نقشه‌های قابل انتخاب، وقتی کاربر برنامه ندارد و هدفی هم انتخاب نکرده.
+  const [pickerMaps, setPickerMaps] = useState<GoalMapSummary[] | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const [plan, setPlan] = useState<GoalPlanView | null>(null);
   const [map, setMap] = useState<GoalMap | null | undefined>(undefined); // undefined = در حال بارگیری
@@ -123,13 +146,27 @@ export const GoalMapScreen = () => {
 
   const load = useCallback(() => {
     setError(false);
-    Promise.all([getGoalPlan(), getGoalMap()])
-      .then(([p, m]) => {
-        setPlan(p);
+    (async () => {
+      const saved = await getGoalPlan();
+      if (saved && (!pickedGoal || pickedGoal === saved.plan.goal)) {
+        const m = await getGoalMap();
+        setPlan(saved);
         setMap(m);
-      })
-      .catch(() => setError(true));
-  }, []);
+        return;
+      }
+      if (!pickedGoal) {
+        setPickerMaps(await getGoalMaps());
+        setPlan(null);
+        setMap(null);
+        return;
+      }
+      // بدون برنامه (یا هدفی غیر از هدف برنامه): همان نقشه با سطح کاربر، بدون ساختن برنامه.
+      const lvl = await getMyLevel().catch(() => null);
+      const r = await exploreGoalMap(pickedGoal, lvl?.scene_level || undefined);
+      setPlan(r.plan);
+      setMap(r.map);
+    })().catch(() => setError(true));
+  }, [pickedGoal]);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -227,7 +264,7 @@ export const GoalMapScreen = () => {
 
   // نقطه‌ی (درصدی) نقشه را وسط کادر می‌آورد.
   const focusOn = useCallback(
-    (xPct: number, yPct: number, s: number, animate: boolean) => {
+    (xPct: number, yPct: number, s: number, animate: boolean, duration = 450) => {
       if (!base || !box) return;
       const lx = (xPct / 100) * base.w;
       const ly = (yPct / 100) * base.h;
@@ -243,7 +280,7 @@ export const GoalMapScreen = () => {
         base.h,
         box.h,
       );
-      const cfg = { duration: 450, easing: Easing.out(Easing.cubic) };
+      const cfg = { duration, easing: duration > 450 ? Easing.inOut(Easing.quad) : Easing.out(Easing.cubic) };
       scale.value = animate ? withTiming(s, cfg) : s;
       tx.value = animate ? withTiming(nx, cfg) : nx;
       ty.value = animate ? withTiming(ny, cfg) : ny;
@@ -265,15 +302,76 @@ export const GoalMapScreen = () => {
   }, [base, box, map]);
 
   const [focused, setFocused] = useState(false);
+  const todayPoint = useMemo(
+    () => points.find(p => p.situation.id === plan?.today_id) ?? points[0],
+    [points, plan?.today_id],
+  );
+  // اولین لمس کاربر گشت خودکار را برای همیشه (در این باز شدن) متوقف می‌کند.
+  const touchedRef = useRef(false);
   useEffect(() => {
-    if (!base || !box || focused || !points.length) return;
-    const today =
-      points.find(p => p.situation.id === plan?.today_id) ?? points[0];
-    focusOn(today.x, today.y, OPEN_SCALE, false);
-    setSelected(today);
-    setFocused(true);
+    if (!base || !box || !todayPoint) return;
+    if (!focused) {
+      focusOn(todayPoint.x, todayPoint.y, OPEN_SCALE, false);
+      // بدون گشت (یک نقطه) کارت جای امروز مثل قبل باز می‌شود.
+      if (points.length < 2) setSelected(todayPoint);
+      setFocused(true);
+      return;
+    }
+    // تغییر اندازه‌ی کادر (تمام‌صفحه/کارت): همان نقطه وسط بماند.
+    const p = selected ?? todayPoint;
+    focusOn(p.x, p.y, scale.value, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, box, points]);
+  }, [base, box, todayPoint]);
+
+  // گشت آرام: دوربین بین «جای امروز» و چند جای نزدیکش جابه‌جا می‌شود تا کاربر بفهمد
+  // نقشه زنده است و جاهای دیگری هم هست؛ با اولین لمس می‌ایستد.
+  useEffect(() => {
+    if (!focused || touchedRef.current || !todayPoint || points.length < 2) return;
+    const near = points
+      .filter(p => p.position !== todayPoint.position)
+      .sort(
+        (a, b) =>
+          Math.hypot(a.x - todayPoint.x, a.y - todayPoint.y) -
+          Math.hypot(b.x - todayPoint.x, b.y - todayPoint.y),
+      )
+      .slice(0, TOUR_STOPS - 1);
+    const stops = [todayPoint, ...near];
+    let i = 0;
+    const id = setInterval(() => {
+      if (touchedRef.current) {
+        clearInterval(id);
+        return;
+      }
+      i = (i + 1) % stops.length;
+      focusOn(stops[i].x, stops[i].y, OPEN_SCALE, true, TOUR_MOVE_MS);
+    }, TOUR_EVERY_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, todayPoint, points]);
+
+  // هر بار باز شدن از دراور (openedAt تازه): از نو، با هدف همان مسیر یا انتخاب‌گر.
+  const openedAt = route.params?.openedAt;
+  const firstOpen = useRef(true);
+  useEffect(() => {
+    if (firstOpen.current) {
+      firstOpen.current = false;
+      return;
+    }
+    setSelected(null);
+    setFocused(false);
+    setFullscreen(false);
+    touchedRef.current = false;
+    setMap(undefined);
+    setPickedGoal(route.params?.goal ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openedAt]);
+
+  const stopTour = useCallback(() => {
+    if (touchedRef.current) return;
+    touchedRef.current = true;
+    updateTiles(scale.value, tx.value, ty.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateTiles]);
 
   const openPoint = useCallback((p: MapPoint) => {
     setSelected(p);
@@ -331,8 +429,17 @@ export const GoalMapScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const haltCamera = () => {
+    'worklet';
+    cancelAnimation(scale);
+    cancelAnimation(tx);
+    cancelAnimation(ty);
+    runOnJS(stopTour)();
+  };
+
   const pinch = Gesture.Pinch()
     .onBegin(() => {
+      haltCamera();
       stopPulse();
       runOnJS(hideHint)();
     })
@@ -361,6 +468,7 @@ export const GoalMapScreen = () => {
   const pan = Gesture.Pan()
     .minDistance(6)
     .onBegin(() => {
+      haltCamera();
       stopPulse();
       runOnJS(hideHint)();
     })
@@ -389,6 +497,7 @@ export const GoalMapScreen = () => {
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
+    .onBegin(haltCamera)
     .onEnd(e => {
       const s = scale.value > 1.3 ? 1 : 2;
       const k = s / scale.value;
@@ -404,6 +513,7 @@ export const GoalMapScreen = () => {
 
   const singleTap = Gesture.Tap()
     .maxDistance(10)
+    .onBegin(haltCamera)
     .onEnd(e => {
       runOnJS(onTapAt)(e.x, e.y, scale.value, tx.value, ty.value);
     });
@@ -437,6 +547,31 @@ export const GoalMapScreen = () => {
       setBox({ w: width, h: height });
   };
 
+  // بستن: اگر از انتخاب‌گر وارد نقشه شده، برمی‌گردد به انتخاب‌گر.
+  const close = () => {
+    if (pickedGoal && !routeGoal && pickerMaps) {
+      setSelected(null);
+      setFocused(false);
+      setFullscreen(false);
+      touchedRef.current = false;
+      setMap(undefined);
+      setPickedGoal(null);
+      return;
+    }
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('GoalPlan');
+  };
+
+  const pickGoal = (goal: GoalId) => {
+    setSelected(null);
+    setFocused(false);
+    touchedRef.current = false;
+    setHintGone(false);
+    setMap(undefined);
+    setPickedGoal(goal);
+    track('goal_map_open', goal);
+  };
+
   // ---------- حالت‌های بارگیری ----------
   if (error) {
     return (
@@ -455,6 +590,44 @@ export const GoalMapScreen = () => {
       </View>
     );
   }
+  if (!map && !plan && !pickedGoal && pickerMaps) {
+    return (
+      <View style={[styles.pickerScreen, { paddingTop: insets.top + SPACING.s }]}>
+        <View style={styles.pickerTop}>
+          <TouchableOpacity style={styles.pickerClose} onPress={close} accessibilityLabel={t('close')}>
+            <X size={20} color={CINE.text} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.pickerTitle}>{t('goalMapPickTitle')}</Text>
+        <Text style={styles.pickerSub}>{t('goalMapPickSub')}</Text>
+        <ScrollView
+          contentContainerStyle={[styles.pickerList, { paddingBottom: insets.bottom + SPACING.l }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {pickerMaps.map(m => (
+            <TouchableOpacity
+              key={m.goal}
+              style={styles.pickerCard}
+              onPress={() => pickGoal(m.goal)}
+              activeOpacity={0.9}
+            >
+              <Image source={{ uri: absUrl(m.image_url) }} style={styles.pickerImg} resizeMode="cover" />
+              <View style={styles.pickerRow}>
+                <MapPin size={16} color={CINE.accent} />
+                <Text style={styles.pickerLabel}>
+                  {t('goalMapPickCity').replace('{goal}', t(GOAL_LABEL_KEY[m.goal] || 'goalTravel'))}
+                </Text>
+                <ChevronLeft size={18} color={CINE.muted} />
+              </View>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity onPress={() => navigation.navigate('GoalPlan')} activeOpacity={0.8}>
+            <Text style={styles.pickerLink}>{t('goalMapPickPlan')}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
   if (!map || !plan) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
@@ -469,8 +642,44 @@ export const GoalMapScreen = () => {
     );
   }
 
+  const headerPill = (
+    <View style={[styles.headerPill, !fullscreen && styles.headerPillLight]}>
+      {!!plan.plan.start_level && (
+        <View style={styles.headerLevel}>
+          <Text style={styles.headerLevelText}>
+            {t(LEVEL_KEY[plan.plan.start_level] || 'levelBeginner')}
+          </Text>
+        </View>
+      )}
+      <Text style={[styles.headerText, !fullscreen && styles.headerTextDark]} numberOfLines={1}>
+        {t('goalMapHeader').replace('{goal}', t(GOAL_LABEL_KEY[plan.plan.goal] || 'goalMigration'))}
+      </Text>
+      <View style={styles.headerDot} />
+    </View>
+  );
+  // کارت نقشه: ۸۰٪ ارتفاع از پایین، ولی اگر صفحه کوتاه بود جای سرتیتر می‌ماند.
+  const cardH = Math.min(
+    Math.round(winH * CARD_HEIGHT),
+    winH - insets.top - insets.bottom - 56 - CARD_GAP * 3,
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, !fullscreen && styles.containerFramed]}>
+      {!fullscreen && (
+        <View style={[styles.frameHeader, { paddingTop: insets.top + SPACING.s }]}>
+          {headerPill}
+          <TouchableOpacity style={styles.frameClose} onPress={close} accessibilityLabel={t('close')}>
+            <X size={20} color={CINE.text} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <View
+        style={
+          fullscreen
+            ? styles.mapFull
+            : [styles.mapCard, { height: cardH, marginBottom: insets.bottom + CARD_GAP }]
+        }
+      >
       <View style={styles.mapBox} onLayout={onLayout}>
         {base && (
           <GestureDetector gesture={gesture}>
@@ -591,38 +800,30 @@ export const GoalMapScreen = () => {
         )}
       </View>
 
-      {/* نوار بالا روی نقشه */}
+      {/* نوار بالا روی نقشه: تمام‌صفحه = سرتیتر + بستن + کوچک کردن؛ کارت = فقط دکمه‌ی تمام‌صفحه. */}
       <View
-        style={[styles.topBar, { paddingTop: insets.top + SPACING.s }]}
+        style={[styles.topBar, { paddingTop: fullscreen ? insets.top + SPACING.s : SPACING.s }]}
         pointerEvents="box-none"
       >
-        <View style={styles.headerPill}>
-          {!!plan.plan.start_level && (
-            <View style={styles.headerLevel}>
-              <Text style={styles.headerLevelText}>
-                {t(LEVEL_KEY[plan.plan.start_level] || 'levelBeginner')}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.headerText} numberOfLines={1}>
-            {t('goalMapHeader').replace('{goal}', t(GOAL_LABEL_KEY[plan.plan.goal] || 'goalMigration'))}
-          </Text>
-          <View style={styles.headerDot} />
-        </View>
+        {fullscreen ? headerPill : <View style={styles.flex1} />}
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={() =>
-            navigation.canGoBack()
-              ? navigation.goBack()
-              : navigation.navigate('GoalPlan')
-          }
-          accessibilityLabel={t('close')}
+          onPress={() => setFullscreen(f => !f)}
+          accessibilityLabel={t(fullscreen ? 'goalMapExitFullscreen' : 'goalMapFullscreen')}
         >
-          <X size={20} color="#FFFFFF" />
+          {fullscreen ? <Minimize2 size={18} color="#FFFFFF" /> : <Maximize2 size={18} color="#FFFFFF" />}
         </TouchableOpacity>
+        {fullscreen && (
+          <TouchableOpacity style={styles.iconBtn} onPress={close} accessibilityLabel={t('close')}>
+            <X size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={[styles.bottomStack, { paddingBottom: insets.bottom + SPACING.m }]} pointerEvents="box-none">
+      <View
+        style={[styles.bottomStack, { paddingBottom: fullscreen ? insets.bottom + SPACING.m : SPACING.m }]}
+        pointerEvents="box-none"
+      >
       {!hintGone && (
         <View style={styles.hint} pointerEvents="none">
           <Text style={styles.hintText}>{t('goalMapHint2')}</Text>
@@ -647,6 +848,7 @@ export const GoalMapScreen = () => {
           t={t}
         />
       )}
+      </View>
       </View>
     </View>
   );
@@ -787,6 +989,60 @@ const SpotCard = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E9E4DA' },
+  containerFramed: { backgroundColor: '#FAF8F4', justifyContent: 'space-between' },
+  frameHeader: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: CARD_GAP,
+    paddingBottom: CARD_GAP,
+  },
+  frameClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: CINE.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapCard: {
+    marginHorizontal: CARD_GAP,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#E9E4DA',
+  },
+  mapFull: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  headerPillLight: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: CINE.border },
+  headerTextDark: { color: CINE.text },
+  pickerScreen: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
+  pickerTop: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: SPACING.s },
+  pickerClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: CINE.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 22, color: CINE.text, textAlign: 'right' },
+  pickerSub: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 21, color: CINE.muted, textAlign: 'right', marginTop: 4 },
+  pickerList: { gap: SPACING.m, paddingTop: SPACING.l },
+  pickerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: CINE.border,
+    overflow: 'hidden',
+  },
+  pickerImg: { width: '100%', aspectRatio: 2.4 },
+  pickerRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12 },
+  pickerLabel: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 15, color: CINE.text, textAlign: 'right' },
+  pickerLink: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: CINE.accentText, textAlign: 'center', paddingVertical: SPACING.s },
   center: {
     flex: 1,
     alignItems: 'center',

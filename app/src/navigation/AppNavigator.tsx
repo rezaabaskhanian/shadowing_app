@@ -50,6 +50,7 @@ import { QuizScreen } from '../screens/Quiz/QuizScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { TokenTopupScreen } from '../screens/TokenTopup/TokenTopupScreen';
 import { AIConversationScreen } from '../screens/AIConversation';
+import { RoleplayListScreen } from '../screens/Roleplay/RoleplayListScreen';
 import { FreeSpeechScreen } from '../screens/FreeSpeech';
 import { TopicListScreen } from '../screens/TopicSpeaking/TopicListScreen';
 import { TopicSpeakingScreen } from '../screens/TopicSpeaking/TopicSpeakingScreen';
@@ -99,6 +100,8 @@ function freshPerOpen<P extends object>(Screen: React.ComponentType<P>): React.F
 }
 
 const FreshTopicSpeaking = freshPerOpen(TopicSpeakingScreen);
+// «دوباره تمرین کن» در نقش‌آفرینی همین صفحه را با openedAt تازه باز می‌کند.
+const FreshAIConversation = freshPerOpen(AIConversationScreen);
 const FreshVideoClip = freshPerOpen(VideoClipScreen);
 const FreshWriting = freshPerOpen(WritingScreen);
 const FreshCourseLesson = freshPerOpen(CourseLessonScreen);
@@ -134,6 +137,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'CurriculumMap',
   'SceneQuiz',
   'AIConversation',
+  'RoleplayList',
   'FreeSpeech',
   'TopicList',
   'TopicSpeaking',
@@ -412,6 +416,7 @@ export const AppNavigator = () => {
       <Tab.Screen name="StoryList" component={StoryListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Story" component={FreshStory} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SongList" component={SongListScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="RoleplayList" component={RoleplayListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Song" component={FreshSong} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SongTakes" component={SongTakesScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="InterviewList" component={InterviewListScreen} options={{ tabBarButton: () => null }} />
@@ -466,7 +471,7 @@ export const AppNavigator = () => {
       />
       <Tab.Screen
         name="AIConversation"
-        component={AIConversationScreen}
+        component={FreshAIConversation}
         options={{
           tabBarButton: () => null,
         }}

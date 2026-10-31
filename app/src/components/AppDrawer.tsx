@@ -40,6 +40,8 @@ import {
   Music,
   PlusCircle,
   SpellCheck,
+  Drama,
+  Map as MapIcon,
 } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -287,6 +289,17 @@ export const AppDrawer = ({
             <Text style={[styles.rowText, ta]}>{t('habitRealSituations')}</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.row, rtl && styles.rowReverse]}
+            activeOpacity={0.7}
+            onPress={() => go('GoalMap', { openedAt: Date.now() })}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <MapIcon color={COLORS.primary} size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>{t('goalMapDrawer')}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('GoalPlan')}>
             <View style={[styles.rowIconWrap, { backgroundColor: COLORS.warningLight }]}>
               <Flag color={COLORS.warning} size={18} />
@@ -303,6 +316,13 @@ export const AppDrawer = ({
               <MessageCircle color={COLORS.primary} size={18} />
             </View>
             <Text style={[styles.rowText, ta]}>{t('drawerConversationTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('RoleplayList')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <Drama color={COLORS.primary} size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>{t('roleplayTitle')}</Text>
           </TouchableOpacity>
 
           {onOpenPlacementTest && (

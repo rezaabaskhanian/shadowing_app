@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Languages, Lightbulb, Lock, Mic, PartyPopper, Square, X } from 'lucide-react-native';
+import { Check, CircleX, Languages, Lightbulb, Lock, Mic, PartyPopper, Square, Target, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -18,7 +18,9 @@ import {
   startConversation,
   sendConversationTurn,
   getConversationSuggestions,
+  phraseUsed,
   type ConversationRole,
+  type Roleplay,
   type ConversationSuggestion,
 } from '../../api/conversation';
 import { track } from '../../services/analytics';
@@ -73,8 +75,33 @@ const TypingDots: React.FC = () => {
   );
 };
 
+/** پایانِ نقش‌آفرینی: کدام جمله‌های کلیدی را کاربر (تقریباً) گفت. */
+const RoleplayPhraseSummary: React.FC<{ roleplay: Roleplay; userTexts: string[] }> = ({ roleplay, userTexts }) => {
+  const { t } = useLanguage();
+  const used = roleplay.key_phrases.map((p) => phraseUsed(p.en, userTexts));
+  const count = used.filter(Boolean).length;
+  return (
+    <View style={styles.phraseSummary}>
+      <Text style={styles.phraseSummaryTitle}>
+        {t('roleplayPhrasesUsed').replace('{used}', String(count)).replace('{total}', String(used.length))}
+      </Text>
+      <ScrollView style={styles.phraseSummaryList} nestedScrollEnabled>
+        {roleplay.key_phrases.map((p, i) => (
+          <View key={i} style={styles.phraseSummaryRow}>
+            <View style={[styles.phraseDot, used[i] && styles.phraseDotUsed]}>
+              {used[i] && <Check size={11} color={COLORS.white} />}
+            </View>
+            <Text style={[styles.phraseSummaryText, !used[i] && styles.phraseSummaryTextMissed]}>{p.en}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
 /**
- * گفتگوی آزادِ صوتی با AI، بعد از تمام‌شدنِ همه‌ی دیالوگ‌های یک صحنه —
+ * گفتگوی آزادِ صوتی با AI، بعد از تمام‌شدنِ همه‌ی دیالوگ‌های یک صحنه، یا روی یک
+ * سناریوی «نقش‌آفرینی» (پارامتر roleplay از RoleplayListScreen) —
  * ورودی از دکمه‌ی چهارمِ Alert تکمیل درس در SceneScreen (scenarioId به‌عنوان
  * پارامتر مسیر). هر نوبت: کاربر ضبط می‌کند → رونویسی+پاسخ AI برمی‌گردد →
  * صدای AI (اگر ElevenLabs تنظیم شده باشد) پخش می‌شود. حداکثر ۶ تا ۸ نوبت.
@@ -90,6 +117,8 @@ export const AIConversationScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const scenarioId: string | undefined = route.params?.scenarioId;
+  // نقش‌آفرینی: به‌جای صحنه، کل سناریو از صفحه‌ی لیست می‌آید (مأموریت و جمله‌های کلیدی).
+  const roleplay: Roleplay | undefined = route.params?.roleplay;
   // اگر مبدأ عنوانِ صحنه را داده باشد، همان لحظه‌ی باز شدن نشان داده می‌شود و منتظرِ پاسخ سرور نمی‌ماند.
   const initialSceneTitle: string = route.params?.sceneTitle ?? '';
 
@@ -137,15 +166,15 @@ export const AIConversationScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!scenarioId) {
+    if (!scenarioId && !roleplay) {
       setLoadPhase('load_error');
       return;
     }
     let active = true;
-    startConversation(scenarioId)
+    startConversation(roleplay ? { roleplayId: roleplay.id } : { sceneId: scenarioId! })
       .then((res) => {
         if (!active) return;
-        track('ai_conversation_started', scenarioId);
+        track(roleplay ? 'roleplay_started' : 'ai_conversation_started', roleplay?.id ?? scenarioId);
         setConversationId(res.conversation_id);
         setSceneTitle(res.scene_title);
         setMaxUserTurns(res.max_user_turns);
@@ -182,7 +211,7 @@ export const AIConversationScreen: React.FC = () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarioId]);
+  }, [scenarioId, roleplay?.id]);
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
@@ -396,6 +425,18 @@ export const AIConversationScreen: React.FC = () => {
         contentContainerStyle={styles.messageListContent}
         showsVerticalScrollIndicator={false}
       >
+        {roleplay && (roleplay.goals_fa.length > 0 || !!roleplay.user_role_fa) && (
+          <View style={styles.missionCard}>
+            <Text style={styles.missionTitle}>{t('roleplayGoals')}</Text>
+            {!!roleplay.user_role_fa && <Text style={styles.missionText}>{roleplay.user_role_fa}</Text>}
+            {roleplay.goals_fa.map((g, i) => (
+              <View key={i} style={styles.missionRow}>
+                <Target size={13} color={COLORS.primary} />
+                <Text style={[styles.missionText, styles.flex1]}>{g}</Text>
+              </View>
+            ))}
+          </View>
+        )}
         {messages.map((msg, i) => (
           <View
             key={i}
@@ -466,6 +507,18 @@ export const AIConversationScreen: React.FC = () => {
           <PartyPopper size={28} color={COLORS.secondary} />
           <Text style={styles.endedTitle}>{t('aiConversationEndedTitle')}</Text>
           <Text style={styles.endedSub}>{t('aiConversationEndedMessage')}</Text>
+          {roleplay && roleplay.key_phrases.length > 0 && (
+            <RoleplayPhraseSummary roleplay={roleplay} userTexts={messages.filter((m) => m.role === 'user').map((m) => m.text)} />
+          )}
+          {roleplay && (
+            <TouchableOpacity
+              style={styles.tryAgainBtn}
+              onPress={() => navigation.navigate('AIConversation', { roleplay, sceneTitle, openedAt: Date.now() })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.tryAgainText}>{t('roleplayTryAgain')}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.confirmBtn} onPress={handleDone} activeOpacity={0.85}>
             <Text style={styles.confirmBtnText}>{t('backToHome')}</Text>
           </TouchableOpacity>
@@ -536,6 +589,45 @@ export const AIConversationScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  missionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F6CDBE',
+    padding: 14,
+    gap: 6,
+    marginBottom: SPACING.m,
+  },
+  missionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.primaryDark, textAlign: 'right' },
+  missionRow: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 6 },
+  missionText: { fontFamily: FONT_FAMILY.regular, fontSize: 13, lineHeight: 20, color: COLORS.text, textAlign: 'right' },
+  phraseSummary: { alignSelf: 'stretch', backgroundColor: '#FAF8F4', borderRadius: 16, padding: 12, gap: 8 },
+  phraseSummaryTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.text, textAlign: 'center' },
+  phraseSummaryList: { maxHeight: 150 },
+  phraseSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
+  phraseDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#D8D2C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phraseDotUsed: { backgroundColor: '#3DAE74', borderColor: '#3DAE74' },
+  phraseSummaryText: { flex: 1, fontFamily: FONT_FAMILY.semiBold, fontSize: 13, color: COLORS.text, textAlign: 'left' },
+  phraseSummaryTextMissed: { color: COLORS.muted },
+  tryAgainBtn: {
+    alignSelf: 'stretch',
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tryAgainText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.primary },
   grabber: { width: 44, height: 4, borderRadius: 2, backgroundColor: '#DDD8CE', marginBottom: 14 },
   turnChip: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: '#EFECE6' },
   turnDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#3DAE74' },

@@ -22,6 +22,7 @@ export type AnalyticsEvent =
   | 'paywall_tapped'
   | 'purchase_completed'
   | 'ai_conversation_started'
+  | 'roleplay_started'
   | 'free_speech_submitted'
   | 'topic_speaking_submitted'
   | 'video_clip_opened'

@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, X } from 'lucide-react-native';
+import { MessageCircle, Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -12,6 +12,7 @@ import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
 import { getPodcast, type Podcast } from '../../api/podcasts';
+import { getRoleplays, type Roleplay } from '../../api/conversation';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { track } from '../../services/analytics';
 import { formatDuration } from './PodcastListScreen';
@@ -43,6 +44,8 @@ export const PodcastScreen: React.FC = () => {
 
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loadError, setLoadError] = useState(false);
+  // نقش‌آفرینیِ همین موقعیت (پادکست‌های «زندگی واقعی»)، اگر منتشر شده باشد.
+  const [roleplay, setRoleplay] = useState<Roleplay | null>(null);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
@@ -63,6 +66,9 @@ export const PodcastScreen: React.FC = () => {
       return;
     }
     let active = true;
+    getRoleplays()
+      .then((list) => active && setRoleplay(list.find((r) => r.podcast_id === podcastId) ?? null))
+      .catch(() => {});
     getPodcast(podcastId)
       .then(async (p) => {
         if (!active) return;
@@ -373,6 +379,24 @@ export const PodcastScreen: React.FC = () => {
           >
             <Mic size={18} color={COLORS.primary} />
             <Text style={styles.myVersionText}>{t('myVersionButton')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {roleplay && (
+          <TouchableOpacity
+            style={styles.myVersionBtn}
+            activeOpacity={0.85}
+            onPress={async () => {
+              await TrackPlayer.pause().catch(() => {});
+              navigation.navigate('AIConversation', {
+                roleplay,
+                sceneTitle: rtl ? roleplay.title_fa || roleplay.title : roleplay.title,
+                openedAt: Date.now(),
+              });
+            }}
+          >
+            <MessageCircle size={18} color={COLORS.primary} />
+            <Text style={styles.myVersionText}>{t('roleplayPractice')}</Text>
           </TouchableOpacity>
         )}
 

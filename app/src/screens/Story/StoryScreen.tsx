@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { BookOpen, ChevronLeft, Gauge, Headphones, Pause, Play, X } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, Gauge, Headphones, Lock, Pause, Play, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -22,9 +22,10 @@ const STORY_TRACK_ID = 'story';
 const RATES = [0.75, 1];
 // بدون عکس، متن هر چند جمله یک بند جدا می‌شود تا دیوار متن نباشد.
 const SENTENCES_PER_PARAGRAPH = 4;
-// A1–A2 اول با صدا می‌خوانند (خواندن همراه با شنیدن)؛ از B1 اول بی‌صدا، بعد گوش دادن —
-// و فقط همین سطح‌ها سرعت خواندنِ بی‌صدا را می‌بینند.
-const LISTEN_FIRST_LEVELS = ['starter', 'beginner'];
+// «اول بخوان، بعد گوش بده»: صدا تا جواب دادن به سؤال‌ها بسته است تا کاربر واقعاً
+// بخواند و سرعت خواندنش اندازه گرفته شود. فقط A1–A2 می‌توانند با «خواندن همراه
+// صدا» زودتر بازش کنند (وصل کردن نوشتار به تلفظ)؛ پیش‌فرض برای همه خاموش است.
+const READ_ALONG_LEVELS = ['starter', 'beginner'];
 
 /**
  * خواندنِ یک فصل از داستان (بخش خواندن): متن‌محور، با «خواندن همراه با شنیدن»
@@ -57,6 +58,8 @@ export const StoryScreen: React.FC = () => {
   const readStartRef = useRef<number | null>(null);
   const listenedBeforeQuizRef = useRef(false);
   const [speed, setSpeed] = useState<ReadingSpeed | null>(null);
+  // A1–A2: کاربر خودش «خواندن همراه صدا» را روشن کرده.
+  const [readAlong, setReadAlong] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
   // y هر خط نسبت به کادر متن است، نه کل محتوای اسکرول؛ جلد و راهنمای بالای متن
@@ -146,8 +149,14 @@ export const StoryScreen: React.FC = () => {
     )
   );
 
+  const questions = story?.questions ?? [];
+  const allAnswered = questions.length > 0 && questions.every((_, i) => answers[i] !== undefined);
+  const correct = questions.filter((q, i) => answers[i] === q.answer).length;
+  // صدا بعد از جواب دادن به سؤال‌ها باز می‌شود (فصل بی‌سؤال: از اول باز).
+  const audioOpen = readAlong || allAnswered || questions.length === 0;
+
   const togglePlay = async () => {
-    if (!ready || !story) return;
+    if (!ready || !story || !audioOpen) return;
     if (playing) {
       await TrackPlayer.pause();
       return;
@@ -163,7 +172,7 @@ export const StoryScreen: React.FC = () => {
   };
 
   const playFrom = async (startMs: number) => {
-    if (!ready) return;
+    if (!ready || !audioOpen) return;
     if (Object.keys(answers).length === 0) listenedBeforeQuizRef.current = true;
     followRef.current = true;
     await TrackPlayer.seekTo(startMs / 1000);
@@ -207,21 +216,17 @@ export const StoryScreen: React.FC = () => {
     }
   }, [activeIdx]);
 
-  const listenFirst = LISTEN_FIRST_LEVELS.includes(story?.level ?? 'starter');
+  const canReadAlong = READ_ALONG_LEVELS.includes(story?.level ?? 'starter');
   const wordCount = lines.reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0);
 
-  // اولین جواب = پایانِ خواندن؛ سرعت فقط برای B1+ و فقط اگر بی‌صدا خوانده باشد.
+  // اولین جواب = پایانِ خواندن؛ سرعت فقط اگر بی‌صدا خوانده باشد.
   const answer = (qi: number, oi: number) => {
-    if (Object.keys(answers).length === 0 && !listenFirst && !listenedBeforeQuizRef.current && readStartRef.current) {
+    if (Object.keys(answers).length === 0 && !listenedBeforeQuizRef.current && readStartRef.current) {
       const seconds = (Date.now() - readStartRef.current) / 1000;
       recordReadingSpeed(wordCount, seconds).then((r) => r && setSpeed(r));
     }
     setAnswers((prev) => ({ ...prev, [qi]: oi }));
   };
-
-  const questions = story?.questions ?? [];
-  const allAnswered = questions.length > 0 && questions.every((_, i) => answers[i] !== undefined);
-  const correct = questions.filter((q, i) => answers[i] === q.answer).length;
 
   // فصل وقتی «خوانده» است که به همه‌ی سؤال‌ها جواب داده شود (بدون سؤال: با دکمه‌ی پایان).
   useEffect(() => {
@@ -309,13 +314,26 @@ export const StoryScreen: React.FC = () => {
 
         <View style={[styles.guide, rr, { backgroundColor: hexToRgba(accent, 0.08), borderColor: hexToRgba(accent, 0.22) }]}>
           <View style={[styles.guideIcon, { backgroundColor: hexToRgba(accent, 0.14) }]}>
-            {listenFirst ? <Headphones size={16} color={accent} /> : <BookOpen size={16} color={accent} />}
+            {readAlong ? <Headphones size={16} color={accent} /> : <BookOpen size={16} color={accent} />}
           </View>
           <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
             <Text style={[styles.guideTitle, ta, { color: accent }]}>
-              {listenFirst ? t('storyGuideListenTitle') : t('storyGuideSilentTitle')}
+              {readAlong ? t('storyGuideListenTitle') : t('storyGuideSilentTitle')}
             </Text>
-            <Text style={[styles.guideText, ta]}>{listenFirst ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
+            <Text style={[styles.guideText, ta]}>{readAlong ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
+            {canReadAlong && !allAnswered && (
+              <View style={[styles.switchInline, rr]}>
+                <Text style={styles.switchLabel}>{t('storyReadAlongToggle')}</Text>
+                <Switch
+                  value={readAlong}
+                  onValueChange={(v) => {
+                    setReadAlong(v);
+                    if (!v) TrackPlayer.pause().catch(() => {});
+                  }}
+                  trackColor={{ true: accent }}
+                />
+              </View>
+            )}
           </View>
         </View>
 
@@ -324,7 +342,7 @@ export const StoryScreen: React.FC = () => {
             <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
             <Switch value={showAllTranslations} onValueChange={setShowAllTranslations} trackColor={{ true: accent }} />
           </View>
-          <Text style={[styles.hint, ta]}>{t('storyReadHint')}</Text>
+          <Text style={[styles.hint, ta]}>{audioOpen ? t('storyReadHint') : t('storyReadHintSilent')}</Text>
         </View>
 
         <View
@@ -348,7 +366,7 @@ export const StoryScreen: React.FC = () => {
                 {!!img && <Image source={{ uri: absUrl(img) }} style={styles.inlineImage} resizeMode="cover" />}
                 <TouchableOpacity
                   style={[styles.sentence, isActive && { backgroundColor: hexToRgba(accent, 0.12) }]}
-                  onPress={() => playFrom(l.start_ms)}
+                  onPress={() => (audioOpen ? playFrom(l.start_ms) : toggleTranslation(i))}
                   onLongPress={() => toggleTranslation(i)}
                   activeOpacity={0.75}
                 >
@@ -476,12 +494,14 @@ export const StoryScreen: React.FC = () => {
         </View>
         <View style={[styles.playerRow, rr]}>
           <TouchableOpacity
-            style={[styles.playBtn, { backgroundColor: accent }]}
+            style={[styles.playBtn, { backgroundColor: audioOpen ? accent : COLORS.borderLight }]}
             onPress={togglePlay}
-            disabled={!ready}
+            disabled={!ready || !audioOpen}
             activeOpacity={0.85}
           >
-            {!ready ? (
+            {!audioOpen ? (
+              <Lock size={20} color={COLORS.muted} />
+            ) : !ready ? (
               <ActivityIndicator color={COLORS.white} />
             ) : playing ? (
               <Pause size={22} color={COLORS.white} fill={COLORS.white} />
@@ -490,8 +510,8 @@ export const StoryScreen: React.FC = () => {
             )}
           </TouchableOpacity>
           <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
-            <Text style={styles.playerLabel}>{t('storyListenAlong')}</Text>
-            <Text style={styles.playerSub}>{t('storyPlayerSub')}</Text>
+            <Text style={styles.playerLabel}>{audioOpen ? t('storyListenAlong') : t('storyAudioLocked')}</Text>
+            <Text style={styles.playerSub}>{audioOpen ? t('storyPlayerSub') : t('storyAudioLockedSub')}</Text>
           </View>
           <View style={styles.rates}>
             {RATES.map((r) => (

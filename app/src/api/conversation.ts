@@ -36,13 +36,71 @@ export interface SendTurnResult {
   is_ended: boolean;
 }
 
-export async function startConversation(sceneId: string): Promise<StartConversationResult> {
+/** گفتگو یا روی یک صحنه است یا روی یک سناریوی «نقش‌آفرینی». */
+export type ConversationTopic = { sceneId: string } | { roleplayId: string };
+
+export async function startConversation(topic: ConversationTopic): Promise<StartConversationResult> {
   const res = await authFetch('/v1/ai-conversation/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scene_id: sceneId }),
+    body: JSON.stringify('roleplayId' in topic ? { roleplay_id: topic.roleplayId } : { scene_id: topic.sceneId }),
   });
   return (await jsonOrThrow(res)) as StartConversationResult;
+}
+
+export interface RoleplayKeyPhrase {
+  en: string;
+  fa: string;
+}
+
+/** سناریوی «نقش‌آفرینی»: موقعیت زندگی واقعی که کاربر با AI تمرین می‌کند. */
+export interface Roleplay {
+  id: string;
+  title: string;
+  title_fa: string;
+  situation_fa: string;
+  user_role_fa: string;
+  goals_fa: string[];
+  key_phrases: RoleplayKeyPhrase[];
+  category: string;
+  level: string;
+  podcast_id?: string;
+}
+
+export async function getRoleplays(): Promise<Roleplay[]> {
+  const res = await authFetch('/v1/ai-conversation/roleplays', { method: 'GET' });
+  return ((await jsonOrThrow(res)) as Roleplay[]) || [];
+}
+
+const normalizeWords = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[’']/g, "'")
+    // «I've» و «I have» یکی حساب شوند (رونویسی گاهی شکل کامل را می‌نویسد).
+    .replace(/won't/g, 'will not')
+    .replace(/can't/g, 'can not')
+    .replace(/n't\b/g, ' not')
+    .replace(/'ve\b/g, ' have')
+    .replace(/'re\b/g, ' are')
+    .replace(/'m\b/g, ' am')
+    .replace(/'ll\b/g, ' will')
+    .replace(/'d\b/g, ' would')
+    .replace(/[^a-z0-9' ]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+/**
+ * آیا کاربر این جمله‌ی کلیدی را (تقریباً) گفته؟ گزینه‌ها با «/» جدا شده‌اند؛ برای
+ * هر گزینه اگر دست‌کم ۸۰٪ کلمه‌هایش در یکی از نوبت‌های کاربر بیاید، گفته شده.
+ * رونویسی گفتار دقیق نیست، پس تطبیق کامل لازم نیست.
+ */
+export function phraseUsed(phrase: string, userTexts: string[]): boolean {
+  const turns = userTexts.map((txt) => new Set(normalizeWords(txt)));
+  return phrase.split('/').some((alt) => {
+    const words = normalizeWords(alt);
+    if (words.length === 0) return false;
+    return turns.some((set) => words.filter((w) => set.has(w)).length / words.length >= 0.8);
+  });
 }
 
 /** از پسوند فایل، mime-type مناسب برای فیلد فرم می‌سازد (مطابق assessment.ts). */

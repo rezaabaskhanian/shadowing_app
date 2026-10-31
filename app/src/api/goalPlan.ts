@@ -123,3 +123,37 @@ export async function getGoalMap(): Promise<GoalMap | null> {
   const map = data?.map as GoalMap | null | undefined;
   return map && map.image_url && map.spots?.length ? map : null;
 }
+
+/** نمای کوچک نقشه‌ی یک هدف، برای انتخاب نقشه وقتی کاربر برنامه ندارد. */
+export interface GoalMapSummary {
+  goal: GoalId;
+  image_url: string;
+  width: number;
+  height: number;
+}
+
+export async function getGoalMaps(): Promise<GoalMapSummary[]> {
+  const res = await authFetch('/v1/goal-plan/maps', { method: 'GET' });
+  if (res.status === 404) return [];
+  const data = await jsonOrThrow(res);
+  return (data?.maps as GoalMapSummary[]) || [];
+}
+
+/**
+ * نقشه‌ی یک هدف با موقعیت‌هایش برای سطح کاربر، بدون ساختن برنامه. plan یک برنامه‌ی
+ * موقت است (ذخیره نمی‌شود) تا نقشه همان منطق «جای امروز» و صحنه‌ی هم‌سطح را داشته باشد.
+ */
+export async function exploreGoalMap(
+  goal: GoalId,
+  level?: string,
+): Promise<{ map: GoalMap | null; plan: GoalPlanView | null }> {
+  const q = level ? `?level=${encodeURIComponent(level)}` : '';
+  const res = await authFetch(`/v1/goal-plan/maps/${goal}${q}`, { method: 'GET' });
+  if (res.status === 404) return { map: null, plan: null };
+  const data = await jsonOrThrow(res);
+  const map = data?.map as GoalMap | null | undefined;
+  return {
+    map: map && map.image_url && map.spots?.length ? map : null,
+    plan: (data?.plan as GoalPlanView) ?? null,
+  };
+}
