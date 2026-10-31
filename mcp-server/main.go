@@ -37,6 +37,8 @@ func main() {
 	c := newClient(baseURL, phone, password)
 	registerTools(server, c)
 	registerInterviewTools(server, c)
+	registerExportTools(server, c)
+	registerRoleplayTools(server, c)
 
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)
