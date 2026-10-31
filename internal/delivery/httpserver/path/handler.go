@@ -39,6 +39,8 @@ func (h Handler) SetPathRoutes(e *echo.Echo) {
 	goal.PUT("", h.SaveGoalPlan)
 	goal.DELETE("", h.DeleteGoalPlan)
 	goal.GET("/map", h.GoalMap)
+	goal.GET("/maps", h.GoalMaps)
+	goal.GET("/maps/:goal", h.ExploreGoalMap)
 
 	adminGoal := e.Group("/v1/admin/goal-packs", auth, middlware.AdminOnly)
 	adminGoal.GET("/:goal", h.AdminGoalPack)
@@ -279,6 +281,22 @@ func (h Handler) GoalMap(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 	return c.JSON(http.StatusOK, echo.Map{"map": m})
+}
+
+// GoalMaps نمای کوچک نقشه‌های ساخته‌شده، برای انتخاب نقشه وقتی کاربر برنامه ندارد.
+func (h Handler) GoalMaps(c echo.Context) error {
+	list, err := h.svc.GoalMaps(c.Request().Context())
+	return respond(c, echo.Map{"maps": list}, err)
+}
+
+// ExploreGoalMap نقشه‌ی یک هدف با موقعیت‌هایش برای سطحِ ?level= (بدون برنامه).
+func (h Handler) ExploreGoalMap(c echo.Context) error {
+	uid, err := userID(c)
+	if uid == "" {
+		return err
+	}
+	m, view, err := h.svc.ExploreGoalMap(c.Request().Context(), uid, c.Param("goal"), c.QueryParam("level"))
+	return respond(c, echo.Map{"map": m, "plan": view}, err)
 }
 
 func (h Handler) AdminGoalMap(c echo.Context) error {

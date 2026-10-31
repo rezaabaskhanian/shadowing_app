@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// Start - شروع یک گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه
+// Start - شروع یک گفتگوی آزاد بعد از تمام‌شدنِ یک صحنه، یا یک نقش‌آفرینی
 func (h *Handler) Start(c echo.Context) error {
 	userClaims, err := claims.GetClaims(c)
 	if err != nil {
@@ -21,14 +21,14 @@ func (h *Handler) Start(c echo.Context) error {
 	}
 
 	var req dto.StartConversationRequest
-	if err := c.Bind(&req); err != nil || req.SceneID == "" {
+	if err := c.Bind(&req); err != nil || (req.SceneID == "") == (req.RoleplayID == "") {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error":   "invalid_input",
-			"message": "scene_id ارسال نشده است",
+			"message": "یکی از scene_id یا roleplay_id باید ارسال شود",
 		})
 	}
 
-	response, err := h.svc.StartConversation(c.Request().Context(), userClaims.UserID, req.SceneID)
+	response, err := h.svc.StartConversation(c.Request().Context(), userClaims.UserID, req.SceneID, req.RoleplayID)
 	if err != nil {
 		return errorhandling.ErrorHandling(err, c)
 	}

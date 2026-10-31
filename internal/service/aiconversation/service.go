@@ -46,12 +46,21 @@ type SceneRepository interface {
 	GetByID(ctx context.Context, id string) (scene.Scene, error)
 }
 
+// RoleplayRepository - سناریوهای «نقش‌آفرینی» (موضوعِ گفتگو به‌جای صحنه).
+type RoleplayRepository interface {
+	List(ctx context.Context, onlyActive bool) ([]aiconversation.Roleplay, error)
+	Get(ctx context.Context, id string) (aiconversation.Roleplay, error)
+	Save(ctx context.Context, rp aiconversation.Roleplay) (string, error)
+	Delete(ctx context.Context, id string) error
+}
+
 type Service struct {
 	conversations ConversationRepository
 	turns         TurnRepository
 	hints         HintRepository
 	profiles      ProfileRepository
 	scenes        SceneRepository
+	roleplays     RoleplayRepository
 	ai            aiservice.Service
 	transcriber   speecheval.Transcriber
 	store         filestore.Store
@@ -64,6 +73,7 @@ func New(
 	hints HintRepository,
 	profiles ProfileRepository,
 	scenes SceneRepository,
+	roleplays RoleplayRepository,
 	ai aiservice.Service,
 	transcriber speecheval.Transcriber,
 	store filestore.Store,
@@ -75,6 +85,7 @@ func New(
 		hints:         hints,
 		profiles:      profiles,
 		scenes:        scenes,
+		roleplays:     roleplays,
 		ai:            ai,
 		transcriber:   transcriber,
 		store:         store,

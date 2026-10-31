@@ -19,15 +19,22 @@ func NewConversationRepository(db *pgxpool.Pool) *ConversationRepository {
 	return &ConversationRepository{db: db}
 }
 
-const conversationColumns = `id, user_id, scene_id, status, turn_count, created_at, updated_at, total_input_tokens, total_output_tokens`
+const conversationColumns = `id, user_id, scene_id, roleplay_id, status, turn_count, created_at, updated_at, total_input_tokens, total_output_tokens`
 
 func scanConversation(row pgx.Row) (*aiconversation.Conversation, error) {
 	var c aiconversation.Conversation
+	var sceneID, roleplayID *uuid.UUID
 	if err := row.Scan(
-		&c.ID, &c.UserID, &c.SceneID, &c.Status, &c.TurnCount, &c.CreatedAt, &c.UpdatedAt,
+		&c.ID, &c.UserID, &sceneID, &roleplayID, &c.Status, &c.TurnCount, &c.CreatedAt, &c.UpdatedAt,
 		&c.TotalInputTokens, &c.TotalOutputTokens,
 	); err != nil {
 		return nil, err
+	}
+	if sceneID != nil {
+		c.SceneID = *sceneID
+	}
+	if roleplayID != nil {
+		c.RoleplayID = *roleplayID
 	}
 	return &c, nil
 }
@@ -36,11 +43,11 @@ func scanConversation(row pgx.Row) (*aiconversation.Conversation, error) {
 func (r *ConversationRepository) Create(ctx context.Context, c *aiconversation.Conversation) error {
 	const op = "postgresaiconversation.ConversationRepository.Create"
 
-	query := `INSERT INTO ai_conversations (id, user_id, scene_id, status, turn_count, created_at, updated_at, total_input_tokens, total_output_tokens)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	query := `INSERT INTO ai_conversations (id, user_id, scene_id, roleplay_id, status, turn_count, created_at, updated_at, total_input_tokens, total_output_tokens)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 	_, err := r.db.Exec(ctx, query,
-		c.ID, c.UserID, c.SceneID, c.Status, c.TurnCount, c.CreatedAt, c.UpdatedAt,
+		c.ID, c.UserID, nullUUID(c.SceneID), nullUUID(c.RoleplayID), c.Status, c.TurnCount, c.CreatedAt, c.UpdatedAt,
 		c.TotalInputTokens, c.TotalOutputTokens,
 	)
 	if err != nil {
@@ -84,4 +91,12 @@ func (r *ConversationRepository) UpdateProgress(ctx context.Context, id uuid.UUI
 		return richerror.New(op).WithMessage("conversation not found").WithKind(richerror.KindNotFound)
 	}
 	return nil
+}
+
+// nullUUID شناسه‌ی خالی (uuid.Nil) را NULL ذخیره می‌کند.
+func nullUUID(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
+	}
+	return &id
 }

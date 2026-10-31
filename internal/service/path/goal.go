@@ -220,6 +220,11 @@ func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, e
 	if err != nil || plan == nil {
 		return nil, err
 	}
+	return s.goalView(ctx, userID, plan)
+}
+
+// goalView موقعیت‌ها، پیش‌بینی و کار امروزِ یک برنامه (ذخیره‌شده یا موقت برای گشت‌زدن در نقشه).
+func (s *Service) goalView(ctx context.Context, userID string, plan *GoalPlan) (*GoalPlanView, error) {
 	pack, err := s.repo.GoalPack(ctx, plan.Goal)
 	if err != nil {
 		return nil, err
@@ -292,6 +297,53 @@ func (s *Service) GoalPlan(ctx context.Context, userID string) (*GoalPlanView, e
 		}
 	}
 	return view, nil
+}
+
+// GoalMapSummary نمای کوچک نقشه‌ی یک هدف برای انتخاب نقشه (بدون نقطه‌ها و کاشی‌ها).
+type GoalMapSummary struct {
+	Goal     string `json:"goal"`
+	ImageURL string `json:"image_url"`
+	Width    int    `json:"width"`
+	Height   int    `json:"height"`
+}
+
+// GoalMaps نقشه‌هایی که ساخته شده‌اند، به ترتیب ثابت هدف‌ها؛ برای کاربرِ بدون برنامه.
+func (s *Service) GoalMaps(ctx context.Context) ([]GoalMapSummary, error) {
+	out := []GoalMapSummary{}
+	for _, goal := range []string{"travel", "migration", "study", "work"} {
+		m, err := s.repo.GoalMap(ctx, goal)
+		if err != nil {
+			return nil, err
+		}
+		if m != nil && m.ImageURL != "" && len(m.Spots) > 0 {
+			out = append(out, GoalMapSummary{Goal: goal, ImageURL: m.ImageURL, Width: m.Width, Height: m.Height})
+		}
+	}
+	return out, nil
+}
+
+// ExploreGoalMap نقشه‌ی یک هدف همراه موقعیت‌هایش برای سطح داده‌شده، بدون ساختن برنامه؛
+// کاربرِ بدون برنامه هم می‌تواند در شهر بگردد و صحنه‌ها را باز کند.
+func (s *Service) ExploreGoalMap(ctx context.Context, userID, goal, level string) (*GoalMap, *GoalPlanView, error) {
+	const op = "path.ExploreGoalMap"
+	if err := parseID(op, userID); err != nil {
+		return nil, nil, err
+	}
+	if !validGoals[goal] {
+		return nil, nil, invalid(op, "هدف نامعتبر است")
+	}
+	if levelRank(level) < 0 {
+		level = "beginner"
+	}
+	m, err := s.repo.GoalMap(ctx, goal)
+	if err != nil || m == nil {
+		return nil, nil, err
+	}
+	view, err := s.goalView(ctx, userID, &GoalPlan{Goal: goal, StartLevel: level, MinutesPerDay: 15})
+	if err != nil {
+		return nil, nil, err
+	}
+	return m, view, nil
 }
 
 // goalExtras تمرین‌های فعالِ هدف تا سطح کاربر، به ترتیبی که ادمین چیده.

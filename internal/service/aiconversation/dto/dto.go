@@ -3,8 +3,10 @@ package dto
 // ============================================
 // StartConversation
 // ============================================
+// StartConversationRequest - دقیقاً یکی از SceneID/RoleplayID.
 type StartConversationRequest struct {
-	SceneID string `json:"scene_id"`
+	SceneID    string `json:"scene_id"`
+	RoleplayID string `json:"roleplay_id"`
 }
 
 type TurnDTO struct {

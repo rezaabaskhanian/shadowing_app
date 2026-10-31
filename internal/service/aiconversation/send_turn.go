@@ -87,9 +87,9 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		return nil, richerror.New(op).WithErr(err)
 	}
 
-	sc, err := s.scenes.GetByID(ctx, conv.SceneID.String())
+	tp, err := s.conversationTopic(ctx, conv)
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+		return nil, err
 	}
 
 	turnNumber := conv.TurnCount + 1
@@ -104,7 +104,7 @@ func (s *Service) SendTurn(ctx context.Context, userIDStr, conversationIDStr, lo
 		}
 		aiHistory = append(aiHistory, aiservice.ConversationTurn{Role: string(aiconversation.RoleUser), Text: transcript})
 
-		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, aiHistory, turnNumber,
+		if result, aiErr := s.ai.Converse(ctx, tp.Title, tp.Description, tp.Category, aiHistory, turnNumber,
 			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil && strings.TrimSpace(result.Reply) != "" {
 			assistantText, assistantTextFA, shouldEnd, usage = result.Reply, strings.TrimSpace(result.ReplyFA), result.ShouldEnd, result.Usage
 			s.access.RecordUsage(ctx, userIDStr, usage.InputTokens, usage.OutputTokens)

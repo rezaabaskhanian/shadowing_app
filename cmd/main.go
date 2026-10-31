@@ -418,8 +418,9 @@ func setupservice(cfg config.Config) (authservice.Service, userservice.Service,
 	conversationRepo := postgresaiconversation.NewConversationRepository(MyPostgresgresRepo.DB)
 	turnRepo := postgresaiconversation.NewTurnRepository(MyPostgresgresRepo.DB)
 	hintRepo := postgresaiconversation.NewHintRepository(MyPostgresgresRepo.DB)
+	roleplayRepo := postgresaiconversation.NewRoleplayRepository(MyPostgresgresRepo.DB)
 	aiConversationSvc := aiconversationservice.New(
-		conversationRepo, turnRepo, hintRepo, assessmentProfileRepo, learnningRepo,
+		conversationRepo, turnRepo, hintRepo, assessmentProfileRepo, learnningRepo, roleplayRepo,
 		aiservice.New(settingsSvc), evaluator,
 		store, aiAccessSvc,
 	)

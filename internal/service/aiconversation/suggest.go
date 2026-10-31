@@ -74,9 +74,9 @@ func (s *Service) Suggest(ctx context.Context, userIDStr, conversationIDStr stri
 		return nil, err
 	}
 
-	sc, err := s.scenes.GetByID(ctx, conv.SceneID.String())
+	tp, err := s.conversationTopic(ctx, conv)
 	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+		return nil, err
 	}
 
 	// نبودنِ پروفایل (کاربر هنوز تست سطح نداده) خطا نیست؛ سطحِ خالی یعنی مبتدی.
@@ -90,7 +90,7 @@ func (s *Service) Suggest(ctx context.Context, userIDStr, conversationIDStr stri
 		aiHistory = append(aiHistory, aiservice.ConversationTurn{Role: string(t.Role), Text: t.Text})
 	}
 
-	result, err := s.ai.SuggestReplies(ctx, sc.Title, sc.Description, sc.Category, level, aiHistory)
+	result, err := s.ai.SuggestReplies(ctx, tp.Title, tp.Description, tp.Category, level, aiHistory)
 	if err != nil {
 		slog.Warn("aiconversation: suggest replies failed", "err", err)
 		return nil, richerror.New(op).WithErr(err).WithMessage("could not generate suggestions")

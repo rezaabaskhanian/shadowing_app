@@ -57,6 +57,8 @@ const (
 	EventGoalMapSpot       = "goal_map_spot"
 	EventSongOpened        = "song_opened"
 	EventSongSingRecorded  = "song_sing_recorded"
+	// نقش‌آفرینی: شروع گفتگو روی یک سناریو (target = شناسه‌ی سناریو).
+	EventRoleplayStarted = "roleplay_started"
 )
 
 var validEvents = map[string]bool{
@@ -64,7 +66,7 @@ var validEvents = map[string]bool{
 	EventOnboardingCompleted: true, EventSignedIn: true, EventPlacementCompleted: true,
 	EventSceneOpened: true, EventShadowRecorded: true, EventSceneCompleted: true,
 	EventPaywallViewed: true, EventPaywallTapped: true, EventPurchaseCompleted: true,
-	EventAIConversationStart: true, EventFreeSpeechSubmitted: true, EventTopicSpeakingDone: true,
+	EventAIConversationStart: true, EventRoleplayStarted: true, EventFreeSpeechSubmitted: true, EventTopicSpeakingDone: true,
 	EventVideoClipOpened: true, EventVideoClipQuizDone: true, EventVideoClipPerformed: true,
 	EventWritingSubmitted: true, EventCourseLessonDone: true, EventPodcastPlayed: true,
 	EventPodcastMyVersionStarted: true, EventPodcastMyVersionPlayed: true,

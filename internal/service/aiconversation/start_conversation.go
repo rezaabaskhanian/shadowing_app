@@ -13,24 +13,41 @@ import (
 	"github.com/google/uuid"
 )
 
-// StartConversation یک گفتگوی تازه می‌سازد و اولین نوبت (از طرف AI) را
+// StartConversation یک گفتگوی تازه روی یک صحنه یا یک سناریوی نقش‌آفرینی
+// (دقیقاً یکی از sceneIDStr/roleplayIDStr) می‌سازد و اولین نوبت (از طرف AI) را
 // برمی‌گرداند. اگر AI یا TTS در دسترس نباشند، هیچ‌کدام درخواست را نمی‌شکنند —
 // یک جمله‌ی افتتاحیه‌ی ثابت و/یا بدون صدا برمی‌گردد.
-func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr string) (*dto.StartConversationResponse, error) {
+func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr, roleplayIDStr string) (*dto.StartConversationResponse, error) {
 	const op = "aiconversation.StartConversation"
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err).WithMessage("invalid user ID").WithKind(richerror.KindInvalid)
 	}
-	sceneUUID, err := uuid.Parse(sceneIDStr)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("invalid scene ID").WithKind(richerror.KindInvalid)
-	}
 
-	sc, err := s.scenes.GetByID(ctx, sceneIDStr)
-	if err != nil {
-		return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+	var sceneUUID, roleplayUUID uuid.UUID
+	var tp topic
+	if roleplayIDStr != "" {
+		if roleplayUUID, err = uuid.Parse(roleplayIDStr); err != nil {
+			return nil, richerror.New(op).WithErr(err).WithMessage("invalid roleplay ID").WithKind(richerror.KindInvalid)
+		}
+		rp, err := s.roleplays.Get(ctx, roleplayIDStr)
+		if err != nil {
+			return nil, err
+		}
+		if !rp.IsActive {
+			return nil, richerror.New(op).WithMessage("roleplay not found").WithKind(richerror.KindNotFound)
+		}
+		tp = roleplayTopic(rp)
+	} else {
+		if sceneUUID, err = uuid.Parse(sceneIDStr); err != nil {
+			return nil, richerror.New(op).WithErr(err).WithMessage("invalid scene ID").WithKind(richerror.KindInvalid)
+		}
+		sc, err := s.scenes.GetByID(ctx, sceneIDStr)
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err).WithMessage("scene not found").WithKind(richerror.KindNotFound)
+		}
+		tp = topic{Title: sc.Title, Description: sc.Description, Category: sc.Category}
 	}
 
 	if err := s.access.CheckAllowed(ctx, op, userIDStr); err != nil {
@@ -40,7 +57,7 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 	openingText, openingTextFA := defaultOpeningText, defaultOpeningTextFA
 	var usage aiservice.TokenUsage
 	if s.ai.Enabled() {
-		if result, aiErr := s.ai.Converse(ctx, sc.Title, sc.Description, sc.Category, nil, 0,
+		if result, aiErr := s.ai.Converse(ctx, tp.Title, tp.Description, tp.Category, nil, 0,
 			aiconversation.MaxUserTurns, aiconversation.WrapUpFromTurn); aiErr == nil && strings.TrimSpace(result.Reply) != "" {
 			openingText, openingTextFA, usage = result.Reply, strings.TrimSpace(result.ReplyFA), result.Usage
 		} else {
@@ -52,7 +69,7 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 
 	audioURL := s.synthesize(ctx, openingText)
 
-	conv, err := aiconversation.NewConversation(userID, sceneUUID)
+	conv, err := aiconversation.NewConversation(userID, sceneUUID, roleplayUUID)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -74,7 +91,7 @@ func (s *Service) StartConversation(ctx context.Context, userIDStr, sceneIDStr s
 
 	return &dto.StartConversationResponse{
 		ConversationID: conv.ID.String(),
-		SceneTitle:     sc.Title,
+		SceneTitle:     tp.Title,
 		OpeningTurn: dto.TurnDTO{
 			Role:     string(aiconversation.RoleAssistant),
 			Text:     openingText,
