@@ -1,5 +1,6 @@
 import type {
   Song,
+  Roleplay,
   InterviewSet,
   SpecialtyField,
   SpecialtyFieldDetail,
@@ -1117,4 +1118,18 @@ export async function saveSong(s: Omit<Song, "id"> & { id?: string }): Promise<S
 
 export async function deleteSong(id: string): Promise<void> {
   await jsonOrThrow(await authFetch(`/v1/admin/songs/${id}`, { method: "DELETE" }));
+}
+
+// ---- نقش‌آفرینی ----
+
+export async function listRoleplays(): Promise<Roleplay[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/roleplays", { method: "GET" }))) || [];
+}
+
+export async function saveRoleplay(r: Roleplay): Promise<Roleplay> {
+  return jsonOrThrow(await authFetch(`/v1/admin/roleplays/${r.id}`, jsonBody("PUT", r)));
+}
+
+export async function deleteRoleplay(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/roleplays/${id}`, { method: "DELETE" }));
 }

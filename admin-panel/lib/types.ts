@@ -876,3 +876,21 @@ export interface Song {
   is_active: boolean;
   line_count?: number;
 }
+
+/** سناریوی «نقش‌آفرینی»: موقعیت زندگی واقعی برای گفتگو با AI. */
+export interface Roleplay {
+  id: string;
+  title: string;
+  title_fa: string;
+  situation_fa: string;
+  ai_role: string;
+  user_role_fa: string;
+  goals_fa: string[];
+  key_phrases: { en: string; fa: string }[];
+  category: string;
+  level: "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
+  podcast_id?: string;
+  position: number;
+  is_active: boolean;
+  created_at?: string;
+}

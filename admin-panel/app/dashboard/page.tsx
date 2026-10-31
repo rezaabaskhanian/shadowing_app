@@ -25,6 +25,7 @@ import PodcastsPanel from "./PodcastsPanel";
 import SongsPanel from "./SongsPanel";
 import ResourcesPanel from "./ResourcesPanel";
 import IdiomsPanel from "./IdiomsPanel";
+import RoleplaysPanel from "./RoleplaysPanel";
 import LearningPathsPanel from "./LearningPathsPanel";
 import InterviewEspPanel from "./InterviewEspPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
@@ -49,6 +50,7 @@ type Tab =
   | "course"
   | "podcasts"
   | "songs"
+  | "roleplays"
   | "idioms"
   | "paths"
   | "resources"
@@ -207,6 +209,12 @@ export default function DashboardPage() {
             🎵 آهنگ
           </button>
           <button
+            className={`sidebar-link ${tab === "roleplays" ? "active" : ""}`}
+            onClick={() => setTab("roleplays")}
+          >
+            🎭 نقش‌آفرینی
+          </button>
+          <button
             className={`sidebar-link ${tab === "videoClips" ? "active" : ""}`}
             onClick={() => setTab("videoClips")}
           >
@@ -330,6 +338,7 @@ export default function DashboardPage() {
         {tab === "course" && <CoursePanel notify={notify} />}
         {tab === "podcasts" && <PodcastsPanel notify={notify} />}
         {tab === "songs" && <SongsPanel notify={notify} />}
+        {tab === "roleplays" && <RoleplaysPanel notify={notify} />}
         {tab === "idioms" && <IdiomsPanel notify={notify} />}
         {tab === "paths" && <LearningPathsPanel notify={notify} />}
         {tab === "resources" && <ResourcesPanel notify={notify} />}
