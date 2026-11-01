@@ -46,6 +46,9 @@ type Clip struct {
 	MovieYear    int `json:"movie_year,omitempty"`
 	MovieStartMs int `json:"movie_start_ms,omitempty"`
 	MovieEndMs   int `json:"movie_end_ms,omitempty"`
+	// برای سریال‌ها: شماره‌ی فصل و قسمت (۰ = فیلم). اپ هم این‌ها را می‌بیند.
+	Season  int `json:"season"`
+	Episode int `json:"episode"`
 	// حاشیه‌ی قطع صدای ویدیو قبل و بعد از جمله‌ی کاربر (میلی‌ثانیه).
 	MutePaddingMs   int        `json:"mute_padding_ms"`
 	VideoURL        string     `json:"video_url"`
@@ -69,13 +72,13 @@ type UserClip struct {
 
 const clipColumns = `c.id::text, c.title, c.description_fa, c.source, c.video_url, c.poster_url, c.level,
 	c.duration_seconds, c.questions, c.position, c.is_active, c.created_at::text, c.category, c.movie_title,
-	c.movie_year, c.movie_start_ms, c.movie_end_ms, c.mute_padding_ms`
+	c.movie_year, c.movie_start_ms, c.movie_end_ms, c.mute_padding_ms, c.season, c.episode`
 
 func scanClip(row pgx.Row, c *Clip, extra ...any) error {
 	var questions []byte
 	dest := append([]any{&c.ID, &c.Title, &c.DescriptionFa, &c.Source, &c.VideoURL, &c.PosterURL, &c.Level,
 		&c.DurationSeconds, &questions, &c.Position, &c.IsActive, &c.CreatedAt, &c.Category, &c.MovieTitle,
-		&c.MovieYear, &c.MovieStartMs, &c.MovieEndMs, &c.MutePaddingMs}, extra...)
+		&c.MovieYear, &c.MovieStartMs, &c.MovieEndMs, &c.MutePaddingMs, &c.Season, &c.Episode}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return err
 	}
@@ -182,11 +185,11 @@ func (r DB) Save(ctx context.Context, c Clip) (string, error) {
 	if id == "" {
 		err = tx.QueryRow(ctx, `
 			INSERT INTO video_clips (title, description_fa, source, video_url, poster_url, level, duration_seconds, questions, position, is_active, category, movie_title,
-				movie_year, movie_start_ms, movie_end_ms, mute_padding_ms)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+				movie_year, movie_start_ms, movie_end_ms, mute_padding_ms, season, episode)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 			RETURNING id::text`,
 			c.Title, c.DescriptionFa, c.Source, c.VideoURL, c.PosterURL, c.Level, c.DurationSeconds, questions, c.Position, c.IsActive,
-			c.Category, c.MovieTitle, c.MovieYear, c.MovieStartMs, c.MovieEndMs, c.MutePaddingMs,
+			c.Category, c.MovieTitle, c.MovieYear, c.MovieStartMs, c.MovieEndMs, c.MutePaddingMs, c.Season, c.Episode,
 		).Scan(&id)
 	} else {
 		var tag interface{ RowsAffected() int64 }
@@ -194,10 +197,10 @@ func (r DB) Save(ctx context.Context, c Clip) (string, error) {
 			UPDATE video_clips SET title = $2, description_fa = $3, source = $4, video_url = $5, poster_url = $6,
 				level = $7, duration_seconds = $8, questions = $9, position = $10, is_active = $11,
 				category = $12, movie_title = $13, movie_year = $14, movie_start_ms = $15, movie_end_ms = $16,
-				mute_padding_ms = $17
+				mute_padding_ms = $17, season = $18, episode = $19
 			WHERE id = $1::uuid`,
 			id, c.Title, c.DescriptionFa, c.Source, c.VideoURL, c.PosterURL, c.Level, c.DurationSeconds, questions, c.Position, c.IsActive,
-			c.Category, c.MovieTitle, c.MovieYear, c.MovieStartMs, c.MovieEndMs, c.MutePaddingMs)
+			c.Category, c.MovieTitle, c.MovieYear, c.MovieStartMs, c.MovieEndMs, c.MutePaddingMs, c.Season, c.Episode)
 		if err == nil && tag.RowsAffected() == 0 {
 			return "", richerror.New(op).WithMessage("کلیپ پیدا نشد").WithKind(richerror.KindNotFound)
 		}

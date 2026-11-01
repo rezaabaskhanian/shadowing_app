@@ -71,6 +71,8 @@ const emptyDraft = (position = 0): Draft => ({
   movie_year: 0,
   movie_start_ms: 0,
   movie_end_ms: 0,
+  season: 0,
+  episode: 0,
   mute_padding_ms: DEFAULT_MUTE_PADDING_MS,
   video_url: "",
   poster_url: "",
@@ -389,13 +391,39 @@ export default function VideoClipsPanel({
             </div>
             {draft.source === "movie" && (
               <div style={{ flex: "1 1 180px" }}>
-                <label>نام فیلم</label>
+                <label>نام فیلم / سریال</label>
                 <input
                   value={draft.movie_title || ""}
                   onChange={(e) => update({ movie_title: e.target.value })}
-                  placeholder="Friends (S01E05)"
+                  placeholder="Young Sheldon"
                 />
               </div>
+            )}
+            {draft.source === "movie" && (
+              <>
+                <div style={{ width: 70 }}>
+                  <label>فصل</label>
+                  <input
+                    dir="ltr"
+                    type="number"
+                    min={0}
+                    value={draft.season || ""}
+                    onChange={(e) => update({ season: Number(e.target.value) || 0 })}
+                    placeholder="—"
+                  />
+                </div>
+                <div style={{ width: 70 }}>
+                  <label>قسمت</label>
+                  <input
+                    dir="ltr"
+                    type="number"
+                    min={0}
+                    value={draft.episode || ""}
+                    onChange={(e) => update({ episode: Number(e.target.value) || 0 })}
+                    placeholder="—"
+                  />
+                </div>
+              </>
             )}
             <div>
               <label>سطح</label>
@@ -744,7 +772,7 @@ export default function VideoClipsPanel({
                   <div style={{ fontWeight: 700 }}>{c.title}</div>
                   <div className="hint" style={{ margin: 0 }}>
                     {c.source === "movie"
-                      ? `فیلم${c.movie_title ? ` (${c.movie_title}${c.movie_year ? `، ${c.movie_year}` : ""})` : ""}${
+                      ? `فیلم${c.movie_title ? ` (${c.movie_title}${c.episode ? ` S${String(c.season || 1).padStart(2, "0")}E${String(c.episode).padStart(2, "0")}` : ""}${c.movie_year ? `، ${c.movie_year}` : ""})` : ""}${
                           c.movie_start_ms ? ` @ ${formatTimecode(c.movie_start_ms)}` : ""
                         }${hideMovies ? " · پنهان (سوئیچ سراسری)" : ""}`
                       : "Flow"}

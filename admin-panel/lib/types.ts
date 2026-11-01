@@ -567,6 +567,9 @@ export interface VideoClip {
   movie_year?: number;
   movie_start_ms?: number;
   movie_end_ms?: number;
+  /** سریال: شماره‌ی فصل و قسمت (۰ = فیلم). */
+  season?: number;
+  episode?: number;
   /** حاشیه‌ی قطع صدای ویدیو قبل و بعد از جمله‌ی کاربر در اپ (ms). */
   mute_padding_ms: number;
   video_url: string;

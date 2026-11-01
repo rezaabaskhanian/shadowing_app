@@ -197,6 +197,13 @@ func (s *Service) AdminSave(ctx context.Context, id string, c Clip) (Clip, error
 	if c.Source != "movie" {
 		c.MovieTitle = ""
 		c.MovieYear, c.MovieStartMs, c.MovieEndMs = 0, 0, 0
+		c.Season, c.Episode = 0, 0
+	}
+	if c.Season < 0 || c.Season > 99 || c.Episode < 0 || c.Episode > 999 {
+		return invalid("شماره‌ی فصل/قسمت درست نیست")
+	}
+	if c.Episode > 0 && c.Season == 0 {
+		c.Season = 1
 	}
 	if c.MovieYear != 0 && (c.MovieYear < 1880 || c.MovieYear > 2100) {
 		return invalid("سال فیلم درست نیست")

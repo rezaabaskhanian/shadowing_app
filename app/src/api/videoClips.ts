@@ -32,6 +32,9 @@ export interface VideoClip {
   category?: string;
   /** نام فیلمِ منبع (فقط برای source=movie). */
   movie_title?: string;
+  /** سریال: شماره‌ی فصل و قسمت (۰ = فیلم، نه سریال). */
+  season?: number;
+  episode?: number;
   /** حاشیه‌ی قطع صدای ویدیو قبل و بعد از جمله‌ی کاربر (ms) — از پنل ادمین. */
   mute_padding_ms?: number;
   video_url: string;

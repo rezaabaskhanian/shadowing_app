@@ -127,9 +127,11 @@ export const VideoClipListScreen: React.FC = () => {
         : [],
     [bySource, source]
   );
-  const visible = bySource.filter(
+  const filtered = bySource.filter(
     (c) => (!category || c.category === category) && (!movie || (c.movie_title || '').trim() === movie)
   );
+  // سریالِ انتخاب‌شده به ترتیبِ فصل و قسمت می‌آید (sort پایدار است، پس داخل هر قسمت ترتیبِ ادمین می‌ماند).
+  const visible = movie ? [...filtered].sort(episodeOrder) : filtered;
 
   const load = useCallback(() => {
     setError(false);
@@ -296,6 +298,13 @@ type ClipProps = {
   onMovie: () => void;
 };
 
+const episodeOrder = (a: VideoClipListItem, b: VideoClipListItem) =>
+  (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0);
+
+/** « · S1 E3» برای تکه‌های سریال؛ فیلم چیزی نمی‌گیرد. */
+const episodeLabel = (clip: VideoClipListItem) =>
+  clip.episode ? ` · S${clip.season || 1} E${clip.episode}` : '';
+
 const formatDuration = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
 
@@ -356,6 +365,7 @@ const FeaturedClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
       <TouchableOpacity hitSlop={6} onPress={onMovie}>
         <Text style={styles.movieTitle} numberOfLines={1}>
           🎞 {clip.movie_title}
+          {episodeLabel(clip)}
         </Text>
       </TouchableOpacity>
     )}
@@ -382,6 +392,7 @@ const CompactClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
         <TouchableOpacity hitSlop={6} onPress={onMovie}>
           <Text style={styles.movieTitle} numberOfLines={1}>
             🎞 {clip.movie_title}
+            {episodeLabel(clip)}
           </Text>
         </TouchableOpacity>
       )}
