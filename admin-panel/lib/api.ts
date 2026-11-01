@@ -1126,8 +1126,9 @@ export async function listRoleplays(): Promise<Roleplay[]> {
   return (await jsonOrThrow(await authFetch("/v1/admin/roleplays", { method: "GET" }))) || [];
 }
 
-export async function saveRoleplay(r: Roleplay): Promise<Roleplay> {
-  return jsonOrThrow(await authFetch(`/v1/admin/roleplays/${r.id}`, jsonBody("PUT", r)));
+/** بدون id سناریوی تازه می‌سازد، با id جایگزین می‌کند. */
+export async function saveRoleplay(r: Omit<Roleplay, "id"> & { id?: string }): Promise<Roleplay> {
+  return jsonOrThrow(await authFetch(r.id ? `/v1/admin/roleplays/${r.id}` : "/v1/admin/roleplays", jsonBody(r.id ? "PUT" : "POST", r)));
 }
 
 export async function deleteRoleplay(id: string): Promise<void> {

@@ -39,6 +39,7 @@ func main() {
 	registerInterviewTools(server, c)
 	registerExportTools(server, c)
 	registerRoleplayTools(server, c)
+	registerImageTools(server, c)
 
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)
