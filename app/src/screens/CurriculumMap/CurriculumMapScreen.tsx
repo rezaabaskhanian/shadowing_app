@@ -13,6 +13,7 @@ import type { Scenario } from '../../data/scenarios';
 import { GradientFill } from '../../components/GradientFill';
 import { useAuth } from '../../data/AuthContext';
 import { getUserStreak, getUserSummary } from '../../api/progress';
+import { getSubscriptionStatus } from '../../api/billing';
 
 const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const PATH_COLOR = '#DCD4C6';
@@ -80,9 +81,17 @@ export const CurriculumMapScreen = () => {
   const { user } = useAuth();
   const [streak, setStreak] = useState<number | null>(null);
   const [xp, setXp] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      if (user?.role === 'admin') {
+        setIsSubscribed(true);
+      } else {
+        getSubscriptionStatus()
+          .then((s) => setIsSubscribed(!!s?.active))
+          .catch(() => setIsSubscribed(false));
+      }
       if (!user?.id) return;
       let active = true;
       getUserStreak(user.id)
@@ -94,9 +103,18 @@ export const CurriculumMapScreen = () => {
       return () => {
         active = false;
       };
-    }, [user?.id])
+    }, [user?.id, user?.role])
   );
   const scrollRef = useRef<ScrollView>(null);
+
+  const FREE_SCENES_PER_LEVEL = 4;
+  const isSceneLocked = useCallback(
+    (scenario: Scenario, session: number) => {
+      if (isSubscribed) return false;
+      return scenario.isLocked || session > FREE_SCENES_PER_LEVEL;
+    },
+    [isSubscribed]
+  );
 
   // نقشه همیشه از آسان به سخت مرتب می‌شود (نه بر اساس "order" خام ادمین)؛
   // داخل هر سطح هم بر اساس order همان‌جا مرتب می‌مانند.
@@ -189,8 +207,8 @@ export const CurriculumMapScreen = () => {
   const CurrentLevelIcon = (LEVEL_BADGE_STYLE[currentLevel] || LEVEL_BADGE_STYLE.Beginner).Icon;
   const currentSession = nodeItems.find((n) => n.scenario.id === currentId)?.session ?? 1;
 
-  const openScene = (scenario: Scenario) => {
-    if (scenario.isLocked) {
+  const openScene = (scenario: Scenario, locked = false) => {
+    if (locked) {
       navigation.navigate('Paywall');
       return;
     }
@@ -381,7 +399,17 @@ export const CurriculumMapScreen = () => {
               );
             }
 
-            const state: NodeState = item.scenario.id === currentId ? 'current' : baseState(item.scenario);
+            const locked = isSceneLocked(item.scenario, item.session);
+            let state: NodeState;
+            if (item.scenario.isCompleted) {
+              state = 'completed';
+            } else if (locked) {
+              state = 'subLocked';
+            } else if (item.scenario.id === currentId) {
+              state = 'current';
+            } else {
+              state = 'upcoming';
+            }
             const levelStyle = LEVEL_BADGE_STYLE[item.scenario.level] || LEVEL_BADGE_STYLE.Beginner;
             const LevelIcon = levelStyle.Icon;
             return (
@@ -389,7 +417,7 @@ export const CurriculumMapScreen = () => {
                 key={item.scenario.id}
                 style={[styles.row, { top: item.top, transform: [{ translateX: item.offsetX }] }]}
               >
-                <NodeBubble state={state} onPress={() => openScene(item.scenario)} />
+                <NodeBubble state={state} onPress={() => openScene(item.scenario, locked)} />
                 <View style={[styles.label, rtl && styles.rowReverse, state === 'current' && styles.labelCurrent]}>
                   {state === 'current' ? (
                     <View style={styles.labelDot} />
@@ -399,6 +427,12 @@ export const CurriculumMapScreen = () => {
                   <Text style={styles.labelTitle} numberOfLines={1}>
                     {item.scenario.title}
                   </Text>
+                  {locked && (
+                    <View style={[styles.subLockedChip, rtl && styles.rowReverse]}>
+                      <Lock size={10} color={COLORS.primary} />
+                      <Text style={styles.subLockedChipText}>{t('locked') || 'قفل'}</Text>
+                    </View>
+                  )}
                   {state === 'current' ? (
                     <View style={styles.learningChip}>
                       <Text style={styles.learningChipText}>
@@ -445,11 +479,25 @@ export const CurriculumMapScreen = () => {
               </Text>
             )}
           </View>
-          <TouchableOpacity style={styles.startBtn} activeOpacity={0.85} onPress={() => openScene(currentScene)}>
+          <TouchableOpacity
+            style={styles.startBtn}
+            activeOpacity={0.85}
+            onPress={() => openScene(currentScene, isSceneLocked(currentScene, currentSession))}
+          >
             <GradientFill from="#F07A4A" to="#E8572F" horizontal />
             <View style={[styles.startBtnInner, rtl && styles.rowReverse]}>
-              <Text style={styles.startBtnText}>{t('curriculumStartPractice')}</Text>
-              {rtl ? <ArrowLeft size={18} color={COLORS.white} /> : <Play size={16} color={COLORS.white} fill={COLORS.white} />}
+              <Text style={styles.startBtnText}>
+                {isSceneLocked(currentScene, currentSession)
+                  ? 'قفل است · ارتقا به اشتراک ویژه'
+                  : t('curriculumStartPractice')}
+              </Text>
+              {isSceneLocked(currentScene, currentSession) ? (
+                <Lock size={16} color={COLORS.white} />
+              ) : rtl ? (
+                <ArrowLeft size={18} color={COLORS.white} />
+              ) : (
+                <Play size={16} color={COLORS.white} fill={COLORS.white} />
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -458,8 +506,7 @@ export const CurriculumMapScreen = () => {
   );
 };
 
-// قفلِ اشتراک (subLocked) طلایی با تاج — چون معنیش «محتوای ویژه»ست.
-// صحنه‌های بعدی با قفلِ کم‌رنگ نشان داده می‌شوند (نوبتشان نرسیده)، ولی لمسشان باز می‌کند.
+// قفلِ اشتراک (subLocked) با رنگ نارنجی تم اصلی
 const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state, onPress }) => {
   if (state === 'current') {
     return (
@@ -486,7 +533,7 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
   const look = {
     completed: { bg: COLORS.success, icon: COLORS.white },
     upcoming: { bg: '#E8E2D7', icon: '#9C9488' },
-    subLocked: { bg: hexToRgba(COLORS.secondary, 0.16), icon: COLORS.secondaryContainer },
+    subLocked: { bg: '#FFF1E8', icon: COLORS.primary },
   }[state];
   return (
     <TouchableOpacity
@@ -497,10 +544,10 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
     >
       {state === 'completed' ? (
         <Check color={look.icon} size={22} strokeWidth={3} />
-      ) : state === 'upcoming' ? (
+      ) : state === 'subLocked' ? (
         <Lock color={look.icon} size={20} />
       ) : (
-        <Crown color={look.icon} size={20} />
+        <Lock color={look.icon} size={20} />
       )}
     </TouchableOpacity>
   );
@@ -773,5 +820,21 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
+  },
+  subLockedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFF1E8',
+    borderWidth: 1,
+    borderColor: '#FCD7C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  subLockedChipText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.primary,
   },
 });

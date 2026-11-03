@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchScene, fetchScenes, SceneLockedError } from '../api/scenes';
+import { fetchScene, fetchScenes, SceneLockedError, isSceneLockedError } from '../api/scenes';
 import { SCENARIOS, expandScenarioToDialogueItems, type Scenario } from './scenarios';
 import { useLanguage } from './i18n';
 import { SplashScreen } from '../screens/SplashScreen';
@@ -68,7 +68,7 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (e) {
         // قفل‌بودن یعنی واقعاً نباید محتوا نشون داده بشه — به‌جای fallback
         // بی‌صدا، به صدازننده اجازه می‌دیم خودش هندلش کنه (مثلاً باز کردن Paywall).
-        if (e instanceof SceneLockedError) throw e;
+        if (isSceneLockedError(e)) throw e;
         // بقیه‌ی خطاها (مثلاً قطعی شبکه): fallback به صحنه‌ی لیست جاری یا داده‌ی محلی.
         // صحنه‌های لیست سبک‌اند و دیالوگ ندارند؛ نشان دادنشان صفحه‌ای بی‌جمله و
         // بی‌صدا می‌ساخت، پس فقط نسخه‌ای که دیالوگ دارد قبول است وگرنه خطا بالا می‌رود.

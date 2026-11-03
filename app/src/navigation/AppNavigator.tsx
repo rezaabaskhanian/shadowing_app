@@ -334,7 +334,7 @@ export const AppNavigator = () => {
   return (
     <Tab.Navigator
       initialRouteName="Home"
-      backBehavior="history"
+      backBehavior="initialRoute"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,

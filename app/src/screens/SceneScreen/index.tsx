@@ -16,7 +16,7 @@ import { useToast } from '../../data/ToastContext';
 import { usePracticeSettings } from '../../data/PracticeSettingsContext';
 import { saveRecording, listRecordings } from '../../services/RecordingsService';
 import { evaluateRecording, type EvaluationResult } from '../../api/shadowing';
-import { SceneLockedError } from '../../api/scenes';
+import { SceneLockedError, isSceneLockedError } from '../../api/scenes';
 import { getUserStreak, recordDialogueProgress } from '../../api/progress';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../data/AuthContext';
@@ -78,7 +78,7 @@ export const SceneScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { scenarioId } = route.params || {};
-  const { getScene } = useScenes();
+  const { getScene, scenes } = useScenes();
   const queryClient = useQueryClient();
 
   /**
@@ -176,6 +176,9 @@ export const SceneScreen = () => {
   // دریافت خودِ صحنه شکست خورد (مثلاً اینترنت قطع)؛ صفحه‌ی معرفی دکمه‌ی تلاش دوباره نشان می‌دهد.
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadRun, setLoadRun] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockMessage, setLockMessage] = useState('');
+
   useEffect(() => {
     if (!scenario) return;
     let alive = true;
@@ -195,6 +198,8 @@ export const SceneScreen = () => {
     // صحنه‌ی قبلی (این تب زنده می‌ماند) نباید تا رسیدن صحنه‌ی تازه نمایش داده شود.
     setScenario(null);
     setLoadFailed(false);
+    setIsLocked(false);
+    setLockMessage('');
     setAudioPrep({ done: 0, total: 0, failed: 0, finished: false });
     getScene(scenarioId)
       .then((s) => {
@@ -204,8 +209,10 @@ export const SceneScreen = () => {
       })
       .catch((e) => {
         if (!mounted) return;
-        if (e instanceof SceneLockedError) {
-          navigation.replace('Paywall');
+        if (isSceneLockedError(e)) {
+          setIsLocked(true);
+          setLockMessage(e?.message || 'این صحنه قفل است؛ برای دسترسی باید اشتراک فعال داشته باشید');
+          setScenario(null);
           return;
         }
         setScenario(null);
@@ -388,29 +395,31 @@ export const SceneScreen = () => {
   const returnTo: string | undefined = route.params?.returnTo;
   const returnParams = route.params?.returnParams;
   const resetToHome = useCallback(() => {
-    if (returnTo) {
-      navigation.reset({
-        index: 1,
-        routes: [{ name: 'Home' }, { name: returnTo, params: returnParams }],
-      });
+    if (navigation.canGoBack()) {
+      navigation.goBack();
       return;
     }
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+    if (returnTo) {
+      navigation.navigate(returnTo, returnParams);
+      return;
+    }
+    navigation.navigate('Home');
   }, [navigation, returnTo, returnParams]);
 
   // Intercept physical phone back button on hardware press to leave the scene
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        if (inScene) {
+          setInScene(false);
+          return true;
+        }
         resetToHome();
         return true;
       };
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [resetToHome])
+    }, [inScene, resetToHome])
   );
 
   const autoTimeoutRef = useRef<any>(null);
@@ -1027,12 +1036,13 @@ export const SceneScreen = () => {
     dispatch({ type: playing ? 'PAUSE' : 'RESUME' });
   };
 
+  const metaScenario = scenario || scenes.find((s) => s.id === scenarioId) || null;
   const defaultCoverUri =
     'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop';
-  const coverImage = scenario?.imageUri
-    ? typeof scenario.imageUri === 'string'
-      ? { uri: scenario.imageUri }
-      : scenario.imageUri
+  const coverImage = metaScenario?.imageUri
+    ? typeof metaScenario.imageUri === 'string'
+      ? { uri: metaScenario.imageUri }
+      : metaScenario.imageUri
     : { uri: defaultCoverUri };
 
   // ابعاد واقعی تصویر از خودِ تصویرِ لودشده خوانده می‌شود (نه با Image.getSize
@@ -1047,7 +1057,7 @@ export const SceneScreen = () => {
   if (!inScene) {
     return (
       <SceneIntroScreen
-        scenario={scenario}
+        scenario={scenario || metaScenario}
         dialogueItems={dialogueItems}
         coverImage={coverImage}
         screenHeight={screenHeight}
@@ -1059,6 +1069,9 @@ export const SceneScreen = () => {
         onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
         loadFailed={loadFailed}
         onRetryLoad={() => setLoadRun((n) => n + 1)}
+        isLocked={isLocked}
+        lockMessage={lockMessage}
+        onOpenPaywall={() => navigation.navigate('Paywall')}
         rtl={language === 'fa'}
         t={t}
       />

@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Lightbulb, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Lightbulb, Lock, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
@@ -36,6 +36,9 @@ interface SceneIntroScreenProps {
   /** خودِ صحنه از سرور نیامد؛ به‌جای چرخش بی‌پایان، پیام و تلاش دوباره. */
   loadFailed: boolean;
   onRetryLoad: () => void;
+  isLocked?: boolean;
+  lockMessage?: string;
+  onOpenPaywall?: () => void;
   /** فارسی: چیدمان راست‌به‌چپ. */
   rtl?: boolean;
   t: (key: string) => string;
@@ -59,6 +62,9 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onRetryAudio,
   loadFailed,
   onRetryLoad,
+  isLocked = false,
+  lockMessage,
+  onOpenPaywall,
   rtl = false,
   t,
 }) => {
@@ -335,7 +341,26 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           )}
         </View>
 
-        {loadFailed && (
+        {isLocked && (
+          <View style={styles.lockedCard}>
+            <View style={styles.lockIconCircle}>
+              <Lock size={22} color={COLORS.white} />
+            </View>
+            <Text style={styles.lockedCardTitle}>این صحنه قفل است</Text>
+            <Text style={styles.lockedCardDesc}>
+              {lockMessage || 'برای تمرین این صحنه و دسترسی به تمام امکانات، اشتراک فعال لازم است.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.lockedCardBtn}
+              activeOpacity={0.88}
+              onPress={onOpenPaywall}
+            >
+              <Text style={styles.lockedCardBtnText}>مشاهده پلن‌ها و خرید اشتراک</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!isLocked && loadFailed && (
           <View style={styles.audioFailRow}>
             <Text style={styles.audioFailText}>{t('sceneLoadFailed')}</Text>
             <TouchableOpacity onPress={onRetryLoad} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -343,7 +368,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        {audioPrep.finished && audioPrep.failed > 0 && (
+        {!isLocked && audioPrep.finished && audioPrep.failed > 0 && (
           <View style={styles.audioFailRow}>
             <Text style={styles.audioFailText}>
               {t('sceneAudioFailed').replace('{n}', String(audioPrep.failed))}
@@ -359,29 +384,41 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
       {/* دکمه‌ی ورود همیشه پایین صفحه دیده می‌شود؛ قبلاً ته اسکرول بود و کاربر بعد از
           خواندن توضیح و گرامر راه شروع را پیدا نمی‌کرد. */}
       <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        {/* Enter Scene CTA Button — تا صدای جمله‌ها دانلود نشده منتظر می‌ماند */}
-        <TouchableOpacity
-          activeOpacity={0.88}
-          style={[styles.enterCtaBtn, row, !audioPrep.finished && styles.enterCtaBtnWaiting]}
-          onPress={onEnterScene}
-          disabled={!audioPrep.finished}
-          accessibilityState={{ disabled: !audioPrep.finished, busy: !audioPrep.finished }}
-        >
-          {audioPrep.finished ? (
-            <View style={rtl ? styles.flipX : undefined}>
-              <Play size={20} color={COLORS.white} fill={COLORS.white} />
-            </View>
-          ) : (
-            <ActivityIndicator size="small" color={COLORS.white} />
-          )}
-          <Text style={styles.enterCtaText}>
-            {audioPrep.finished
-              ? t('enterScene')
-              : t('sceneAudioPreparing')
-                  .replace('{done}', String(audioPrep.done))
-                  .replace('{total}', String(audioPrep.total))}
-          </Text>
-        </TouchableOpacity>
+        {isLocked ? (
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={[styles.enterCtaBtn, styles.enterCtaBtnLocked, row]}
+            onPress={onOpenPaywall}
+          >
+            <Lock size={20} color={COLORS.white} />
+            <Text style={styles.enterCtaText}>
+              قفل است · ارتقا به اشتراک ویژه
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={[styles.enterCtaBtn, row, !audioPrep.finished && styles.enterCtaBtnWaiting]}
+            onPress={onEnterScene}
+            disabled={!audioPrep.finished}
+            accessibilityState={{ disabled: !audioPrep.finished, busy: !audioPrep.finished }}
+          >
+            {audioPrep.finished ? (
+              <View style={rtl ? styles.flipX : undefined}>
+                <Play size={20} color={COLORS.white} fill={COLORS.white} />
+              </View>
+            ) : (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            )}
+            <Text style={styles.enterCtaText}>
+              {audioPrep.finished
+                ? t('enterScene')
+                : t('sceneAudioPreparing')
+                    .replace('{done}', String(audioPrep.done))
+                    .replace('{total}', String(audioPrep.total))}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -738,5 +775,54 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
+  },
+  enterCtaBtnLocked: {
+    backgroundColor: COLORS.primary,
+  },
+  lockedCard: {
+    backgroundColor: '#FFF7F2',
+    borderWidth: 1.5,
+    borderColor: '#FCD7C7',
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  lockIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  lockedCardTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 17,
+    color: COLORS.primaryDark,
+    textAlign: 'center',
+  },
+  lockedCardDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    color: '#7C2D12',
+    textAlign: 'center',
+    lineHeight: 21,
+    paddingHorizontal: 8,
+  },
+  lockedCardBtn: {
+    marginTop: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 24,
+  },
+  lockedCardBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.white,
   },
 });

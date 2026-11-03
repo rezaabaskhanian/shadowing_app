@@ -6,12 +6,28 @@ import { authFetch } from './client';
 
 // وقتی GetScene برای صحنه‌ی قفل‌شده ۴۰۳ برمی‌گردونه، به‌جای پرت‌کردن یه خطای
 // عمومی، این کلاس رو throw می‌کنیم تا صفحه بتونه به‌جای toast خطا، مستقیم
-// پی‌وال (Paywall) رو باز کنه.
+// پی‌وال (Paywall) رو باز کنه یا وضعیت قفل نشون بده.
 export class SceneLockedError extends Error {
-  constructor() {
-    super('این صحنه قفل است؛ برای دسترسی باید اشتراک فعال داشته باشید');
+  readonly isLocked = true;
+  constructor(message = 'این صحنه قفل است؛ برای دسترسی باید اشتراک فعال داشته باشید') {
+    super(message);
     this.name = 'SceneLockedError';
+    Object.setPrototypeOf(this, SceneLockedError.prototype);
   }
+}
+
+export function isSceneLockedError(e: any): boolean {
+  if (!e) return false;
+  return (
+    e instanceof SceneLockedError ||
+    e?.name === 'SceneLockedError' ||
+    e?.isLocked === true ||
+    (typeof e?.message === 'string' &&
+      (e.message.includes('این صحنه قفل است') ||
+        e.message.includes('اشتراک فعال') ||
+        e.message.includes('سطح تو هنوز باز نیست') ||
+        e.message.includes('قفل')))
+  );
 }
 
 // ---- شکل پاسخ بک‌اند ----
@@ -184,8 +200,8 @@ export async function fetchScene(id: string): Promise<Scenario> {
   const res = await authFetch(`/v1/scenes/${id}`, { method: 'GET' });
   if (res.status === 403) {
     const body = await res.json().catch(() => ({}));
-    if (body?.is_locked) throw new SceneLockedError();
-    throw new Error(body?.message || 'دسترسی به این صحنه مجاز نیست');
+    const msg = body?.message || 'این صحنه قفل است؛ برای دسترسی باید اشتراک فعال داشته باشید';
+    throw new SceneLockedError(msg);
   }
   if (!res.ok) throw new Error('failed to fetch scene');
   const data = (await res.json()) as BackendScene;

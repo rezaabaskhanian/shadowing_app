@@ -42,12 +42,15 @@ import {
 } from '../../api/goalPlan';
 import { getMyLevel } from '../../api/assessment';
 import { useScenes } from '../../data/ScenesContext';
+import { isSceneLockedError } from '../../api/scenes';
 import {
   expandScenarioToDialogueItems,
   type DialogueItem,
 } from '../../data/scenarios';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import { GradientFill } from '../../components/GradientFill';
+import { useAuth } from '../../data/AuthContext';
+import { getSubscriptionStatus } from '../../api/billing';
 
 // همان پالت «سینما»ی برنامه‌ی من.
 const CINE = {
@@ -128,6 +131,8 @@ export const GoalMapScreen = () => {
   const { height: winH } = useWindowDimensions();
   const { t } = useLanguage();
   const { getScene } = useScenes();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // هدفی که کاربر از دراور/انتخاب‌گر باز کرده؛ بدون آن، نقشه‌ی برنامه‌اش (یا انتخاب‌گر).
   const routeGoal: GoalId | undefined = route.params?.goal;
@@ -169,12 +174,19 @@ export const GoalMapScreen = () => {
   }, [pickedGoal]);
   useFocusEffect(
     useCallback(() => {
+      if (user?.role === 'admin') {
+        setIsSubscribed(true);
+      } else {
+        getSubscriptionStatus()
+          .then((s) => setIsSubscribed(!!s?.active))
+          .catch(() => setIsSubscribed(false));
+      }
       load();
       // این صفحه یک تب است و با رفتن به صحنه mount می‌ماند؛ پخش‌کننده‌ی صدا سراسری است
       // و کارتِ باز رویداد «تمام شد» صحنه را هم می‌گرفت و جمله‌ی بعدیِ خودش را
       // وسط تمرین پخش می‌کرد. با ترک صفحه کارت (و پخش‌کننده‌اش) بسته می‌شود.
       return () => setSelected(null);
-    }, [load]),
+    }, [load, user?.role]),
   );
 
   useEffect(() => {
@@ -836,10 +848,15 @@ export const GoalMapScreen = () => {
           key={selected.position}
           point={selected}
           todayId={plan.today_id}
+          isSubscribed={isSubscribed}
           getScene={getScene}
           onClose={() => setSelected(null)}
-          onEnter={sceneId => {
+          onEnter={(sceneId, locked) => {
             setSelected(null);
+            if (locked) {
+              navigation.navigate('Paywall');
+              return;
+            }
             navigation.navigate('Shadowing', {
               scenarioId: sceneId,
               returnTo: 'GoalMap',
@@ -858,6 +875,7 @@ export const GoalMapScreen = () => {
 const SpotCard = ({
   point,
   todayId,
+  isSubscribed,
   getScene,
   onClose,
   onEnter,
@@ -865,26 +883,35 @@ const SpotCard = ({
 }: {
   point: MapPoint;
   todayId?: string;
+  isSubscribed?: boolean;
   getScene: (id: string) => Promise<any>;
   onClose: () => void;
-  onEnter: (sceneId: string) => void;
+  onEnter: (sceneId: string, locked?: boolean) => void;
   t: (k: string) => string;
 }) => {
   const s = point.situation;
   const st = pointState(point, todayId);
   const [lines, setLines] = useState<DialogueItem[] | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const isSpotLocked = isLocked || (!isSubscribed && point.position > 4);
   const [playIdx, setPlayIdx] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     let alive = true;
     if (!s.scene_id) return;
+    setIsLocked(false);
     getScene(s.scene_id)
       .then((sc: any) => {
         if (alive && sc)
           setLines(expandScenarioToDialogueItems(sc).slice(0, PREVIEW_LINES));
       })
-      .catch(() => alive && setLines([]));
+      .catch((e) => {
+        if (alive) {
+          if (isSceneLockedError(e)) setIsLocked(true);
+          setLines([]);
+        }
+      });
     return () => {
       alive = false;
     };
@@ -963,13 +990,21 @@ const SpotCard = ({
 
       {!!s.scene_id && (
         <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.enterBtn} onPress={() => onEnter(s.scene_id!)} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={styles.enterBtn}
+            onPress={() => onEnter(s.scene_id!, isSpotLocked)}
+            activeOpacity={0.9}
+          >
             <GradientFill from="#F07A4A" to="#E8572F" horizontal />
             <View style={styles.enterInner}>
               <Text style={styles.enterText}>
-                {st === 'done' ? t('goalMapPracticeAgain') : t('goalMapEnter')}
+                {isSpotLocked
+                  ? 'قفل است · خرید اشتراک'
+                  : st === 'done'
+                  ? t('goalMapPracticeAgain')
+                  : t('goalMapEnter')}
               </Text>
-              <ArrowLeft size={18} color="#FFFFFF" />
+              {isSpotLocked ? <Lock size={18} color="#FFFFFF" /> : <ArrowLeft size={18} color="#FFFFFF" />}
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.playBtn} onPress={togglePlay} disabled={!lines?.length}>

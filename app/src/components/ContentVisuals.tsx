@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, type ImageSourcePropType } from 'react-native';
-import { CheckCircle2, Clock, Info, Play } from 'lucide-react-native';
+import { CheckCircle2, Clock, Info, Lock, Play } from 'lucide-react-native';
 import { GradientFill } from './GradientFill';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../theme/colors';
@@ -45,6 +45,7 @@ interface BannerCardProps {
   cornerLabel?: string;
   metas?: BannerMeta[];
   done?: boolean;
+  locked?: boolean;
   onPress: () => void;
 }
 
@@ -58,6 +59,7 @@ export const BannerCard: React.FC<BannerCardProps> = ({
   cornerLabel,
   metas,
   done,
+  locked,
   onPress,
 }) => {
   // در فارسی عنوان (با نقطه‌ی رنگ سطح) سمت راست و برچسب سطح سمت چپ؛ مدت همیشه پایین-چپ عکس.
@@ -65,10 +67,14 @@ export const BannerCard: React.FC<BannerCardProps> = ({
   const rtl = language === 'fa';
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-      <View style={[styles.banner, { backgroundColor: accent }]}>
+      <View style={[styles.banner, { backgroundColor: locked ? COLORS.primary : accent }]}>
         {!!image && <Image source={image} style={styles.bannerImage} resizeMode="cover" />}
-        {/* روی عکس دکمه‌ی پخشِ شیشه‌ای؛ بدون عکس، آیکون وسط نوار رنگی. */}
-        {image ? (
+        {/* روی عکس دکمه‌ی پخشِ شیشه‌ای یا قفل؛ بدون عکس، آیکون وسط نوار رنگی. */}
+        {locked ? (
+          <View style={[styles.bannerPlay, { backgroundColor: COLORS.primary }]}>
+            <Lock size={18} color={COLORS.white} />
+          </View>
+        ) : image ? (
           <View style={styles.bannerPlay}>
             <Play size={18} color={COLORS.white} fill={COLORS.white} />
           </View>
@@ -92,9 +98,14 @@ export const BannerCard: React.FC<BannerCardProps> = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          <View style={[styles.titleDot, { backgroundColor: accent }]} />
+          <View style={[styles.titleDot, { backgroundColor: locked ? COLORS.primary : accent }]} />
           <View style={styles.flex1} />
-          {!!badgeLabel && (
+          {locked ? (
+            <View style={[styles.badge, { backgroundColor: '#FFF1E8', borderColor: '#FCD7C7', borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+              <Lock size={10} color={COLORS.primary} />
+              <Text style={[styles.badgeText, { color: COLORS.primary, fontFamily: FONT_FAMILY.bold }]}>قفل اشتراک</Text>
+            </View>
+          ) : !!badgeLabel && (
             // برچسب سطح: پس‌زمینه‌ی کم‌رنگ و متن رنگی، نه پس‌زمینه‌ی پررنگ که با عکس رقابت کند.
             <View style={[styles.badge, { backgroundColor: hexToRgba(accent, 0.12) }]}>
               <Text style={[styles.badgeText, { color: accent }]}>{badgeLabel}</Text>

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   BackHandler,
+  Image,
   ImageBackground,
   Modal,
   ScrollView,
@@ -31,6 +32,8 @@ import {
   X,
   Layers,
   Music,
+  Check,
+  Lock,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react-native';
@@ -60,7 +63,7 @@ import {
 import { getTodaysMission, type TodaysMission } from '../api/mission';
 import { PlacementTestFlow } from './PlacementTest';
 import { PlacementV2Flow } from './PlacementTest/PlacementV2Flow';
-import { COLORS, hexToRgba } from '../theme/colors';
+import { COLORS, SPACING, hexToRgba } from '../theme/colors';
 import { SHADOWS } from '../theme/elevation';
 import { FONT_FAMILY } from '../theme/typography';
 import { difficultyToLevel } from '../api/scenes';
@@ -76,6 +79,7 @@ import { getSpeakingTopics, type SpeakingTopic } from '../api/topicSpeaking';
 import { getWritingPrompts, type WritingPrompt } from '../api/writing';
 import { getCourse, type CourseLesson } from '../api/course';
 import { getPaths, type PathSummary } from '../api/path';
+import { getSubscriptionStatus } from '../api/billing';
 import { PathHomeCard } from './Path/PathHomeCard';
 import { PathStartSheet } from './Path/PathStartSheet';
 import { track } from '../services/analytics';
@@ -150,6 +154,7 @@ export const HomeScreen = () => {
   // پنهان می‌کند (ورودی‌شان در دراور همیشه هست).
   const [clips, setClips] = React.useState<VideoClipListItem[]>([]);
   const [podcasts, setPodcasts] = React.useState<Podcast[]>([]);
+  const [podcastsLoaded, setPodcastsLoaded] = React.useState(false);
   const [topics, setTopics] = React.useState<SpeakingTopic[]>([]);
   const [prompts, setPrompts] = React.useState<WritingPrompt[]>([]);
   const [stories, setStories] = React.useState<Podcast[]>([]);
@@ -166,8 +171,18 @@ export const HomeScreen = () => {
         .then((list) => active && setClips(list))
         .catch(() => active && setClips([]));
       getPodcasts()
-        .then((list) => active && setPodcasts(list))
-        .catch(() => active && setPodcasts([]));
+        .then((list) => {
+          if (active) {
+            setPodcasts(list);
+            setPodcastsLoaded(true);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setPodcasts([]);
+            setPodcastsLoaded(true);
+          }
+        });
       // فهرست کامل نگه داشته می‌شود و موقع نمایش به سطح کاربر (و پایین‌تر) محدود می‌شود.
       getSpeakingTopics()
         .then((list) => active && setTopics(list))
@@ -265,11 +280,22 @@ export const HomeScreen = () => {
   // سطح مؤثر کاربر (انتخاب دستی در Drawer، وگرنه نتیجه‌ی تست) — همان سطحی
   // که بک‌اند با آن صحنه‌ها را فیلتر می‌کند.
   const [myLevel, setMyLevelState] = React.useState<MyLevel | null>(null);
+  const [myLevelLoaded, setMyLevelLoaded] = React.useState(false);
   const refreshMyLevel = React.useCallback(() => {
     let active = true;
     getMyLevel()
-      .then((l) => active && setMyLevelState(l))
-      .catch(() => active && setMyLevelState(null));
+      .then((l) => {
+        if (active) {
+          setMyLevelState(l);
+          setMyLevelLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setMyLevelState(null);
+          setMyLevelLoaded(true);
+        }
+      });
     return () => {
       active = false;
     };
@@ -382,6 +408,30 @@ export const HomeScreen = () => {
   // همه (با تیکِ تمام‌شده‌ها) از دکمه‌ی «مسیر کامل» به نقشه می‌ره.
   const HOME_PREVIEW_COUNT = HOME_SECTION_PREVIEW_COUNT;
   const homePreviewScenes = myUpcomingScenes.slice(0, HOME_PREVIEW_COUNT);
+
+  const [isSubscribed, setIsSubscribed] = React.useState(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.role === 'admin') {
+        setIsSubscribed(true);
+        return;
+      }
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }, [user?.role])
+  );
+
+  const targetLevel = (myLevel?.scene_level || 'beginner').toLowerCase();
+  const userLevelScenes = React.useMemo(() => {
+    const list = scenes.filter((s) => s.level.toLowerCase() === targetLevel);
+    return list.length > 0 ? list : scenes.slice(0, 8);
+  }, [scenes, targetLevel]);
+
+  const isHomeSceneLocked = React.useCallback(
+    (sc: { isLocked?: boolean }, idx: number) => !isSubscribed && (sc.isLocked || idx >= 4),
+    [isSubscribed]
+  );
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
@@ -1022,9 +1072,108 @@ export const HomeScreen = () => {
         </View>
 
         {/* کارت‌های سریع «سایه‌زنی» و «لایتنر» برداشته شدند؛ هر دو در نوار پایین هستند. */}
-        {/* ادامه‌ی یادگیری: صحنه‌های سطح (و قدم اول برای مبتدی)، با یک لینک «مسیر کامل». */}
-        {/* دو کارت کنار هم (بدون اسکرول)، مثل طرح. */}
-        <HomeGroup title={t('homeGroupLearn')} tabs={learnTabs} allLabel={t('homeSeeAll')} rtl={rtl} twoUp />
+        {/* ویترین افقی صحنه‌های سطح کاربر (سناریوی ۱) */}
+        {userLevelScenes.length > 0 && (
+          <View style={styles.sceneShelf}>
+            <View style={styles.sceneShelfHeader}>
+              <View style={styles.sceneShelfTitleRow}>
+                <Text style={styles.sceneShelfTitle}>🎬 {t('worlds')}</Text>
+                <View
+                  style={[
+                    styles.sceneShelfLevelBadge,
+                    {
+                      backgroundColor:
+                        (LEVEL_BADGE_STYLE[difficultyToLevel(myLevel?.scene_level || 'beginner')] ||
+                          LEVEL_BADGE_STYLE.Beginner).bg,
+                    },
+                  ]}
+                >
+                  <Text style={styles.sceneShelfLevelBadgeText}>
+                    {t(
+                      SCENE_LEVEL_LABEL_KEY[difficultyToLevel(myLevel?.scene_level || 'beginner')] ||
+                        SCENE_LEVEL_LABEL_KEY.Beginner
+                    )}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.sceneShelfAllBtn}
+                onPress={() => navigation.navigate('CurriculumMap')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.sceneShelfAllText}>{t('viewFullPath')}</Text>
+                <ChevronLeft size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.sceneShelfScroll}
+            >
+              {userLevelScenes.map((sc, index) => {
+                const locked = isHomeSceneLocked(sc, index);
+                return (
+                  <TouchableOpacity
+                    key={sc.id}
+                    style={styles.sceneShelfCard}
+                    activeOpacity={0.85}
+                    onPress={() => (locked ? navigation.navigate('Paywall') : openScene(sc))}
+                  >
+                    <View style={styles.sceneShelfImageWrapper}>
+                      <Image
+                        source={typeof sc.imageUri === 'string' ? { uri: sc.imageUri } : sc.imageUri}
+                        style={styles.sceneShelfImage}
+                        resizeMode="cover"
+                      />
+                      {locked ? (
+                        <View style={styles.sceneShelfLockBadge}>
+                          <Lock size={10} color={COLORS.white} />
+                          <Text style={styles.sceneShelfLockText}>{t('locked') || 'قفل'}</Text>
+                        </View>
+                      ) : sc.isCompleted ? (
+                        <View style={styles.sceneShelfDoneBadge}>
+                          <Check size={12} color={COLORS.white} strokeWidth={3} />
+                        </View>
+                      ) : null}
+                      {!!sc.time && (
+                        <View style={styles.sceneShelfTimeBadge}>
+                          <Text style={styles.sceneShelfTimeText}>{sc.time}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.sceneShelfCardTitle} numberOfLines={1}>
+                      {sc.title}
+                    </Text>
+                    {!!sc.category && (
+                      <Text style={styles.sceneShelfCategory} numberOfLines={1}>
+                        {SCENE_CATEGORY_LABEL_KEY[sc.category]
+                          ? t(SCENE_CATEGORY_LABEL_KEY[sc.category])
+                          : sc.category}
+                      </Text>
+                    )}
+                    {sc.progress > 0 && !sc.isCompleted && (
+                      <View style={styles.sceneShelfProgressBg}>
+                        <View style={[styles.sceneShelfProgressFill, { width: `${sc.progress}%` }]} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* دوره‌ی شروع برای مبتدیان */}
+        {isBeginner && courseLessons.length > 0 && (
+          <HomeGroup
+            title={t('courseTitle')}
+            tabs={[toTab(courseSection)]}
+            allLabel={t('homeSeeAll')}
+            rtl={rtl}
+            twoUp
+          />
+        )}
 
         {/* پیشنهاد امروز: یک پادکست و یک داستان با عکس؛ هر کارت یک خط زیرعنوان یکدست دارد
             (نوع · مدت یا فصل) تا کاربر بداند چرا اینجاست و چقدر وقت می‌برد. */}
@@ -1094,7 +1243,14 @@ export const HomeScreen = () => {
           </View>
         )}
 
-        <HomeGroup title={t('homeGroupLibrary')} tabs={libraryTabs} allLabel={t('homeSeeAll')} rtl={rtl} />
+        <HomeGroup
+          title={t('homeGroupLibrary')}
+          tabs={libraryTabs}
+          allLabel={t('homeSeeAll')}
+          rtl={rtl}
+          defaultTabKey="podcast"
+          loading={!podcastsLoaded}
+        />
         <HomeGroup title={t('homeGroupPractice')} tabs={practiceTabs} allLabel={t('homeSeeAll')} rtl={rtl} />
 
         {/* Bottom padding for tab bar */}
@@ -1503,5 +1659,140 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.medium,
     fontSize: 11,
     marginTop: 2,
+  },
+  sceneShelf: {
+    marginVertical: SPACING.m,
+  },
+  sceneShelfHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.l,
+    marginBottom: SPACING.s,
+  },
+  sceneShelfTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sceneShelfTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  sceneShelfLevelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  sceneShelfLevelBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
+  },
+  sceneShelfAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  sceneShelfAllText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  sceneShelfScroll: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: 4,
+  },
+  sceneShelfCard: {
+    width: 155,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    overflow: 'hidden',
+    padding: 8,
+  },
+  sceneShelfImageWrapper: {
+    width: '100%',
+    height: 100,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#1A1D26',
+  },
+  sceneShelfImage: {
+    width: '100%',
+    height: '100%',
+  },
+  sceneShelfLockBadge: {
+    position: 'absolute',
+    top: 6,
+    start: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  sceneShelfLockText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 9,
+    color: COLORS.white,
+  },
+  sceneShelfDoneBadge: {
+    position: 'absolute',
+    top: 6,
+    start: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sceneShelfTimeBadge: {
+    position: 'absolute',
+    bottom: 6,
+    end: 6,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
+  },
+  sceneShelfTimeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 9,
+    color: COLORS.white,
+  },
+  sceneShelfCardTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.text,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  sceneShelfCategory: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.muted,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  sceneShelfProgressBg: {
+    height: 3,
+    backgroundColor: '#EEEAE3',
+    borderRadius: 2,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  sceneShelfProgressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 2,
   },
 });

@@ -12,6 +12,8 @@ import { atOrBelowLevel, getStories } from '../../api/podcasts';
 import { getMyLevel } from '../../api/assessment';
 import { getReadChapters, groupStories, type StorySeries } from '../../services/storyProgress';
 import { BannerCard, ListHero, levelColor } from '../../components/ContentVisuals';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_LABEL: Record<string, string> = {
   starter: 'levelStarter',
@@ -29,15 +31,26 @@ export const StoryListScreen: React.FC = () => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [series, setSeries] = useState<StorySeries[] | null>(null);
   const [error, setError] = useState(false);
 
+  const FREE_STORIES_COUNT = 4;
+
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     Promise.all([getStories(), getMyLevel().catch(() => null), getReadChapters()])
       .then(([chapters, lvl, read]) => setSeries(groupStories(atOrBelowLevel(chapters, lvl?.scene_level), read)))
       .catch(() => setError(true));
-  }, []);
+  }, [user?.role]);
 
   // بعد از خواندن یک فصل، پیشرفتِ کارت‌ها تازه شود.
   useFocusEffect(load);
@@ -78,8 +91,9 @@ export const StoryListScreen: React.FC = () => {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.l }]}
           showsVerticalScrollIndicator={false}
         >
-          {series.map((s) => {
+          {series.map((s, index) => {
             const done = s.readCount === s.chapters.length;
+            const isLocked = !isSubscribed && index >= FREE_STORIES_COUNT;
             return (
               <BannerCard
                 key={s.title}
@@ -101,7 +115,12 @@ export const StoryListScreen: React.FC = () => {
                   },
                 ]}
                 done={done}
-                onPress={() => navigation.navigate('Story', { storyId: s.next.id, openedAt: Date.now() })}
+                locked={isLocked}
+                onPress={() =>
+                  isLocked
+                    ? navigation.navigate('Paywall')
+                    : navigation.navigate('Story', { storyId: s.next.id, openedAt: Date.now() })
+                }
               />
             );
           })}

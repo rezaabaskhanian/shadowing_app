@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, BookOpen, ChevronLeft, Clapperboard, Clapperboard as ClapIcon, Film, Headphones, Mic, Play, Search, Trophy, Users, X } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, ChevronLeft, Clapperboard, Clapperboard as ClapIcon, Film, Headphones, Lock, Mic, Play, Search, Trophy, Tv, Users, X } from 'lucide-react-native';
 import { GradientFill } from '../../components/GradientFill';
 
 import { COLORS, SPACING } from '../../theme/colors';
@@ -11,6 +11,8 @@ import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
 import { getVideoClips, type ClipLevel, type VideoClipListItem } from '../../api/videoClips';
 import { SCENE_CATEGORY_LABEL_KEY } from '../../data/scenarios';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 type SourceFilter = 'all' | 'flow' | 'movie';
 const SOURCE_TABS: { id: SourceFilter; labelKey: string }[] = [
@@ -25,6 +27,13 @@ const LEVEL_META: Record<ClipLevel, { labelKey: string; bg: string }> = {
   advanced: { labelKey: 'levelAdvanced', bg: COLORS.levelAdvancedBg },
   proficient: { labelKey: 'levelProficient', bg: COLORS.levelProficientBg },
 };
+
+const MAIN_LEVEL_TABS: { id: ClipLevel | ''; label: string; color: string }[] = [
+  { id: '', label: 'همه سطح‌ها', color: COLORS.textSecondary },
+  { id: 'beginner', label: 'مبتدی', color: COLORS.levelBeginnerBg },
+  { id: 'intermediate', label: 'متوسط', color: COLORS.levelIntermediateBg },
+  { id: 'advanced', label: 'پیشرفته', color: COLORS.levelAdvancedBg },
+];
 
 /**
  * تا وقتی هیچ کلیپی منتشر نشده: معرفی «به‌زودی» و دو تمرین جایگزین، به‌جای یک پیام خالی.
@@ -101,6 +110,29 @@ export const VideoClipListScreen: React.FC = () => {
   const [category, setCategory] = useState('');
   // دنبال‌کردنِ یک فیلم: همه‌ی تکه‌های همان فیلم به ترتیبِ ادمین (position).
   const [movie, setMovie] = useState(route.params?.movieTitle ?? '');
+  const [level, setLevel] = useState<ClipLevel | ''>('');
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const load = useCallback(() => {
+    setError(false);
+    getVideoClips()
+      .then(setClips)
+      .catch(() => setError(true));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      if (user?.role === 'admin') {
+        setIsSubscribed(true);
+        return;
+      }
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }, [load, user?.role])
+  );
 
   React.useEffect(() => {
     if (route.params?.source) setSource(route.params.source);
@@ -110,9 +142,36 @@ export const VideoClipListScreen: React.FC = () => {
     }
   }, [route.params?.source, route.params?.movieTitle]);
 
+  // یکدست‌سازی سطح تمام قسمت‌های هر سریال:
+  // طبق اصل آموزشی، وقتی یک سریال برای یک سطح است (مثلاً مبتدی یا پیشرفته)،
+  // تمام قسمت‌های آن سریال تا آخر همان سطح یکپارچه را خواهند داشت.
+  const normalizedClips = useMemo(() => {
+    if (!clips) return null;
+    const seriesLevelMap: Record<string, ClipLevel> = {};
+    clips.forEach((c) => {
+      if (c.source === 'movie' && c.movie_title) {
+        const title = c.movie_title.trim();
+        if (!seriesLevelMap[title]) {
+          seriesLevelMap[title] = c.level || 'beginner';
+        }
+      }
+    });
+
+    return clips.map((c) => {
+      if (c.source === 'movie' && c.movie_title) {
+        const title = c.movie_title.trim();
+        const sLevel = seriesLevelMap[title];
+        if (sLevel && c.level !== sLevel) {
+          return { ...c, level: sLevel };
+        }
+      }
+      return c;
+    });
+  }, [clips]);
+
   const bySource = useMemo(
-    () => (clips ?? []).filter((c) => source === 'all' || c.source === source),
-    [clips, source]
+    () => (normalizedClips ?? []).filter((c) => source === 'all' || c.source === source),
+    [normalizedClips, source]
   );
   // فقط دسته‌هایی که واقعاً کلیپ دارند چیپ می‌گیرند.
   const categories = useMemo(
@@ -127,21 +186,70 @@ export const VideoClipListScreen: React.FC = () => {
         : [],
     [bySource, source]
   );
+  // فقط سطح‌هایی که واقعاً کلیپ دارند چیپ می‌گیرند.
+  const availableLevels = useMemo(
+    () => (Object.keys(LEVEL_META) as ClipLevel[]).filter((l) => bySource.some((c) => c.level === l)),
+    [bySource]
+  );
   const filtered = bySource.filter(
-    (c) => (!category || c.category === category) && (!movie || (c.movie_title || '').trim() === movie)
+    (c) => (!category || c.category === category) && (!movie || (c.movie_title || '').trim() === movie) && (!level || c.level === level)
   );
   // سریالِ انتخاب‌شده به ترتیبِ فصل و قسمت می‌آید (sort پایدار است، پس داخل هر قسمت ترتیبِ ادمین می‌ماند).
   const visible = movie ? [...filtered].sort(episodeOrder) : filtered;
 
-  const load = useCallback(() => {
-    setError(false);
-    getVideoClips()
-      .then(setClips)
-      .catch(() => setError(true));
-  }, []);
+  // محاسبه ایندکس هر کلیپ درون سطح خود برای محدودیت ۴ کلیپ رایگان در هر سطح
+  const levelIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const countByLevel: Record<string, number> = {};
+    (normalizedClips ?? []).forEach((c) => {
+      const lvl = c.level || 'beginner';
+      const idx = countByLevel[lvl] || 0;
+      map.set(c.id, idx);
+      countByLevel[lvl] = idx + 1;
+    });
+    return map;
+  }, [normalizedClips]);
 
-  // برگشت از یک اجرا → بهترین امتیازها تازه شوند.
-  useFocusEffect(load);
+  const isClipLocked = useCallback(
+    (clip: VideoClipListItem) => {
+      if (isSubscribed) return false;
+      const idx = levelIndexMap.get(clip.id) ?? 0;
+      return idx >= 4;
+    },
+    [isSubscribed, levelIndexMap]
+  );
+
+  // دسته‌بندی و لیست سریال‌ها برای ویترین (سطح هر سریال یکتا و یکپارچه است)
+  const seriesList = useMemo(() => {
+    const movieClips = (normalizedClips ?? []).filter((c) => c.source === 'movie' && !!c.movie_title);
+    const groups: Record<string, VideoClipListItem[]> = {};
+    movieClips.forEach((c) => {
+      const title = c.movie_title!.trim();
+      if (!groups[title]) groups[title] = [];
+      groups[title].push(c);
+    });
+    return Object.keys(groups).map((title) => {
+      const sClips = groups[title].sort(episodeOrder);
+      const seriesLevel = sClips[0]?.level || 'beginner';
+      return {
+        title,
+        posterUrl: sClips.find((c) => c.poster_url)?.poster_url,
+        clipCount: sClips.length,
+        clips: sClips,
+        level: seriesLevel,
+      };
+    });
+  }, [normalizedClips]);
+
+  const filteredSeriesList = useMemo(() => {
+    if (!level) return seriesList;
+    return seriesList.filter((s) => s.level === level);
+  }, [seriesList, level]);
+
+  const flowClips = useMemo(
+    () => (normalizedClips ?? []).filter((c) => c.source !== 'movie'),
+    [normalizedClips]
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
@@ -178,10 +286,57 @@ export const VideoClipListScreen: React.FC = () => {
 
       {clips && clips.length > 0 && (
         <View style={styles.filters}>
+          {/* تب‌های اصلی سطح‌بندی (مبتدی، متوسط، پیشرفته) */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {MAIN_LEVEL_TABS.map((tab) => {
+              const active = level === tab.id;
+              const count = (normalizedClips ?? []).filter((c) => (tab.id ? c.level === tab.id : true)).length;
+              return (
+                <TouchableOpacity
+                  key={tab.id || 'all-levels'}
+                  style={[
+                    styles.levelFilterTab,
+                    active && styles.levelFilterTabActive,
+                    active && tab.id ? { borderColor: tab.color, backgroundColor: tab.color + '14' } : null,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setLevel(tab.id)}
+                >
+                  {tab.id ? (
+                    <View style={[styles.levelFilterDot, { backgroundColor: tab.color }]} />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.levelFilterText,
+                      active && styles.levelFilterTextActive,
+                      active && tab.id ? { color: tab.color } : null,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                  {count > 0 ? (
+                    <View style={[styles.countBubble, active && styles.countBubbleActive]}>
+                      <Text style={[styles.countText, active && styles.countTextActive]}>
+                        {count.toLocaleString('fa-IR')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.countBubble, { backgroundColor: '#F0EFEA' }]}>
+                      <Text style={[styles.countText, { color: COLORS.muted }]}>به‌زودی</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* تب‌های دسته‌بندی منبع (همه / از فیلم‌ها / ساخته‌ی ما) */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {SOURCE_TABS.map((tab) => {
               const active = source === tab.id;
-              const count = (clips ?? []).filter((c) => tab.id === 'all' || c.source === tab.id).length;
+              const count = (normalizedClips ?? []).filter(
+                (c) => (tab.id === 'all' || c.source === tab.id) && (!level || c.level === level)
+              ).length;
               return (
                 <TouchableOpacity
                   key={tab.id}
@@ -203,6 +358,7 @@ export const VideoClipListScreen: React.FC = () => {
               );
             })}
           </ScrollView>
+
           {movies.length > 1 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
               {['', ...movies].map((m) => (
@@ -219,6 +375,7 @@ export const VideoClipListScreen: React.FC = () => {
               ))}
             </ScrollView>
           )}
+
           {categories.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
               {['', ...categories].map((k) => (
@@ -239,8 +396,31 @@ export const VideoClipListScreen: React.FC = () => {
       )}
 
       {clips && clips.length > 0 && visible.length === 0 && (
-        <View style={styles.center}>
-          <Text style={styles.mutedText}>{t('videoClipsEmptyFilter')}</Text>
+        <View style={styles.emptyContainer}>
+          {level ? (
+            <View style={styles.emptyLevelBlock}>
+              <View style={[styles.emptyLevelBadge, { backgroundColor: (LEVEL_META[level]?.bg ?? COLORS.primary) + '15' }]}>
+                <Film size={28} color={LEVEL_META[level]?.bg ?? COLORS.primary} />
+              </View>
+              <Text style={styles.emptyLevelTitle}>
+                ویدیوهای سطح {t(LEVEL_META[level]?.labelKey ?? '')} به‌زودی
+              </Text>
+              <Text style={styles.emptyLevelDesc}>
+                سریال‌ها و تمرین‌های ویدیویی سطح {t(LEVEL_META[level]?.labelKey ?? '')} در حال آماده‌سازی هستند و به‌زودی به این بخش اضافه می‌شوند.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyLevelBtn}
+                activeOpacity={0.85}
+                onPress={() => setLevel('')}
+              >
+                <Text style={styles.emptyLevelBtnText}>مشاهده همه ویدیوها</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.center}>
+              <Text style={styles.mutedText}>{t('videoClipsEmptyFilter')}</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -250,23 +430,189 @@ export const VideoClipListScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           {(() => {
-            const [first, ...rest] = visible;
-            const open = (clip: VideoClipListItem) =>
+            const open = (clip: VideoClipListItem) => {
+              if (isClipLocked(clip)) {
+                navigation.navigate('Paywall');
+                return;
+              }
               navigation.navigate('VideoClip', { clipId: clip.id, openedAt: Date.now() });
-            const pickMovie = (clip: VideoClipListItem) => {
+            };
+            const pickMovie = (title: string) => {
               setSource('movie');
               setCategory('');
-              setMovie(clip.movie_title!.trim());
+              setMovie(title.trim());
             };
+
+            // حالت ۱: کاربر یک سریال خاص را انتخاب کرده و دارد قسمت‌های آن را می‌بیند
+            if (movie) {
+              const [first, ...rest] = visible;
+              return (
+                <>
+                  <View style={styles.seriesBanner}>
+                    <View style={styles.seriesBannerRight}>
+                      <Text style={styles.seriesBannerTitle}>🎬 سریال {movie}</Text>
+                      <Text style={styles.seriesBannerCount}>
+                        {visible.length.toLocaleString('fa-IR')} قسمت برای تمرین
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.seriesClearBtn}
+                      activeOpacity={0.8}
+                      onPress={() => setMovie('')}
+                    >
+                      <X size={14} color={COLORS.primary} />
+                      <Text style={styles.seriesClearBtnText}>همه سریال‌ها</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {first && (
+                    <FeaturedClip
+                      clip={first}
+                      t={t}
+                      isLocked={isClipLocked(first)}
+                      onOpen={() => open(first)}
+                      onMovie={() => pickMovie(first.movie_title || '')}
+                    />
+                  )}
+                  {rest.length > 0 && (
+                    <Text style={styles.sectionTitle}>{t('videoClipsMoreTitle')}</Text>
+                  )}
+                  {rest.map((clip) => (
+                    <CompactClip
+                      key={clip.id}
+                      clip={clip}
+                      t={t}
+                      isLocked={isClipLocked(clip)}
+                      onOpen={() => open(clip)}
+                      onMovie={() => pickMovie(clip.movie_title || '')}
+                    />
+                  ))}
+                </>
+              );
+            }
+
+            // حالت ۲: کاربر در صفحه اصلی است (ویترین سریال‌ها و قفسه‌های افقی هر سریال)
             return (
               <>
-                <FeaturedClip clip={first} t={t} onOpen={() => open(first)} onMovie={() => pickMovie(first)} />
-                {rest.length > 0 && (
-                  <Text style={styles.sectionTitle}>{t('videoClipsMoreTitle')}</Text>
+                {/* بخش کارت‌های ویترین انتخاب سریال */}
+                {filteredSeriesList.length > 0 && (source === 'all' || source === 'movie') && (
+                  <View style={styles.showcaseBlock}>
+                    <View style={styles.showcaseHeader}>
+                      <Text style={styles.showcaseTitle}>🍿 ویترین سریال‌ها</Text>
+                      <Text style={styles.showcaseSubtitle}>
+                        یک سریال را انتخاب کنید تا قسمت‌های آن نمایش داده شود
+                      </Text>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.seriesRow}
+                    >
+                      {filteredSeriesList.map((s) => (
+                        <SeriesShowcaseCard
+                          key={s.title}
+                          series={s}
+                          t={t}
+                          onSelect={() => pickMovie(s.title)}
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
                 )}
-                {rest.map((clip) => (
-                  <CompactClip key={clip.id} clip={clip} t={t} onOpen={() => open(clip)} onMovie={() => pickMovie(clip)} />
-                ))}
+
+                {/* قفسه‌های افقی به تفکیک هر سریال */}
+                {(source === 'all' || source === 'movie') &&
+                  filteredSeriesList.map((s) => {
+                    const sClips = level ? s.clips.filter((c) => c.level === level) : s.clips;
+                    if (sClips.length === 0) return null;
+                    return (
+                      <View key={`shelf-${s.title}`} style={styles.shelfBlock}>
+                        <View style={styles.shelfHeaderRow}>
+                          <View style={styles.shelfTitleContainer}>
+                            <Text style={styles.shelfSectionTitle}>🎬 {s.title}</Text>
+                            <View style={[styles.shelfLevelPill, { backgroundColor: LEVEL_META[s.level]?.bg ?? COLORS.primary }]}>
+                              <Text style={styles.shelfLevelPillText}>
+                                {t(LEVEL_META[s.level]?.labelKey ?? 'levelBeginner')}
+                              </Text>
+                            </View>
+                            <View style={styles.shelfCountPill}>
+                              <Text style={styles.shelfCountPillText}>
+                                {sClips.length.toLocaleString('fa-IR')} قسمت
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.shelfActionBtn}
+                            activeOpacity={0.8}
+                            onPress={() => pickMovie(s.title)}
+                          >
+                            <Text style={styles.shelfActionText}>مشاهده همه</Text>
+                            <ChevronLeft size={14} color={COLORS.primary} />
+                          </TouchableOpacity>
+                        </View>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.shelfScrollRow}
+                        >
+                          {sClips.map((clip) => (
+                            <ShelfClipCard
+                              key={clip.id}
+                              clip={clip}
+                              t={t}
+                              isLocked={isClipLocked(clip)}
+                              onOpen={() => open(clip)}
+                            />
+                          ))}
+                        </ScrollView>
+                      </View>
+                    );
+                  })}
+
+                {/* قفسه ویدیوهای Flow (ساخته ما) */}
+                {flowClips.filter((c) => !level || c.level === level).length > 0 && (source === 'all' || source === 'flow') && (
+                  <View style={styles.shelfBlock}>
+                    <View style={styles.shelfHeaderRow}>
+                      <View style={styles.shelfTitleContainer}>
+                        <Text style={styles.shelfSectionTitle}>📽 ویدیوهای ساخته ما (Flow)</Text>
+                        <View style={styles.shelfCountPill}>
+                          <Text style={styles.shelfCountPillText}>
+                            {flowClips.filter((c) => !level || c.level === level).length.toLocaleString('fa-IR')}
+                          </Text>
+                        </View>
+                      </View>
+                      {source !== 'flow' && (
+                        <TouchableOpacity
+                          style={styles.shelfActionBtn}
+                          activeOpacity={0.8}
+                          onPress={() => setSource('flow')}
+                        >
+                          <Text style={styles.shelfActionText}>مشاهده همه</Text>
+                          <ChevronLeft size={14} color={COLORS.primary} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.shelfScrollRow}
+                    >
+                      {flowClips
+                        .filter((c) => !level || c.level === level)
+                        .map((clip) => (
+                          <ShelfClipCard
+                            key={clip.id}
+                            clip={clip}
+                            t={t}
+                            isLocked={isClipLocked(clip)}
+                            onOpen={() => open(clip)}
+                          />
+                        ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* کارت پیشنهاد فیلم جدید */}
                 <View style={styles.suggestCard}>
                   <View style={styles.suggestIcon}>
                     <Search size={20} color={COLORS.primary} />
@@ -294,6 +640,7 @@ export const VideoClipListScreen: React.FC = () => {
 type ClipProps = {
   clip: VideoClipListItem;
   t: (k: string) => string;
+  isLocked?: boolean;
   onOpen: () => void;
   onMovie: () => void;
 };
@@ -308,7 +655,12 @@ const episodeLabel = (clip: VideoClipListItem) =>
 const formatDuration = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
 
-const ClipPoster: React.FC<{ clip: VideoClipListItem; style: any; playSize: number }> = ({ clip, style, playSize }) => (
+const ClipPoster: React.FC<{
+  clip: VideoClipListItem;
+  style: any;
+  playSize: number;
+  isLocked?: boolean;
+}> = ({ clip, style, playSize, isLocked }) => (
   <View style={[styles.poster, style]}>
     {clip.poster_url ? (
       <Image source={{ uri: absUrl(clip.poster_url) }} style={styles.posterImage} resizeMode="cover" />
@@ -317,9 +669,25 @@ const ClipPoster: React.FC<{ clip: VideoClipListItem; style: any; playSize: numb
     ) : (
       <Clapperboard size={28} color={COLORS.white} />
     )}
-    <View style={[styles.playCircle, { width: playSize, height: playSize, borderRadius: playSize / 2 }]}>
-      <Play size={playSize * 0.38} color={COLORS.white} fill={COLORS.white} />
+    <View
+      style={[
+        styles.playCircle,
+        { width: playSize, height: playSize, borderRadius: playSize / 2 },
+        isLocked && styles.playCircleLocked,
+      ]}
+    >
+      {isLocked ? (
+        <Lock size={playSize * 0.42} color={COLORS.white} />
+      ) : (
+        <Play size={playSize * 0.38} color={COLORS.white} fill={COLORS.white} />
+      )}
     </View>
+    {isLocked && (
+      <View style={styles.lockBadgeOverlay}>
+        <Lock size={11} color={COLORS.white} />
+        <Text style={styles.lockBadgeOverlayText}>قفل</Text>
+      </View>
+    )}
     {clip.duration_seconds > 0 && (
       <View style={styles.durationBadge}>
         <Text style={styles.durationText}>{formatDuration(clip.duration_seconds)}</Text>
@@ -328,10 +696,20 @@ const ClipPoster: React.FC<{ clip: VideoClipListItem; style: any; playSize: numb
   </View>
 );
 
-const ClipMeta: React.FC<{ clip: VideoClipListItem; t: (k: string) => string }> = ({ clip, t }) => {
+const ClipMeta: React.FC<{ clip: VideoClipListItem; t: (k: string) => string; isLocked?: boolean }> = ({
+  clip,
+  t,
+  isLocked,
+}) => {
   const level = LEVEL_META[clip.level] ?? LEVEL_META.beginner;
   return (
     <View style={styles.metaRow}>
+      {isLocked && (
+        <View style={styles.lockedMetaChip}>
+          <Lock size={10} color={COLORS.white} />
+          <Text style={styles.lockedMetaChipText}>اشتراک</Text>
+        </View>
+      )}
       <View style={[styles.levelChip, { borderColor: level.bg }]}>
         <Text style={[styles.levelChipText, { color: level.bg }]}>{t(level.labelKey)}</Text>
       </View>
@@ -354,12 +732,12 @@ const ClipMeta: React.FC<{ clip: VideoClipListItem; t: (k: string) => string }> 
   );
 };
 
-const FeaturedClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
+const FeaturedClip: React.FC<ClipProps> = ({ clip, t, isLocked, onOpen, onMovie }) => (
   <View style={styles.featured}>
     <TouchableOpacity activeOpacity={0.9} onPress={onOpen}>
-      <ClipPoster clip={clip} style={styles.featuredPoster} playSize={56} />
+      <ClipPoster clip={clip} style={styles.featuredPoster} playSize={56} isLocked={isLocked} />
     </TouchableOpacity>
-    <ClipMeta clip={clip} t={t} />
+    <ClipMeta clip={clip} t={t} isLocked={isLocked} />
     <Text style={styles.featuredTitle}>{clip.title}</Text>
     {clip.source === 'movie' && !!clip.movie_title && (
       <TouchableOpacity hitSlop={6} onPress={onMovie}>
@@ -374,16 +752,26 @@ const FeaturedClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
         {clip.description_fa}
       </Text>
     )}
-    <TouchableOpacity style={styles.featuredCta} activeOpacity={0.85} onPress={onOpen}>
-      <Play size={14} color={COLORS.white} fill={COLORS.white} />
-      <Text style={styles.featuredCtaText}>{t('videoClipsStart')}</Text>
+    <TouchableOpacity
+      style={[styles.featuredCta, isLocked && styles.featuredCtaLocked]}
+      activeOpacity={0.85}
+      onPress={onOpen}
+    >
+      {isLocked ? (
+        <Lock size={14} color={COLORS.white} />
+      ) : (
+        <Play size={14} color={COLORS.white} fill={COLORS.white} />
+      )}
+      <Text style={styles.featuredCtaText}>
+        {isLocked ? 'قفل است · ارتقا به اشتراک ویژه' : t('videoClipsStart')}
+      </Text>
     </TouchableOpacity>
   </View>
 );
 
-const CompactClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
+const CompactClip: React.FC<ClipProps> = ({ clip, t, isLocked, onOpen, onMovie }) => (
   <TouchableOpacity style={styles.compact} activeOpacity={0.85} onPress={onOpen}>
-    <ClipPoster clip={clip} style={styles.compactPoster} playSize={32} />
+    <ClipPoster clip={clip} style={styles.compactPoster} playSize={32} isLocked={isLocked} />
     <View style={styles.compactBody}>
       <Text style={styles.compactTitle} numberOfLines={2}>
         {clip.title}
@@ -401,15 +789,110 @@ const CompactClip: React.FC<ClipProps> = ({ clip, t, onOpen, onMovie }) => (
           {clip.description_fa}
         </Text>
       )}
-      <ClipMeta clip={clip} t={t} />
+      <ClipMeta clip={clip} t={t} isLocked={isLocked} />
     </View>
   </TouchableOpacity>
 );
+
+/** کارت یک کلیپ در ویترین قفسه‌ی افقی */
+const ShelfClipCard: React.FC<{
+  clip: VideoClipListItem;
+  t: (k: string) => string;
+  isLocked?: boolean;
+  onOpen: () => void;
+}> = ({ clip, t, isLocked, onOpen }) => {
+  const level = LEVEL_META[clip.level] ?? LEVEL_META.beginner;
+  return (
+    <TouchableOpacity style={styles.shelfCard} activeOpacity={0.88} onPress={onOpen}>
+      <View style={styles.shelfPosterWrapper}>
+        <ClipPoster clip={clip} style={styles.shelfPoster} playSize={34} isLocked={isLocked} />
+      </View>
+      <Text style={styles.shelfCardTitle} numberOfLines={2}>
+        {clip.title}
+      </Text>
+      <View style={styles.shelfMetaRow}>
+        <View style={[styles.levelDot, { backgroundColor: level.bg }]} />
+        <Text style={styles.shelfMetaText}>
+          {t(level.labelKey)}
+          {episodeLabel(clip)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+/** کارت بزرگ معرفی یک سریال در ویترین بالای صفحه */
+const SeriesShowcaseCard: React.FC<{
+  series: {
+    title: string;
+    posterUrl?: string;
+    clipCount: number;
+    level: ClipLevel;
+  };
+  t: (k: string) => string;
+  onSelect: () => void;
+}> = ({ series, t, onSelect }) => {
+  const meta = LEVEL_META[series.level] ?? LEVEL_META.beginner;
+  return (
+    <TouchableOpacity style={styles.seriesCard} activeOpacity={0.88} onPress={onSelect}>
+      <View style={styles.seriesPosterWrapper}>
+        {series.posterUrl ? (
+          <Image source={{ uri: absUrl(series.posterUrl) }} style={styles.seriesPosterImg} resizeMode="cover" />
+        ) : (
+          <View style={[styles.seriesPosterImg, styles.seriesPosterPlaceholder]}>
+            <Film size={32} color={COLORS.white} />
+          </View>
+        )}
+        <View style={styles.seriesEpisodeCountBadge}>
+          <Text style={styles.seriesEpisodeCountText}>
+            {series.clipCount.toLocaleString('fa-IR')} قسمت
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.seriesCardTitle} numberOfLines={1}>{series.title}</Text>
+      <View style={styles.seriesLevelsRow}>
+        <View style={[styles.seriesLevelDot, { backgroundColor: meta.bg }]} />
+        <Text style={styles.seriesLevelsText}>
+          {t(meta.labelKey)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   filters: {
     gap: SPACING.s,
     marginBottom: SPACING.m,
+  },
+  levelFilterTab: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: '#EEEAE3',
+  },
+  levelFilterTabActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#FFF8F4',
+  },
+  levelFilterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  levelFilterText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  levelFilterTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.text,
   },
   sourceTab: {
     flexDirection: 'row-reverse',
@@ -456,6 +939,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: '#EEEAE3',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chipActive: {
     backgroundColor: COLORS.primaryLight,
@@ -468,6 +953,12 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: COLORS.primary,
+  },
+  levelDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginEnd: 4,
   },
   movieTitle: {
     ...TEXT_STYLES.labelSm,
@@ -621,6 +1112,54 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.bodyMd,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: SPACING.l,
+  },
+  emptyLevelBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    marginVertical: 12,
+  },
+  emptyLevelBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyLevelTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyLevelDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    lineHeight: 22,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  emptyLevelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+  },
+  emptyLevelBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: COLORS.white,
   },
   linkText: {
     ...TEXT_STYLES.labelMd,
@@ -778,4 +1317,256 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   suggestBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.white },
+  playCircleLocked: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  lockBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    start: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  lockBadgeOverlayText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
+  },
+  lockedMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  lockedMetaChipText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
+  },
+  featuredCtaLocked: {
+    backgroundColor: COLORS.primary,
+  },
+  seriesBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF7F2',
+    borderWidth: 1,
+    borderColor: '#FCD7C7',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: SPACING.m,
+  },
+  seriesBannerRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  seriesBannerTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  seriesBannerCount: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  seriesClearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#FCD7C7',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  seriesClearBtnText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  showcaseBlock: {
+    marginBottom: SPACING.l,
+  },
+  showcaseHeader: {
+    marginBottom: SPACING.s,
+  },
+  showcaseTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'right',
+  },
+  showcaseSubtitle: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: COLORS.muted,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  seriesRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  seriesCard: {
+    width: 140,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEEAE3',
+    overflow: 'hidden',
+    padding: 8,
+  },
+  seriesPosterWrapper: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#1A1D26',
+  },
+  seriesPosterImg: {
+    width: '100%',
+    height: '100%',
+  },
+  seriesPosterPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seriesEpisodeCountBadge: {
+    position: 'absolute',
+    bottom: 6,
+    end: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  seriesEpisodeCountText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
+  },
+  seriesCardTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.text,
+    textAlign: 'right',
+    marginTop: 8,
+  },
+  seriesLevelsRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  seriesLevelDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  seriesLevelsText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.muted,
+  },
+  shelfBlock: {
+    marginBottom: SPACING.l,
+  },
+  shelfHeaderRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.s,
+  },
+  shelfTitleContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shelfSectionTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  shelfLevelPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  shelfLevelPillText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
+  },
+  shelfCountPill: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  shelfCountPillText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: COLORS.textSecondary,
+  },
+  shelfActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  shelfActionText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  shelfScrollRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  shelfCard: {
+    width: 160,
+  },
+  shelfPosterWrapper: {
+    width: 160,
+    height: 100,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  shelfPoster: {
+    width: 160,
+    height: 100,
+  },
+  shelfCardTitle: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 13,
+    color: COLORS.text,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  shelfMetaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  shelfMetaText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.muted,
+  },
 });

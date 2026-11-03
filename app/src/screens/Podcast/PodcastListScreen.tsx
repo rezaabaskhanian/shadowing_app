@@ -11,6 +11,8 @@ import { absUrl } from '../../api/config';
 import { getPodcasts, atOrBelowLevel, type Podcast } from '../../api/podcasts';
 import { BannerCard } from '../../components/ContentVisuals';
 import { getMyLevel } from '../../api/assessment';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_META: Record<string, { labelKey: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
@@ -33,6 +35,8 @@ export const PodcastListScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [allPodcasts, setPodcasts] = useState<Podcast[] | null>(null);
   const [error, setError] = useState(false);
   // درسی / منتخب؛ از خانه با «همه»ی هر بخش، همان نوع از قبل انتخاب است.
@@ -52,15 +56,24 @@ export const PodcastListScreen: React.FC = () => {
       : scoped
   )?.slice().sort((a, b) => levelRank(b.level) - levelRank(a.level));
 
+  const FREE_PODCASTS_COUNT = 4;
+
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     getPodcasts()
       .then(setPodcasts)
       .catch(() => setError(true));
     getMyLevel()
       .then((l) => setMyLevel(l.scene_level))
       .catch(() => {});
-  }, []);
+  }, [user?.role]);
 
   useFocusEffect(load);
 
@@ -120,8 +133,9 @@ export const PodcastListScreen: React.FC = () => {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.l }]}
           showsVerticalScrollIndicator={false}
         >
-          {podcasts.map((p) => {
+          {podcasts.map((p, index) => {
             const level = LEVEL_META[p.level] ?? LEVEL_META.beginner;
+            const isLocked = !isSubscribed && index >= FREE_PODCASTS_COUNT;
             return (
               <BannerCard
                 key={p.id}
@@ -132,7 +146,12 @@ export const PodcastListScreen: React.FC = () => {
                 subtitle={p.description_fa}
                 badgeLabel={t(level.labelKey)}
                 cornerLabel={`🎧 ${formatDuration(p.duration_seconds)}`}
-                onPress={() => navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })}
+                locked={isLocked}
+                onPress={() =>
+                  isLocked
+                    ? navigation.navigate('Paywall')
+                    : navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })
+                }
               />
             );
           })}

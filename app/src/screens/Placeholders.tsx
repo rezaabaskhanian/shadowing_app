@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Alert,
+  BackHandler,
   FlatList,
   Modal,
   Platform,
@@ -103,7 +104,24 @@ export const ScenesScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       queryClient.refetchQueries({ queryKey: sceneKeys.list, stale: true });
-    }, [queryClient])
+
+      const onBackPress = () => {
+        if (searchQuery) {
+          setSearchQuery('');
+          return true;
+        }
+        if (activeCategory !== 'all' || activeLevel !== 'all') {
+          setActiveCategory('all');
+          setActiveLevel('all');
+          return true;
+        }
+        navigation.navigate('Home');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [queryClient, searchQuery, activeCategory, activeLevel, navigation])
   );
 
   // رسیدن از جای دیگر اپ (مثلاً زدن روی دسته‌ی کارت خانه) با دسته‌ی از پیش

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Briefcase, GraduationCap, Info, Mic, Play, Plane, Trophy } from 'lucide-react-native';
+import { Briefcase, GraduationCap, Info, Lock, Mic, Play, Plane, Trophy } from 'lucide-react-native';
 
 import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -13,6 +13,8 @@ import { atOrBelowLevel } from '../../api/podcasts';
 import { levelColor } from '../../components/ContentVisuals';
 import { HubHeader } from '../../components/HubHeader';
 import { GradientFill } from '../../components/GradientFill';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 export const INTERVIEW_KIND_META: Record<InterviewKind, { Icon: typeof Briefcase; color: string }> = {
   job: { Icon: Briefcase, color: COLORS.primary },
@@ -30,23 +32,40 @@ export const InterviewListScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const fieldKey: string | undefined = route.params?.fieldKey;
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [sets, setSets] = useState<InterviewSet[] | null>(null);
   const [error, setError] = useState(false);
 
+  const FREE_INTERVIEW_COUNT = 1;
+
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     Promise.all([getInterviewSets(), getMyLevel().catch(() => null)])
       .then(([list, lvl]) => {
         const forField = fieldKey ? list.filter((s) => s.field_key === fieldKey) : list;
         setSets(atOrBelowLevel(forField, lvl?.scene_level));
       })
       .catch(() => setError(true));
-  }, [fieldKey]);
+  }, [fieldKey, user?.role]);
 
   useFocusEffect(load);
 
   const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
-  const open = (id: string) => navigation.navigate('InterviewSession', { setId: id, openedAt: Date.now() });
+  const open = (id: string, isLocked?: boolean) => {
+    if (isLocked) {
+      navigation.navigate('Paywall');
+      return;
+    }
+    navigation.navigate('InterviewSession', { setId: id, openedAt: Date.now() });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
@@ -82,14 +101,24 @@ export const InterviewListScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>{t('interviewSuggested')}</Text>
               <Text style={styles.sectionCount}>{t('interviewActiveCount').replace('{n}', toFa(sets.length))}</Text>
             </View>
-            {sets.map((set) => {
+            {sets.map((set, index) => {
+              const isLocked = !isSubscribed && index >= FREE_INTERVIEW_COUNT;
               const kind = INTERVIEW_KIND_META[set.kind] ?? INTERVIEW_KIND_META.job;
               const color = levelColor(set.level);
               const done = (set.attempts ?? 0) > 0;
               return (
-                <TouchableOpacity key={set.id} style={styles.card} onPress={() => open(set.id)} activeOpacity={0.85}>
-                  <View style={[styles.cardIcon, { backgroundColor: `${kind.color}1A` }]}>
-                    <kind.Icon size={20} color={kind.color} />
+                <TouchableOpacity
+                  key={set.id}
+                  style={[styles.card, isLocked && { borderColor: '#FCD7C7', backgroundColor: '#FFFDFC' }]}
+                  onPress={() => open(set.id, isLocked)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.cardIcon, { backgroundColor: isLocked ? '#FFF1E8' : `${kind.color}1A` }]}>
+                    {isLocked ? (
+                      <Lock size={20} color={COLORS.primary} />
+                    ) : (
+                      <kind.Icon size={20} color={kind.color} />
+                    )}
                   </View>
                   <View style={styles.cardBody}>
                     <View style={styles.cardMeta}>
@@ -98,11 +127,20 @@ export const InterviewListScreen: React.FC = () => {
                           {t(`level${set.level.charAt(0).toUpperCase()}${set.level.slice(1)}`)}
                         </Text>
                       </View>
-                      <Text style={styles.metaText}>
-                        {done
-                          ? t('interviewBest').replace('{s}', toFa(set.best_score ?? 0))
-                          : t('interviewQuestionCount').replace('{n}', toFa(set.question_count))}
-                      </Text>
+                      {isLocked ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FFF1E8', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FCD7C7' }}>
+                          <Lock size={10} color={COLORS.primary} />
+                          <Text style={{ fontFamily: FONT_FAMILY.bold, fontSize: 10, color: COLORS.primary }}>
+                            قفل اشتراک
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.metaText}>
+                          {done
+                            ? t('interviewBest').replace('{s}', toFa(set.best_score ?? 0))
+                            : t('interviewQuestionCount').replace('{n}', toFa(set.question_count))}
+                        </Text>
+                      )}
                     </View>
                     <Text style={styles.cardTitle} numberOfLines={1}>
                       {set.title_fa || set.title}
@@ -113,8 +151,10 @@ export const InterviewListScreen: React.FC = () => {
                       </Text>
                     )}
                   </View>
-                  <View style={[styles.playBtn, done && styles.playBtnDone]}>
-                    {done ? (
+                  <View style={[styles.playBtn, done && styles.playBtnDone, isLocked && { backgroundColor: '#FFF1E8', borderColor: '#FCD7C7', borderWidth: 1 }]}>
+                    {isLocked ? (
+                      <Lock size={14} color={COLORS.primary} />
+                    ) : done ? (
                       <Trophy size={14} color={COLORS.warning} />
                     ) : (
                       <Play size={14} color={COLORS.text} fill={COLORS.text} />

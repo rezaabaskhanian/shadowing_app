@@ -12,6 +12,8 @@ import { atOrBelowLevel } from '../../api/podcasts';
 import { getMyLevel } from '../../api/assessment';
 import { getSongs, type Song } from '../../api/songs';
 import { BannerCard, ListHero, levelColor } from '../../components/ContentVisuals';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_LABEL: Record<string, string> = {
   starter: 'levelStarter',
@@ -29,15 +31,26 @@ export const SongListScreen: React.FC = () => {
   const rtl = language === 'fa';
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [songs, setSongs] = useState<Song[] | null>(null);
   const [error, setError] = useState(false);
 
+  const FREE_SONGS_COUNT = 4;
+
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     Promise.all([getSongs(), getMyLevel().catch(() => null)])
       .then(([list, lvl]) => setSongs(atOrBelowLevel(list, lvl?.scene_level)))
       .catch(() => setError(true));
-  }, []);
+  }, [user?.role]);
   useFocusEffect(load);
 
   return (
@@ -83,24 +96,32 @@ export const SongListScreen: React.FC = () => {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.l }]}
           showsVerticalScrollIndicator={false}
         >
-          {songs.map((s) => (
-            <BannerCard
-              key={s.id}
-              image={s.cover_url ? { uri: absUrl(s.cover_url) } : null}
-              accent={levelColor(s.level)}
-              icon={<Music size={20} color={COLORS.white} />}
-              title={s.title}
-              subtitle={s.artist || s.description_fa}
-              badgeLabel={t(LEVEL_LABEL[s.level] ?? 'levelBeginner')}
-              cornerLabel={s.duration_seconds > 0 ? duration(s.duration_seconds) : undefined}
-              metas={
-                s.instrumental_url
-                  ? [{ icon: <Mic size={13} color={COLORS.muted} />, text: t('songSingAlongBadge') }]
-                  : []
-              }
-              onPress={() => navigation.navigate('Song', { songId: s.id, openedAt: Date.now() })}
-            />
-          ))}
+          {songs.map((s, index) => {
+            const isLocked = !isSubscribed && index >= FREE_SONGS_COUNT;
+            return (
+              <BannerCard
+                key={s.id}
+                image={s.cover_url ? { uri: absUrl(s.cover_url) } : null}
+                accent={levelColor(s.level)}
+                icon={<Music size={20} color={COLORS.white} />}
+                title={s.title}
+                subtitle={s.artist || s.description_fa}
+                badgeLabel={t(LEVEL_LABEL[s.level] ?? 'levelBeginner')}
+                cornerLabel={s.duration_seconds > 0 ? duration(s.duration_seconds) : undefined}
+                locked={isLocked}
+                metas={
+                  s.instrumental_url
+                    ? [{ icon: <Mic size={13} color={COLORS.muted} />, text: t('songSingAlongBadge') }]
+                    : []
+                }
+                onPress={() =>
+                  isLocked
+                    ? navigation.navigate('Paywall')
+                    : navigation.navigate('Song', { songId: s.id, openedAt: Date.now() })
+                }
+              />
+            );
+          })}
         </ScrollView>
       )}
     </View>

@@ -12,6 +12,8 @@ import { getMyLevel } from '../../api/assessment';
 import { atOrBelowLevel } from '../../api/podcasts';
 import { absUrl } from '../../api/config';
 import { BannerCard, ListHero } from '../../components/ContentVisuals';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_META: Record<TopicLevel, { labelKey: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
@@ -29,16 +31,27 @@ export const TopicListScreen: React.FC = () => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [topics, setTopics] = useState<SpeakingTopic[] | null>(null);
   const [error, setError] = useState(false);
 
+  const FREE_TOPIC_COUNT = 1;
+
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     // فقط موضوع‌های سطح کاربر و پایین‌تر؛ سطح بالاتر نشان داده نمی‌شود.
     Promise.all([getSpeakingTopics(), getMyLevel().catch(() => null)])
       .then(([list, lvl]) => setTopics(atOrBelowLevel(list, lvl?.scene_level)))
       .catch(() => setError(true));
-  }, []);
+  }, [user?.role]);
 
   // هر بار برگشت به این صفحه (بعد از یک تلاش) بهترین امتیازها تازه شوند.
   useFocusEffect(load);
@@ -83,7 +96,8 @@ export const TopicListScreen: React.FC = () => {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.l }]}
           showsVerticalScrollIndicator={false}
         >
-          {topics.map((topic) => {
+          {topics.map((topic, index) => {
+            const isLocked = !isSubscribed && index >= FREE_TOPIC_COUNT;
             const level = LEVEL_META[topic.level] ?? LEVEL_META.beginner;
             const picture = topic.image_url || topic.images?.find((img) => !!img.url)?.url;
             const metas = [
@@ -112,7 +126,14 @@ export const TopicListScreen: React.FC = () => {
                 badgeLabel={t(level.labelKey)}
                 metas={metas}
                 done={topic.attempts > 0}
-                onPress={() => navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() })}
+                locked={isLocked}
+                onPress={() => {
+                  if (isLocked) {
+                    navigation.navigate('Paywall');
+                    return;
+                  }
+                  navigation.navigate('TopicSpeaking', { topic, openedAt: Date.now() });
+                }}
               />
             );
           })}

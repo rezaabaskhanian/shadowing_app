@@ -45,12 +45,24 @@ export const HomeGroup: React.FC<{
   rtl?: boolean;
   /** دو کارت بزرگ کنار هم بدون اسکرول (برای «ادامه‌ی یادگیری»). */
   twoUp?: boolean;
-}> = ({ title, tabs, allLabel, rtl = false, twoUp = false }) => {
+  /** در صورت true بودن، تا لود شدن کامل دیتا هیچ چیزی رندر نمی‌شود */
+  loading?: boolean;
+  /** کلید تبی که ترجیح دارد اول نمایش داده شود */
+  defaultTabKey?: string;
+}> = ({ title, tabs, allLabel, rtl = false, twoUp = false, loading = false, defaultTabKey }) => {
   const { width: screenW } = useWindowDimensions();
   const visible = tabs.filter((tb) => tb.items.length > 0 || !!tb.emptyText);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  if (loading) return null;
   if (visible.length === 0) return null;
-  const active = visible.find((tb) => tb.key === activeKey) ?? visible[0];
+
+  const targetKey = activeKey ?? defaultTabKey ?? tabs[0]?.key;
+  const active =
+    visible.find((tb) => tb.key === targetKey) ??
+    (!activeKey && tabs.some((tb) => tb.key === targetKey) ? null : visible[0]);
+
+  if (!active) return null;
   // ۲۰ حاشیه‌ی دو طرف صفحه + ۱۲ فاصله‌ی بین دو کارت.
   const twoW = Math.floor((screenW - 40 - 12) / 2);
   const cardSize = twoUp ? { width: twoW } : null;

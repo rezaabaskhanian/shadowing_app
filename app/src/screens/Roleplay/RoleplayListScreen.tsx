@@ -2,13 +2,15 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Drama, Headphones, MessageCircle, Target, X } from 'lucide-react-native';
+import { Drama, Headphones, Lock, MessageCircle, Target, X } from 'lucide-react-native';
 
 import { COLORS, SPACING } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { getRoleplays, type Roleplay } from '../../api/conversation';
 import { ListHero, levelColor } from '../../components/ContentVisuals';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_LABEL: Record<string, string> = {
   starter: 'levelStarter',
@@ -33,6 +35,10 @@ export const RoleplayListScreen: React.FC = () => {
   const [error, setError] = useState(false);
   const [category, setCategory] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const FREE_ROLEPLAY_COUNT = 4;
 
   const load = useCallback(() => {
     setError(false);
@@ -40,7 +46,19 @@ export const RoleplayListScreen: React.FC = () => {
       .then(setItems)
       .catch(() => setError(true));
   }, []);
-  useFocusEffect(load);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      if (user?.role === 'admin') {
+        setIsSubscribed(true);
+        return;
+      }
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }, [load, user?.role])
+  );
 
   const categories = useMemo(() => Array.from(new Set((items ?? []).map((r) => r.category))), [items]);
   const shown = (items ?? []).filter((r) => !category || r.category === category);
@@ -49,8 +67,17 @@ export const RoleplayListScreen: React.FC = () => {
     return label === `roleplayCat_${c}` ? c : label;
   };
 
-  const start = (r: Roleplay) =>
-    navigation.navigate('AIConversation', { roleplay: r, sceneTitle: rtl ? r.title_fa || r.title : r.title, openedAt: Date.now() });
+  const start = (r: Roleplay, locked = false) => {
+    if (locked) {
+      navigation.navigate('Paywall');
+      return;
+    }
+    navigation.navigate('AIConversation', {
+      roleplay: r,
+      sceneTitle: rtl ? r.title_fa || r.title : r.title,
+      openedAt: Date.now(),
+    });
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
@@ -113,6 +140,8 @@ export const RoleplayListScreen: React.FC = () => {
 
           {shown.map((r) => {
             const open = openId === r.id;
+            const globalIndex = (items ?? []).findIndex((item) => item.id === r.id);
+            const isLocked = !isSubscribed && globalIndex >= FREE_ROLEPLAY_COUNT;
             return (
               <TouchableOpacity
                 key={r.id}
@@ -121,8 +150,12 @@ export const RoleplayListScreen: React.FC = () => {
                 activeOpacity={0.9}
               >
                 <View style={[styles.cardHead, rtl && styles.rowReverse]}>
-                  <View style={styles.cardIcon}>
-                    <MessageCircle size={20} color={COLORS.primary} />
+                  <View style={[styles.cardIcon, isLocked && styles.cardIconLocked]}>
+                    {isLocked ? (
+                      <Lock size={18} color={COLORS.primary} />
+                    ) : (
+                      <MessageCircle size={20} color={COLORS.primary} />
+                    )}
                   </View>
                   <View style={styles.flex1}>
                     <Text style={[styles.cardTitle, ta]} numberOfLines={1}>
@@ -132,6 +165,12 @@ export const RoleplayListScreen: React.FC = () => {
                       {r.title}
                     </Text>
                   </View>
+                  {isLocked && (
+                    <View style={styles.lockBadge}>
+                      <Lock size={11} color={COLORS.white} />
+                      <Text style={styles.lockBadgeText}>{t('locked') || 'قفل'}</Text>
+                    </View>
+                  )}
                   <View style={[styles.levelBadge, { backgroundColor: levelColor(r.level) }]}>
                     <Text style={styles.levelBadgeText}>{t(LEVEL_LABEL[r.level] ?? 'levelBeginner')}</Text>
                   </View>
@@ -173,9 +212,19 @@ export const RoleplayListScreen: React.FC = () => {
                       </View>
                     )}
 
-                    <TouchableOpacity style={styles.startBtn} onPress={() => start(r)} activeOpacity={0.85}>
-                      <MessageCircle size={18} color={COLORS.white} />
-                      <Text style={styles.startBtnText}>{t('roleplayStart')}</Text>
+                    <TouchableOpacity
+                      style={[styles.startBtn, isLocked && styles.startBtnLocked]}
+                      onPress={() => start(r, isLocked)}
+                      activeOpacity={0.85}
+                    >
+                      {isLocked ? (
+                        <Lock size={18} color={COLORS.white} />
+                      ) : (
+                        <MessageCircle size={18} color={COLORS.white} />
+                      )}
+                      <Text style={styles.startBtnText}>
+                        {isLocked ? 'قفل است · ارتقا به اشتراک ویژه' : t('roleplayStart')}
+                      </Text>
                     </TouchableOpacity>
                     {!!r.podcast_id && (
                       <TouchableOpacity
@@ -272,6 +321,26 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     backgroundColor: COLORS.primary,
     marginTop: 4,
+  },
+  startBtnLocked: {
+    backgroundColor: COLORS.primary,
+  },
+  cardIconLocked: {
+    backgroundColor: '#FFF1E8',
+  },
+  lockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  lockBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: COLORS.white,
   },
   startBtnText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.white },
   podcastBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 40 },

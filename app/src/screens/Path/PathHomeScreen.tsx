@@ -38,6 +38,8 @@ import { completePathItem, getPath, type LearningPath, type PathItem, type PathW
 import { track } from '../../services/analytics';
 import { getSpeakingTopics } from '../../api/topicSpeaking';
 import { getWritingPrompts } from '../../api/writing';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const KIND_ICON: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   scene: BookOpen,
@@ -113,6 +115,8 @@ export const PathHomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const level: string = route.params?.level || 'starter';
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const [path, setPath] = useState<LearningPath | null>(null);
   const [error, setError] = useState(false);
@@ -122,17 +126,45 @@ export const PathHomeScreen: React.FC = () => {
 
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     getPath(level)
       .then((p) => {
-        setPath(p);
+        // ۴ جلسه اول مسیر آموزشی برای همه باز و آزاد است
+        let globalSessionIdx = 0;
+        const adjustedWeeks = (p.weeks || []).map((w, wi) => {
+          let hasUnlocked = false;
+          const adjustedSessions = w.sessions.map((s) => {
+            const isFirstFour = globalSessionIdx < 4;
+            globalSessionIdx++;
+            const unlocked = s.unlocked || isFirstFour;
+            if (unlocked) hasUnlocked = true;
+            return {
+              ...s,
+              unlocked,
+            };
+          });
+          return {
+            ...w,
+            unlocked: w.unlocked || hasUnlocked || wi === 0,
+            sessions: adjustedSessions,
+          };
+        });
+        const updatedPath = { ...p, weeks: adjustedWeeks };
+        setPath(updatedPath);
         // با هر بار برگشت به صفحه، هفته‌ی فعالیتِ بعدی باز می‌شود تا کاربر
         // بلافاصله قدم بعدی را ببیند.
-        const ws = p.weeks || [];
+        const ws = adjustedWeeks;
         const next = findNextStep(ws);
         setOpenWeek(next ? next.weekIndex : currentWeekIndex(ws));
       })
       .catch(() => setError(true));
-  }, [level]);
+  }, [level, user?.role]);
 
   useFocusEffect(load);
 
@@ -333,8 +365,15 @@ export const PathHomeScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.weekHeader, rtl && styles.rowReverse]}
                   onPress={() => {
-                    if (!week.unlocked) setLockHintKey(lockHintKey === weekHintKey ? null : weekHintKey);
-                    else setOpenWeek(openWeek === wi ? null : wi);
+                    if (!week.unlocked) {
+                      if (!isSubscribed && wi > 0) {
+                        navigation.navigate('Paywall');
+                        return;
+                      }
+                      setLockHintKey(lockHintKey === weekHintKey ? null : weekHintKey);
+                    } else {
+                      setOpenWeek(openWeek === wi ? null : wi);
+                    }
                   }}
                   activeOpacity={0.85}
                 >
@@ -347,8 +386,8 @@ export const PathHomeScreen: React.FC = () => {
                       )}
                     </View>
                   ) : (
-                    <View style={styles.lockSquare}>
-                      <Lock size={15} color={COLORS.muted} />
+                    <View style={[styles.lockSquare, !isSubscribed && { backgroundColor: '#FFF1E8', borderColor: '#FCD7C7', borderWidth: 1 }]}>
+                      <Lock size={15} color={!isSubscribed ? COLORS.primary : COLORS.muted} />
                     </View>
                   )}
                   <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
@@ -431,19 +470,30 @@ export const PathHomeScreen: React.FC = () => {
                       // جلسه‌ی قفل: کارت جمع‌وجور با شماره، عنوان و قفل؛ با لمس، توضیحِ زمان باز شدن.
                       if (!session.unlocked) {
                         const hintKey = `s-${week.id}-${session.no}`;
+                        const isSubLock = !isSubscribed;
                         return (
                           <TouchableOpacity
                             key={session.no}
-                            style={[styles.sessionCard, isCheckpoint && styles.sessionCardCheckpoint]}
-                            onPress={() => setLockHintKey(lockHintKey === hintKey ? null : hintKey)}
+                            style={[
+                              styles.sessionCard,
+                              isCheckpoint && styles.sessionCardCheckpoint,
+                              isSubLock && { borderColor: '#FCD7C7', backgroundColor: '#FFFDFC' },
+                            ]}
+                            onPress={() => {
+                              if (isSubLock) {
+                                navigation.navigate('Paywall');
+                                return;
+                              }
+                              setLockHintKey(lockHintKey === hintKey ? null : hintKey);
+                            }}
                             activeOpacity={0.8}
                           >
                             <View style={[styles.sessionCardRow, rtl && styles.rowReverse]}>
-                              <View style={[styles.sessionStatus, isCheckpoint && styles.sessionStatusStar]}>
+                              <View style={[styles.sessionStatus, isSubLock && { backgroundColor: '#FFF1E8' }]}>
                                 {isCheckpoint ? (
-                                  <Star size={13} color={COLORS.textSecondary} fill={COLORS.textSecondary} />
+                                  <Star size={13} color={isSubLock ? COLORS.primary : COLORS.textSecondary} fill={isSubLock ? COLORS.primary : COLORS.textSecondary} />
                                 ) : (
-                                  <Lock size={13} color={COLORS.muted} />
+                                  <Lock size={13} color={isSubLock ? COLORS.primary : COLORS.muted} />
                                 )}
                               </View>
                               <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
@@ -452,13 +502,20 @@ export const PathHomeScreen: React.FC = () => {
                                   {session.title_fa}
                                 </Text>
                               </View>
-                              {isCheckpoint ? (
+                              {isSubLock ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF1E8', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#FCD7C7' }}>
+                                  <Lock size={10} color={COLORS.primary} />
+                                  <Text style={{ fontFamily: FONT_FAMILY.bold, fontSize: 10, color: COLORS.primary }}>
+                                    ارتقا به اشتراک ویژه
+                                  </Text>
+                                </View>
+                              ) : isCheckpoint ? (
                                 <Lock size={14} color={COLORS.muted} />
                               ) : (
                                 <Text style={styles.sessionTag}>{t('pathSessionLockedTag')}</Text>
                               )}
                             </View>
-                            {lockHintKey === hintKey && (
+                            {!isSubLock && lockHintKey === hintKey && (
                               <Text style={[styles.lockHintInline, textAlign]}>{t('pathSessionLockedHint')}</Text>
                             )}
                           </TouchableOpacity>
@@ -496,11 +553,7 @@ export const PathHomeScreen: React.FC = () => {
                       }
 
                       const items = visibleItems(session.items);
-                      // قدم‌های اختیاریِ انجام‌نشده (غیر از قدم بعدی) کپسول کوچک کنار عنوان جلسه‌اند،
-                      // بقیه ردیف کامل.
                       const isNextItem = (it: PathItem) => nextStep?.item.key === it.key && nextStep.week.id === week.id;
-                      const pills = items.filter((it) => !it.required && !it.done && !isNextItem(it));
-                      const rows = items.filter((it) => !pills.includes(it));
                       return (
                         <View key={session.no} style={styles.session}>
                           <View style={styles.sessionDivider} />
@@ -509,27 +562,19 @@ export const PathHomeScreen: React.FC = () => {
                               {sessionTitle}
                             </Text>
                             {session.done && <Check size={16} color={COLORS.success} />}
-                            {pills.map((it) => (
-                              <TouchableOpacity
-                                key={it.key}
-                                style={styles.optionalPill}
-                                onPress={() => openItem(week, it)}
-                                activeOpacity={0.8}
-                              >
-                                <Text style={styles.optionalPillText}>
-                                  {t(`pathKind_${it.kind}`)} • {t('pathOptional')}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
                           </View>
-                          {rows.map((item) => {
+                          {items.map((item) => {
                             const Icon = KIND_ICON[item.kind] || BookOpen;
                             const isNext = isNextItem(item);
+                            const isCheckpoint = item.kind === 'checkpoint';
+                            const itemTitleText = isCheckpoint
+                              ? t('pathKind_checkpoint')
+                              : item.title || t(`pathKind_${item.kind}`);
                             const kindLine = [
                               isNext ? t('pathNextActivity') : '',
-                              t(`pathKind_${item.kind}`),
+                              item.title && !isCheckpoint ? t(`pathKind_${item.kind}`) : '',
                               !item.required ? t('pathOptional') : '',
-                              item.minutes ? t('pathMinutes').replace('{n}', String(item.minutes)) : '',
+                              item.minutes ? t('pathMinutes').replace('{n}', num(item.minutes)) : '',
                             ]
                               .filter(Boolean)
                               .join(' • ');
@@ -567,9 +612,14 @@ export const PathHomeScreen: React.FC = () => {
                                   >
                                     {kindLine}
                                   </Text>
-                                  {!!item.title && item.kind !== 'checkpoint' && (
+                                  {!!itemTitleText && (
                                     <Text style={[styles.itemTitle, textAlign]} numberOfLines={1}>
-                                      {item.title}
+                                      {itemTitleText}
+                                    </Text>
+                                  )}
+                                  {!!(item as any).note_fa && !item.title && (
+                                    <Text style={[styles.itemNote, textAlign]} numberOfLines={2}>
+                                      {(item as any).note_fa}
                                     </Text>
                                   )}
                                 </View>
@@ -831,6 +881,7 @@ const styles = StyleSheet.create({
   itemKindDone: { color: COLORS.success },
   itemKindNext: { color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
   itemTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.text },
+  itemNote: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.muted, lineHeight: 18, marginTop: 2 },
   doneCircle: {
     width: 28,
     height: 28,

@@ -12,6 +12,8 @@ import { getMyLevel } from '../../api/assessment';
 import { atOrBelowLevel } from '../../api/podcasts';
 import { absUrl } from '../../api/config';
 import { BannerCard, ListHero } from '../../components/ContentVisuals';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 
 const LEVEL_META: Record<WritingLevel, { labelKey: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', bg: COLORS.levelStarterBg },
@@ -29,16 +31,27 @@ export const WritingListScreen: React.FC = () => {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [topics, setTopics] = useState<WritingPrompt[] | null>(null);
   const [error, setError] = useState(false);
+
+  const FREE_WRITING_COUNT = 1;
 
   // فقط موضوع‌های سطح کاربر و پایین‌تر؛ سطح بالاتر نشان داده نمی‌شود.
   const load = useCallback(() => {
     setError(false);
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
     Promise.all([getWritingPrompts(), getMyLevel().catch(() => null)])
       .then(([list, lvl]) => setTopics(atOrBelowLevel(list, lvl?.scene_level)))
       .catch(() => setError(true));
-  }, []);
+  }, [user?.role]);
 
   // هر بار برگشت به این صفحه (بعد از یک تلاش) بهترین امتیازها تازه شوند.
   useFocusEffect(load);
@@ -83,7 +96,8 @@ export const WritingListScreen: React.FC = () => {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.l }]}
           showsVerticalScrollIndicator={false}
         >
-          {topics.map((topic) => {
+          {topics.map((topic, index) => {
+            const isLocked = !isSubscribed && index >= FREE_WRITING_COUNT;
             const level = LEVEL_META[topic.level] ?? LEVEL_META.beginner;
             const metas = [
               {
@@ -110,7 +124,14 @@ export const WritingListScreen: React.FC = () => {
                 badgeLabel={t(level.labelKey)}
                 metas={metas}
                 done={topic.attempts > 0}
-                onPress={() => navigation.navigate('Writing', { prompt: topic, openedAt: Date.now() })}
+                locked={isLocked}
+                onPress={() => {
+                  if (isLocked) {
+                    navigation.navigate('Paywall');
+                    return;
+                  }
+                  navigation.navigate('Writing', { prompt: topic, openedAt: Date.now() });
+                }}
               />
             );
           })}
