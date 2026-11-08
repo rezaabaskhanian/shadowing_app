@@ -425,7 +425,7 @@ export const HomeScreen = () => {
   const targetLevel = (myLevel?.scene_level || 'beginner').toLowerCase();
   const userLevelScenes = React.useMemo(() => {
     const list = scenes.filter((s) => s.level.toLowerCase() === targetLevel);
-    return list.length > 0 ? list : scenes.slice(0, 8);
+    return (list.length > 0 ? list : scenes).slice(0, 8);
   }, [scenes, targetLevel]);
 
   const isHomeSceneLocked = React.useCallback(
@@ -444,7 +444,7 @@ export const HomeScreen = () => {
       navigation.navigate('Paywall');
       return;
     }
-    navigation.navigate('Shadowing', { scenarioId: scenario.id });
+    navigation.navigate('Shadowing', { scenarioId: scenario.id, returnTo: 'Home' });
   };
 
   // ویدیوها دو بخشِ جدا دارند: ساخته‌ی خودمان (Google Flow) و تکه‌هایی از فیلم‌ها.

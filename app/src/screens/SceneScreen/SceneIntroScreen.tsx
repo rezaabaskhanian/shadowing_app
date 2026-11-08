@@ -132,17 +132,41 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           }
         }}
       />
-      <ScrollView contentContainerStyle={styles.introScroll} showsVerticalScrollIndicator={false}>
+      {/* Floating Top Navigation Header — همیشه بالای نوار وضعیت و حتی حین اسکرول در دسترس است */}
+      <View
+        style={[
+          styles.floatingHeader,
+          { top: Math.max(insets.top, 16) + 4 },
+          rtl && styles.rowReverse,
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={onClose}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          activeOpacity={0.8}
+        >
+          {rtl ? <ChevronRight size={22} color={COLORS.white} /> : <ChevronLeft size={22} color={COLORS.white} />}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={handleShare}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          activeOpacity={0.8}
+        >
+          <Share2 size={18} color={COLORS.white} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.introScroll, { paddingTop: Math.max(insets.top, 16) + 54 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Cover Hero Banner */}
         <View style={[styles.introCoverWrapper, { height: screenHeight / 3 }]}>
           <ImageBackground source={coverImage} style={styles.introCover}>
             <View style={styles.introCoverScrim} />
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <X size={20} color={COLORS.white} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.closeBtn, styles.shareBtn]} onPress={handleShare}>
-              <Share2 size={18} color={COLORS.white} />
-            </TouchableOpacity>
           </ImageBackground>
         </View>
 
@@ -560,11 +584,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
   },
+  floatingHeader: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 99,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(15, 20, 28, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   introCoverWrapper: {
     height: 240,
     borderRadius: 28,
     overflow: 'hidden',
-    marginTop: 20,
+    marginTop: 8,
     marginBottom: 20,
   },
   introCover: {

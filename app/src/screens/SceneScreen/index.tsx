@@ -395,6 +395,14 @@ export const SceneScreen = () => {
   const returnTo: string | undefined = route.params?.returnTo;
   const returnParams = route.params?.returnParams;
   const resetToHome = useCallback(() => {
+    // ریست حالت‌های داخلی صحنه و توقف صدا
+    setInScene(false);
+    setShowAllDialogues(false);
+    try {
+      dispatch({ type: 'PAUSE' });
+    } catch {}
+
+    // با backBehavior="history"، متد goBack به آخرین صفحه در تاریخچه (مثل مسیر یا نقشه) بازمی‌گردد
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
