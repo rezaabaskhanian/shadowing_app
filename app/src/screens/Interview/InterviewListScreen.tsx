@@ -34,7 +34,10 @@ export const InterviewListScreen: React.FC = () => {
   const fieldKey: string | undefined = route.params?.fieldKey;
   const { user } = useAuth();
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [sets, setSets] = useState<InterviewSet[] | null>(null);
+  const [allSets, setAllSets] = useState<InterviewSet[] | null>(null);
+  const [selectedField, setSelectedField] = useState<string>('all');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [userLevel, setUserLevel] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   const FREE_INTERVIEW_COUNT = 1;
@@ -51,7 +54,10 @@ export const InterviewListScreen: React.FC = () => {
     Promise.all([getInterviewSets(), getMyLevel().catch(() => null)])
       .then(([list, lvl]) => {
         const forField = fieldKey ? list.filter((s) => s.field_key === fieldKey) : list;
-        setSets(atOrBelowLevel(forField, lvl?.scene_level));
+        setAllSets(forField);
+        if (lvl?.scene_level) {
+          setUserLevel(lvl.scene_level);
+        }
       })
       .catch(() => setError(true));
   }, [fieldKey, user?.role]);
@@ -66,6 +72,21 @@ export const InterviewListScreen: React.FC = () => {
     }
     navigation.navigate('InterviewSession', { setId: id, openedAt: Date.now() });
   };
+
+  const sets = (allSets || []).filter((s) => {
+    // 1. Filter by Field / Category
+    if (selectedField !== 'all') {
+      if (s.field_key !== selectedField && s.kind !== selectedField) {
+        return false;
+      }
+    }
+    // 2. Filter by Level
+    if (selectedLevel === 'all') return true;
+    if (selectedLevel === 'beginner') return s.level === 'beginner' || s.level === 'starter';
+    if (selectedLevel === 'intermediate') return s.level === 'intermediate';
+    if (selectedLevel === 'advanced') return s.level === 'advanced' || s.level === 'proficient';
+    return true;
+  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
@@ -82,7 +103,61 @@ export const InterviewListScreen: React.FC = () => {
           subtitle={t('interviewHubSub')}
         />
 
-        {sets === null && !error && <ActivityIndicator color={COLORS.primary} style={styles.loader} />}
+        {/* Level Filters */}
+        {/* Field / Job Category Filters */}
+        <View style={styles.filterContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {[
+              { id: 'all', label: t('interviewFieldAll') },
+              { id: 'computer', label: t('interviewFieldTech') },
+              { id: 'nursing', label: t('interviewFieldNursing') },
+              { id: 'admission', label: t('interviewFieldAdmission') },
+              { id: 'visa', label: t('interviewFieldVisa') },
+            ].map((tab) => {
+              const active = selectedField === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[styles.filterTab, active && styles.filterTabActive]}
+                  onPress={() => setSelectedField(tab.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterTabText, active && styles.filterTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Level Filters */}
+        <View style={[styles.filterContainer, { marginTop: 2 }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {[
+              { id: 'all', label: t('interviewFilterAll') },
+              { id: 'beginner', label: t('interviewFilterBeginner') },
+              { id: 'intermediate', label: t('interviewFilterIntermediate') },
+              { id: 'advanced', label: t('interviewFilterAdvanced') },
+            ].map((tab) => {
+              const active = selectedLevel === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[styles.filterTabSm, active && styles.filterTabSmActive]}
+                  onPress={() => setSelectedLevel(tab.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterTabSmText, active && styles.filterTabSmTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {allSets === null && !error && <ActivityIndicator color={COLORS.primary} style={styles.loader} />}
 
         {error && (
           <View style={styles.center}>
@@ -93,7 +168,7 @@ export const InterviewListScreen: React.FC = () => {
           </View>
         )}
 
-        {sets && sets.length === 0 && <Text style={[styles.mutedText, styles.loader]}>{t('interviewEmpty')}</Text>}
+        {allSets && sets.length === 0 && <Text style={[styles.mutedText, styles.loader]}>{t('interviewEmpty')}</Text>}
 
         {sets && sets.length > 0 && (
           <>
@@ -193,6 +268,47 @@ const styles = StyleSheet.create({
   mutedText: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
   linkText: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
   list: { gap: 12 },
+  filterContainer: { marginTop: 4, marginBottom: 2 },
+  filterRow: { flexDirection: 'row-reverse', gap: 8, paddingVertical: 4 },
+  filterTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F1EDE6',
+  },
+  filterTabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  filterTabText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  filterTabTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.white,
+  },
+  filterTabSm: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8E4DC',
+  },
+  filterTabSmActive: {
+    backgroundColor: COLORS.levelIntermediateBg,
+    borderColor: COLORS.levelIntermediateBg,
+  },
+  filterTabSmText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: COLORS.textSecondary,
+  },
+  filterTabSmTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.white,
+  },
   sectionRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.m },
   sectionTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.text },
   sectionCount: { fontFamily: FONT_FAMILY.semiBold, fontSize: 11, color: COLORS.primary },

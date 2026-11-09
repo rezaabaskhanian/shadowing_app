@@ -1,6 +1,7 @@
 package com.shadowingapp
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.core.view.WindowCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -28,6 +29,7 @@ class MainActivity : ReactActivity() {
     // وضعیت نمی‌رود — چون تصمیم‌گیری نهایی درباره‌ی edge-to-edge در سطح
     // native و پنجره‌ی اکتیویتی است، نه در RN.
     WindowCompat.setDecorFitsSystemWindows(window, false)
+    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     super.onCreate(null)
   }
 }

@@ -16,6 +16,7 @@ import (
 	settingsservice "shadowing-backend/internal/service/settings"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	"shadowing-backend/internal/service/telegramchannel"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
 	ttsservice "shadowing-backend/internal/service/tts"
@@ -51,6 +52,13 @@ type Handler struct {
 	verbSvc sceneVerbScanner
 	// adminBot ربات اعلان تلگرام/بله (پیام آزمایشی از پنل).
 	adminBot *adminbotservice.Service
+	// telegramChannelSvc ارسال خودکار صبحگاهی به کانال تلگرام
+	telegramChannelSvc *telegramchannel.Service
+}
+
+func (h Handler) WithTelegramChannel(svc *telegramchannel.Service) Handler {
+	h.telegramChannelSvc = svc
+	return h
 }
 
 type sceneVerbScanner interface {

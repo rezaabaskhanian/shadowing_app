@@ -49,7 +49,7 @@ export async function loadContentAvailability(): Promise<ContentAvailability> {
     has(getPodcasts(), last.podcasts),
     has(getWritingPrompts(), last.writing),
     has(getSpeakingTopics(), last.topicSpeaking),
-    features.interview ? has(getInterviewSets(), last.interview) : Promise.resolve(false),
+    has(getInterviewSets(), true),
     features.specialty ? has(getSpecialtyFields(), last.specialty) : Promise.resolve(false),
   ]);
   last = { course, videoClips, podcasts, writing, topicSpeaking, interview, specialty };

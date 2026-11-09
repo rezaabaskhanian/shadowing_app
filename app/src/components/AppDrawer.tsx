@@ -199,81 +199,76 @@ export const AppDrawer = ({
         </TouchableWithoutFeedback>
 
         <Animated.View style={[styles.drawer, { transform: [{ translateX }] }]}>
-          {/* <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <X color={COLORS.text} size={20} />
-          </TouchableOpacity> */}
-
-          {/* User summary */}
-          <View style={[styles.userIdentity, rtl && styles.rowReverse]}>
-            <View style={styles.avatarCircle}>
-              <UserIcon size={22} color={COLORS.primary} />
-            </View>
-            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
-              <Text style={styles.userName} numberOfLines={1}>
-                {user?.nickname || ''}
-              </Text>
-              {speakingLevel && (
-                <View style={styles.levelChip}>
-                  <Text style={styles.levelChipText}>
-                    {t('placementLevelBadge').replace('{level}', speakingLevel)}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* My Points banner */}
-          <TouchableOpacity
-            style={[styles.pointsCard, rtl && styles.rowReverse]}
-            activeOpacity={0.85}
-            onPress={() => go('MySubmissions')}
+          {/* کل دراور به صورت یکپارچه داخل اسکرول قرار می‌گیرد */}
+          <ScrollView
+            style={styles.drawerScroll}
+            contentContainerStyle={styles.drawerScrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.pointsIconWrap}>
-              <Coins color={COLORS.secondary} size={22} />
+            {/* User summary */}
+            <View style={[styles.userIdentity, rtl && styles.rowReverse]}>
+              <View style={styles.avatarCircle}>
+                <UserIcon size={22} color={COLORS.primary} />
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {user?.nickname || ''}
+                </Text>
+                {speakingLevel && (
+                  <View style={styles.levelChip}>
+                    <Text style={styles.levelChipText}>
+                      {t('placementLevelBadge').replace('{level}', speakingLevel)}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
-              <Text style={[styles.pointsValue, ta]}>
-                {points} · {t('myPoints')}
-              </Text>
-              {/* با امتیاز صفر، به‌جای قانون تبدیل، راه گرفتن امتیاز را می‌گوییم. */}
-              <Text style={[styles.pointsSub, ta]}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
-            </View>
-            {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
-          </TouchableOpacity>
 
-          {/* اشتراک: بدون اشتراک دعوت به خرید، با اشتراک تاریخ پایان. */}
-          <TouchableOpacity
-            style={[styles.pointsCard, rtl && styles.rowReverse]}
-            activeOpacity={0.85}
-            onPress={() => go('Paywall')}
-          >
-            <View style={[styles.pointsIconWrap, { backgroundColor: COLORS.primaryLight }]}>
-              <Crown color={COLORS.primary} size={22} />
-            </View>
-            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
-              <Text style={[styles.pointsValue, ta]}>
-                {subscription?.active ? t('subscriptionActive') : t('subscriptionBuy')}
-              </Text>
-              <Text style={[styles.pointsSub, ta]}>
-                {subscription?.active
-                  ? t('subscriptionUntil').replace('{date}', formatSubscriptionEnd(subscription, language))
-                  : t('subscriptionBuySub')}
-              </Text>
-            </View>
-            {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
-          </TouchableOpacity>
+            {/* My Points banner */}
+            <TouchableOpacity
+              style={[styles.pointsCard, rtl && styles.rowReverse]}
+              activeOpacity={0.85}
+              onPress={() => go('MySubmissions')}
+            >
+              <View style={styles.pointsIconWrap}>
+                <Coins color={COLORS.secondary} size={22} />
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.pointsValue, ta]}>
+                  {points} · {t('myPoints')}
+                </Text>
+                {/* با امتیاز صفر، به‌جای قانون تبدیل، راه گرفتن امتیاز را می‌گوییم. */}
+                <Text style={[styles.pointsSub, ta]}>{points > 0 ? t('myPointsSub') : t('myPointsEarnHint')}</Text>
+              </View>
+              {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
+            </TouchableOpacity>
 
-          <View style={styles.dividerLine} />
+            {/* اشتراک: بدون اشتراک دعوت به خرید، با اشتراک تاریخ پایان. */}
+            <TouchableOpacity
+              style={[styles.pointsCard, rtl && styles.rowReverse]}
+              activeOpacity={0.85}
+              onPress={() => go('Paywall')}
+            >
+              <View style={[styles.pointsIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+                <Crown color={COLORS.primary} size={22} />
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.pointsValue, ta]}>
+                  {subscription?.active ? t('subscriptionActive') : t('subscriptionBuy')}
+                </Text>
+                <Text style={[styles.pointsSub, ta]}>
+                  {subscription?.active
+                    ? t('subscriptionUntil').replace('{date}', formatSubscriptionEnd(subscription, language))
+                    : t('subscriptionBuySub')}
+                </Text>
+              </View>
+              {rtl ? <ChevronLeft color={COLORS.muted} size={18} /> : <ChevronRight color={COLORS.muted} size={18} />}
+            </TouchableOpacity>
 
-          {/* Language Habit */}
+            <View style={styles.dividerLine} />
 
-          {/* بدنه‌ی قابل‌اسکرول: تعداد ردیف‌ها ممکنه با اضافه‌شدن فیچرهای بعدی
-              زیاد بشه، و روی گوشی‌های صفحه‌کوچیک (مثل Galaxy J5) بدون اسکرول
-              ردیف‌ها روی هم می‌ریزن یا از صفحه بیرون می‌زنن. */}
-          <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
-          {/* سه گروه با تیتر کوچک: یادگیری روزانه، تمرین بیشتر، پشتیبانی. قبلاً ۱۱ ردیف هم‌وزن
-              پشت هم بود و کاربر تازه‌کار نمی‌فهمید از کجا شروع کند. */}
-          <Text style={[styles.groupTitle, ta]}>{t('drawerGroupLearn')}</Text>
+            {/* سه گروه با تیتر کوچک: یادگیری روزانه، تمرین بیشتر، پشتیبانی. */}
+            <Text style={[styles.groupTitle, ta]}>{t('drawerGroupLearn')}</Text>
 
           {/* هر ردیف رنگ اختصاصی خودش را دارد — هم برای تشخیص سریع‌تر، هم تا
               وقتی از این ردیف وارد صفحه‌اش می‌شوی، همون رنگ آنجا هم ادامه پیدا
@@ -419,14 +414,12 @@ export const AppDrawer = ({
             </TouchableOpacity>
           )}
 
-          {available.interview && (
-            <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('InterviewList')}>
-              <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
-                <Briefcase color={COLORS.primary} size={18} />
-              </View>
-              <Text style={[styles.rowText, ta]}>{t('interviewTitle')}</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('InterviewList')}>
+            <View style={[styles.rowIconWrap, { backgroundColor: COLORS.primaryLight }]}>
+              <Briefcase color={COLORS.primary} size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>{t('interviewTitle')}</Text>
+          </TouchableOpacity>
 
           {available.specialty && (
             <TouchableOpacity style={[styles.row, rtl && styles.rowReverse]} activeOpacity={0.7} onPress={() => go('SpecialtyHub')}>
@@ -644,7 +637,8 @@ export const AppDrawer = ({
             </View>
             <Text style={[styles.rowText, ta]}>{t('helpFaq')}</Text>
           </TouchableOpacity>
-          </ScrollView>
+
+          <View style={styles.dividerLine} />
 
           <TouchableOpacity
             style={[styles.row, rtl && styles.rowReverse]}
@@ -657,6 +651,7 @@ export const AppDrawer = ({
             <LogOut color={COLORS.error} size={18} />
             <Text style={[styles.rowText, styles.logoutText]}>{t('logout')}</Text>
           </TouchableOpacity>
+          </ScrollView>
         </Animated.View>
       </View>
     </Modal>
@@ -677,7 +672,19 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  drawer: { width: DRAWER_WIDTH, height: '100%', backgroundColor: '#FBFAF7', paddingTop: 56, paddingHorizontal: SPACING.m, paddingBottom: SPACING.l },
+  drawer: {
+    width: DRAWER_WIDTH,
+    height: '100%',
+    backgroundColor: '#FBFAF7',
+  },
+  drawerScroll: {
+    flex: 1,
+  },
+  drawerScrollContent: {
+    paddingTop: 56,
+    paddingHorizontal: SPACING.m,
+    paddingBottom: SPACING.l + 32,
+  },
   closeBtn: {
     position: 'absolute',
     top: 16,
@@ -735,9 +742,6 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
-  },
-  menuScroll: {
-    flex: 1,
   },
   dividerLine: { height: 1, backgroundColor: '#ECEAE4', marginVertical: 12 },
   groupTitle: {

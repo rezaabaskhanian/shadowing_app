@@ -114,6 +114,24 @@ export default function NotificationsPanel({
         </div>
       </div>
 
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: "rgba(2, 132, 199, 0.05)",
+          borderColor: "rgba(2, 132, 199, 0.3)",
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>📢 ارسال خودکار صبحگاهی به کانال تلگرام</div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+            برای زمان‌بندی انتشار روزانه جملات آموزشی و مینی‌دیالوگ‌ها در کانال تلگرام، به تب «کانال تلگرام» در منوی کناری مراجعه کنید.
+          </div>
+        </div>
+      </div>
+
       <div className="card">
         <h2 style={{ marginTop: 0 }}>📣 ارسال نوتیفیکیشن</h2>
         <div style={{ marginBottom: 12 }}>

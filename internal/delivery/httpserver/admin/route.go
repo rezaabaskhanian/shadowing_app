@@ -65,6 +65,12 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/feedbacks/:id/reply", h.ReplyFeedback)
 	g.POST("/bot/test", h.TestAdminBot)
 
+	// کانال تلگرام (ارسال خودکار صبحگاهی و دستی)
+	g.GET("/telegram-channel", h.GetTelegramChannel)
+	g.POST("/telegram-channel/test", h.TestTelegramChannel)
+	g.POST("/telegram-channel/send-now", h.SendTelegramChannelNow)
+	g.GET("/telegram-channel/preview", h.PreviewTelegramChannel)
+
 	// بررسی پیشنهادهای موضوع کاربران
 	g.GET("/topic-suggestions", h.ListTopicSuggestions)
 	g.GET("/topic-suggestions/:id", h.GetTopicSuggestion)

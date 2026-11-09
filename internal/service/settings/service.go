@@ -41,39 +41,56 @@ const (
 	// کلیدهای روشن/خاموشِ بخش‌های تازه‌ی اپ ("true" = باز برای کاربرها).
 	KeyFeatureInterview = "FEATURE_INTERVIEW_ENABLED"
 	KeyFeatureESP       = "FEATURE_ESP_ENABLED"
+	// ارسال خودکار صبحگاهی به کانال تلگرام
+	KeyTelegramChannelBotToken   = "TELEGRAM_CHANNEL_BOT_TOKEN"
+	KeyTelegramChannelID         = "TELEGRAM_CHANNEL_ID"
+	KeyTelegramChannelEnabled    = "TELEGRAM_CHANNEL_ENABLED"
+	KeyTelegramChannelPostTime   = "TELEGRAM_CHANNEL_POST_TIME"
+	KeyTelegramChannelPostMode   = "TELEGRAM_CHANNEL_POST_MODE"
+	KeyTelegramChannelCustomText = "TELEGRAM_CHANNEL_CUSTOM_TEXT"
+	KeyTelegramChannelLastDate   = "TELEGRAM_CHANNEL_LAST_DATE"
+	KeyTelegramChannelLastStatus = "TELEGRAM_CHANNEL_LAST_STATUS"
 )
 
 // AllowedKeys برای اعتبارسنجی درخواست‌های به‌روزرسانی از پنل ادمین استفاده می‌شود.
 var AllowedKeys = map[string]bool{
-	KeyAIProvider:          true,
-	KeyAnthropicAPIKey:     true,
-	KeyClaudeModel:         true,
-	KeyGeminiAPIKey:        true,
-	KeyGeminiModel:         true,
-	KeyGeminiFallbackModel: true,
-	KeyDeepSeekAPIKey:      true,
-	KeyDeepSeekModel:       true,
-	KeyOpenRouterAPIKey:    true,
-	KeyOpenRouterModel:     true,
-	KeyElevenLabsAPIKey:    true,
-	KeyElevenLabsVoiceID:   true,
-	KeyElevenLabsModelID:   true,
-	KeyTTSProvider:         true,
-	KeyGeminiTTSModel:      true,
-	KeyGeminiTTSVoice:      true,
-	KeyOpenRouterTTSModel:  true,
-	KeyGroqAPIKey:          true,
-	KeyGroqTTSModel:        true,
-	KeyGroqSTTModel:        true,
-	KeyFCMServiceAccount:   true,
-	KeyAIDailyTokenLimit:   true,
-	KeyAITokenPricing:      true,
-	KeyTelegramBotToken:    true,
-	KeyTelegramChatID:      true,
-	KeyBaleBotToken:        true,
-	KeyBaleChatID:          true,
-	KeyFeatureInterview:    true,
-	KeyFeatureESP:          true,
+	KeyAIProvider:                true,
+	KeyAnthropicAPIKey:           true,
+	KeyClaudeModel:               true,
+	KeyGeminiAPIKey:              true,
+	KeyGeminiModel:               true,
+	KeyGeminiFallbackModel:       true,
+	KeyDeepSeekAPIKey:            true,
+	KeyDeepSeekModel:             true,
+	KeyOpenRouterAPIKey:          true,
+	KeyOpenRouterModel:           true,
+	KeyElevenLabsAPIKey:          true,
+	KeyElevenLabsVoiceID:         true,
+	KeyElevenLabsModelID:         true,
+	KeyTTSProvider:               true,
+	KeyGeminiTTSModel:            true,
+	KeyGeminiTTSVoice:            true,
+	KeyOpenRouterTTSModel:        true,
+	KeyGroqAPIKey:                true,
+	KeyGroqTTSModel:              true,
+	KeyGroqSTTModel:              true,
+	KeyFCMServiceAccount:         true,
+	KeyAIDailyTokenLimit:         true,
+	KeyAITokenPricing:            true,
+	KeyTelegramBotToken:          true,
+	KeyTelegramChatID:            true,
+	KeyBaleBotToken:              true,
+	KeyBaleChatID:                true,
+	KeyFeatureInterview:          true,
+	KeyFeatureESP:                true,
+	KeyTelegramChannelBotToken:   true,
+	KeyTelegramChannelID:         true,
+	KeyTelegramChannelEnabled:    true,
+	KeyTelegramChannelPostTime:   true,
+	KeyTelegramChannelPostMode:   true,
+	KeyTelegramChannelCustomText: true,
+	KeyTelegramChannelLastDate:   true,
+	KeyTelegramChannelLastStatus: true,
 }
 
 type repository interface {

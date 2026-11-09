@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -61,6 +62,7 @@ import (
 	specialtyservice "shadowing-backend/internal/service/specialty"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
+	"shadowing-backend/internal/service/telegramchannel"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicspeakingservice "shadowing-backend/internal/service/topicspeaking"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
@@ -175,6 +177,9 @@ func New(cfg config.Config, userSvc userservice.Service,
 		fmt.Println("warning: object storage init failed, falling back is not possible:", err)
 	}
 
+	telegramChannelSvc := telegramchannel.New(settingsSvc)
+	go telegramChannelSvc.StartScheduler(context.Background())
+
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
@@ -204,7 +209,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			authSvc, authConfig, store,
 			verbSvc,
 			adminBot,
-		),
+		).WithTelegramChannel(telegramChannelSvc),
 
 		verbHandler: verbhandler.New(verbSvc, authSvc, authConfig, uploadDir),
 

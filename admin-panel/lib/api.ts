@@ -394,6 +394,27 @@ export async function testAdminBot(): Promise<Record<string, string>> {
   return (data?.results || {}) as Record<string, string>;
 }
 
+// ---------- کانال تلگرام (ارسال خودکار صبحگاهی) ----------
+export async function getTelegramChannelConfig(): Promise<import("./types").TelegramChannelConfig> {
+  const res = await authFetch("/v1/admin/telegram-channel", { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+export async function testTelegramChannel(): Promise<{ message: string }> {
+  const res = await authFetch("/v1/admin/telegram-channel/test", { method: "POST" });
+  return jsonOrThrow(res);
+}
+
+export async function sendTelegramChannelNow(text?: string): Promise<{ message: string }> {
+  const res = await authFetch("/v1/admin/telegram-channel/send-now", jsonBody("POST", { text: text || "" }));
+  return jsonOrThrow(res);
+}
+
+export async function previewTelegramChannel(): Promise<{ preview: string }> {
+  const res = await authFetch("/v1/admin/telegram-channel/preview", { method: "GET" });
+  return jsonOrThrow(res);
+}
+
 export async function listFeedbacks(): Promise<Feedback[]> {
   const res = await authFetch("/v1/admin/feedbacks", { method: "GET" });
   const data = await jsonOrThrow(res);

@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Crown, Flame, Lock, Play, Trophy, Zap } from 'lucide-react-native';
 import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 
@@ -14,6 +14,8 @@ import { GradientFill } from '../../components/GradientFill';
 import { useAuth } from '../../data/AuthContext';
 import { getUserStreak, getUserSummary } from '../../api/progress';
 import { getSubscriptionStatus } from '../../api/billing';
+import { getMyLevel } from '../../api/assessment';
+import { difficultyToLevel } from '../../api/scenes';
 
 const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const PATH_COLOR = '#DCD4C6';
@@ -74,6 +76,7 @@ function baseState(scenario: Scenario): Exclude<NodeState, 'current'> {
 
 export const CurriculumMapScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { t, language } = useLanguage();
   const rtl = language === 'fa';
   const num = (v: number | string) => (rtl ? toFa(v) : String(v));
@@ -82,6 +85,7 @@ export const CurriculumMapScreen = () => {
   const [streak, setStreak] = useState<number | null>(null);
   const [xp, setXp] = useState<number | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [userLevel, setUserLevel] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,6 +103,13 @@ export const CurriculumMapScreen = () => {
         .catch(() => {});
       getUserSummary(user.id)
         .then((r) => active && setXp(r.total_xp))
+        .catch(() => {});
+      getMyLevel()
+        .then((lvl) => {
+          if (active && lvl?.scene_level) {
+            setUserLevel(difficultyToLevel(lvl.scene_level));
+          }
+        })
         .catch(() => {});
       return () => {
         active = false;
@@ -125,7 +136,20 @@ export const CurriculumMapScreen = () => {
     return (a.order ?? 0) - (b.order ?? 0);
   });
   const completedCount = ordered.filter((s) => s.isCompleted).length;
-  const currentId = ordered.find((s) => baseState(s) === 'upcoming')?.id;
+
+  // سطح مؤثر کاربر (از پارامتر یا نتیجه‌ی تست تعیین سطح)
+  const effectiveLevel = route.params?.focusLevel || userLevel || 'Beginner';
+  const targetRank = LEVEL_RANK[effectiveLevel] ?? 1;
+
+  // پیدا کردن اولین صحنه‌ی فعال متناسب با سطح تعیین سطح کاربر
+  // صحنه‌های قبل هرگز حذف نمی‌شوند؛ فقط نقطه شروع و فوکوس کاربر تنظیم می‌شود
+  const candidateScenes = ordered.filter((s) => (LEVEL_RANK[s.level] ?? 0) >= targetRank);
+  const currentInTargetLevel = candidateScenes.find((s) => baseState(s) === 'upcoming')?.id;
+  const currentId =
+    currentInTargetLevel ||
+    candidateScenes[0]?.id ||
+    ordered.find((s) => baseState(s) === 'upcoming')?.id ||
+    ordered[0]?.id;
 
   // چیدمانِ ردیف‌ها: هر بار که سطح عوض می‌شود یک تیترِ بخش («مبتدی»/«متوسط»/
   // «پیشرفته») اضافه می‌شود و شمارنده‌ی زیگزاگ از نو شروع می‌شود — تا مسیر هر
@@ -192,20 +216,45 @@ export const CurriculumMapScreen = () => {
   const startY = useMemo(() => {
     const current = nodeItems.find((item) => item.scenario.id === currentId);
     return current ? Math.max(0, current.top - 180) : 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ordered.length > 0]);
+  }, [currentId, nodeItems]);
   const [winTop, setWinTop] = useState(startY);
   const startedRef = useRef(false);
   const inWindow = (top: number, height: number) => top + height >= winTop - WINDOW_ABOVE && top <= winTop + WINDOW_BELOW;
 
+  // هدایت خودکار اسکرول به سطح تعیین شده کاربر
+  useEffect(() => {
+    if (startY > 0) {
+      setWinTop(startY);
+      const tm = setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: startY, animated: true });
+      }, 150);
+      return () => clearTimeout(tm);
+    }
+  }, [startY]);
+
   const currentScene = ordered.find((sc) => sc.id === currentId);
-  const currentLevel = currentScene?.level || 'Starter';
+  const currentLevel = currentScene?.level || effectiveLevel || 'Starter';
   const currentLevelScenes = ordered.filter((sc) => sc.level === currentLevel);
   const currentLevelDone = currentLevelScenes.filter((sc) => sc.isCompleted).length;
   const currentLevelTotal = currentLevelScenes.length;
   const currentLevelLabel = t(LEVEL_LABEL_KEY[currentLevel] || LEVEL_LABEL_KEY.Beginner);
   const CurrentLevelIcon = (LEVEL_BADGE_STYLE[currentLevel] || LEVEL_BADGE_STYLE.Beginner).Icon;
   const currentSession = nodeItems.find((n) => n.scenario.id === currentId)?.session ?? 1;
+
+  // پرش نرم به یک سطح خاص بدون حذف سایر صحنه‌های نقشه
+  const jumpToLevel = (targetLvl: string) => {
+    const targetNode = nodeItems.find((item) => {
+      if (targetLvl === 'Beginner') {
+        return item.scenario.level === 'Starter' || item.scenario.level === 'Beginner';
+      }
+      return item.scenario.level.toLowerCase() === targetLvl.toLowerCase();
+    });
+    if (targetNode) {
+      const targetY = Math.max(0, targetNode.top - 180);
+      setWinTop(targetY);
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    }
+  };
 
   const openScene = (scenario: Scenario, locked = false) => {
     if (locked) {
@@ -282,6 +331,41 @@ export const CurriculumMapScreen = () => {
           </View>
         </View>
       )}
+
+      {/* انتخاب سریع سطح در رودمپ برای جابجایی بدون حذف هیچ‌یک از صحنه‌ها */}
+      <View style={[styles.levelTabsRow, rtl && styles.rowReverse]}>
+        {[
+          { id: 'Beginner', label: 'مبتدی' },
+          { id: 'Intermediate', label: 'متوسط' },
+          { id: 'Advanced', label: 'پیشرفته' },
+        ].map((lvlTab) => {
+          const isUserAssessed = userLevel
+            ? (lvlTab.id === 'Beginner' && (userLevel === 'Starter' || userLevel === 'Beginner')) ||
+              userLevel.toLowerCase() === lvlTab.id.toLowerCase()
+            : lvlTab.id === 'Beginner';
+          const isCurrentActive =
+            currentLevel.toLowerCase() === lvlTab.id.toLowerCase() ||
+            (lvlTab.id === 'Beginner' && (currentLevel === 'Starter' || currentLevel === 'Beginner'));
+
+          return (
+            <TouchableOpacity
+              key={lvlTab.id}
+              style={[
+                styles.levelTabItem,
+                isCurrentActive && styles.levelTabItemActive,
+                rtl && styles.rowReverse,
+              ]}
+              onPress={() => jumpToLevel(lvlTab.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.levelTabText, isCurrentActive && styles.levelTabTextActive]}>
+                {lvlTab.label}
+              </Text>
+              {isUserAssessed && <View style={styles.myLevelDot} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <ScrollView
         ref={scrollRef}
@@ -836,5 +920,49 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 10,
     color: COLORS.primary,
+  },
+  levelTabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 8,
+    marginVertical: 6,
+    zIndex: 10,
+  },
+  levelTabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    backgroundColor: '#F3EFEA',
+    borderWidth: 1,
+    borderColor: '#E6DFD5',
+  },
+  levelTabItemActive: {
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.primary,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  levelTabText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  levelTabTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.primary,
+  },
+  myLevelDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16a34a',
   },
 });

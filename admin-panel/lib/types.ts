@@ -176,6 +176,19 @@ export interface SettingsResp {
   feature_esp_enabled?: string;
 }
 
+// ---------- کانال تلگرام (ارسال خودکار صبحگاهی) ----------
+export interface TelegramChannelConfig {
+  bot_token: SettingItem;
+  channel_id: string;
+  enabled: boolean;
+  post_time: string;
+  post_mode: "auto_daily" | "custom";
+  custom_text: string;
+  last_date: string;
+  last_status: string;
+  preview: string;
+}
+
 // ---------- نوتیفیکیشن‌ها ----------
 export interface NotificationStatsResp {
   total_users: number;

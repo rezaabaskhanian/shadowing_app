@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleX, Lock, Mic, RotateCcw, Square, Trophy, Volume2, X } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, CircleX, Lock, Mic, RotateCcw, Square, Trophy, Volume2, X } from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -348,71 +348,85 @@ export const InterviewSessionScreen: React.FC = () => {
 
             {phase === 'feedback' && feedback && (
               <>
-                <RiseIn i={0} style={[styles.card, styles.scoreCard]}>
-                  <View style={[styles.scoreCircle, { borderColor: scoreColor(feedback.score) }]}>
-                    <Text style={[styles.scoreValue, { color: scoreColor(feedback.score) }]}>{feedback.score}</Text>
-                    <Text style={styles.scoreLabel}>{t('topicSpeakingScore')}</Text>
-                  </View>
-                  <View style={styles.flex1}>
-                    <Text style={styles.statsText}>
-                      {t('topicSpeakingStats')
-                        .replace('{words}', String(feedback.word_count))
-                        .replace('{wpm}', String(feedback.words_per_minute))}
+                {feedback.score === 0 ? (
+                  <RiseIn i={0} style={[styles.card, styles.warningCard]}>
+                    <View style={styles.warningHead}>
+                      <AlertTriangle size={20} color={COLORS.error} />
+                      <Text style={styles.warningTitle}>صدایی تشخیص داده نشد!</Text>
+                    </View>
+                    <Text style={styles.warningText}>
+                      {feedback.summary_fa || 'هوش مصنوعی متوجه صدایی از شما نشد و نمره‌ای ثبت نشد. لطفاً دکمه «دوباره پاسخ بده» را بزنید و انگلیسی صحبت کنید.'}
                     </Text>
-                    {!!feedback.summary_fa && <Text style={styles.summary}>{feedback.summary_fa}</Text>}
-                  </View>
-                </RiseIn>
-                {feedback.mistakes.length > 0 && (
-                  <RiseIn i={1} style={styles.card}>
-                    <Text style={styles.cardLabel}>{t('topicSpeakingMistakes')}</Text>
-                    {feedback.mistakes.map((m, i) => (
-                      <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
-                        <Text style={styles.wrongText}>{m.original}</Text>
-                        <Text style={styles.rightText}>{m.corrected}</Text>
-                        {!!m.explanation_fa && <Text style={styles.explain}>{m.explanation_fa}</Text>}
+                  </RiseIn>
+                ) : (
+                  <>
+                    <RiseIn i={0} style={[styles.card, styles.scoreCard]}>
+                      <View style={[styles.scoreCircle, { borderColor: scoreColor(feedback.score) }]}>
+                        <Text style={[styles.scoreValue, { color: scoreColor(feedback.score) }]}>{feedback.score}</Text>
+                        <Text style={styles.scoreLabel}>{t('topicSpeakingScore')}</Text>
                       </View>
-                    ))}
-                  </RiseIn>
-                )}
-                {feedback.better_phrases.length > 0 && (
-                  <RiseIn i={2} style={styles.card}>
-                    <Text style={styles.cardLabel}>{t('topicSpeakingBetter')}</Text>
-                    {feedback.better_phrases.map((p, i) => (
-                      <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
-                        <Text style={styles.explain}>
-                          {t('topicSpeakingInsteadOf')}: <Text style={styles.plainEn}>{p.instead_of}</Text>
+                      <View style={styles.flex1}>
+                        <Text style={styles.statsText}>
+                          {t('topicSpeakingStats')
+                            .replace('{words}', String(feedback.word_count))
+                            .replace('{wpm}', String(feedback.words_per_minute))}
                         </Text>
-                        <Text style={styles.rightText}>
-                          {t('topicSpeakingSay')}: {p.try}
-                        </Text>
-                        {!!p.note_fa && <Text style={styles.explain}>{p.note_fa}</Text>}
+                        {!!feedback.summary_fa && <Text style={styles.summary}>{feedback.summary_fa}</Text>}
                       </View>
-                    ))}
-                  </RiseIn>
+                    </RiseIn>
+
+                    {feedback.strengths_fa && feedback.strengths_fa.length > 0 && (
+                      <RiseIn i={1} style={[styles.card, styles.strengthCard]}>
+                        <View style={styles.inlineRow}>
+                          <CheckCircle2 size={16} color={COLORS.success} />
+                          <Text style={[styles.cardLabel, { color: COLORS.success }]}>نقاط قوت پاسخ شما</Text>
+                        </View>
+                        {feedback.strengths_fa.map((s, idx) => (
+                          <Text key={idx} style={styles.paragraph}>• {s}</Text>
+                        ))}
+                      </RiseIn>
+                    )}
+
+                    {feedback.better_phrases.length > 0 && (
+                      <RiseIn i={2} style={styles.card}>
+                        <Text style={styles.cardLabel}>{t('topicSpeakingBetter')}</Text>
+                        {feedback.better_phrases.map((p, i) => (
+                          <View key={i} style={[styles.fixItem, i > 0 && styles.fixDivider]}>
+                            <Text style={styles.explain}>
+                              {t('topicSpeakingInsteadOf')}: <Text style={styles.plainEn}>{p.instead_of}</Text>
+                            </Text>
+                            <Text style={styles.rightText}>
+                              {t('topicSpeakingSay')}: {p.try}
+                            </Text>
+                            {!!p.note_fa && <Text style={styles.explain}>{p.note_fa}</Text>}
+                          </View>
+                        ))}
+                      </RiseIn>
+                    )}
+
+                    {!!feedback.transcript && (
+                      <RiseIn i={3} style={styles.card}>
+                        <Text style={styles.cardLabel}>{t('topicSpeakingYourTalk')}</Text>
+                        <Text style={[styles.paragraph, styles.mutedParagraph]}>«{feedback.transcript}»</Text>
+                      </RiseIn>
+                    )}
+                  </>
                 )}
-                {!!feedback.improved_version && (
-                  <RiseIn i={3} style={styles.card}>
-                    <Text style={styles.cardLabel}>{t('topicSpeakingImproved')}</Text>
-                    <Text style={styles.paragraph}>{feedback.improved_version}</Text>
-                  </RiseIn>
-                )}
+
                 {!!question.sample_answer && (
                   <RiseIn i={4} style={styles.card}>
-                    <TouchableOpacity onPress={() => setShowSample((v) => !v)} activeOpacity={0.8}>
+                    <TouchableOpacity onPress={() => setShowSample((v) => !v)} activeOpacity={0.8} style={styles.sampleToggle}>
                       <Text style={[styles.cardLabel, { color: COLORS.primary }]}>⭐ {t('interviewSample')}</Text>
+                      <Text style={styles.sampleToggleText}>{showSample ? 'بستن' : 'مشاهده نمونه پاسخ'}</Text>
                     </TouchableOpacity>
                     {showSample && (
-                      <>
+                      <View style={styles.sampleBox}>
                         <Text style={styles.paragraph}>{question.sample_answer}</Text>
                         {!!question.sample_answer_fa && <Text style={styles.translation}>{question.sample_answer_fa}</Text>}
-                      </>
+                      </View>
                     )}
                   </RiseIn>
                 )}
-                <RiseIn i={5} style={styles.card}>
-                  <Text style={styles.cardLabel}>{t('topicSpeakingYourTalk')}</Text>
-                  <Text style={[styles.paragraph, styles.mutedParagraph]}>{feedback.transcript}</Text>
-                </RiseIn>
               </>
             )}
           </>
@@ -560,78 +574,123 @@ export const InterviewSessionScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.l },
+  container: { flex: 1, backgroundColor: '#FAF8F4', paddingHorizontal: SPACING.l },
   center: { alignItems: 'center', justifyContent: 'center' },
   flex1: { flex: 1 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#EAE6DF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressText: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary, fontFamily: FONT_FAMILY.semiBold },
+  progressText: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.textSecondary },
   content: { flexGrow: 1, paddingVertical: SPACING.m, gap: SPACING.m },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.m,
+    borderColor: '#ECE8E1',
+    padding: 14,
     gap: 6,
     ...SHADOWS.level1,
   },
-  questionCard: { borderColor: hexToRgba(COLORS.primary, 0.3) },
-  questionHead: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.s },
-  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  questionText: { ...TEXT_STYLES.bodyLg, color: COLORS.text, fontFamily: FONT_FAMILY.semiBold },
-  questionTextSm: { ...TEXT_STYLES.bodyMd, color: COLORS.text, fontFamily: FONT_FAMILY.semiBold },
-  translation: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary },
-  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.s, flexWrap: 'wrap' },
+  questionCard: { borderColor: hexToRgba(COLORS.primary, 0.25) },
+  questionHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  avatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  questionText: { fontFamily: FONT_FAMILY.bold, fontSize: 14.5, lineHeight: 22, color: COLORS.text },
+  questionTextSm: { fontFamily: FONT_FAMILY.bold, fontSize: 13, lineHeight: 20, color: COLORS.text },
+  translation: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 18, color: COLORS.textSecondary },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   smallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: COLORS.primaryLight,
     borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
   },
-  smallBtnText: { ...TEXT_STYLES.labelSm, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
+  smallBtnText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 11, color: COLORS.primary },
   tipCard: {
-    backgroundColor: hexToRgba(COLORS.levelIntermediateBg, 0.05),
-    borderColor: hexToRgba(COLORS.levelIntermediateBg, 0.2),
+    backgroundColor: '#FFFBF4',
+    borderColor: '#FBE3BF',
   },
-  cardLabel: { fontFamily: FONT_FAMILY.semiBold, fontSize: 13, color: COLORS.textSecondary },
+  strengthCard: {
+    backgroundColor: '#F3FAF5',
+    borderColor: '#C7EBD2',
+  },
+  warningCard: {
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FED7D7',
+    padding: 14,
+    gap: 8,
+  },
+  warningHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  warningTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: COLORS.error,
+  },
+  warningText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    lineHeight: 19,
+    color: COLORS.text,
+  },
+  sampleToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sampleToggleText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
+    color: COLORS.primary,
+  },
+  sampleBox: {
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0ECE4',
+    gap: 6,
+  },
+  cardLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 11.5, color: COLORS.textSecondary },
   sampleLabel: { color: COLORS.primary, marginTop: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { borderRadius: BORDER_RADIUS.full, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
-  chipText: { ...TEXT_STYLES.labelMd },
+  chip: { borderRadius: BORDER_RADIUS.full, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 3.5 },
+  chipText: { fontFamily: FONT_FAMILY.medium, fontSize: 11 },
   centerBlock: { alignItems: 'center', gap: SPACING.s, paddingVertical: SPACING.l },
-  mutedText: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
-  errorText: { ...TEXT_STYLES.labelMd, color: COLORS.error, textAlign: 'center', marginBottom: SPACING.s },
+  mutedText: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' },
+  errorText: { fontFamily: FONT_FAMILY.medium, fontSize: 12, color: COLORS.error, textAlign: 'center', marginBottom: SPACING.s },
   scoreCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
-  scoreCircle: { width: 76, height: 76, borderRadius: 38, borderWidth: 4, alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { fontFamily: FONT_FAMILY.bold, fontSize: 24 },
-  scoreLabel: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
-  reportTitle: { ...TEXT_STYLES.headlineSm, color: COLORS.text },
-  statsText: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
-  summary: { ...TEXT_STYLES.labelMd, color: COLORS.text },
+  scoreCircle: { width: 68, height: 68, borderRadius: 34, borderWidth: 3.5, alignItems: 'center', justifyContent: 'center' },
+  scoreValue: { fontFamily: FONT_FAMILY.bold, fontSize: 22 },
+  scoreLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 10, color: COLORS.muted },
+  reportTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
+  statsText: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
+  summary: { fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 18, color: COLORS.text },
   fixItem: { gap: 2, paddingVertical: 4 },
   fixDivider: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.s },
-  wrongText: { ...TEXT_STYLES.bodyMd, color: COLORS.error, textDecorationLine: 'line-through' },
-  rightText: { ...TEXT_STYLES.bodyMd, color: COLORS.success, fontFamily: FONT_FAMILY.semiBold },
+  wrongText: { fontFamily: FONT_FAMILY.regular, fontSize: 12, color: COLORS.error, textDecorationLine: 'line-through' },
+  rightText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 12, color: COLORS.success },
   plainEn: { color: COLORS.text },
-  explain: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary },
-  paragraph: { ...TEXT_STYLES.bodyMd, color: COLORS.text, lineHeight: 22 },
+  explain: { fontFamily: FONT_FAMILY.regular, fontSize: 11.5, color: COLORS.textSecondary },
+  paragraph: { fontFamily: FONT_FAMILY.regular, fontSize: 12.5, color: COLORS.text, lineHeight: 20 },
   mutedParagraph: { color: COLORS.textSecondary },
-  recordArea: { alignItems: 'center', gap: SPACING.s, paddingTop: SPACING.s },
+  recordArea: { alignItems: 'center', gap: 6, paddingTop: 4 },
   recordBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -639,28 +698,29 @@ const styles = StyleSheet.create({
   },
   recordBtnActive: { backgroundColor: COLORS.error },
   recordBtnWaiting: { opacity: 0.6 },
-  timer: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
-  hint: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary },
-  bottomRow: { flexDirection: 'row', gap: SPACING.s, paddingTop: SPACING.s },
+  timer: { fontFamily: FONT_FAMILY.bold, fontSize: 12.5, color: COLORS.primary },
+  hint: { fontFamily: FONT_FAMILY.regular, fontSize: 11.5, color: COLORS.textSecondary },
+  bottomRow: { flexDirection: 'row', gap: 10, paddingTop: 6 },
   primaryBtn: {
+    height: 48,
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
+    borderRadius: 14,
     paddingHorizontal: SPACING.l,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  primaryBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  primaryBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 13.5 },
   secondaryBtn: {
+    height: 48,
     flexDirection: 'row',
     gap: 6,
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.m,
+    borderColor: '#ECE8E1',
     paddingHorizontal: SPACING.l,
     alignItems: 'center',
   },
-  secondaryBtnText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 15 },
+  secondaryBtnText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 13.5 },
 });

@@ -787,21 +787,32 @@ export const HomeScreen = () => {
     onDone: () => {
       track('placement_completed');
       setPlacementModalVisible(false);
-      if (startPathAfterTest.current) {
-        startPathAfterTest.current = false;
-        getMyLevel()
-          .then((l) => {
-            const level = pathLevelFor(l.scene_level);
-            if (level) navigation.navigate('PathHome', { level });
-          })
-          .catch(() => {});
-      }
+      const isFromPathStart = startPathAfterTest.current;
+      startPathAfterTest.current = false;
+
       // بعد از تمام‌شدن (چه اولین بار، چه دوباره از Drawer)، پروفایل را
       // دوباره می‌خوانیم تا بجِ سطح و کارتِ CTA فوراً به‌روز شوند؛ لیست
       // صحنه‌ها هم به سطح وابسته است (بک‌اند بر اساسش فیلتر می‌کند).
       refreshPlacementState();
       refreshMyLevel();
       reloadScenes();
+
+      // هدایت کاربر به رودمپ متناسب با سطح تعیین‌سطح شده (مبتدی، متوسط، پیشرفته)
+      getMyLevel()
+        .then((l) => {
+          if (isFromPathStart) {
+            const level = pathLevelFor(l.scene_level);
+            if (level) {
+              navigation.navigate('PathHome', { level });
+              return;
+            }
+          }
+          const targetLevel = difficultyToLevel(l.scene_level);
+          navigation.navigate('CurriculumMap', { focusLevel: targetLevel });
+        })
+        .catch(() => {
+          navigation.navigate('CurriculumMap');
+        });
     },
   };
 
