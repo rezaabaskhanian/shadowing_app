@@ -489,9 +489,10 @@ export default function TelegramChannelPanel({
                 maxHeight: 520,
                 overflowY: "auto",
               }}
-            >
-              {preview || "در حال آماده‌سازی پیش‌نمایش..."}
-            </div>
+              dangerouslySetInnerHTML={{
+                __html: preview ? preview.replace(/\n/g, "<br/>") : "در حال آماده‌سازی پیش‌نمایش...",
+              }}
+            />
 
             <p style={{ fontSize: 11.5, opacity: 0.65, marginTop: 10, marginBottom: 0 }}>
               * پست بالا دقیقا با همین قالب به همراه لینک و منشن کانال، هر روز صبح در ساعت مقرر به صورت خودکار ارسال

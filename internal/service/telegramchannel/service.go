@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,8 @@ var tehranLocation = func() *time.Location {
 	}
 	return time.FixedZone("IRST", 3*3600+1800)
 }()
+
+var htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
 
 type Service struct {
 	settings *settingsservice.Service
@@ -72,6 +75,24 @@ func chatValue(chat string) any {
 }
 
 func (s *Service) sendTelegramMessage(ctx context.Context, token, chatID, text string) error {
+	// ابتدا پیام را با قالب استاندارد و ایمن HTML ارسال می‌کنیم
+	err := s.executeTelegramSend(ctx, token, chatID, text, "HTML")
+	if err == nil {
+		return nil
+	}
+
+	// اگر تلگرام خطای تجزیه قالب داد، تگ‌های HTML را حذف و به صورت متن ساده ارسال می‌کنیم تا ارسال نسوزد
+	errStr := strings.ToLower(err.Error())
+	if strings.Contains(errStr, "can't parse entities") || strings.Contains(errStr, "parse entities") {
+		slog.Warn("telegramchannel: html parse error, retrying as plain text", "err", err)
+		plainText := htmlTagRegex.ReplaceAllString(text, "")
+		return s.executeTelegramSend(ctx, token, chatID, plainText, "")
+	}
+
+	return err
+}
+
+func (s *Service) executeTelegramSend(ctx context.Context, token, chatID, text, parseMode string) error {
 	client, err := s.getClient()
 	if err != nil {
 		return fmt.Errorf("خطا در ایجاد کلاینت اتصال به تلگرام: %w", err)
@@ -80,8 +101,10 @@ func (s *Service) sendTelegramMessage(ctx context.Context, token, chatID, text s
 	payload := map[string]any{
 		"chat_id":                  chatValue(chatID),
 		"text":                     text,
-		"parse_mode":               "Markdown",
 		"disable_web_page_preview": false,
+	}
+	if parseMode != "" {
+		payload["parse_mode"] = parseMode
 	}
 
 	body, _ := json.Marshal(payload)
@@ -108,7 +131,6 @@ func (s *Service) sendTelegramMessage(ctx context.Context, token, chatID, text s
 	}
 
 	if !r.OK {
-		// خطاهای رایج تلگرام را به فارسی روان بازگو می‌کنیم
 		desc := r.Description
 		if strings.Contains(desc, "chat not found") {
 			return fmt.Errorf("کانال پیدا نشد. مطمئن شوید آیدی کانال درست است و ربات در کانال عضو شده است (خطای تلگرام: %s)", desc)
@@ -137,7 +159,7 @@ func (s *Service) GenerateTodayPost() string {
 	now := time.Now().In(tehranLocation)
 	lesson := GetLessonForToday(now)
 	channelID := s.resolveChannelID()
-	return FormatTelegramMessage(lesson, channelID, "https://lingoflow.ir")
+	return FormatTelegramMessageHTML(lesson, channelID, "https://lingoflow.ir")
 }
 
 // SendTest یک پیام آزمایشی به کانال می‌فرستد تا ادمین از اتصال و دسترسی مطمئن شود
@@ -152,7 +174,7 @@ func (s *Service) SendTest(ctx context.Context) error {
 	}
 
 	now := time.Now().In(tehranLocation).Format("2006-01-02 15:04:05")
-	testMsg := fmt.Sprintf("✅ *تست اتصال به کانال تلگرام LingoFlow*\n\nارتباط ربات با کانال با موفقیت برقرار است.\nزمان ارسال: `%s`\n\nاین یک پیام آزمایشی از پنل ادمین لینگوفلو است.", now)
+	testMsg := fmt.Sprintf("✅ <b>تست اتصال به کانال تلگرام LingoFlow</b>\n\nارتباط ربات با کانال با موفقیت برقرار است.\nزمان ارسال: <code>%s</code>\n\nاین یک پیام آزمایشی از پنل ادمین لینگوفلو است.", now)
 
 	return s.sendTelegramMessage(ctx, token, channelID, testMsg)
 }

@@ -2,6 +2,7 @@ package telegramchannel
 
 import (
 	"fmt"
+	"html"
 	"strings"
 	"time"
 )
@@ -48,7 +49,7 @@ var curatedLessons = []DailyLesson{
 		DialogueA:   "This project needs way more focus on user experience.",
 		DialogueB:   "I couldn't agree more! That's our top priority.",
 		Tip:         "به جای گفتن ساده‌ی 'I agree'، استفاده از این جمله سطح زبان شما را از متوسط به پیشرفته ارتقا می‌دهد.",
-		AppPractice: "همین الان میکروفون اپلیکیشن لینگوفلو را باز کنید و استرس کلمات (Stress on 'agree' and 'more') را بسنجید.",
+		AppPractice: "همین الان میکروفون اپلیکیشن لینگوفلو را باز کنید و استرس کلمات را بسنجید.",
 	},
 	{
 		Theme:       "اصطلاح در شرایط استرس یا سختی (Resilience)",
@@ -78,7 +79,7 @@ var curatedLessons = []DailyLesson{
 		DialogueA:   "Before we launch the app, let's review the milestones.",
 		DialogueB:   "Great idea, just to make sure everyone is on the same page.",
 		Tip:         "در ایمیل‌ها و مکالمات اداری برای جلوگیری از ناهماهنگی این عبارت فوق‌العاده کاربردی است.",
-		AppPractice: "در بخش مکالمه هوش مصنوعی اپ لینگوفلو با هوش مصنوعی درباره پروژه‌تان بحث کنید و این اصطلاح را استفاده کنید.",
+		AppPractice: "در بخش مکالمه هوش مصنوعی اپ لینگوفلو با هوش مصنوعی درباره پروژه‌تان بحث کنید.",
 	},
 	{
 		Theme:       "پایان دادن به کار یا روز کاری (Work-Life Balance)",
@@ -88,7 +89,7 @@ var curatedLessons = []DailyLesson{
 		DialogueA:   "We've been coding for eight hours straight.",
 		DialogueB:   "You're right. Let's call it a day and continue tomorrow morning.",
 		Tip:         "مترادف صمیمی و طبیعی برای 'Finish work for today'.",
-		AppPractice: "تمرین صوتی این عبارت را در لیسنینگ اپ گوش داده و تلاش کنید سرعت ادای کلمات به هم وصل (Connected Speech) شود.",
+		AppPractice: "تمرین صوتی این عبارت را در لیسنینگ اپ گوش داده و تمرین کنید.",
 	},
 	{
 		Theme:       "اصطلاح ابراز تعجب یا اتفاق خوب (Casual Expressions)",
@@ -97,8 +98,8 @@ var curatedLessons = []DailyLesson{
 		PersianMean: "حلال‌زاده! (درست وقتی داشتیم راجبت حرف می‌زدیم اومدی)",
 		DialogueA:   "Have you seen Sarah today?",
 		DialogueB:   "Speak of the devil! Here she comes right now.",
-		Tip:         "معادل دقیق ضرب‌المثل 'حلال‌زاده است، مویش را آتش زدیم پیدا شد' در فارسی.",
-		AppPractice: "در بخش Roleplay اپلیکیشن نقش نفر B را بازی کنید و غافلگیری را در صدایتان منتقل کنید.",
+		Tip:         "معادل ضرب‌المثل حلال‌زاده در فارسی.",
+		AppPractice: "در بخش Roleplay اپلیکیشن نقش نفر B را بازی کنید.",
 	},
 	{
 		Theme:       "سلامت و حال جسمی (Daily Wellbeing)",
@@ -182,61 +183,52 @@ var curatedLessons = []DailyLesson{
 	},
 }
 
-// FormatTelegramMessage پیام را با قالب چشم‌نواز تلگرام فرمت‌بندی می‌کند
-func FormatTelegramMessage(lesson DailyLesson, channelID, appURL string) string {
+// FormatTelegramMessageHTML پیام را با قالب رسمی و امن HTML تلگرام تولید می‌کند تا هیچ خطای Parse رخ ندهد.
+func FormatTelegramMessageHTML(lesson DailyLesson, channelID, appURL string) string {
 	var b strings.Builder
 
 	now := time.Now()
-	// تقویم شمسی ساده یا میلادی
 	dateStr := now.Format("Monday, 02 Jan 2006")
 
-	b.WriteString("☀️ *صبح بخیر همراهان گرامی | Good Morning!*\n")
-	b.WriteString(fmt.Sprintf("📅 _%s_\n\n", dateStr))
+	b.WriteString("☀️ <b>صبح بخیر همراهان گرامی | Good Morning!</b>\n")
+	b.WriteString(fmt.Sprintf("📅 <i>%s</i>\n\n", html.EscapeString(dateStr)))
 
-	b.WriteString(fmt.Sprintf("🏷 *موضوع امروز:* %s\n\n", escapeMarkdown(lesson.Theme)))
+	b.WriteString(fmt.Sprintf("🏷 <b>موضوع امروز:</b> %s\n\n", html.EscapeString(lesson.Theme)))
 
-	b.WriteString("🎯 *عبارت کلیدی (Key Phrase):*\n")
-	b.WriteString(fmt.Sprintf("▫️ `%s`\n", lesson.KeyPhrase))
+	b.WriteString("🎯 <b>عبارت کلیدی (Key Phrase):</b>\n")
+	b.WriteString(fmt.Sprintf("▫️ <code>%s</code>\n", html.EscapeString(lesson.KeyPhrase)))
 	if lesson.Phonetic != "" {
-		b.WriteString(fmt.Sprintf("🗣 _تلفظ:_ `%s`\n", lesson.Phonetic))
+		b.WriteString(fmt.Sprintf("🗣 <i>تلفظ:</i> <code>%s</code>\n", html.EscapeString(lesson.Phonetic)))
 	}
-	b.WriteString(fmt.Sprintf("🇮🇷 *معنی فارسی:* %s\n\n", escapeMarkdown(lesson.PersianMean)))
+	b.WriteString(fmt.Sprintf("🇮🇷 <b>معنی فارسی:</b> %s\n\n", html.EscapeString(lesson.PersianMean)))
 
-	b.WriteString("💬 *مکالمه واقعی (Mini Dialogue):*\n")
-	b.WriteString(fmt.Sprintf("▫️ *A:* \"%s\"\n", escapeMarkdown(lesson.DialogueA)))
-	b.WriteString(fmt.Sprintf("▫️ *B:* \"%s\"\n\n", escapeMarkdown(lesson.DialogueB)))
+	b.WriteString("💬 <b>مکالمه واقعی (Mini Dialogue):</b>\n")
+	b.WriteString(fmt.Sprintf("▫️ <b>A:</b> \"%s\"\n", html.EscapeString(lesson.DialogueA)))
+	b.WriteString(fmt.Sprintf("▫️ <b>B:</b> \"%s\"\n\n", html.EscapeString(lesson.DialogueB)))
 
 	if lesson.Tip != "" {
-		b.WriteString("💡 *نکته یادگیری:* \n")
-		b.WriteString(fmt.Sprintf("%s\n\n", escapeMarkdown(lesson.Tip)))
+		b.WriteString("💡 <b>نکته یادگیری:</b>\n")
+		b.WriteString(fmt.Sprintf("%s\n\n", html.EscapeString(lesson.Tip)))
 	}
 
-	b.WriteString("🎙 *تمرین امروز در اپلیکیشن LingoFlow:*\n")
-	b.WriteString(fmt.Sprintf("«%s»\n\n", escapeMarkdown(lesson.AppPractice)))
+	b.WriteString("🎙 <b>تمرین امروز در اپلیکیشن LingoFlow:</b>\n")
+	b.WriteString(fmt.Sprintf("«%s»\n\n", html.EscapeString(lesson.AppPractice)))
 
 	b.WriteString("━━━━━━━━━━━━━━━━━━━━\n")
-	b.WriteString("📲 *همین حالا در اپلیکیشن لینگوفلو تمرین کنید:*\n")
-	if appURL != "" {
-		b.WriteString(fmt.Sprintf("🔗 [ورود به اپلیکیشن و شروع تمرین](%s)\n", appURL))
-	} else {
-		b.WriteString("🔗 [دانلود و اجرای اپلیکیشن لینگوفلو](https://lingoflow.ir)\n")
+	b.WriteString("📲 <b>همین حالا در اپلیکیشن لینگوفلو تمرین کنید:</b>\n")
+	if appURL == "" {
+		appURL = "https://lingoflow.ir"
 	}
+	b.WriteString(fmt.Sprintf("🔗 <a href=\"%s\">ورود به اپلیکیشن و شروع تمرین</a>\n", html.EscapeString(appURL)))
 
 	if channelID != "" {
 		cleanChan := strings.TrimPrefix(channelID, "@")
 		if !strings.HasPrefix(cleanChan, "-") {
-			b.WriteString(fmt.Sprintf("🆔 @%s\n", cleanChan))
+			b.WriteString(fmt.Sprintf("🆔 @%s\n", html.EscapeString(cleanChan)))
 		}
 	}
 
 	return b.String()
-}
-
-// escapeMarkdown برای کاراکترهای رزرو شده در Markdown تلگرام (legacy parse_mode: Markdown)
-func escapeMarkdown(s string) string {
-	// در حالت Markdown تلگرام: * _ ` [ ] کاراکترهای کنترلی هستند.
-	// متن‌های معمولی نباید تگ‌های باز نشده داشته باشند
-	return s
 }
 
 // GetLessonForToday یک درس بر اساس روز سال انتخاب می‌کند تا هر روز متفاوت و متنوع باشد
@@ -245,4 +237,3 @@ func GetLessonForToday(date time.Time) DailyLesson {
 	idx := day % len(curatedLessons)
 	return curatedLessons[idx]
 }
-

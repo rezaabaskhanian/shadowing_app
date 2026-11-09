@@ -21,7 +21,7 @@ func TestGetLessonForToday(t *testing.T) {
 	}
 }
 
-func TestFormatTelegramMessage(t *testing.T) {
+func TestFormatTelegramMessageHTML(t *testing.T) {
 	lesson := DailyLesson{
 		Theme:       "اصطلاح کاربردی",
 		KeyPhrase:   "Break the ice",
@@ -33,7 +33,7 @@ func TestFormatTelegramMessage(t *testing.T) {
 		AppPractice: "این جمله را در سایه‌زنی اپلیکیشن تمرین کنید.",
 	}
 
-	msg := FormatTelegramMessage(lesson, "@lingoflow_test", "https://lingoflow.ir")
+	msg := FormatTelegramMessageHTML(lesson, "@lingoflow_test_channel", "https://lingoflow.ir")
 
 	if !strings.Contains(msg, "Break the ice") {
 		t.Errorf("expected message to contain 'Break the ice'")
@@ -41,11 +41,10 @@ func TestFormatTelegramMessage(t *testing.T) {
 	if !strings.Contains(msg, "سر صحبت را باز کردن") {
 		t.Errorf("expected message to contain Persian translation")
 	}
-	if !strings.Contains(msg, "@lingoflow_test") {
-		t.Errorf("expected message to contain channel handle")
+	if !strings.Contains(msg, "@lingoflow_test_channel") {
+		t.Errorf("expected message to contain channel handle with underscores")
 	}
-	if !strings.Contains(msg, "https://lingoflow.ir") {
-		t.Errorf("expected message to contain app url")
+	if !strings.Contains(msg, "<b>") {
+		t.Errorf("expected message to contain HTML tags")
 	}
 }
-
