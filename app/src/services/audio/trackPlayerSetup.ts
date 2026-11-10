@@ -42,11 +42,21 @@ export function ensureTrackPlayerSetup(): Promise<void> {
     setupPromise = setupWithRetry()
       .then(() =>
         TrackPlayer.updateOptions({
-          // بدون این، اندروید انتظار دارد notification/media-session کامل
-          // تنظیم شده باشد؛ چون این اپ کنترل پس‌زمینه/لاک‌اسکرین نمی‌خواهد،
-          // قابلیت‌ها را خالی می‌گذاریم.
-          capabilities: [Capability.Play, Capability.Pause, Capability.Stop],
-          notificationCapabilities: [],
+          // قابلیت‌های کنترل پخش در نوار اعلان‌ها و لاک‌اسکرین برای ادامه پخش در پس‌زمینه و هنگام خاموش بودن صفحه
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.Stop,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+          ],
+          notificationCapabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.Stop,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+          ],
           // برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با پخش لازم است؛ پیش‌فرض
           // کتابخانه (۱ ثانیه) خیلی درشت است.
           progressUpdateEventInterval: 0.1,

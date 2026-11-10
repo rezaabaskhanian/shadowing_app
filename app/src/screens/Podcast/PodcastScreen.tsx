@@ -4,22 +4,28 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { MessageCircle, Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, X } from 'lucide-react-native';
+import { Eye, EyeOff, FileText, Headphones, ListMusic, MessageCircle, Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, Volume2, X } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
-import { getPodcast, type Podcast } from '../../api/podcasts';
+import { getPodcast, getPodcasts, atOrBelowLevel, type Podcast } from '../../api/podcasts';
 import { getRoleplays, type Roleplay } from '../../api/conversation';
+import { getMyLevel } from '../../api/assessment';
+import { getSubscriptionStatus } from '../../api/billing';
+import { useAuth } from '../../data/AuthContext';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
+import { announceNextPodcast, playPodcastCueSound } from '../../services/audio/podcastCue';
 import { track } from '../../services/analytics';
 import { formatDuration } from './PodcastListScreen';
 import { KaraokeText } from '../../components/KaraokeText';
 import { Slideshow, slideStarts } from '../../components/Slideshow';
 
 const RATES = [0.5, 0.75, 1, 1.25];
+const FREE_PODCASTS_COUNT = 4;
 // رنگ گوینده‌ها به ترتیب ورودشان؛ گوینده‌ی دوم سمت مقابل می‌نشیند.
 // مرجانیِ اصلی برای دکمه‌ی پخش می‌ماند؛ گوینده‌ها رنگ‌های دیگر می‌گیرند.
 const SPEAKER_COLORS = [COLORS.audioMine, COLORS.levelIntermediateBg, COLORS.pink, COLORS.levelBeginnerBg];
@@ -40,7 +46,29 @@ export const PodcastScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const podcastId: string | undefined = route.params?.podcastId;
+  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+    } else {
+      getSubscriptionStatus()
+        .then((s) => setIsSubscribed(!!s?.active))
+        .catch(() => setIsSubscribed(false));
+    }
+  }, [user?.role]);
+
+  const initialPodcastId: string | undefined = route.params?.podcastId;
+  const [currentId, setCurrentId] = useState<string | undefined>(initialPodcastId);
+  const currentIdRef = useRef<string | undefined>(initialPodcastId);
+  currentIdRef.current = currentId;
+
+  const [playlist, setPlaylist] = useState<Podcast[]>([]);
+  const [autoplay, setAutoplay] = useState(false);
+  const autoplayRef = useRef(false);
+  autoplayRef.current = autoplay;
+  const isTransitioningRef = useRef(false);
 
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -51,6 +79,7 @@ export const PodcastScreen: React.FC = () => {
   const [positionMs, setPositionMs] = useState(0);
   const [rate, setRate] = useState(1);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(true);
   const trackedRef = useRef(false);
   // تکرار جمله: وقتی روشن است، با رسیدن به پایانِ جمله‌ی فعلی دوباره از اولش پخش می‌شود.
   const [repeatLine, setRepeatLine] = useState(false);
@@ -59,35 +88,26 @@ export const PodcastScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const lineY = useRef<Record<number, number>>({});
   const lastActive = useRef(-1);
+  const podcastDurationRef = useRef(0);
 
-  useEffect(() => {
-    if (!podcastId) {
-      setLoadError(true);
-      return;
+  // محاسبه پادکست بعدی با در نظر گرفتن اشتراک (کاربر رایگان فقط تا ۴ قسمت اول)
+  const currentIndex = playlist.findIndex((p) => p.id === currentId);
+  const isLastFreeEpisode = !isSubscribed && currentIndex >= FREE_PODCASTS_COUNT - 1;
+
+  let nextPodcast: Podcast | null = null;
+  if (currentIndex >= 0 && currentIndex + 1 < playlist.length) {
+    const nextIndex = currentIndex + 1;
+    // اگر کاربر اشتراک ندارد و به انتهای قسمت‌های رایگان رسیده، دیگر پخش نشود
+    if (!isSubscribed && nextIndex >= FREE_PODCASTS_COUNT) {
+      nextPodcast = null;
+    } else {
+      nextPodcast = playlist[nextIndex];
     }
-    let active = true;
-    getRoleplays()
-      .then((list) => active && setRoleplay(list.find((r) => r.podcast_id === podcastId) ?? null))
-      .catch(() => {});
-    getPodcast(podcastId)
-      .then(async (p) => {
-        if (!active) return;
-        setPodcast(p);
-        await ensureTrackPlayerSetup();
-        await TrackPlayer.reset();
-        await TrackPlayer.add({
-          id: PODCAST_TRACK_ID,
-          url: absUrl(p.audio_url),
-          title: p.title,
-          artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
-        });
-        if (active) setReady(true);
-      })
-      .catch(() => active && setLoadError(true));
-    return () => {
-      active = false;
-    };
-  }, [podcastId]);
+  } else if (isSubscribed && playlist.length > 1 && currentIndex === playlist.length - 1) {
+    nextPodcast = playlist[0];
+  }
+  const nextPodcastRef = useRef<Podcast | null>(null);
+  nextPodcastRef.current = nextPodcast;
 
   // هایلایتِ کلمه‌به‌کلمه: پلیر هر ۱۰۰ms موقعیت می‌دهد؛ بینِ دو رویداد، روی UI
   // thread با سرعتِ پخش جلو می‌بریم تا حرکتِ هایلایت نرم باشد (بدون re-render).
@@ -99,6 +119,104 @@ export const PodcastScreen: React.FC = () => {
       positionSV.value += frame.timeSincePreviousFrame * rateSV.value;
     }
   });
+
+  // بارگذاری و آماده‌سازی یا پخش یک پادکست بر اساس شناسه
+  const loadAndPlayPodcast = useCallback(
+    async (id: string, autoPlayImmediately = false) => {
+      if (!id) return;
+      setCurrentId(id);
+      currentIdRef.current = id;
+      setReady(false);
+      setPositionMs(0);
+      positionSV.value = 0;
+      lastActive.current = -1;
+
+      try {
+        getRoleplays()
+          .then((list) => setRoleplay(list.find((r) => r.podcast_id === id) ?? null))
+          .catch(() => {});
+
+        const p = await getPodcast(id);
+        setPodcast(p);
+        podcastDurationRef.current = p.duration_seconds;
+
+        // صف پادکست‌های هم‌نوع (اگر درسی است، فقط درسی‌ها به ترتیب؛ اگر منتخب است، فقط منتخب‌ها)
+        Promise.all([getPodcasts().catch(() => []), getMyLevel().catch(() => null)])
+          .then(([all, lvl]) => {
+            const scoped = atOrBelowLevel(all, lvl?.scene_level);
+            const filtered = (scoped.length > 0 ? scoped : all).filter((item) =>
+              p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story'
+            );
+            setPlaylist(filtered);
+          })
+          .catch(() => {});
+
+        await ensureTrackPlayerSetup();
+        await TrackPlayer.reset();
+        await TrackPlayer.add({
+          id: PODCAST_TRACK_ID,
+          url: absUrl(p.audio_url),
+          title: p.title,
+          artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
+          artist: 'LingoFlow',
+        });
+        await TrackPlayer.setRate(rate).catch(() => {});
+        setReady(true);
+        if (autoPlayImmediately) {
+          trackedRef.current = true;
+          track('podcast_played', p.id);
+          await TrackPlayer.play();
+        }
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+      } catch {
+        setLoadError(true);
+      }
+    },
+    [positionSV, rate]
+  );
+
+  // انتقال به پادکست بعدی همراه با اعلان صوتی و خواندن تایتل سرفصل پادکست بعدی
+  const playNextEpisode = useCallback(async () => {
+    const nextP = nextPodcastRef.current;
+    if (!nextP || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
+    try {
+      // توقف موقت ترک‌پلیر
+      await TrackPlayer.pause().catch(() => {});
+
+      // ۱. خواندن عنوان/سرفصل پادکست بعدی با ویس هوشمند یا فایل اعلان
+      await announceNextPodcast(nextP.title);
+
+      // ۲. بارگذاری و شروع خودکار پادکست بعدی
+      await loadAndPlayPodcast(nextP.id, true);
+    } catch {
+      await loadAndPlayPodcast(nextP.id, true).catch(() => {});
+    } finally {
+      isTransitioningRef.current = false;
+    }
+  }, [loadAndPlayPodcast]);
+
+  // خواندن تنظیم ذخیره‌شده در ابتدای ورود به صفحه
+  useEffect(() => {
+    AsyncStorage.getItem('@podcast_autoplay_next').then((val) => {
+      const enabled = val === 'true';
+      setAutoplay(enabled);
+      autoplayRef.current = enabled;
+    });
+
+    if (initialPodcastId) {
+      loadAndPlayPodcast(initialPodcastId, false);
+    } else {
+      setLoadError(true);
+    }
+  }, [initialPodcastId, loadAndPlayPodcast]);
+
+  const toggleAutoplay = (val: boolean) => {
+    setAutoplay(val);
+    autoplayRef.current = val;
+    AsyncStorage.setItem('@podcast_autoplay_next', String(val)).catch(() => {});
+  };
 
   // رویدادهای پلیر: موقعیت برای متن هم‌زمان، وضعیت برای دکمه‌ی پخش.
   useEffect(() => {
@@ -113,19 +231,48 @@ export const PodcastScreen: React.FC = () => {
       }
       positionSV.value = ms;
       setPositionMs(ms);
+
+      // اگر پخش به ثانیه‌های پایانی پادکست رسید، به طور خودکار به قسمت بعدی می‌رود
+      if (
+        podcastDurationRef.current > 0 &&
+        d.position >= podcastDurationRef.current - 0.4 &&
+        autoplayRef.current &&
+        nextPodcastRef.current &&
+        !isTransitioningRef.current
+      ) {
+        playNextEpisode();
+      }
     });
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
-      playingSV.value = d.state === State.Playing;
-      setPlaying(d.state === State.Playing);
+      const isPl = d.state === State.Playing;
+      playingSV.value = isPl;
+      setPlaying(isPl);
+
+      // در اندروید و ایمولاتور پایان پخش با State.Ended گزارش می‌شود
+      if (d.state === State.Ended) {
+        if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
+          playNextEpisode();
+        }
+      }
     });
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
       playingSV.value = false;
       setPlaying(false);
+
+      if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
+        playNextEpisode();
+      }
+    });
+    const nextRemoteSub = TrackPlayer.addEventListener(Event.RemoteNext, () => {
+      if (nextPodcastRef.current) {
+        playNextEpisode();
+      }
     });
     return () => {
       progressSub.remove();
       stateSub.remove();
       endedSub.remove();
+      nextRemoteSub.remove();
     };
   }, [positionSV, playingSV]);
 
@@ -218,7 +365,11 @@ export const PodcastScreen: React.FC = () => {
   };
   const nextLine = () => {
     const after = lines.find((l) => l.start_ms > positionMs + 100);
-    if (after) seekToLine(after.start_ms);
+    if (after) {
+      seekToLine(after.start_ms);
+    } else if (nextPodcastRef.current) {
+      playNextEpisode();
+    }
   };
 
   const toggleRepeat = () => {
@@ -243,13 +394,14 @@ export const PodcastScreen: React.FC = () => {
     await TrackPlayer.seekTo(ms / 1000);
   };
 
-  // جمله‌ی در حال پخش همیشه در دید بماند.
+  // جمله‌ی در حال پخش همیشه در دید بماند (فقط وقتی متن باز است).
   useEffect(() => {
+    if (!showTranscript) return;
     if (activeIdx < 0 || activeIdx === lastActive.current) return;
     lastActive.current = activeIdx;
     const y = lineY.current[activeIdx];
     if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
-  }, [activeIdx]);
+  }, [activeIdx, showTranscript]);
 
   if (loadError) {
     return (
@@ -291,7 +443,18 @@ export const PodcastScreen: React.FC = () => {
           </Text>
           <Text style={styles.topSub}>{t('podcastPlayerSub')}</Text>
         </View>
-        <View style={styles.closeBtnSpacer} />
+        <TouchableOpacity
+          style={[styles.topTranscriptBtn, showTranscript && styles.topTranscriptBtnActive]}
+          onPress={() => setShowTranscript((v) => !v)}
+          activeOpacity={0.8}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {showTranscript ? (
+            <EyeOff size={18} color={COLORS.primary} />
+          ) : (
+            <FileText size={18} color={COLORS.textSecondary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -312,60 +475,132 @@ export const PodcastScreen: React.FC = () => {
             <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
           )
         )}
-        {/* توضیح و کلید ترجمه در یک کارت سفید */}
+        {/* توضیح و تنظیمات پادکست */}
         <View style={styles.infoCard}>
           {!!podcast.description_fa && (
             <Text style={[styles.desc, { textAlign: rtl ? 'right' : 'left' }]}>{podcast.description_fa}</Text>
           )}
-          <View style={[styles.switchRow, rr]}>
-            <Text style={styles.switchLabel}>{t('podcastShowAllTranslations')}</Text>
-            <Switch value={showTranslation} onValueChange={setShowTranslation} trackColor={{ true: COLORS.primary }} />
+
+          {/* دکمه‌های کنترل سریع: نمایش/مخفی‌سازی متن و ترجمه فارسی */}
+          <View style={[styles.optionsRow, rr]}>
+            <TouchableOpacity
+              style={[styles.pillBtn, !showTranscript && styles.pillBtnActive, rr]}
+              onPress={() => setShowTranscript((v) => !v)}
+              activeOpacity={0.8}
+            >
+              {showTranscript ? (
+                <EyeOff size={14} color={COLORS.textSecondary} />
+              ) : (
+                <FileText size={14} color={COLORS.primary} />
+              )}
+              <Text style={[styles.pillBtnText, !showTranscript && styles.pillBtnTextActive]}>
+                {showTranscript ? t('podcastHideTranscript') : t('podcastShowTranscript')}
+              </Text>
+            </TouchableOpacity>
+
+            {showTranscript && (
+              <TouchableOpacity
+                style={[styles.pillBtn, showTranslation && styles.pillBtnActive, rr]}
+                onPress={() => setShowTranslation((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.pillBtnText, showTranslation && styles.pillBtnTextActive]}>
+                  {t('podcastShowTranslation')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ردیف پخش خودکار قسمت بعدی و تست ویس */}
+          <View style={[styles.autoplayRow, rr]}>
+            <View style={[styles.autoplayTextWrap, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+              <View style={[styles.autoplayTitleRow, rr]}>
+                <ListMusic size={15} color={autoplay ? COLORS.primary : COLORS.muted} />
+                <Text style={styles.autoplayTitle}>{t('podcastAutoplayNext')}</Text>
+              </View>
+              {autoplay && (
+                isLastFreeEpisode ? (
+                  <TouchableOpacity onPress={() => navigation.navigate('Paywall')} activeOpacity={0.8}>
+                    <Text style={[styles.autoplayNextName, styles.autoplayWarning, { textAlign: rtl ? 'right' : 'left' }]}>
+                      {t('podcastLastFreeEpisode')}
+                    </Text>
+                  </TouchableOpacity>
+                ) : nextPodcast ? (
+                  <Text style={[styles.autoplayNextName, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={1}>
+                    {t('podcastNextEpisodeLabel').replace('{title}', nextPodcast.title)}
+                  </Text>
+                ) : null
+              )}
+            </View>
+
+            <View style={[styles.autoplayControls, rr]}>
+              <TouchableOpacity
+                style={styles.testVoiceBtn}
+                onPress={() => announceNextPodcast(nextPodcast?.title || podcast?.title)}
+                activeOpacity={0.75}
+              >
+                <Volume2 size={13} color={COLORS.primary} />
+                <Text style={styles.testVoiceText}>{t('podcastTestCue')}</Text>
+              </TouchableOpacity>
+              <Switch
+                value={autoplay}
+                onValueChange={toggleAutoplay}
+                trackColor={{ true: COLORS.primary }}
+              />
+            </View>
           </View>
         </View>
 
-        {lines.map((l, i) => {
-          const isActive = i === activeIdx;
-          // هر گوینده رنگ و سمت خودش را دارد (مثل گفتگوی چت) تا نوبتِ حرف زدن
-          // با یک نگاه معلوم باشد.
-          const tone = speakerTone(l.speaker);
-          return (
-            <TouchableOpacity
-              key={l.id ?? i}
-              onLayout={(e) => {
-                lineY.current[i] = e.nativeEvent.layout.y;
-              }}
-              style={[
-                styles.line,
-                isActive && { backgroundColor: hexToRgba(tone.color, 0.07), borderColor: tone.color },
-              ]}
-              onPress={() => seekToLine(l.start_ms)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.speakerRow, rr]}>
-                <View style={[styles.avatar, { backgroundColor: tone.color }]}>
-                  <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
+        {!showTranscript ? (
+          <View style={styles.listeningNotice}>
+            <Headphones size={20} color={COLORS.muted} />
+            <Text style={styles.listeningNoticeText}>{t('podcastListeningModeTitle')}</Text>
+          </View>
+        ) : (
+          lines.map((l, i) => {
+            const isActive = i === activeIdx;
+            // هر گوینده رنگ و سمت خودش را دارد (مثل گفتگوی چت) تا نوبتِ حرف زدن
+            // با یک نگاه معلوم باشد.
+            const tone = speakerTone(l.speaker);
+            return (
+              <TouchableOpacity
+                key={l.id ?? i}
+                onLayout={(e) => {
+                  lineY.current[i] = e.nativeEvent.layout.y;
+                }}
+                style={[
+                  styles.line,
+                  isActive && { backgroundColor: hexToRgba(tone.color, 0.07), borderColor: tone.color },
+                ]}
+                onPress={() => seekToLine(l.start_ms)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.speakerRow, rr]}>
+                  <View style={[styles.avatar, { backgroundColor: tone.color }]}>
+                    <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <Text style={[styles.speaker, styles.flex1, { color: tone.color, textAlign: rtl ? 'right' : 'left' }]}>{l.speaker}</Text>
+                  {/* نشانه‌ی اینکه لمس هر جمله همان جمله را پخش می‌کند. */}
+                  <Play size={12} color={isActive ? tone.color : COLORS.muted} fill={isActive ? tone.color : 'transparent'} />
                 </View>
-                <Text style={[styles.speaker, styles.flex1, { color: tone.color, textAlign: rtl ? 'right' : 'left' }]}>{l.speaker}</Text>
-                {/* نشانه‌ی اینکه لمس هر جمله همان جمله را پخش می‌کند. */}
-                <Play size={12} color={isActive ? tone.color : COLORS.muted} fill={isActive ? tone.color : 'transparent'} />
-              </View>
-              {isActive ? (
-                <KaraokeText
-                  text={l.text}
-                  startMs={l.start_ms}
-                  endMs={l.end_ms}
-                  positionMs={positionSV}
-                  textStyle={StyleSheet.flatten([styles.lineText, styles.lineTextActive])}
-                />
-              ) : (
-                <Text style={styles.lineText}>{l.text}</Text>
-              )}
-              {showTranslation && !!l.translation_fa && (
-                <Text style={[styles.translation, { textAlign: rtl ? 'right' : 'left' }]}>{l.translation_fa}</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+                {isActive ? (
+                  <KaraokeText
+                    text={l.text}
+                    startMs={l.start_ms}
+                    endMs={l.end_ms}
+                    positionMs={positionSV}
+                    textStyle={StyleSheet.flatten([styles.lineText, styles.lineTextActive])}
+                  />
+                ) : (
+                  <Text style={styles.lineText}>{l.text}</Text>
+                )}
+                {showTranslation && !!l.translation_fa && (
+                  <Text style={[styles.translation, { textAlign: rtl ? 'right' : 'left' }]}>{l.translation_fa}</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })
+        )}
 
         {/* «نسخه‌ی من» بعد از متن: اول گفتگو را بفهمد، بعد خودش ضبط کند (قبلاً بالای متن بود). */}
         {lines.length > 0 && (
@@ -483,7 +718,139 @@ export const PodcastScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   rowReverse: { flexDirection: 'row-reverse' },
-  closeBtnSpacer: { width: 38 },
+  topTranscriptBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ECEAE4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topTranscriptBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  toggleTranscriptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+  },
+  toggleTranscriptBtnActive: {
+    backgroundColor: '#F3EFEA',
+    borderWidth: 1,
+    borderColor: '#E3DDD3',
+  },
+  toggleTranscriptText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: COLORS.white,
+  },
+  toggleTranscriptTextActive: {
+    color: COLORS.text,
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  pillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F3EFEA',
+    borderWidth: 1,
+    borderColor: '#E8E2D8',
+  },
+  pillBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  pillBtnText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  pillBtnTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.primary,
+  },
+  autoplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0ECE4',
+    marginTop: 2,
+  },
+  autoplayTextWrap: {
+    flex: 1,
+    marginRight: 8,
+  },
+  autoplayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  autoplayTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
+    color: COLORS.text,
+  },
+  autoplayNextName: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  autoplayWarning: {
+    color: '#D97706',
+    fontFamily: FONT_FAMILY.medium,
+  },
+  autoplayControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  testVoiceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryLight,
+  },
+  testVoiceText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+    color: COLORS.primary,
+  },
+  listeningNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ECEAE4',
+    marginBottom: SPACING.m,
+  },
+  listeningNoticeText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12.5,
+    color: COLORS.muted,
+  },
   topTitleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
   topSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
   infoCard: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: 14, gap: 10 },
