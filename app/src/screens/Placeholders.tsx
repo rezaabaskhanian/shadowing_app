@@ -663,128 +663,19 @@ export const ProgressScreen = () => {
   );
 };
 
-import {
-  useNotifications,
-  ReminderTime,
-  ContentSource,
-  MAX_REMINDER_TIMES,
-} from '../data/NotificationContext';
-import { Switch } from 'react-native';
-import { Bell, BookOpen, Check, Clock, Crown, MessageSquare, Mic, Pencil, Plus, Repeat, Sparkles } from 'lucide-react-native';
-import { usePracticeSettings, REPEAT_OPTIONS, HIGHLIGHT_COLOR_OPTIONS } from '../data/PracticeSettingsContext';
-
-/**
- * TimePickerModal انتخاب ساعت دلخواه برای یادآوری روزانه. عمداً با ScrollView
- * ساده نوشته شده (نه @react-native-community/datetimepicker) تا وابستگی نیتیو
- * جدید و rebuild لازم نشود. دقیقه‌ها با گام ۵ دقیقه‌ای‌اند.
- */
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
-
-const TimePickerModal: React.FC<{
-  visible: boolean;
-  onCancel: () => void;
-  onConfirm: (time: ReminderTime) => void;
-}> = ({ visible, onCancel, onConfirm }) => {
-  const { t } = useLanguage();
-  const [hour, setHour] = React.useState('20');
-  const [minute, setMinute] = React.useState('00');
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.timeModalBackdrop}>
-        <View style={styles.timeModalCard}>
-          <Text style={styles.timeModalTitle}>{t('pickReminderTime')}</Text>
-          <Text style={styles.timeModalPreview}>{`${hour}:${minute}`}</Text>
-
-          <View style={styles.timeColumnRow}>
-            <View style={styles.timeColumn}>
-              <Text style={styles.subOptionLabel}>{t('hour')}</Text>
-              <ScrollView style={styles.timeColumnScroll} showsVerticalScrollIndicator={false}>
-                {HOUR_OPTIONS.map((h) => (
-                  <TouchableOpacity
-                    key={h}
-                    style={[styles.timeCell, hour === h && styles.timeCellActive]}
-                    onPress={() => setHour(h)}
-                  >
-                    <Text style={[styles.pillText, hour === h && styles.pillTextActive]}>{h}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.timeColumn}>
-              <Text style={styles.subOptionLabel}>{t('minute')}</Text>
-              <ScrollView style={styles.timeColumnScroll} showsVerticalScrollIndicator={false}>
-                {MINUTE_OPTIONS.map((m) => (
-                  <TouchableOpacity
-                    key={m}
-                    style={[styles.timeCell, minute === m && styles.timeCellActive]}
-                    onPress={() => setMinute(m)}
-                  >
-                    <Text style={[styles.pillText, minute === m && styles.pillTextActive]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-
-          <View style={styles.timeModalActions}>
-            <TouchableOpacity style={[styles.pillBtn]} onPress={onCancel}>
-              <Text style={styles.pillText}>{t('cancel')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.pillBtn, styles.pillBtnActive]}
-              onPress={() => onConfirm(`${hour}:${minute}`)}
-            >
-              <Text style={[styles.pillText, styles.pillTextActive]}>{t('addReminderTime')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
+import { Check, Crown, LogOut, MessageSquare, Mic, Pencil, Sparkles } from 'lucide-react-native';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const displayName = (name: string) => name.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
-  const { language, setLanguage, t } = useLanguage();
-  const { user } = useAuth();
-  const {
-    studyReminderEnabled,
-    setStudyReminderEnabled,
-    studyReminderTimes,
-    addStudyReminderTime,
-    removeStudyReminderTime,
-    contentNotificationEnabled,
-    setContentNotificationEnabled,
-    contentSource,
-    setContentSource,
-    triggerTestNotification,
-  } = useNotifications();
-  const { repeatsPerStep, setRepeatsPerStep, highlightColor, setHighlightColor } = usePracticeSettings();
-  const toast = useToast();
-  const [timePickerOpen, setTimePickerOpen] = React.useState(false);
-
-  // ساعتِ انتخاب‌شده در مودال اضافه می‌شود؛ اگر تکراری بود یا به سقف رسیده
-  // بودیم، به‌جای اضافه‌کردنِ بی‌صدا به کاربر پیام می‌دهیم.
-  const handleAddReminderTime = (time: ReminderTime) => {
-    setTimePickerOpen(false);
-    if (studyReminderTimes.includes(time)) {
-      toast.info(t('reminderTimeDuplicate'));
-      return;
-    }
-    if (!addStudyReminderTime(time)) {
-      toast.warning(t('reminderTimeLimitReached'));
-    }
-  };
-  const { box } = useVocab();
-  const { scenes } = useScenes();
-  // سطح کاربر برای برچسب زیر اسم.
+  const { language, t } = useLanguage();
+  const { user, logout } = useAuth();
   const [levelName, setLevelName] = React.useState('');
   const [subscription, setSubscription] = React.useState<SubscriptionStatus | null>(null);
+  const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
+
   useFocusEffect(
     React.useCallback(() => {
       if (!user?.id) return;
@@ -801,63 +692,14 @@ export const ProfileScreen = () => {
     }, [user?.id])
   );
 
-  // یه آیتم واقعی (کلمه‌ی سررسیده‌ی جعبه‌ی لایتنر یا جمله‌ی یکی از صحنه‌ها)
-  // انتخاب می‌کند تا دکمه‌ی «ارسال نوتیفیکیشن آزمایشی» دقیقاً همون چیزی که
-  // نوتیف واقعی نشون می‌ده رو پیش‌نمایش بده، نه یه نمونه‌ی ثابت.
-  const handleSendTestNotification = () => {
-    const source = contentSource;
-    let type: 'leitner' | 'sentence' =
-      source === 'leitner' ? 'leitner' : source === 'sentences' ? 'sentence' : Math.random() > 0.5 ? 'leitner' : 'sentence';
-
-    const sentencePool = scenes.flatMap((s) =>
-      (s.hotspots || [])
-        .filter((h) => h.dialogue && h.translation)
-        .map((h) => ({ text: h.dialogue, translation: h.translation, scene: s.title }))
-    );
-
-    if (type === 'leitner' && box.length === 0) type = 'sentence';
-    if (type === 'sentence' && sentencePool.length === 0) type = 'leitner';
-
-    if (type === 'leitner' && box.length === 0) {
-      Alert.alert(t('noContentForTestNotification'));
-      return;
-    }
-    if (type === 'sentence' && sentencePool.length === 0) {
-      Alert.alert(t('noContentForTestNotification'));
-      return;
-    }
-
-    if (type === 'leitner') {
-      const dueWords = box.filter(isDue);
-      const word = (dueWords.length > 0 ? dueWords : box)[Math.floor(Math.random() * (dueWords.length > 0 ? dueWords.length : box.length))];
-      triggerTestNotification({
-        id: Date.now().toString(),
-        type: 'leitner',
-        title: `📚 Leitner Word Review (Level ${word.level})`,
-        body: word.word,
-        translation: word.meaning,
-        sourceLabel: 'Leitner Box',
-      });
-    } else {
-      const sentence = sentencePool[Math.floor(Math.random() * sentencePool.length)];
-      triggerTestNotification({
-        id: Date.now().toString(),
-        type: 'sentence',
-        title: `🎙 Lesson Shadowing (${sentence.scene})`,
-        body: `"${sentence.text}"`,
-        translation: sentence.translation,
-        sourceLabel: 'Lesson Scenario',
-      });
-    }
-  };
-
   const rtl = language === 'fa';
   const row = rtl ? styles.rowReverse : null;
   const ta = rtl ? styles.textRight : styles.textLeft;
   const Chevron = rtl ? ChevronLeft : ChevronRight;
-  // دکمه‌ی چرخ‌دنده‌ی سربرگ به بخش تنظیمات تمرین پایین صفحه می‌پرد.
-  const scrollRef = React.useRef<ScrollView>(null);
-  const [settingsY, setSettingsY] = React.useState(0);
+
+  const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
 
   const menuRow = (opts: {
     key: string;
@@ -894,7 +736,7 @@ export const ProfileScreen = () => {
   );
 
   return (
-    <ScrollView ref={scrollRef} style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={[styles.pageHeadRow, row]}>
         <View style={rtl ? styles.alignEnd : styles.alignStart}>
           <Text style={[styles.pageTitle, ta]}>{t('profileTitle')}</Text>
@@ -902,7 +744,8 @@ export const ProfileScreen = () => {
         </View>
         <TouchableOpacity
           style={styles.iconButton}
-          onPress={() => scrollRef.current?.scrollTo({ y: settingsY, animated: true })}
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityLabel="Settings"
         >
           <Settings color={COLORS.text} size={18} />
         </TouchableOpacity>
@@ -925,30 +768,6 @@ export const ProfileScreen = () => {
         )}
       </View>
 
-      {/* زبان اپ در یک ردیف جمع‌وجور: آیکون و برچسب، و کلید دوگزینه‌ای. */}
-      <View style={[styles.settingCard, styles.langCardRow, row]}>
-        <View style={[styles.langLabelGroup, row]}>
-          <View style={[styles.pointsIconWrapSm, { backgroundColor: '#EEF2FF' }]}>
-            <Languages size={16} color="#5B6CF0" />
-          </View>
-          <Text style={[styles.settingLabel, styles.langLabelInline]}>{t('appLanguage')}</Text>
-        </View>
-        <View style={[styles.langToggleRow, styles.langToggleCompact]}>
-          <TouchableOpacity
-            style={[styles.langBtn, language === 'en' ? styles.langBtnActive : null]}
-            onPress={() => setLanguage('en')}
-          >
-            <Text style={[styles.langBtnText, language === 'en' ? styles.langBtnTextActive : null]}>English</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.langBtn, language === 'fa' ? styles.langBtnActive : null]}
-            onPress={() => setLanguage('fa')}
-          >
-            <Text style={[styles.langBtnText, language === 'fa' ? styles.langBtnTextActive : null]}>فارسی</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {menuRow({
         key: 'edit',
         icon: <Pencil color={COLORS.primary} size={20} />,
@@ -957,6 +776,7 @@ export const ProfileScreen = () => {
         sub: t('profileEditMenuSub'),
         onPress: () => navigation.navigate('ProfileEdit'),
       })}
+
       {menuRow({
         key: 'sub',
         icon: <Crown color={COLORS.secondary} size={20} />,
@@ -965,9 +785,18 @@ export const ProfileScreen = () => {
         sub: subscription?.active
           ? t('subscriptionUntil').replace('{date}', formatSubscriptionEnd(subscription, language))
           : t('subscriptionBuySub'),
-        // با اشتراک فعال هم صفحه‌ی خرید باز می‌شود تا تمدید و بازیابی خرید در دسترس باشد.
         onPress: () => navigation.navigate('Paywall'),
       })}
+
+      {menuRow({
+        key: 'submissions',
+        icon: <Lightbulb color="#D97706" size={20} />,
+        iconBg: '#FEF3C7',
+        title: t('mySubmissionsTitle'),
+        sub: rtl ? 'مشاهده و پیگیری سناریوهای پیشنهادی شما' : 'View and track your suggested scenes',
+        onPress: () => navigation.navigate('MySubmissions'),
+      })}
+
       {menuRow({
         key: 'rec',
         icon: <Mic color={COLORS.audioMine} size={20} />,
@@ -976,17 +805,17 @@ export const ProfileScreen = () => {
         sub: t('myRecordingsSub'),
         onPress: () => navigation.navigate('MyRecordings'),
       })}
+
       {menuRow({
-        key: 'help',
-        icon: <HelpCircle color={COLORS.error} size={20} />,
-        iconBg: COLORS.errorLight,
-        title: t('helpFaq'),
-        sub: t('helpFaqSub'),
-        onPress: () => navigation.navigate('HelpFaq'),
+        key: 'settings',
+        icon: <Settings color="#2563EB" size={20} />,
+        iconBg: '#EFF6FF',
+        title: rtl ? 'تنظیمات و یادآورها' : 'Settings & Reminders',
+        sub: rtl ? 'زبان برنامه، تکرار تمرین و ساعات اعلان' : 'Language, practice mode & notification times',
+        onPress: () => navigation.navigate('Settings'),
       })}
 
-      {/* ابزارهای فقط-توسعه (پیش‌نمایش توست + PoC مکالمه‌ی زنده) — در بیلد
-          ریلیز برای کاربر نمایش داده نمی‌شوند؛ کادر خط‌چین نشان می‌دهد قابلیت واقعی نیستند. */}
+      {/* ابزارهای فقط-توسعه */}
       {__DEV__ && (
         <>
           {menuRow({
@@ -1012,191 +841,50 @@ export const ProfileScreen = () => {
         </>
       )}
 
-      {/* Practice Card: تعداد دورهای خودکار در مرحله‌های گوش‌دادن و سایه‌زنی */}
-      <View style={[styles.settingCard, { marginTop: 4 }]} onLayout={(e) => setSettingsY(e.nativeEvent.layout.y - 12)}>
-        <View style={[styles.sectionHeaderRow, row]}>
-          <View style={[styles.cardIcon, { backgroundColor: '#E6F6EE' }]}>
-            <Repeat color={COLORS.tertiary} size={16} />
-          </View>
-          <Text style={styles.settingCardTitle}>{t('practiceSettingsTitle')}</Text>
+      {/* دکمه خروج از حساب کاربری */}
+      <TouchableOpacity
+        style={[styles.pointsCard, styles.logoutCard, row]}
+        onPress={handleLogout}
+        activeOpacity={0.85}
+      >
+        <View style={[styles.pointsIconWrap, { backgroundColor: '#FEE2E2' }]}>
+          <LogOut color={COLORS.error} size={20} />
         </View>
-
-        <Text style={[styles.optionTitle, ta]}>{t('repeatsPerStepLabel')}</Text>
-        <Text style={[styles.optionSub, ta]}>{t('repeatsPerStepSub')}</Text>
-
-        <View style={[styles.segmented, row]}>
-          {REPEAT_OPTIONS.map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={[styles.segment, repeatsPerStep === option && styles.segmentActive]}
-              onPress={() => setRepeatsPerStep(option)}
-            >
-              <Text style={[styles.segmentText, repeatsPerStep === option && styles.pillTextActive]}>
-                {option === 0 ? '∞' : `${option}×`}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.dividerLine} />
-
-        <Text style={[styles.optionTitle, ta]}>{t('highlightColorLabel')}</Text>
-        <Text style={[styles.optionSub, ta]}>{t('highlightColorSub')}</Text>
-
-        <View style={[styles.colorSwatchRow, row, { marginTop: 12 }]}>
-          {HIGHLIGHT_COLOR_OPTIONS.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[styles.colorSwatchRing, highlightColor === color && { borderColor: color }]}
-              onPress={() => setHighlightColor(color)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: highlightColor === color }}
-            >
-              <View style={[styles.colorSwatch, { backgroundColor: color }]}>
-                {highlightColor === color && <Check color={COLORS.white} size={16} strokeWidth={3} />}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* پیش‌نمایش زنده: همان هایلایتی که روی جمله‌ی در حال پخش می‌نشیند. */}
-        <View style={styles.highlightPreview}>
-          <Text style={styles.highlightPreviewEn}>
-            <Text style={{ backgroundColor: hexToRgba(highlightColor, 0.28), color: highlightColor }}>Nice to meet</Text> you.
+        <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+          <Text style={[styles.pointsValue, { color: COLORS.error }]}>{t('logout')}</Text>
+          <Text style={[styles.pointsSub, ta]}>
+            {rtl ? 'خروج از حساب کاربری روی این دستگاه' : 'Sign out of your account on this device'}
           </Text>
-          <Text style={styles.highlightPreviewFa}>{t('highlightPreviewFa')}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
-      {/* Notifications & Reminders Card */}
-      <View style={[styles.settingCard, { marginTop: 16 }]}>
-        <View style={[styles.sectionHeaderRow, row]}>
-          <View style={[styles.cardIcon, { backgroundColor: '#FFF6E0' }]}>
-            <Bell color={COLORS.secondary} size={16} />
-          </View>
-          <Text style={styles.settingCardTitle}>{t('notificationsTitle')}</Text>
-        </View>
-
-        {/* Option 1: Daily Study Reminder */}
-        <View style={[styles.toggleRow, row]}>
-          <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
-            <Text style={[styles.optionTitle, ta]}>{t('studyReminder')}</Text>
-            <Text style={[styles.optionSub, ta]}>{t('studyReminderSub')}</Text>
-          </View>
-          <Switch
-            value={studyReminderEnabled}
-            onValueChange={setStudyReminderEnabled}
-            trackColor={{ false: '#E3E5EA', true: COLORS.tertiary }}
-            thumbColor={COLORS.white}
-          />
-        </View>
-
-        {studyReminderEnabled && (
-          <View style={styles.subOptionGroup}>
-            <View style={[styles.subOptionHead, row]}>
-              <Clock color={COLORS.textSecondary} size={14} />
-              <Text style={styles.subOptionLabel}>{t('reminderTime')}</Text>
-            </View>
-
-            {studyReminderTimes.length === 0 ? (
-              <Text style={[styles.optionSub, ta]}>{t('reminderTimesEmpty')}</Text>
-            ) : (
-              <View style={[styles.timeChipRow, row]}>
-                {studyReminderTimes.map((time) => (
-                  <View key={time} style={styles.timeChip}>
-                    <Text style={styles.timeChipText}>{time}</Text>
-                    <TouchableOpacity
-                      onPress={() => removeStudyReminderTime(time)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <X color={COLORS.white} size={13} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {studyReminderTimes.length < MAX_REMINDER_TIMES && (
-              <TouchableOpacity
-                style={[styles.addTimeBtn, rtl && styles.selfEnd]}
-                onPress={() => setTimePickerOpen(true)}
-              >
-                <Plus color={COLORS.primary} size={14} />
-                <Text style={styles.addTimeText}>{t('addReminderTime')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        <View style={styles.dividerLine} />
-
-        {/* Option 2: Leitner & Lesson Sentences Alerts */}
-        <View style={[styles.toggleRow, row]}>
-          <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
-            <Text style={[styles.optionTitle, ta]}>{t('contentNotification')}</Text>
-            <Text style={[styles.optionSub, ta]}>{t('contentNotificationSub')}</Text>
-          </View>
-          <Switch
-            value={contentNotificationEnabled}
-            onValueChange={setContentNotificationEnabled}
-            trackColor={{ false: '#E3E5EA', true: COLORS.tertiary }}
-            thumbColor={COLORS.white}
-          />
-        </View>
-
-        {contentNotificationEnabled && (
-          <View style={styles.subOptionGroup}>
-            <View style={[styles.subOptionHead, row]}>
-              <BookOpen color={COLORS.tertiary} size={14} />
-              <Text style={styles.subOptionLabel}>{t('notificationSource')}</Text>
-            </View>
-            <View style={styles.pillGroupVertical}>
-              {(
-                [
-                  { id: 'leitner', label: t('sourceLeitner') },
-                  { id: 'sentences', label: t('sourceSentences') },
-                  { id: 'mixed', label: t('sourceMixed') },
-                ] as { id: ContentSource; label: string }[]
-              ).map((src) => (
-                <TouchableOpacity
-                  key={src.id}
-                  style={[styles.pillBtnWide, contentSource === src.id && styles.pillBtnWideActive]}
-                  onPress={() => setContentSource(src.id)}
-                >
-                  <Text style={[styles.pillText, contentSource === src.id && styles.pillTextActive]}>
-                    {src.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* دکمه‌ی ثانویه و خنثی؛ نارنجی پر برای اقدام‌های اصلی کاربر می‌ماند. */}
-        <TouchableOpacity style={[styles.testBtn, row]} onPress={handleSendTestNotification}>
-          <Sparkles color={COLORS.tertiary} size={16} />
-          <Text style={styles.testBtnText}>{t('sendTestNotification')}</Text>
-        </TouchableOpacity>
-
-        <TimePickerModal
-          visible={timePickerOpen}
-          onCancel={() => setTimePickerOpen(false)}
-          onConfirm={handleAddReminderTime}
-        />
-      </View>
+      <ConfirmModal
+        visible={logoutModalVisible}
+        icon={<LogOut color={COLORS.white} size={26} />}
+        color="#EF4444"
+        title={t('logout')}
+        body={rtl ? 'آیا از خروج از حساب کاربری اطمینان دارید؟' : 'Are you sure you want to log out of your account?'}
+        confirmLabel={t('logout')}
+        cancelLabel={t('cancel')}
+        onConfirm={() => {
+          setLogoutModalVisible(false);
+          logout();
+        }}
+        onCancel={() => setLogoutModalVisible(false)}
+      />
     </ScrollView>
   );
 };
 
 // رنگ‌های طرح جدید: پس‌زمینه‌ی خاکستریِ خیلی روشن و کارت‌های سفید با کادر و سایه‌ی نرم.
-const PAGE_BG = '#F7F7F9';
-const CARD_BORDER = '#EEEEF2';
+const PAGE_BG = '#FDFBF7';
+const CARD_BORDER = '#F0EBE3';
 const CARD_SHADOW = {
   shadowColor: '#1A1D26',
-  shadowOpacity: 0.05,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 3 },
-  elevation: 1,
+  shadowOpacity: 0.04,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 2,
 };
 
 const styles = StyleSheet.create({
@@ -1243,7 +931,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 14,
     borderRadius: 20,
-    backgroundColor: '#F0F1F4',
+    backgroundColor: '#F3EFE6',
   },
   weekStripCol: { alignItems: 'center', gap: 6, flex: 1 },
   weekStripLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.medium, fontSize: 11 },
@@ -1411,7 +1099,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     ...CARD_SHADOW,
@@ -1421,7 +1109,7 @@ const styles = StyleSheet.create({
   // فضای اضافه برای دکمه‌ی ثابت «ادامه‌ی یادگیری» بالای نوار پایین.
   scrollWithCta: { paddingBottom: 210 },
   ctaFloat: { position: 'absolute', left: 20, right: 20, bottom: Platform.OS === 'ios' ? 106 : 98 },
-  ctaBtn: { flexDirection: 'row', gap: 10, height: 54, borderRadius: 16, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  ctaBtn: { flexDirection: 'row', gap: 10, height: 54, borderRadius: 18, backgroundColor: '#FF6422', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF6422', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   ctaText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.white },
   progressTip: { flex: 1, fontFamily: FONT_FAMILY.medium, fontSize: 12, lineHeight: 21, color: COLORS.text },
   statsTile: { flex: 1, alignItems: 'center', gap: 6 },
@@ -1430,7 +1118,7 @@ const styles = StyleSheet.create({
   statsLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
   scoreCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     ...CARD_SHADOW,
@@ -1452,13 +1140,13 @@ const styles = StyleSheet.create({
   scoreValue: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 40, lineHeight: 50 },
   scoreLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12 },
   scoreRow: { flexDirection: 'row', gap: 12, alignSelf: 'stretch' },
-  scoreMetric: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 14, backgroundColor: '#F7F8FA' },
+  scoreMetric: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 14, backgroundColor: '#FAF8F5' },
   metricValue: { fontFamily: FONT_FAMILY.bold, fontSize: 22 },
   metricLabel: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, marginTop: 2 },
   profileHeader: {
     alignItems: 'center',
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     ...CARD_SHADOW,
@@ -1469,9 +1157,9 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#FFEFE6',
+    backgroundColor: '#FFF4EE',
     borderWidth: 3,
-    borderColor: '#FFE1D2',
+    borderColor: '#FAD8C7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -1492,14 +1180,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     ...CARD_SHADOW,
     padding: 14,
     marginBottom: 12,
   },
-  pointsIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F2F2F5', alignItems: 'center', justifyContent: 'center' },
+  logoutCard: {
+    borderColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
+    marginTop: 8,
+  },
+  pointsIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3EFE6', alignItems: 'center', justifyContent: 'center' },
   pointsValue: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -1508,7 +1201,7 @@ const styles = StyleSheet.create({
   pointsSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, marginTop: 2 },
   settingCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: CARD_BORDER,
     ...CARD_SHADOW,
@@ -1519,7 +1212,7 @@ const styles = StyleSheet.create({
   langCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   langLabelInline: { marginBottom: 0 },
   langToggleCompact: { width: 170 },
-  langToggleRow: { flexDirection: 'row', backgroundColor: '#F2F2F5', borderRadius: 14, padding: 4 },
+  langToggleRow: { flexDirection: 'row', backgroundColor: '#F3EFE6', borderRadius: 14, padding: 4 },
   langBtn: {
     flex: 1,
     paddingVertical: 7,
@@ -1527,7 +1220,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   langBtnActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
   },
   langBtnText: {
     color: COLORS.textSecondary,

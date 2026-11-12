@@ -18,7 +18,7 @@ import { getMyLevel } from '../../api/assessment';
 import { difficultyToLevel } from '../../api/scenes';
 
 const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
-const PATH_COLOR = '#DCD4C6';
+const PATH_COLOR = '#E2DBD0';
 // خط مسیر چقدر از وسط به طرفِ مخالفِ دایره‌ها می‌رود (نسبت به جابه‌جاییِ خود دایره).
 const CURVE_RATIO = 0.6;
 const HALO_SIZE = 210;
@@ -599,15 +599,15 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
         <Svg width={HALO_SIZE} height={HALO_SIZE} style={styles.currentHalo} pointerEvents="none">
           <Defs>
             <RadialGradient id="curHalo" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#E8572F" stopOpacity={0.32} />
-              <Stop offset="0.45" stopColor="#E8572F" stopOpacity={0.16} />
-              <Stop offset="1" stopColor="#E8572F" stopOpacity={0} />
+              <Stop offset="0" stopColor="#FF6422" stopOpacity={0.28} />
+              <Stop offset="0.45" stopColor="#FF6422" stopOpacity={0.12} />
+              <Stop offset="1" stopColor="#FF6422" stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={HALO_SIZE / 2} cy={HALO_SIZE / 2} r={HALO_SIZE / 2} fill="url(#curHalo)" />
         </Svg>
         <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.currentNode} accessibilityLabel={state}>
-          <GradientFill from="#F28A55" to="#E8572F" />
+          <GradientFill from="#FF7A3D" to="#FF6422" />
           <Play color={COLORS.white} size={28} fill={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.currentBadge} />
@@ -615,9 +615,9 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
     );
   }
   const look = {
-    completed: { bg: COLORS.success, icon: COLORS.white },
-    upcoming: { bg: '#E8E2D7', icon: '#9C9488' },
-    subLocked: { bg: '#FFF1E8', icon: COLORS.primary },
+    completed: { bg: '#059669', icon: COLORS.white },
+    upcoming: { bg: '#F3EFE6', icon: '#9C9488' },
+    subLocked: { bg: '#FFF7F2', icon: '#FF6422' },
   }[state];
   return (
     <TouchableOpacity
@@ -642,16 +642,16 @@ const styles = StyleSheet.create({
   alignEnd: { alignItems: 'flex-end' },
   screen: {
     flex: 1,
-    backgroundColor: '#F7F5F1',
-    paddingTop: 44,
+    backgroundColor: '#FDFBF7',
+    paddingTop: 48,
     paddingHorizontal: 20,
   },
   top: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEAE3',
+    borderBottomColor: '#F0EBE3',
   },
   headerRow: {
     flexDirection: 'row',
@@ -663,23 +663,28 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   headerText: { flex: 1 },
   title: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 18,
     lineHeight: 28,
   },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  subDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
+  subDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#059669' },
   sub: {
-    color: COLORS.textSecondary,
+    color: '#716B62',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
   },
@@ -688,27 +693,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
   },
-  chipStreak: { backgroundColor: '#FDEEE8', borderColor: '#F6D3C6' },
-  chipXp: { backgroundColor: '#EEF7F1', borderColor: '#D3EADB' },
+  chipStreak: { backgroundColor: '#FFF4EE', borderColor: '#FAD8C7' },
+  chipXp: { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' },
   chipText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
-  chipStreakText: { color: '#E8572F' },
-  chipXpText: { color: '#2F8A5B' },
+  chipStreakText: { color: '#FF6422' },
+  chipXpText: { color: '#059669' },
   progressTrack: {
     flexDirection: 'row',
-    height: 5,
+    height: 6,
     borderRadius: 3,
-    backgroundColor: '#ECE7DE',
+    backgroundColor: '#EAE5DC',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: 3,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
   },
   levelBanner: {
     flexDirection: 'row',
@@ -716,25 +721,31 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 14,
     padding: 14,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F3E3BC',
+    borderColor: '#F0EBE3',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   levelIconBox: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: '#EBA13F',
+    borderRadius: 14,
+    backgroundColor: '#FF6422',
     alignItems: 'center',
     justifyContent: 'center',
   },
   levelBannerText: { flex: 1 },
   levelChipRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  levelChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: '#E3F1E8' },
-  levelChipText: { color: '#2F8A5B', fontFamily: FONT_FAMILY.bold, fontSize: 10 },
-  levelKicker: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 11 },
-  levelTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 14 },
+  levelChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: '#ECFDF5' },
+  levelChipText: { color: '#059669', fontFamily: FONT_FAMILY.bold, fontSize: 10 },
+  levelKicker: { color: '#716B62', fontFamily: FONT_FAMILY.regular, fontSize: 11 },
+  levelTitle: { color: '#1A1D26', fontFamily: FONT_FAMILY.bold, fontSize: 14 },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -743,30 +754,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 26,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#EEEAE3',
+    borderTopColor: '#F0EBE3',
   },
   bottomText: { flex: 1 },
-  bottomDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
-  bottomTitle: { flexShrink: 1, color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 13 },
-  bottomSub: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 11, marginTop: 3 },
+  bottomDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#FF6422' },
+  bottomTitle: { flexShrink: 1, color: '#1A1D26', fontFamily: FONT_FAMILY.bold, fontSize: 13 },
+  bottomSub: { color: '#716B62', fontFamily: FONT_FAMILY.regular, fontSize: 11, marginTop: 3 },
   startBtn: {
     height: 50,
     paddingHorizontal: 22,
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.35,
+    elevation: 4,
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.28,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 4 },
   },
   startBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  startBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  startBtnText: { color: '#FFFFFF', fontFamily: FONT_FAMILY.bold, fontSize: 14 },
   scrollContent: {
     paddingBottom: 60,
     paddingTop: 24,
@@ -857,32 +868,37 @@ const styles = StyleSheet.create({
   label: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     marginTop: 8,
-    maxWidth: 200,
-    backgroundColor: COLORS.white,
+    maxWidth: 220,
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#E9E4DA',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   labelCurrent: {
-    borderColor: COLORS.primary,
+    borderColor: '#FF6422',
     borderWidth: 1.5,
-    backgroundColor: '#FFF4EF',
+    backgroundColor: '#FFF7F2',
     paddingVertical: 7,
   },
-  labelDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
+  labelDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#FF6422' },
   labelTitle: {
     flexShrink: 1,
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
   },
-  labelSession: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 10 },
-  learningChip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: '#FBDCD0' },
-  learningChipText: { color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold, fontSize: 10 },
+  labelSession: { color: '#716B62', fontFamily: FONT_FAMILY.regular, fontSize: 10 },
+  learningChip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: '#FDEBE4' },
+  learningChipText: { color: '#FF6422', fontFamily: FONT_FAMILY.semiBold, fontSize: 10 },
   sectionHeader: {
     position: 'absolute',
     left: 0,
@@ -909,9 +925,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: '#FFF1E8',
+    backgroundColor: '#FFF7F2',
     borderWidth: 1,
-    borderColor: '#FCD7C7',
+    borderColor: '#FAD8C7',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -919,13 +935,15 @@ const styles = StyleSheet.create({
   subLockedChipText: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 10,
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   levelTabsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 8,
-    marginVertical: 6,
+    padding: 4,
+    gap: 4,
+    marginVertical: 10,
+    backgroundColor: '#F3EFE6',
+    borderRadius: 16,
     zIndex: 10,
   },
   levelTabItem: {
@@ -934,30 +952,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 10,
-    borderRadius: 20,
-    backgroundColor: '#F3EFEA',
+    borderRadius: 12,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#E6DFD5',
+    borderColor: 'transparent',
   },
   levelTabItemActive: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   levelTabText: {
     fontFamily: FONT_FAMILY.medium,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#716B62',
   },
   levelTabTextActive: {
     fontFamily: FONT_FAMILY.bold,
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   myLevelDot: {
     width: 6,

@@ -493,7 +493,7 @@ export const PodcastMyVersionScreen: React.FC = () => {
 const styles = StyleSheet.create({
   rowReverse: { flexDirection: 'row-reverse' },
   textRight: { textAlign: 'right' },
-  container: { flex: 1, backgroundColor: COLORS.backgroundSoft },
+  container: { flex: 1, backgroundColor: '#FDFBF7' },
   headerText: { flex: 1 },
   hintCard: {
     flexDirection: 'row',

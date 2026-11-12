@@ -54,14 +54,14 @@ import { getSubscriptionStatus } from '../../api/billing';
 
 // همان پالت «سینما»ی برنامه‌ی من.
 const CINE = {
-  bg: '#FFFFFF',
-  surface: '#F7F5F1',
-  border: '#E7E2D9',
+  bg: '#FDFBF7',
+  surface: '#FFFFFF',
+  border: '#F0EBE3',
   text: '#1A1D26',
-  muted: '#5F6573',
-  accent: '#FF7A59',
-  accentText: '#C2412D',
-  success: '#2E9E6B',
+  muted: '#716B62',
+  accent: '#FF6422',
+  accentText: '#FF6422',
+  success: '#059669',
   locked: '#9AA0AC',
 };
 
@@ -650,6 +650,18 @@ export const GoalMapScreen = () => {
         >
           <Text style={styles.retryText}>{t('goalPlanTitle')}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.retry, { marginTop: 10, backgroundColor: '#313540' }]}
+          onPress={async () => {
+            const list = await getGoalMaps();
+            setPickerMaps(list);
+            setPlan(null);
+            setMap(null);
+            setPickedGoal(null);
+          }}
+        >
+          <Text style={styles.retryText}>{t('goalMapPickTitle')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -703,6 +715,7 @@ export const GoalMapScreen = () => {
                   source={{ uri: absUrl(map.image_url) }}
                   style={{ width: base.w, height: base.h }}
                   resizeMode="cover"
+                  onError={(e) => console.warn('GoalMap image load failed:', absUrl(map.image_url), e.nativeEvent?.error)}
                 />
                 {map.tiles &&
                   visibleTiles.map(i => {
@@ -1273,15 +1286,17 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: '#FBF9F6',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
     padding: SPACING.m,
     gap: SPACING.m,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
+    elevation: 6,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.1,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 4 },
   },
   cardHead: { flexDirection: 'row-reverse', alignItems: 'center', gap: SPACING.m },
   cardIcon: {

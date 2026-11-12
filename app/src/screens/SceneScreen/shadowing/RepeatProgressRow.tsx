@@ -102,18 +102,18 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E5DFD5',
   },
   nextStepBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    borderRadius: 14,
+    gap: 4,
+    borderRadius: 16,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   nextStepBtnText: {
-    fontFamily: FONT_FAMILY.semiBold,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
   },
 });

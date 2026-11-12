@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ChevronRight, Clock, Flame, Info, MessageSquare, Star, Zap } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Clock, Flame, Info, MessageSquare, Star, Zap } from 'lucide-react-native';
 import { GradientFill } from '../../components/GradientFill';
 
 import { COLORS } from '../../theme/colors';
@@ -40,6 +41,25 @@ export const LanguageHabitScreen = () => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   const [doneToday, setDoneToday] = useState(false);
+
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Home');
+    }
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [handleBack])
+  );
 
   const load = useCallback(() => {
     let active = true;
@@ -106,6 +126,8 @@ export const LanguageHabitScreen = () => {
   ];
   const streakDays = Math.min(7, history?.current_streak ?? 0);
 
+  const BackIcon = language === 'fa' ? ChevronRight : ChevronLeft;
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -117,8 +139,13 @@ export const LanguageHabitScreen = () => {
             <Text style={styles.tagText}>{t('habitTag')}</Text>
             <View style={styles.tagDot} />
           </View>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <ChevronRight color={COLORS.text} size={20} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
+            <BackIcon color={COLORS.text} size={20} />
           </TouchableOpacity>
         </View>
 
@@ -258,29 +285,37 @@ export const LanguageHabitScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FAF8F4' },
+  screen: { flex: 1, backgroundColor: '#FDFBF7' },
   content: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 60 },
   loader: { marginTop: 40 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
   infoBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   tag: {
     flexDirection: 'row',
@@ -289,22 +324,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(46,158,107,0.10)',
+    backgroundColor: 'rgba(5, 150, 105, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(46,158,107,0.25)',
+    borderColor: 'rgba(5, 150, 105, 0.25)',
   },
-  tagText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: '#2F8A5B' },
-  tagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success },
-  title: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, textAlign: 'right' },
-  subtitle: { color: COLORS.muted, fontFamily: FONT_FAMILY.regular, fontSize: 12, textAlign: 'right', marginTop: 4, marginBottom: 18 },
+  tagText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: '#059669' },
+  tagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#059669' },
+  title: { color: '#1A1D26', fontFamily: FONT_FAMILY.bold, fontSize: 24, textAlign: 'right' },
+  subtitle: { color: '#716B62', fontFamily: FONT_FAMILY.regular, fontSize: 12, textAlign: 'right', marginTop: 4, marginBottom: 18 },
   missionCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     padding: 18,
     marginBottom: 16,
     gap: 14,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   missionHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   missionHeadText: { flex: 1, alignItems: 'flex-end', gap: 8 },
@@ -315,15 +355,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    backgroundColor: '#FDEDE8',
+    backgroundColor: '#FFF4EE',
   },
-  dailyChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: COLORS.primary },
-  missionActivityName: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 22, textAlign: 'right' },
+  dailyChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 10, color: '#FF6422' },
+  missionActivityName: { color: '#1A1D26', fontFamily: FONT_FAMILY.bold, fontSize: 22, textAlign: 'right' },
   activityIconWrap: {
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: COLORS.tertiaryLight,
+    backgroundColor: '#FFF4EE',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -334,11 +374,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     borderWidth: 2,
-    borderColor: COLORS.white,
+    borderColor: '#FFFFFF',
   },
-  missionPurpose: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 22, textAlign: 'right' },
+  missionPurpose: { color: '#716B62', fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 22, textAlign: 'right' },
   metaRow: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
   metaPill: {
     flexDirection: 'row',
@@ -347,63 +387,77 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F8F5EE',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
   },
-  metaText: { color: COLORS.text, fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
-  stepsBox: { backgroundColor: '#F7F5F1', borderRadius: 18, padding: 12, gap: 10, borderWidth: 1, borderColor: '#EEEAE3' },
+  metaText: { color: '#1A1D26', fontFamily: FONT_FAMILY.semiBold, fontSize: 11 },
+  stepsBox: { backgroundColor: '#F8F5EE', borderRadius: 20, padding: 12, gap: 10, borderWidth: 1, borderColor: '#F0EBE3' },
   stepsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  stepsTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.text },
-  stepsBar: { width: 4, height: 14, borderRadius: 2, backgroundColor: COLORS.primary },
+  stepsTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: '#1A1D26' },
+  stepsBar: { width: 4, height: 14, borderRadius: 2, backgroundColor: '#FF6422' },
   step: {
     flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.03,
+    elevation: 1,
   },
   stepNum: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   stepNumText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
   stepText: { flex: 1, alignItems: 'flex-end', gap: 3 },
-  stepTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: COLORS.text },
-  stepDesc: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 18, color: COLORS.textSecondary, textAlign: 'right' },
+  stepTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 12, color: '#1A1D26' },
+  stepDesc: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 18, color: '#716B62', textAlign: 'right' },
   startBtn: {
     height: 54,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.35,
+    elevation: 4,
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.28,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 4 },
   },
   startInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  startBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 15 },
+  startBtnText: { color: '#FFFFFF', fontFamily: FONT_FAMILY.bold, fontSize: 15 },
   countdownWrap: { alignItems: 'center', justifyContent: 'center', height: 54 },
-  countdownText: { color: COLORS.primary, fontFamily: FONT_FAMILY.bold, fontSize: 36 },
+  countdownText: { color: '#FF6422', fontFamily: FONT_FAMILY.bold, fontSize: 36 },
   emptyContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     padding: 24,
     alignItems: 'center',
     marginBottom: 16,
   },
-  emptyText: { color: COLORS.textSecondary, fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 24, textAlign: 'center' },
-  historyCard: { backgroundColor: COLORS.white, borderRadius: 24, borderWidth: 1, borderColor: '#EEEAE3', padding: 16, gap: 14 },
+  emptyText: { color: '#716B62', fontFamily: FONT_FAMILY.medium, fontSize: 14, lineHeight: 24, textAlign: 'center' },
+  historyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    padding: 16,
+    gap: 14,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   historyHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   historyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  historyTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 17 },
-  liveChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#F1EEE8' },
-  liveText: { fontFamily: FONT_FAMILY.medium, fontSize: 10, color: COLORS.textSecondary },
+  historyTitle: { color: '#1A1D26', fontFamily: FONT_FAMILY.bold, fontSize: 17 },
+  liveChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#F3EFE6' },
+  liveText: { fontFamily: FONT_FAMILY.medium, fontSize: 10, color: '#716B62' },
   statsRow: { flexDirection: 'row', gap: 8 },
   statTile: {
     flex: 1,
@@ -412,17 +466,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 6,
     borderRadius: 16,
-    backgroundColor: '#F7F5F1',
+    backgroundColor: '#F8F5EE',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
   },
-  statTileHot: { backgroundColor: '#FFF4EF', borderColor: '#F6D9CC' },
-  statValue: { fontFamily: FONT_FAMILY.bold, fontSize: 18, color: COLORS.text },
-  statValueHot: { color: COLORS.primary },
-  statLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 10, color: COLORS.textSecondary, textAlign: 'center' },
+  statTileHot: { backgroundColor: '#FFF4EE', borderColor: '#FAD8C7' },
+  statValue: { fontFamily: FONT_FAMILY.bold, fontSize: 18, color: '#1A1D26' },
+  statValueHot: { color: '#FF6422' },
+  statLabel: { fontFamily: FONT_FAMILY.regular, fontSize: 10, color: '#716B62', textAlign: 'center' },
   levelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  levelPct: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: COLORS.primary },
-  levelLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.textSecondary },
-  levelTrack: { height: 8, borderRadius: 4, backgroundColor: '#F1EEE8', overflow: 'hidden', flexDirection: 'row-reverse' },
+  levelPct: { fontFamily: FONT_FAMILY.bold, fontSize: 11, color: '#FF6422' },
+  levelLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: '#716B62' },
+  levelTrack: { height: 8, borderRadius: 4, backgroundColor: '#F3EFE6', overflow: 'hidden', flexDirection: 'row-reverse' },
   levelFill: { height: '100%', borderRadius: 4, overflow: 'hidden' },
 });

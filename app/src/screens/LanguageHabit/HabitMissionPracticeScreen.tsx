@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Mic, Square, X } from 'lucide-react-native';
 
@@ -140,11 +140,24 @@ export const HabitMissionPracticeScreen = () => {
 
   const isBusy = phase === 'uploading';
 
-  const exit = () => {
+  const exit = useCallback(() => {
     exitingRef.current = true;
     if (isRecording) stopRecording();
-    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'LanguageHabit' }] }));
-  };
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('LanguageHabit');
+    }
+  }, [isRecording, navigation]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      exit();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [exit]);
 
   return (
     <View style={styles.screen}>
@@ -226,9 +239,9 @@ export const HabitMissionPracticeScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FDFBF7',
     justifyContent: 'space-between',
-    paddingTop: 70,
+    paddingTop: 60,
     paddingBottom: 50,
   },
   closeBtn: {
@@ -236,19 +249,25 @@ const styles = StyleSheet.create({
     top: 54,
     left: 20,
     zIndex: 1,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   header: {
     alignItems: 'center',
     gap: 6,
   },
   activityName: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
   },
@@ -260,7 +279,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   timerText: {
-    color: COLORS.textSecondary,
+    color: '#716B62',
     fontFamily: FONT_FAMILY.medium,
     fontSize: 20,
   },
@@ -268,12 +287,17 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
   },
   recordBtnActive: {
-    backgroundColor: COLORS.error,
+    backgroundColor: '#EF4444',
   },
   studyArea: {
     flex: 1,
@@ -282,39 +306,49 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   studyTitle: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 20,
     textAlign: 'center',
   },
   studySubtitle: {
-    color: COLORS.textSecondary,
+    color: '#716B62',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     textAlign: 'center',
   },
   studyList: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#F0EBE3',
     padding: 18,
     gap: 10,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   studyLine: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.medium,
     fontSize: 15,
     textAlign: 'center',
   },
   studyReadyBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   studyReadyBtnText: {
-    color: COLORS.white,
+    color: '#FFFFFF',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },

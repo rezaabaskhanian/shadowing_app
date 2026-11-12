@@ -4,13 +4,16 @@ import {
   Image,
   ImageBackground,
   Modal,
+  Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BookOpen,
   Clapperboard,
@@ -39,6 +42,14 @@ import {
 } from 'lucide-react-native';
 import { type BentoItem } from '../components/BentoGrid';
 import { HomeGroup, type HomeGroupTab } from '../components/HomeGroup';
+import { HomeHeader } from '../components/home/HomeHeader';
+import { HomeHeroBanner } from '../components/home/HomeHeroBanner';
+import { HomeContinueCard } from '../components/home/HomeContinueCard';
+import { HomeQuickAccess } from '../components/home/HomeQuickAccess';
+import { HomeRecommendedShelf, type RecommendedSceneItem } from '../components/home/HomeRecommendedShelf';
+import { HomeDailyPlanBanner } from '../components/home/HomeDailyPlanBanner';
+import { HomeExploreCard } from '../components/home/HomeExploreCard';
+import { HomeVerbNoticeCard, HomeRetestNoticeCard } from '../components/home/HomeVerbNoticeCard';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY as SCENE_LEVEL_LABEL_KEY } from '../components/SceneListCard';
 import { ProgressRing } from '../components/ProgressRing';
 import { AppDrawer } from '../components/AppDrawer';
@@ -133,6 +144,7 @@ const getGreetingKey = (): string => {
 };
 
 export const HomeScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { scenes, reload: reloadScenes } = useScenes();
   const { language, setLanguage, t } = useLanguage();
@@ -432,6 +444,32 @@ export const HomeScreen = () => {
     (sc: { isLocked?: boolean }, idx: number) => !isSubscribed && (sc.isLocked || idx >= 4),
     [isSubscribed]
   );
+
+  const formatSceneLevel = React.useCallback(
+    (lvl?: string) => {
+      const l = (lvl || '').toLowerCase();
+      if (rtl) {
+        if (l === 'beginner' || l === 'starter' || l === 'a1' || l === 'a2') return 'مبتدی';
+        if (l === 'intermediate' || l === 'b1' || l === 'b2') return 'متوسط';
+        if (l === 'advanced' || l === 'c1' || l === 'c2') return 'پیشرفته';
+        if (l === 'proficient') return 'حرفه‌ای';
+        return 'مبتدی';
+      }
+      return lvl ? lvl.toUpperCase() : 'B1';
+    },
+    [rtl]
+  );
+
+  const recommendedSceneItems: RecommendedSceneItem[] = React.useMemo(() => {
+    return userLevelScenes.map((sc, index) => ({
+      id: sc.id,
+      title: sc.title,
+      level: formatSceneLevel(sc.level),
+      imageUri: sc.imageUri,
+      isLocked: isHomeSceneLocked(sc, index),
+      time: sc.time,
+    }));
+  }, [userLevelScenes, isHomeSceneLocked, formatSceneLevel]);
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fa' : 'en');
@@ -819,38 +857,24 @@ export const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 6 : 14),
+            paddingBottom: Math.max(insets.bottom + 104, 120),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER: بالا دکمه‌ی منو و کپسول‌های زبان/استریک، زیرش سلام و تیتر. */}
-        <View style={styles.header}>
-          <View style={styles.headerActions}>
-            {/* Drawer Trigger */}
-            <TouchableOpacity style={styles.menuBtn} onPress={() => setDrawerVisible(true)}>
-              <Menu size={20} color={COLORS.text} />
-            </TouchableOpacity>
-
-            <View style={styles.headerPills}>
-              {/* Language Selector */}
-              <TouchableOpacity style={styles.langBadge} onPress={toggleLanguage}>
-                <Text style={styles.langBadgeText}>{language.toUpperCase()}</Text>
-                <Globe size={13} color={COLORS.muted} />
-              </TouchableOpacity>
-
-              {/* Streak Badge — لمس برای توضیح معنای استریک */}
-              <TouchableOpacity style={styles.streakBadge} onPress={() => setStreakInfoVisible(true)}>
-                <Text style={styles.streakText}>{streak}</Text>
-                <Flame size={15} color={COLORS.secondary} fill={COLORS.secondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={[styles.greeting, rtl && styles.textRight]} numberOfLines={2}>
-            {t(getGreetingKey())}
-            {nameSuffix}
-          </Text>
-          <Text style={[styles.headerTitle, rtl && styles.textRight]}>{t('readyToStepIn')}</Text>
-        </View>
+        {/* 1. Header: بالا دکمه‌ی منو و کپسول‌های زبان و استریک */}
+        <HomeHeader
+          language={language}
+          onToggleLanguage={toggleLanguage}
+          streak={streak}
+          onOpenStreakInfo={() => setStreakInfoVisible(true)}
+          onOpenDrawer={() => setDrawerVisible(true)}
+          rtl={rtl}
+        />
 
         <AppDrawer
           visible={drawerVisible}
@@ -876,397 +900,105 @@ export const HomeScreen = () => {
           levelName={levelName}
         />
 
-        {/* مسیر آموزشی: «جلسه‌ی بعدی من» برای کسی که شروع کرده، و دعوت به شروع برای مبتدی‌ها */}
-        {homePath && (
-          <PathHomeCard
-            path={homePath}
-            onPress={() =>
-              homePath.started
-                ? navigation.navigate('PathHome', { level: homePath.level })
-                : setPathStartVisible(true)
+        {/* 2. Hero Section: بنر اختصاصی تحریریه‌ای Learn English by Living It */}
+        <HomeHeroBanner
+          onContinue={() => {
+            if (homePath?.started) {
+              navigation.navigate('PathHome', { level: homePath.level });
+            } else if (featuredScenario) {
+              openScene(featuredScenario);
+            } else {
+              navigation.navigate('CurriculumMap');
             }
-          />
-        )}
-
-        {/* TODAY'S MISSION / CONTINUE STORY SECTION — همان کارتِ همیشگی، فقط
-            وقتی /v1/mission/today چیزی برگردانده باشد شخصی‌سازی می‌شود؛ وگرنه
-            دقیقاً همان «ادامه داستان»ِ قدیمی (scenes[0]) است. */}
-        {/* کارت «مأموریت امروز» فقط برای کسی که هنوز مسیر را شروع نکرده؛ وگرنه با «جلسه‌ی
-            بعدی من» رقابت می‌کرد و کاربر نمی‌دانست کدام را بزند. */}
-        {featuredScenario && paths !== null && !homePath?.started && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>
-                {missionScene ? t('todaysMission') : t('continueStory')}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.storyCard}
-              onPress={() => openScene(featuredScenario)}
-            >
-              <ImageBackground
-                source={
-                  typeof featuredScenario.imageUri === 'string'
-                    ? { uri: featuredScenario.imageUri }
-                    : featuredScenario.imageUri
-                }
-                style={styles.storyImage}
-                imageStyle={styles.storyImageStyle}
-              >
-                <View style={styles.storyScrim} />
-
-                <View style={styles.storyContent}>
-                  {featuredScenario.category ? (
-                    // زدن روی دسته → تب صحنه‌ها با همین دسته فیلتر می‌شود
-                    <TouchableOpacity
-                      hitSlop={8}
-                      onPress={() => navigation.navigate('Scenes', { category: featuredScenario.category })}
-                    >
-                      <Text style={styles.storyCategory}>
-                        {SCENE_CATEGORY_LABEL_KEY[featuredScenario.category]
-                          ? t(SCENE_CATEGORY_LABEL_KEY[featuredScenario.category])
-                          : featuredScenario.category.toString().toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  <Text style={styles.storyTitle}>{featuredScenario.title}</Text>
-
-                  {missionScene && todaysMission && (
-                    <View style={styles.missionBadgesRow}>
-                      <View style={styles.missionBadge}>
-                        <Text style={styles.missionBadgeText}>{todaysMission.level}</Text>
-                      </View>
-                      <View style={styles.missionBadge}>
-                        <Clock size={12} color={COLORS.white} />
-                        <Text style={styles.missionBadgeText}>
-                          {todaysMission.estimated_minutes} {t('min')}
-                        </Text>
-                      </View>
-                      <View style={styles.missionBadge}>
-                        <Text style={styles.missionBadgeText}>
-                          {todaysMission.focus_skill === 'pronunciation'
-                            ? t('pronunciation')
-                            : todaysMission.focus_skill === 'fluency'
-                            ? t('fluency')
-                            : t('speaking')}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Progress Line */}
-                  <View style={styles.storyProgressBg}>
-                    <View
-                      style={[
-                        styles.storyProgressFill,
-                        { width: `${featuredScenario.progress || 0}%` },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* Play Circle CTA Overlay */}
-                <View style={styles.playOverlayBtn}>
-                  <Play size={22} color={COLORS.white} fill={COLORS.white} />
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* کارت «تمرین آزاد» موقتاً برداشته شد؛ بخش‌های پایین خانه همین دسترسی را می‌دهند (برای برگرداندن، کامنت را باز کن).
-        <View style={styles.freePracticeCard}>
-          <Text style={styles.homeCardTitle}>{t('homeFreePractice')}</Text>
-          <View style={styles.freePracticeRow}>
-            {[
-              { key: 'shadow', label: t('shadowing'), Icon: Mic, color: COLORS.primary, onPress: () => navigation.navigate('Scenes') },
-              { key: 'podcast', label: t('homePickPodcast'), Icon: Headphones, color: COLORS.secondary, onPress: () => navigation.navigate('PodcastList') },
-              { key: 'story', label: t('homePickStory'), Icon: BookOpen, color: COLORS.levelIntermediateBg, onPress: () => navigation.navigate('StoryList') },
-              { key: 'writing', label: t('homePickWriting'), Icon: PenLine, color: COLORS.levelAdvancedBg, onPress: () => navigation.navigate('WritingList') },
-            ].map((tile) => (
-              <TouchableOpacity key={tile.key} style={styles.freeTile} onPress={tile.onPress} activeOpacity={0.85}>
-                <View style={[styles.freeTileIcon, { backgroundColor: hexToRgba(tile.color, 0.12) }]}>
-                  <tile.Icon size={24} color={tile.color} />
-                </View>
-                <Text style={styles.freeTileLabel} numberOfLines={1}>
-                  {tile.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        */}
-
-        {/* کارت «سایه‌زنی امروز» موقتاً برداشته شد تا خانه بدون آن دیده شود (برای برگرداندن، این کامنت را باز کن).
-        <View style={styles.progressCard}>
-          <View style={styles.progressTopRow}>
-            <ProgressRing percent={todayPercent} size={88} strokeWidth={8} color={COLORS.primary}>
-              <Text style={styles.ringPercentText}>{todayPercent}%</Text>
-            </ProgressRing>
-            <View style={styles.progressTextCol}>
-              <Text style={styles.progressCardTitle}>{t('todaysShadowing')}</Text>
-              <Text style={styles.repsText}>
-                {todaySessions} / {DAILY_SESSIONS_GOAL} <Text style={styles.repsUnit}>{t('repsCount')}</Text>
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.statChipsRow}>
-            <View style={[styles.statChip, { backgroundColor: COLORS.primaryLight }]}>
-              <Repeat size={16} color={COLORS.primary} />
-              <Text style={styles.statChipValue}>{todaySessions}</Text>
-              <Text style={styles.statChipLabel}>{t('repsCount')}</Text>
-            </View>
-            <View style={[styles.statChip, { backgroundColor: COLORS.infoLight }]}>
-              <Clock size={16} color={COLORS.info} />
-              <Text style={styles.statChipValue}>{todayMinutes}</Text>
-              <Text style={styles.statChipLabel}>{t('min')}</Text>
-            </View>
-            <View style={[styles.statChip, { backgroundColor: COLORS.tertiaryLight }]}>
-              <Sparkles size={16} color={COLORS.tertiary} />
-              <Text style={styles.statChipValue}>{fluency}%</Text>
-              <Text style={styles.statChipLabel}>{t('fluency')}</Text>
-            </View>
-          </View>
-        </View>
-        */}
-
-        {/* مسیرهای فرعی (برنامه‌ی هدف، تست دوباره، تمرین فعل) لینک‌های متنی کوچک زیر کارت اصلی‌اند،
-            نه کارت‌های هم‌وزن آن؛ تا «ادامه‌ی جلسه» تنها اقدام اصلی صفحه بماند. */}
-        <View style={styles.sideLinks}>
-          <TouchableOpacity style={[styles.sideLink, rtl && styles.rowReverse]} onPress={() => navigation.navigate('GoalPlan')} activeOpacity={0.85}>
-            <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.primaryLight }]}>
-              <Flag size={16} color={COLORS.primary} />
-            </View>
-            <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>
-              {goalPlan
-                ? `${t('goalPlanTitle')} · ${t('goalPlanReadyOf')
-                    .replace('{a}', String(goalPlan.ready))
-                    .replace('{b}', String(goalPlan.in_plan_count))}`
-                : t('goalPlanHomeTitle')}
-            </Text>
-            {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
-          </TouchableOpacity>
-          {retestDue && (
-            <TouchableOpacity
-              style={[styles.sideLink, rtl && styles.rowReverse]}
-              onPress={() => {
-                track('retest_card_tap');
-                setPlacementModalVisible(true);
-              }}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.infoLight }]}>
-                <TrendingUp size={16} color={COLORS.info} />
-              </View>
-              <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>{t('retestLink')}</Text>
-              {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
-            </TouchableOpacity>
-          )}
-          {pendingVerb && (
-            <TouchableOpacity
-              style={[styles.sideLink, rtl && styles.rowReverse]}
-              onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.sideLinkIcon, { backgroundColor: COLORS.successLight }]}>
-                <Layers size={16} color={COLORS.success} />
-              </View>
-              <Text style={[styles.sideLinkText, rtl ? styles.textRight : styles.textLeft]} numberOfLines={1}>
-                {t('verbPendingTitle').replace('{verb}', pendingVerb.lemma)}
-              </Text>
-              {rtl ? <ChevronLeft size={16} color={COLORS.muted} /> : <ChevronRight size={16} color={COLORS.muted} />}
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* کارت‌های سریع «سایه‌زنی» و «لایتنر» برداشته شدند؛ هر دو در نوار پایین هستند. */}
-        {/* ویترین افقی صحنه‌های سطح کاربر (سناریوی ۱) */}
-        {userLevelScenes.length > 0 && (
-          <View style={styles.sceneShelf}>
-            <View style={styles.sceneShelfHeader}>
-              <View style={styles.sceneShelfTitleRow}>
-                <Text style={styles.sceneShelfTitle}>🎬 {t('worlds')}</Text>
-                <View
-                  style={[
-                    styles.sceneShelfLevelBadge,
-                    {
-                      backgroundColor:
-                        (LEVEL_BADGE_STYLE[difficultyToLevel(myLevel?.scene_level || 'beginner')] ||
-                          LEVEL_BADGE_STYLE.Beginner).bg,
-                    },
-                  ]}
-                >
-                  <Text style={styles.sceneShelfLevelBadgeText}>
-                    {t(
-                      SCENE_LEVEL_LABEL_KEY[difficultyToLevel(myLevel?.scene_level || 'beginner')] ||
-                        SCENE_LEVEL_LABEL_KEY.Beginner
-                    )}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.sceneShelfAllBtn}
-                onPress={() => navigation.navigate('CurriculumMap')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.sceneShelfAllText}>{t('viewFullPath')}</Text>
-                <ChevronLeft size={14} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.sceneShelfScroll}
-            >
-              {userLevelScenes.map((sc, index) => {
-                const locked = isHomeSceneLocked(sc, index);
-                return (
-                  <TouchableOpacity
-                    key={sc.id}
-                    style={styles.sceneShelfCard}
-                    activeOpacity={0.85}
-                    onPress={() => (locked ? navigation.navigate('Paywall') : openScene(sc))}
-                  >
-                    <View style={styles.sceneShelfImageWrapper}>
-                      <Image
-                        source={typeof sc.imageUri === 'string' ? { uri: sc.imageUri } : sc.imageUri}
-                        style={styles.sceneShelfImage}
-                        resizeMode="cover"
-                      />
-                      {locked ? (
-                        <View style={styles.sceneShelfLockBadge}>
-                          <Lock size={10} color={COLORS.white} />
-                          <Text style={styles.sceneShelfLockText}>{t('locked') || 'قفل'}</Text>
-                        </View>
-                      ) : sc.isCompleted ? (
-                        <View style={styles.sceneShelfDoneBadge}>
-                          <Check size={12} color={COLORS.white} strokeWidth={3} />
-                        </View>
-                      ) : null}
-                      {!!sc.time && (
-                        <View style={styles.sceneShelfTimeBadge}>
-                          <Text style={styles.sceneShelfTimeText}>{sc.time}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.sceneShelfCardTitle} numberOfLines={1}>
-                      {sc.title}
-                    </Text>
-                    {!!sc.category && (
-                      <Text style={styles.sceneShelfCategory} numberOfLines={1}>
-                        {SCENE_CATEGORY_LABEL_KEY[sc.category]
-                          ? t(SCENE_CATEGORY_LABEL_KEY[sc.category])
-                          : sc.category}
-                      </Text>
-                    )}
-                    {sc.progress > 0 && !sc.isCompleted && (
-                      <View style={styles.sceneShelfProgressBg}>
-                        <View style={[styles.sceneShelfProgressFill, { width: `${sc.progress}%` }]} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* دوره‌ی شروع برای مبتدیان */}
-        {isBeginner && courseLessons.length > 0 && (
-          <HomeGroup
-            title={t('courseTitle')}
-            tabs={[toTab(courseSection)]}
-            allLabel={t('homeSeeAll')}
-            rtl={rtl}
-            twoUp
-          />
-        )}
-
-        {/* پیشنهاد امروز: یک پادکست و یک داستان با عکس؛ هر کارت یک خط زیرعنوان یکدست دارد
-            (نوع · مدت یا فصل) تا کاربر بداند چرا اینجاست و چقدر وقت می‌برد. */}
-        {(todayPodcast || todayStory) && (
-          <View style={styles.todayPicksCard}>
-            <Text style={[styles.homeCardTitle, rtl ? styles.textRight : styles.textLeft]}>{t('homeForToday')}</Text>
-            <View style={[styles.todayPicksRow, rtl && styles.rowReverse]}>
-              {todayPodcast && (
-                <TouchableOpacity
-                  style={styles.todayPick}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('Podcast', { podcastId: todayPodcast.id, openedAt: Date.now() })}
-                >
-                  <ImageBackground
-                    source={uriImage(todayPodcast.cover_url) ?? undefined}
-                    style={styles.todayPickImage}
-                    imageStyle={styles.todayPickImageRadius}
-                  >
-                    <View style={[styles.todayPickKind, rtl ? styles.selfEnd : styles.selfStart, rtl && styles.rowReverse]}>
-                      <Headphones size={12} color={COLORS.white} />
-                      <Text style={styles.todayPickKindText}>{t('homePickPodcast')}</Text>
-                    </View>
-                  </ImageBackground>
-                  <View style={[styles.todayPickBody, rtl ? styles.alignEnd : styles.alignStart]}>
-                    <Text style={styles.todayPickTitle} numberOfLines={1}>
-                      {todayPodcast.title}
-                    </Text>
-                    <Text style={styles.todayPickSub} numberOfLines={1}>
-                      {t('homePickPodcast')}
-                      {todayPodcast.duration_seconds > 0
-                        ? ` · ${t('homePickMinutes').replace('{n}', String(Math.max(1, Math.round(todayPodcast.duration_seconds / 60))))}`
-                        : ''}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              {todayStory && (
-                <TouchableOpacity
-                  style={styles.todayPick}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('Story', { storyId: todayStory.next.id, openedAt: Date.now() })}
-                >
-                  <ImageBackground
-                    source={uriImage(todayStory.cover_url) ?? undefined}
-                    style={styles.todayPickImage}
-                    imageStyle={styles.todayPickImageRadius}
-                  >
-                    <View style={[styles.todayPickKind, rtl ? styles.selfEnd : styles.selfStart, rtl && styles.rowReverse]}>
-                      <BookOpen size={12} color={COLORS.white} />
-                      <Text style={styles.todayPickKindText}>{t('homePickStory')}</Text>
-                    </View>
-                    {/* اسم داستان روی خودِ عکس، روی سایه‌ی تیره‌ی پایین تا خوانا بماند */}
-                    <View style={[styles.todayPickOverlay, rtl ? styles.alignEnd : styles.alignStart]}>
-                      <Text style={styles.todayPickOverlayTitle} numberOfLines={1}>
-                        {todayStory.title}
-                      </Text>
-                    </View>
-                  </ImageBackground>
-                  <View style={[styles.todayPickBody, rtl ? styles.alignEnd : styles.alignStart]}>
-                    <Text style={styles.todayPickStoryTitle} numberOfLines={1}>
-                      {todayStory.next.title} · {t('storyChapterN').replace('{n}', String(todayStory.next.chapter_no || 1))}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
-        <HomeGroup
-          title={t('homeGroupLibrary')}
-          tabs={libraryTabs}
-          allLabel={t('homeSeeAll')}
+          }}
+          ctaText={rtl ? 'ادامه‌ی جلسه' : 'Continue Session'}
+          heroImageUri={featuredScenario?.imageUri}
           rtl={rtl}
-          defaultTabKey="podcast"
-          loading={!podcastsLoaded}
         />
-        <HomeGroup title={t('homeGroupPractice')} tabs={practiceTabs} allLabel={t('homeSeeAll')} rtl={rtl} />
 
-        {/* Bottom padding for tab bar */}
-        {/* نوار شناور پایین (۷۰ + فاصله‌ی ۱۶ + لبه‌ی گوشی) نباید روی کارت آخر بیفتد. */}
-        <View style={{ height: 170 }} />
+        {/* 3. Continue Learning Card: کارت در حال یادگیری با حلقه درصد پیشرفت */}
+        {featuredScenario && (
+          <HomeContinueCard
+            title={featuredScenario.title}
+            progressPercent={featuredScenario.progress || 35}
+            remainingMinutes={todaysMission?.estimated_minutes || 12}
+            imageUri={featuredScenario.imageUri}
+            onPress={() => openScene(featuredScenario)}
+            statusLabel={rtl ? 'در حال یادگیری' : 'Learning in progress'}
+            rtl={rtl}
+          />
+        )}
+
+        {/* 4. Quick Access Row: چهار کارت پاستلی دسترسی سریع */}
+        <HomeQuickAccess
+          onOpenShadowing={() => navigation.navigate('CurriculumMap')}
+          onOpenVocabulary={() => navigation.navigate('Leitner')}
+          onOpenPractice={() => navigation.navigate('LanguageHabit')}
+          onOpenProgress={() => setXpInfoVisible(true)}
+          rtl={rtl}
+        />
+
+        {/* 5. Recommended Scenarios: ویترین افقی سناریوهای پیشنهادی */}
+        {recommendedSceneItems.length > 0 && (
+          <HomeRecommendedShelf
+            title={rtl ? 'سناریوهای پیشنهادی' : 'Recommended Scenarios'}
+            scenes={recommendedSceneItems}
+            onOpenScene={(sc) => {
+              if (sc.isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                openScene(sc);
+              }
+            }}
+            onViewAll={() => navigation.navigate('CurriculumMap')}
+            rtl={rtl}
+          />
+        )}
+
+        {/* 6. Daily Plan / Habit Banner: بنر برنامه روزانه ۱۵ دقیقه‌ای */}
+        <HomeDailyPlanBanner
+          goalMinutes={15}
+          completedMinutes={6}
+          onPress={() => navigation.navigate('GoalPlan')}
+          onContinue={() => {
+            if (featuredScenario) {
+              openScene(featuredScenario);
+            } else {
+              navigation.navigate('GoalPlan');
+            }
+          }}
+          rtl={rtl}
+        />
+
+        {/* کارت‌های تعاملی پایش پیشرفت و چالش افعال چندمعنایی */}
+        {retestDue && (
+          <HomeRetestNoticeCard
+            onPress={() => {
+              track('retest_card_tap');
+              setPlacementModalVisible(true);
+            }}
+            rtl={rtl}
+          />
+        )}
+
+        {pendingVerb && (
+          <HomeVerbNoticeCard
+            verb={pendingVerb}
+            onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
+            rtl={rtl}
+          />
+        )}
+
+        {/* 7. Dedicated Content Library & Explore Gateway:
+            به‌جای نمایش کاتالوگ طولانی و شلوغ در خانه، کتابخانه مستقل با ۴ دسترسی سریع و لینک به دراور فراهم شده است */}
+        <HomeExploreCard
+          onOpenPodcasts={() => navigation.navigate('PodcastList')}
+          onOpenStories={() => navigation.navigate('StoryList')}
+          onOpenVideos={() => navigation.navigate('VideoClipList')}
+          onOpenSongs={() => navigation.navigate('SongList')}
+          onOpenAll={() => setDrawerVisible(true)}
+          rtl={rtl}
+        />
       </ScrollView>
 
       <PathStartSheet
@@ -1302,12 +1034,12 @@ export const HomeScreen = () => {
   );
 };
 
-// رنگ‌های طرح خانه: پس‌زمینه‌ی خاکستریِ خیلی روشن و کارت‌های سفید با کادر و سایه‌ی نرم.
-const HOME_BG = '#F7F7F9';
-const HOME_CARD_BORDER = '#EEEEF2';
+// رنگ‌های طرح جدید خانه: پس‌زمینه‌ی کرم/استخوانی طبیعی و کارت‌های با حاشیه گرم
+const HOME_BG = '#FDFBF7';
+const HOME_CARD_BORDER = '#F0EBE3';
 const HOME_CARD_SHADOW = {
   shadowColor: '#1A1D26',
-  shadowOpacity: 0.05,
+  shadowOpacity: 0.04,
   shadowRadius: 10,
   shadowOffset: { width: 0, height: 3 },
   elevation: 1,
@@ -1315,7 +1047,7 @@ const HOME_CARD_SHADOW = {
 
 const styles = StyleSheet.create({
   // بدون پس‌زمینه و سایه، هم‌خانواده‌ی بقیه‌ی دسته‌های خانه.
-  todayPicksCard: { gap: 10, marginBottom: 20 },
+  todayPicksCard: { gap: 10, marginBottom: 20, paddingHorizontal: 20 },
   homeCardTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 17, color: COLORS.text },
   todayPicksRow: { flexDirection: 'row', gap: 12 },
   todayPick: {
@@ -1353,20 +1085,8 @@ const styles = StyleSheet.create({
   selfEnd: { alignSelf: 'flex-end' },
   selfStart: { alignSelf: 'flex-start' },
   todayPickSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, lineHeight: 17, color: COLORS.muted },
-  freePracticeCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    padding: 16,
-    gap: 12,
-    marginBottom: 20,
-    ...SHADOWS.level1,
-  },
-  freePracticeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  freeTile: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
-  freeTileIcon: { width: 58, height: 58, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  freeTileLabel: { fontFamily: FONT_FAMILY.medium, fontSize: 13, color: COLORS.text },
   container: { flex: 1, backgroundColor: HOME_BG },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 44 },
+  scrollContent: { paddingHorizontal: 0, paddingTop: 44, paddingBottom: 115 },
   header: { marginBottom: 18 },
   greeting: { color: COLORS.muted, fontFamily: FONT_FAMILY.medium, fontSize: 12 },
   headerTitle: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 24, marginTop: 4 },
@@ -1395,7 +1115,7 @@ const styles = StyleSheet.create({
     borderColor: '#FCE3B4',
     backgroundColor: '#FFF6E3',
   },
-  sideLinks: { gap: 10, marginBottom: 22 },
+  sideLinks: { gap: 10, marginBottom: 22, paddingHorizontal: 20 },
   sideLink: {
     flexDirection: 'row',
     alignItems: 'center',

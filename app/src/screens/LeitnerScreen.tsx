@@ -112,7 +112,7 @@ export const LeitnerScreen = () => {
             }}
             activeOpacity={0.8}
           >
-            <Clock size={14} color={!showVerbs && dueOnly ? COLORS.white : COLORS.primary} />
+            <Clock size={14} color={!showVerbs && dueOnly ? '#FF6422' : '#716B62'} />
             <Text style={[styles.filterTabText, !showVerbs && dueOnly && styles.filterTabTextActive]}>
               {t('today')} ({dueCount})
             </Text>
@@ -126,8 +126,8 @@ export const LeitnerScreen = () => {
             }}
             activeOpacity={0.8}
           >
-            <Sparkles size={14} color={!showVerbs && !dueOnly ? COLORS.white : COLORS.tertiary} />
-            <Text style={[styles.filterTabText, !showVerbs && !dueOnly && styles.filterTabTextActive]}>
+            <Sparkles size={14} color={!showVerbs && !dueOnly ? '#059669' : '#716B62'} />
+            <Text style={[styles.filterTabText, !showVerbs && !dueOnly && styles.filterTabTextActiveGreen]}>
               {t('all')} ({box.length})
             </Text>
           </TouchableOpacity>
@@ -137,7 +137,7 @@ export const LeitnerScreen = () => {
             onPress={() => setExtraTab('verbs')}
             activeOpacity={0.8}
           >
-            <Layers size={14} color={extraTab === 'verbs' ? COLORS.white : COLORS.primary} />
+            <Layers size={14} color={extraTab === 'verbs' ? '#FF6422' : '#716B62'} />
             <Text style={[styles.filterTabText, extraTab === 'verbs' && styles.filterTabTextActive]}>{t('verbsTab')}</Text>
           </TouchableOpacity>
 
@@ -146,7 +146,7 @@ export const LeitnerScreen = () => {
             onPress={() => setExtraTab('idioms')}
             activeOpacity={0.8}
           >
-            <MessageCircle size={14} color={extraTab === 'idioms' ? COLORS.white : COLORS.primary} />
+            <MessageCircle size={14} color={extraTab === 'idioms' ? '#FF6422' : '#716B62'} />
             <Text style={[styles.filterTabText, extraTab === 'idioms' && styles.filterTabTextActive]}>{t('idiomsTab')}</Text>
           </TouchableOpacity>
         </View>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   revealText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
   backWord: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.textSecondary, marginBottom: 8, textAlign: 'center' },
-  screen: { flex: 1, backgroundColor: '#F7F7F9' },
+  screen: { flex: 1, backgroundColor: '#FDFBF7' },
   scrollContent: {
     flex: 1,
     paddingHorizontal: 20,
@@ -433,28 +433,53 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20,
   },
-  filterRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 18,
+    backgroundColor: '#F3EFE6',
+    borderRadius: 18,
+    padding: 4,
+  },
   filterTab: {
     flex: 1,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 4,
-    backgroundColor: COLORS.white,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#EEEEF2',
+    borderColor: 'transparent',
   },
   filterTabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  filterTabActiveGreen: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterTabText: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 12 },
+  filterTabActiveGreen: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  filterTabText: { color: '#716B62', fontFamily: FONT_FAMILY.medium, fontSize: 12 },
   filterTabTextActive: {
-    color: COLORS.white,
+    color: '#FF6422',
+    fontFamily: FONT_FAMILY.bold,
+  },
+  filterTabTextActiveGreen: {
+    color: '#059669',
+    fontFamily: FONT_FAMILY.bold,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -531,14 +556,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: '#EEEEF2',
+    borderColor: '#F0EBE3',
     padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#1A1D26',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.04,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
   cardFace: {
@@ -547,16 +572,16 @@ const styles = StyleSheet.create({
   // پس‌زمینه‌ی خودِ کارت مات می‌ماند و رنگ بنفش کم‌رنگ روی یک لایه‌ی جدا می‌آید؛
   // پس‌زمینه‌ی نیمه‌شفاف روی اندروید سایه‌ی elevation را به‌صورت قاب خاکستری نشان می‌داد.
   cardBack: {
-    borderColor: COLORS.primary,
+    borderColor: '#FF6422',
   },
   cardBackTint: {
     ...StyleSheet.absoluteFill,
     borderRadius: BORDER_RADIUS.xl,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF7F2',
   },
   word: { color: COLORS.text, fontFamily: FONT_FAMILY.bold, fontSize: 34, textAlign: 'center' },
   meaning: {
-    color: COLORS.primary,
+    color: '#FF6422',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 24,
     textAlign: 'center',
@@ -571,15 +596,15 @@ const styles = StyleSheet.create({
   levelBadge: {
     position: 'absolute',
     top: 20,
-    backgroundColor: '#FFF0E8',
+    backgroundColor: '#FFF4EE',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#FAD3C4',
+    borderColor: '#FAD8C7',
   },
   levelText: {
-    color: COLORS.primary,
+    color: '#FF6422',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 11,
   },
@@ -591,11 +616,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.backgroundSoft,
+    borderColor: '#F0EBE3',
+    backgroundColor: '#FAF7F2',
   },
   dueBadgeNow: {
-    borderColor: COLORS.primary,
+    borderColor: '#FF6422',
   },
   dueText: {
     color: COLORS.textSecondary,
@@ -603,7 +628,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   dueTextNow: {
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   swipeLabel: {
     position: 'absolute',
@@ -616,14 +641,14 @@ const styles = StyleSheet.create({
   },
   knowLabel: {
     right: 20,
-    borderColor: COLORS.tertiary,
-    backgroundColor: COLORS.tertiaryLight,
+    borderColor: '#059669',
+    backgroundColor: '#ECFDF5',
     transform: [{ rotate: '12deg' }],
   },
   forgotLabel: {
     left: 20,
-    borderColor: COLORS.error,
-    backgroundColor: 'rgba(186,26,26,0.1)',
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
     transform: [{ rotate: '-12deg' }],
   },
   swipeLabelText: {
@@ -641,17 +666,17 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   knewBtn: {
-    backgroundColor: COLORS.tertiary,
+    backgroundColor: '#059669',
   },
   forgotBtn: {
-    backgroundColor: COLORS.error,
+    backgroundColor: '#DC2626',
   },
   actionText: {
     color: COLORS.white,

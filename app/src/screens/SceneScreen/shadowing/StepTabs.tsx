@@ -4,6 +4,7 @@ import { Check } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
+import { SHADOWS } from '../../../theme/elevation';
 
 type StepKey = 'tabListen' | 'tabShadow' | 'tabRecord' | 'tabCompare';
 const STEP_TABS: { num: 1 | 2 | 3 | 4; key: StepKey }[] = [
@@ -13,20 +14,9 @@ const STEP_TABS: { num: 1 | 2 | 3 | 4; key: StepKey }[] = [
   { num: 4, key: 'tabCompare' },
 ];
 
-// هر مرحله رنگ فعالِ خودش را دارد — نه فقط برای تنوع بصری، بلکه تا کاربر با
-// یه نگاه به رنگ تب، بدون خوندن متن بفهمه کدوم مرحله‌ست: آبی (دریافتی/گوش
-// دادن) → بنفشِ برند (تکرار) → نارنجی (ضبط) → سبز (همون رنگِ «تکمیل/نتیجه‌ی
-// خوب» که جای دیگه‌ی اپ هم برای مقایسه/امتیاز استفاده می‌شه).
-//
-// آبی و نارنجیِ خودِ پالت (COLORS.info و COLORS.secondary) عمداً استفاده
-// نشدند: هر دو برای بج/آیکونِ کوچیک روی پس‌زمینه‌ی خیلی کم‌رنگ طراحی شده‌اند،
-// و به‌عنوان متن یا پس‌زمینه‌ی توپر با آیکونِ سفید کنتراستشان با سفید کمتر از
-// حد قابل‌قبول است (آبی ~۳.۷:۱ ، نارنجی ~۲:۱). این‌جا چون هم به‌عنوان متن روی
-// سفید هم پس‌زمینه‌ی توپرِ زیرِ آیکون سفید استفاده می‌شوند، از نسخه‌ی تیره‌ترِ
-// همون رنگ‌ها استفاده شده (هر دو بالای ۵:۱، هم‌تراز با primary/tertiary).
 const STEP_LISTEN_BLUE = '#2453DB';
 const STEP_RECORD_ORANGE = COLORS.primary;
-const STEP_COMPARE_GREEN = '#2F6B57';
+const STEP_COMPARE_GREEN = '#059669';
 
 export const STEP_ACCENT_COLOR: Record<number, string> = {
   0: STEP_LISTEN_BLUE,
@@ -35,20 +25,16 @@ export const STEP_ACCENT_COLOR: Record<number, string> = {
   3: STEP_COMPARE_GREEN,
 };
 
-// نسخه‌ی کم‌رنگِ همون رنگ‌ها، برای پس‌زمینه‌ی نرم پشت دکمه‌ها/چیپ‌های فعالِ
-// داخل هر مرحله (همون کاری که COLORS.primaryLight برای بنفش می‌کرد). این‌جا
-// خودِ توکن‌های info/secondary مشکلی ندارند چون فقط پس‌زمینه‌ی رقیقند، نه متن.
 export const STEP_ACCENT_LIGHT_COLOR: Record<number, string> = {
   0: 'rgba(36, 83, 219, 0.10)',
-  1: COLORS.primaryLight,
-  2: COLORS.primaryLight,
-  3: 'rgba(47, 107, 87, 0.12)',
+  1: 'rgba(255, 100, 34, 0.12)',
+  2: 'rgba(255, 100, 34, 0.12)',
+  3: 'rgba(5, 150, 105, 0.12)',
 };
 
 /**
- * نوار تب‌های پیوسته‌ی ۴مرحله. در فارسی برعکس نمایش داده می‌شود (RTL) چون
- * ترتیب چیدمان بصری باید با جهت متن رابط هماهنگ باشد، ولی `activeStepIndex`
- * که به بیرون می‌رود همیشه بر همان شماره‌گذاری منطقی ۰..۳ است.
+ * نوار تب‌های پیوسته‌ی ۴ مرحله (Listen / Shadow / Record / Compare)
+ * طراحی مدرن با پیل‌های نرم و برجسته (Segmented Pill Tabs)
  */
 export const StepTabs: React.FC<{
   language: string;
@@ -60,31 +46,39 @@ export const StepTabs: React.FC<{
   const orderedStepTabs = language === 'fa' ? [...STEP_TABS].reverse() : STEP_TABS;
 
   return (
-    <View style={styles.segmentedTabsRow}>
+    <View style={styles.segmentedContainer}>
       {orderedStepTabs.map((st) => {
         const stepIdx = st.num - 1;
         const active = activeStepIndex === stepIdx;
         const done = completedSteps.includes(stepIdx);
         const accentColor = STEP_ACCENT_COLOR[stepIdx] ?? COLORS.primary;
+
         return (
           <TouchableOpacity
             key={st.num}
-            activeOpacity={0.7}
-            style={styles.segmentedTab}
+            activeOpacity={0.8}
+            style={[styles.segmentedTab, active && styles.segmentedTabActive]}
             onPress={() => onChangeStep(stepIdx)}
           >
-            <View style={styles.segmentedTabLabelRow}>
-              {done && <Check size={12} color={COLORS.tertiary} />}
-              <Text
+            {done ? (
+              <Check size={13} color="#059669" strokeWidth={2.5} />
+            ) : (
+              <View
                 style={[
-                  styles.segmentedTabText,
-                  active ? [styles.segmentedTabTextActive, { color: accentColor }] : null,
+                  styles.stepDot,
+                  { backgroundColor: active ? accentColor : '#C5BEB3' },
                 ]}
-              >
-                {t(st.key)}
-              </Text>
-            </View>
-            {active && <View style={[styles.segmentedTabIndicator, { backgroundColor: accentColor }]} />}
+              />
+            )}
+            <Text
+              style={[
+                styles.segmentedTabText,
+                active && [styles.segmentedTabTextActive, { color: accentColor }],
+              ]}
+              numberOfLines={1}
+            >
+              {t(st.key)}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -93,36 +87,38 @@ export const StepTabs: React.FC<{
 };
 
 const styles = StyleSheet.create({
-  segmentedTabsRow: {
+  segmentedContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    marginBottom: 14,
+    backgroundColor: '#F3EFE6',
+    borderRadius: 18,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
   },
   segmentedTab: {
     flex: 1,
-    paddingTop: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentedTabLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 14,
+    gap: 5,
+  },
+  segmentedTabActive: {
+    backgroundColor: '#FFFFFF',
+    ...SHADOWS.level1,
+  },
+  stepDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   segmentedTabText: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 13,
+    color: '#7A7265',
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12.5,
   },
   segmentedTabTextActive: {
     fontFamily: FONT_FAMILY.bold,
-  },
-  segmentedTabIndicator: {
-    marginTop: 10,
-    marginBottom: -1,
-    height: 3,
-    width: '70%',
-    borderRadius: 2,
   },
 });

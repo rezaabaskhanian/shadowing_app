@@ -146,7 +146,7 @@ export const TopicListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FDFBF7',
     paddingHorizontal: SPACING.l,
   },
   header: {
@@ -161,10 +161,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.s,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   center: {
     flex: 1,

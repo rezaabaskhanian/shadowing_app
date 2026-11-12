@@ -48,6 +48,7 @@ import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
 import { useNotifications } from '../data/NotificationContext';
+import { ConfirmModal } from './ConfirmModal';
 import { useScenes } from '../data/ScenesContext';
 import { useToast } from '../data/ToastContext';
 import { getMyPoints } from '../api/submissions';
@@ -104,6 +105,7 @@ export const AppDrawer = ({
   const { scenes } = useScenes();
   const toast = useToast();
   const [savingLevel, setSavingLevel] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   // انتخاب سطح بالاتر از نتیجه‌ی تست مجاز است (محدودیت سطح آموزشی است نه
   // پولی)، فقط یک هشدار کوتاه می‌دهیم.
@@ -169,9 +171,9 @@ export const AppDrawer = ({
     }
   }, [modalVisible, translateX]);
 
-  // ناوبری از دراور، خودِ visible رو نمی‌بنده؛ فقط چون فوکوس این صفحه از دست میره
-  // مودال مخفی میشه و با برگشت به این صفحه دوباره باز میشه.
+  // ناوبری از دراور، خودِ دراور را می‌بندد تا پنجره‌ی Modal نیتیو روی صفحه باز نماند.
   const go = (screen: string, params?: object) => {
+    onClose();
     navigation.navigate(screen, params);
   };
 
@@ -643,10 +645,7 @@ export const AppDrawer = ({
           <TouchableOpacity
             style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
-            onPress={() => {
-              onClose();
-              logout();
-            }}
+            onPress={() => setLogoutModalVisible(true)}
           >
             <LogOut color={COLORS.error} size={18} />
             <Text style={[styles.rowText, styles.logoutText]}>{t('logout')}</Text>
@@ -654,6 +653,22 @@ export const AppDrawer = ({
           </ScrollView>
         </Animated.View>
       </View>
+
+      <ConfirmModal
+        visible={logoutModalVisible}
+        icon={<LogOut color={COLORS.white} size={26} />}
+        color="#EF4444"
+        title={t('logout')}
+        body={rtl ? 'آیا از خروج از حساب کاربری اطمینان دارید؟' : 'Are you sure you want to log out of your account?'}
+        confirmLabel={t('logout')}
+        cancelLabel={t('cancel')}
+        onConfirm={() => {
+          setLogoutModalVisible(false);
+          onClose();
+          logout();
+        }}
+        onCancel={() => setLogoutModalVisible(false)}
+      />
     </Modal>
   );
 };
@@ -675,7 +690,7 @@ const styles = StyleSheet.create({
   drawer: {
     width: DRAWER_WIDTH,
     height: '100%',
-    backgroundColor: '#FBFAF7',
+    backgroundColor: '#FDFBF7',
   },
   drawerScroll: {
     flex: 1,
@@ -702,7 +717,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 16,
   },
-  avatarCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFEFE6', borderWidth: 2, borderColor: '#FFE1D2', alignItems: 'center', justifyContent: 'center' },
+  avatarCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFF4EE', borderWidth: 2, borderColor: '#FAD8C7', alignItems: 'center', justifyContent: 'center' },
   userName: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
@@ -720,16 +735,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: COLORS.white,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#EEEEF2',
+    borderColor: '#F0EBE3',
     padding: 14,
     marginBottom: 16,
     shadowColor: '#1A1D26',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   pointsIconWrap: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#FFF4DE', alignItems: 'center', justifyContent: 'center' },
   pointsValue: {
@@ -743,7 +758,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  dividerLine: { height: 1, backgroundColor: '#ECEAE4', marginVertical: 12 },
+  dividerLine: { height: 1, backgroundColor: '#F0EBE3', marginVertical: 12 },
   groupTitle: {
     color: COLORS.muted,
     fontFamily: FONT_FAMILY.semiBold,

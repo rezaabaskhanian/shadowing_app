@@ -49,6 +49,15 @@ interface SceneIntroScreenProps {
  * هات‌اسپات‌ها/جملات/دقیقه، بنر روش ۴مرحله‌ای، پیش‌نمایش دیالوگ‌ها و دکمه‌ی
  * ورود به صحنه.
  */
+const SCENE_REAL_PHOTOS = [
+  'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80', // Airport
+  'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80', // Cafe
+  'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80', // City
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80', // Hotel
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80', // Shopping
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80', // Restaurant
+];
+
 export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   scenario,
   dialogueItems,
@@ -119,6 +128,32 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
     Share.share({ message: scenario?.title || 'Shadow' }).catch(() => {});
   };
 
+  const resolvedCoverSource = React.useMemo(() => {
+    if (coverImage && typeof coverImage === 'object' && (coverImage as any).uri && (coverImage as any).uri.startsWith('http')) {
+      return coverImage;
+    }
+    const title = (scenario?.title || '').toLowerCase();
+    if (title.includes('airport') || title.includes('flight') || title.includes('plane') || title.includes('فرودگاه')) {
+      return { uri: SCENE_REAL_PHOTOS[0] };
+    }
+    if (title.includes('cafe') || title.includes('coffee') || title.includes('کافه')) {
+      return { uri: SCENE_REAL_PHOTOS[1] };
+    }
+    if (title.includes('city') || title.includes('london') || title.includes('street') || title.includes('شهر')) {
+      return { uri: SCENE_REAL_PHOTOS[2] };
+    }
+    if (title.includes('hotel') || title.includes('reception') || title.includes('هتل')) {
+      return { uri: SCENE_REAL_PHOTOS[3] };
+    }
+    if (title.includes('shop') || title.includes('clothes') || title.includes('خرید')) {
+      return { uri: SCENE_REAL_PHOTOS[4] };
+    }
+    if (title.includes('restaur') || title.includes('food') || title.includes('رستوران')) {
+      return { uri: SCENE_REAL_PHOTOS[5] };
+    }
+    return coverImage || { uri: SCENE_REAL_PHOTOS[1] };
+  }, [coverImage, scenario?.title]);
+
   return (
     <View style={styles.container}>
       <AudioPlayer
@@ -165,7 +200,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
       >
         {/* Cover Hero Banner */}
         <View style={[styles.introCoverWrapper, { height: screenHeight / 3 }]}>
-          <ImageBackground source={coverImage} style={styles.introCover}>
+          <ImageBackground source={resolvedCoverSource} style={styles.introCover}>
             <View style={styles.introCoverScrim} />
           </ImageBackground>
         </View>
@@ -454,12 +489,17 @@ const styles = StyleSheet.create({
   // مثلث پخش در فارسی رو به چپ (جهت «جلو»).
   flipX: { transform: [{ scaleX: -1 }] },
   infoCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     padding: 16,
     marginBottom: 16,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   infoCardHeader: {
     flexDirection: 'row',
@@ -470,14 +510,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF1EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   infoCardTitle: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
-    color: COLORS.text,
+    color: '#191C21',
   },
   infoCardBody: {
     marginTop: 12,
@@ -486,7 +526,7 @@ const styles = StyleSheet.create({
   grammarTopic: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
-    color: COLORS.primary,
+    color: '#FF6422',
     marginTop: 1,
   },
   grammarExplanationRow: {
@@ -499,13 +539,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     lineHeight: 22,
-    color: COLORS.textSecondary,
+    color: '#697082',
   },
   grammarAudioBtn: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF1EB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -513,24 +553,26 @@ const styles = StyleSheet.create({
   grammarExamplesLabel: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
-    color: COLORS.muted,
+    color: '#8E95A5',
     marginTop: 2,
   },
   grammarExample: {
-    backgroundColor: '#F6F4F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    backgroundColor: '#FAF7F2',
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#F2EDE4',
   },
   grammarExampleText: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 14,
-    color: COLORS.text,
+    color: '#191C21',
   },
   grammarExampleTranslation: {
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#697082',
     marginTop: 2,
   },
   wordGroup: {
@@ -544,7 +586,7 @@ const styles = StyleSheet.create({
   wordGroupName: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#697082',
   },
   wordChips: {
     flexDirection: 'row',
@@ -553,9 +595,9 @@ const styles = StyleSheet.create({
   },
   wordChip: {
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#ECE8E0',
+    borderColor: '#F0EBE3',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -563,22 +605,22 @@ const styles = StyleSheet.create({
   wordChipWord: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
-    color: COLORS.text,
+    color: '#191C21',
   },
   wordChipMeaning: {
     fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#697082',
     marginTop: 1,
   },
   wordsToggle: {
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 12,
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FDFBF7',
   },
   introScroll: {
     paddingHorizontal: 20,
@@ -597,7 +639,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(15, 20, 28, 0.75)',
+    backgroundColor: 'rgba(25, 28, 33, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -608,7 +650,7 @@ const styles = StyleSheet.create({
   },
   introCoverWrapper: {
     height: 240,
-    borderRadius: 28,
+    borderRadius: 26,
     overflow: 'hidden',
     marginTop: 8,
     marginBottom: 20,
@@ -660,13 +702,13 @@ const styles = StyleSheet.create({
   },
   introTitle: {
     flex: 1,
-    color: COLORS.text,
+    color: '#191C21',
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 28,
+    fontSize: 27,
     letterSpacing: -0.5,
   },
   introDesc: {
-    color: COLORS.textSecondary,
+    color: '#697082',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     lineHeight: 22,
@@ -678,30 +720,34 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   statNumber: {
-    color: COLORS.text,
+    color: '#191C21',
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 20,
+    fontSize: 21,
   },
   statLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.regular,
-    fontSize: 12,
+    color: '#8E95A5',
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
     marginTop: 2,
   },
   conversationsLabel: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
-    letterSpacing: 1,
+    color: '#697082',
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
     marginBottom: 12,
   },
   conversationsList: {
@@ -712,28 +758,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   convNumCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF1EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   convTitle: {
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
+    color: '#191C21',
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
     marginBottom: 4,
   },
   convFaTitle: {
-    color: COLORS.textSecondary,
+    color: '#697082',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
   },
@@ -745,18 +796,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   moreSentencesText: {
-    color: COLORS.textSecondary,
+    color: '#697082',
     fontFamily: FONT_FAMILY.semiBold,
     fontSize: 13,
   },
   tipBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFF9F5',
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#FFEADF',
     gap: 12,
     marginBottom: 24,
   },
@@ -764,18 +815,18 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(245, 166, 35, 0.14)',
+    backgroundColor: '#FFE5D6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   tipTitle: {
-    color: COLORS.text,
+    color: '#191C21',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
     marginBottom: 4,
   },
   tipText: {
-    color: COLORS.textSecondary,
+    color: '#697082',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     lineHeight: 20,
@@ -784,21 +835,25 @@ const styles = StyleSheet.create({
   ctaBar: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FDFBF7',
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: '#F0EBE3',
   },
   enterCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     borderRadius: 28,
     height: 56,
     gap: 10,
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
   enterCtaText: {
-    color: COLORS.white,
+    color: '#FFFFFF',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
   },
@@ -813,17 +868,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   audioFailText: {
-    color: COLORS.textSecondary,
+    color: '#697082',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
   },
   audioRetryText: {
-    color: COLORS.primary,
+    color: '#FF6422',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
   },
   enterCtaBtnLocked: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
   },
   lockedCard: {
     backgroundColor: '#FFF7F2',
@@ -840,7 +895,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -848,7 +903,7 @@ const styles = StyleSheet.create({
   lockedCardTitle: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 17,
-    color: COLORS.primaryDark,
+    color: '#191C21',
     textAlign: 'center',
   },
   lockedCardDesc: {
@@ -861,7 +916,7 @@ const styles = StyleSheet.create({
   },
   lockedCardBtn: {
     marginTop: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     paddingHorizontal: 20,
     paddingVertical: 11,
     borderRadius: 24,
@@ -869,6 +924,6 @@ const styles = StyleSheet.create({
   lockedCardBtnText: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
-    color: COLORS.white,
+    color: '#FFFFFF',
   },
 });

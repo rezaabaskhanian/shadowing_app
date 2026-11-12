@@ -11,7 +11,7 @@ import {
   createBottomTabNavigator,
   BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
-import { AudioLines, CircleUserRound, House, Layers, TrendingUp } from 'lucide-react-native';
+import { AudioLines, BarChart2, CircleUserRound, House, Layers, Settings, TrendingUp } from 'lucide-react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -28,6 +28,7 @@ import {
   ProfileScreen,
   ScenesScreen,
 } from '../screens/Placeholders';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { LeitnerScreen } from '../screens/LeitnerScreen';
 import { SceneScreen } from '../screens/SceneScreen';
 import { SubmitSceneScreen } from '../screens/SubmitSceneScreen';
@@ -116,6 +117,7 @@ const FreshInterviewSession = freshPerOpen(InterviewSessionScreen);
 const FreshSpecialtyField = freshPerOpen(SpecialtyFieldScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 const FreshPodcastDictation = freshPerOpen(PodcastDictationScreen);
+const FreshGoalMap = freshPerOpen(GoalMapScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
@@ -168,22 +170,21 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'PodcastMyVersion',
   'Paywall',
   'TokenTopup',
-  'ProfileEdit',
   'ToastDemo',
   'RealtimePoC',
 ];
 
 // هر تب رنگ خودش را دارد؛ وقتی انتخاب می‌شود، آیکون و پس‌زمینه‌ی کم‌رنگش به
 // همین رنگ درمی‌آیند (خانه همان بنفشِ اصلی اپ است).
-const TAB_META: Record<string, { Icon: typeof House; color: string }> = {
-  Progress: { Icon: TrendingUp, color: COLORS.tertiary },
-  Leitner: { Icon: Layers, color: COLORS.info },
-  Home: { Icon: House, color: COLORS.primary },
-  Scenes: { Icon: AudioLines, color: COLORS.warning },
-  Profile: { Icon: CircleUserRound, color: COLORS.pink },
+const TAB_META: Record<string, { Icon: any; color: string }> = {
+  Settings: { Icon: Settings, color: '#FF6422' },
+  Progress: { Icon: BarChart2, color: '#FF6422' },
+  Home: { Icon: House, color: '#FF6422' },
+  Scenes: { Icon: AudioLines, color: '#FF6422' },
+  Profile: { Icon: CircleUserRound, color: '#FF6422' },
 };
 
-/** یک تبِ معمولی: با انتخاب شدن، پس‌زمینه‌ی رنگی نرم ظاهر و آیکون کمی بزرگ می‌شود. */
+/** یک تبِ معمولی با رنگ نارنجی برای حالت فعال و رنگ خاکستری برای حالت غیرفعال */
 const TabButton = ({
   routeName,
   label,
@@ -195,31 +196,25 @@ const TabButton = ({
   isFocused: boolean;
   onPress: () => void;
 }) => {
-  const { Icon, color } = TAB_META[routeName] || TAB_META.Home;
-  const focus = useSharedValue(isFocused ? 1 : 0);
-  React.useEffect(() => {
-    focus.value = withTiming(isFocused ? 1 : 0, { duration: 220 });
-  }, [isFocused, focus]);
-
-  // رنگ بیرون از worklet حساب می‌شود؛ صدا زدن تابع معمولی JS داخل
-  // useAnimatedStyle (روی UI thread) کرش «Tried to synchronously call a Remote Function» می‌دهد.
-  const pillColor = hexToRgba(color, 0.14);
-  const pillStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(focus.value, [0, 1], ['transparent', pillColor]),
-    transform: [{ scale: 0.9 + focus.value * 0.1 }],
-  }));
+  const { Icon } = TAB_META[routeName] || TAB_META.Home;
+  const activeColor = '#FF6422';
+  const inactiveColor = '#8E95A5';
 
   return (
-    <TouchableOpacity onPress={onPress} style={styles.tabItem} activeOpacity={0.7}>
-      <Animated.View style={[styles.iconContainer, pillStyle]}>
+    <TouchableOpacity onPress={onPress} style={styles.tabItem} activeOpacity={0.75}>
+      <View style={styles.iconContainer}>
         <Icon
-          color={isFocused ? color : COLORS.textSecondary}
-          size={21}
-          strokeWidth={isFocused ? 2.4 : 1.8}
+          color={isFocused ? activeColor : inactiveColor}
+          size={22}
+          strokeWidth={isFocused ? 2.4 : 1.9}
         />
-      </Animated.View>
+      </View>
       <Text
-        style={[styles.tabLabel, isFocused && styles.activeLabel, isFocused && { color }]}
+        style={[
+          styles.tabLabel,
+          { color: isFocused ? activeColor : inactiveColor },
+          isFocused && styles.activeLabel,
+        ]}
         numberOfLines={1}
       >
         {label}
@@ -228,40 +223,32 @@ const TabButton = ({
   );
 };
 
-/**
- * دکمه‌ی وسطِ خانه: انتخاب‌نشده سفید با آیکون بنفش، انتخاب‌شده بنفشِ پُر با
- * آیکون سفید و کمی بزرگ‌تر (با فنر).
- */
+/** دکمه‌ی وسطِ خانه: دایره‌ی نارنجی شناور در حالت فعال، مطابق رفرنس */
 const HomeTabButton = ({ label, isFocused, onPress }: { label: string; isFocused: boolean; onPress: () => void }) => {
-  const focus = useSharedValue(isFocused ? 1 : 0);
-  React.useEffect(() => {
-    focus.value = withSpring(isFocused ? 1 : 0, { damping: 14, stiffness: 180 });
-  }, [isFocused, focus]);
-
-  const circleStyle = useAnimatedStyle(() => ({
-    // در حالت غیرفعال خنثی (نه نارنجی)؛ وگرنه کنار تب فعالِ دیگر، دو تب فعال دیده می‌شد.
-    backgroundColor: interpolateColor(focus.value, [0, 1], [COLORS.surface, COLORS.primary]),
-    borderColor: interpolateColor(focus.value, [0, 1], [COLORS.border, COLORS.background]),
-    transform: [{ scale: 0.94 + focus.value * 0.12 }],
-  }));
+  const activeColor = '#FF6422';
+  const inactiveColor = '#8E95A5';
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.centerTabItem} activeOpacity={0.85}>
-      <Animated.View style={[styles.centerCircle, circleStyle]}>
+      <View style={[styles.centerCircle, isFocused ? styles.centerCircleActive : styles.centerCircleIdle]}>
         <House
-          color={isFocused ? COLORS.white : COLORS.textSecondary}
+          color={isFocused ? '#FFFFFF' : inactiveColor}
           size={24}
-          strokeWidth={isFocused ? 2.4 : 2}
-          fill={isFocused ? hexToRgba(COLORS.white, 0.25) : 'transparent'}
+          strokeWidth={2.4}
         />
-      </Animated.View>
-      <Text style={[styles.tabLabel, styles.centerLabel, !isFocused && styles.centerLabelIdle]}>{label}</Text>
+      </View>
+      <Text style={[styles.tabLabel, { color: isFocused ? activeColor : inactiveColor, fontFamily: FONT_FAMILY.bold }]}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 };
 
+const VISIBLE_TAB_ROUTES = ['Settings', 'Progress', 'Home', 'Scenes', 'Profile'];
+
 const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
+  const rtl = language === 'fa';
 
   // Hide tab bar on detail/flow screens (scene practice, scene submission)
   const currentRouteName = state.routes[state.index]?.name;
@@ -273,7 +260,7 @@ const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
     <View style={styles.tabBarWrapper}>
       <View style={styles.tabBarContainer}>
         {state.routes.map((route, index) => {
-          if (HIDDEN_TAB_BAR_ROUTES.includes(route.name)) return null;
+          if (!VISIBLE_TAB_ROUTES.includes(route.name)) return null;
 
           const isFocused = state.index === index;
           const isHome = route.name === 'Home';
@@ -292,20 +279,20 @@ const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
 
           let labelText = '';
           switch (route.name) {
-            case 'Progress':
-              labelText = t('progress');
+            case 'Settings':
+              labelText = rtl ? 'تنظیمات' : 'Settings';
               break;
-            case 'Leitner':
-              labelText = t('leitner');
+            case 'Progress':
+              labelText = rtl ? 'آمار' : 'Stats';
               break;
             case 'Home':
-              labelText = t('home');
+              labelText = rtl ? 'خانه' : 'Home';
               break;
             case 'Scenes':
-              labelText = t('shadowing');
+              labelText = rtl ? 'تمرین صدا' : 'Voice Practice';
               break;
             case 'Profile':
-              labelText = t('profile');
+              labelText = rtl ? 'حساب من' : 'My Account';
               break;
             default:
               labelText = route.name;
@@ -340,11 +327,18 @@ export const AppNavigator = () => {
         headerShown: false,
       }}
     >
+      <Tab.Screen name="Settings" component={SettingsScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Leitner" component={LeitnerScreen} />
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Scenes" component={ScenesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Leitner"
+        component={LeitnerScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
       <Tab.Screen
         name="Shadowing"
         component={SceneScreen}
@@ -397,7 +391,7 @@ export const AppNavigator = () => {
       <Tab.Screen name="VerbDetail" component={VerbDetailScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="VerbQuiz" component={VerbQuizScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="GoalPlan" component={GoalPlanScreen} options={{ tabBarButton: () => null }} />
-      <Tab.Screen name="GoalMap" component={GoalMapScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="GoalMap" component={FreshGoalMap} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="VerbSpeak" component={VerbSpeakScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="TopicList" component={TopicListScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="TopicSpeaking" component={FreshTopicSpeaking} options={{ tabBarButton: () => null }} />
@@ -564,6 +558,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     ...SHADOWS.level2,
+  },
+  centerCircleActive: {
+    backgroundColor: '#FF6422',
+    borderColor: '#FFFFFF',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  centerCircleIdle: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F0EBE3',
   },
   iconContainer: {
     width: 44,

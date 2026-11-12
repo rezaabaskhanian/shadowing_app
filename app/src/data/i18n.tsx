@@ -212,6 +212,20 @@ export const translations: Translations = {
     fa: 'جواب سوالات پرتکرار درباره‌ی تمرین، استریک، XP و امتیاز.',
   },
   logout: { en: 'Log Out', fa: 'خروج از حساب کاربری' },
+  settingsTab: { en: 'Settings', fa: 'تنظیمات' },
+  settingsSub: {
+    en: 'Customize learning preferences, alerts & support',
+    fa: 'شخصی‌سازی تجربه یادگیری، اعلان‌ها و پشتیبانی',
+  },
+  appLanguageSub: {
+    en: 'Interface and translation language',
+    fa: 'زبان نمایش برنامه و ترجمه‌ها',
+  },
+  helpAndSupport: { en: 'Help & Support', fa: 'پشتیبانی و راهنما' },
+  allRightsReserved: {
+    en: 'LingoFlow v1.0.0 · All rights reserved',
+    fa: 'لینگوفلو نسخه ۱.۰.۰ · تمامی حقوق محفوظ است',
+  },
   profileEditTitle: { en: 'Edit profile', fa: 'ویرایش پروفایل' },
   profileEditMenu: { en: 'Edit my info', fa: 'ویرایش اطلاعات' },
   subscriptionBuy: { en: 'Get a subscription', fa: 'خرید اشتراک' },

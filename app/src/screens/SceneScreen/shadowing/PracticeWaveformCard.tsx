@@ -103,17 +103,22 @@ export const PracticeWaveformCard: React.FC<{
 const styles = StyleSheet.create({
   waveformCard: {
     width: '100%',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
-    borderRadius: 20,
+    borderColor: '#F0EBE3',
+    borderRadius: 22,
     paddingVertical: 18,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     marginVertical: 12,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   waveformCardListen: {
-    backgroundColor: '#EEEBE5',
-    borderColor: '#EEEBE5',
+    backgroundColor: '#FAF7F2',
+    borderColor: '#F0EBE3',
   },
   // در مقایسه، خودِ بخش‌ها کارت‌های جدا دارند.
   waveformCardCompare: {

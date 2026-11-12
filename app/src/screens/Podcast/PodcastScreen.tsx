@@ -1,10 +1,39 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
-import { Eye, EyeOff, FileText, Headphones, ListMusic, MessageCircle, Mic, Pause, Play, Repeat1, RotateCcw, RotateCw, SkipBack, SkipForward, Volume2, X } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  FileText,
+  Headphones,
+  ListMusic,
+  MessageCircle,
+  Mic,
+  Pause,
+  Play,
+  Repeat1,
+  RotateCcw,
+  RotateCw,
+  SkipBack,
+  SkipForward,
+  Sparkles,
+  Volume2,
+  X,
+} from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
@@ -26,21 +55,17 @@ import { Slideshow, slideStarts } from '../../components/Slideshow';
 
 const RATES = [0.5, 0.75, 1, 1.25];
 const FREE_PODCASTS_COUNT = 4;
-// رنگ گوینده‌ها به ترتیب ورودشان؛ گوینده‌ی دوم سمت مقابل می‌نشیند.
-// مرجانیِ اصلی برای دکمه‌ی پخش می‌ماند؛ گوینده‌ها رنگ‌های دیگر می‌گیرند.
-const SPEAKER_COLORS = [COLORS.audioMine, COLORS.levelIntermediateBg, COLORS.pink, COLORS.levelBeginnerBg];
-const VOCAB_COLORS = [COLORS.primary, COLORS.audioMine, COLORS.pink, COLORS.levelBeginnerBg, COLORS.levelIntermediateBg];
+
+const SPEAKER_COLORS = ['#2563EB', '#D97706', '#7C3AED', '#059669'];
+const VOCAB_COLORS = ['#FF6422', '#2563EB', '#7C3AED', '#059669', '#D97706'];
 const PODCAST_TRACK_ID = 'podcast';
 
 /**
- * پخش پادکست با متن هم‌زمان: جمله‌ی در حال پخش هایلایت می‌شود، لمس هر جمله از
- * همان‌جا پخش می‌کند، ترجمه‌ی فارسی قابل نمایش است و لغت‌های مهم پایین صفحه‌اند.
- * مستقیم از TrackPlayer استفاده می‌کند (جابه‌جایی در زمان لازم است که
- * AudioPlayer ندارد)؛ با ترک صفحه پخش متوقف می‌شود.
+ * صفحه پخش پیشرفته پادکست لینگوفلو با زبان بصری مدرن و گرم
+ * شامل متن هم‌زمان، کارائوکه، تغییر سرعت، تکرار جمله، پخش خودکار و سناریوهای متصل
  */
 export const PodcastScreen: React.FC = () => {
   const { t, language } = useLanguage();
-  // فارسی: بستن سمت راست، نام گوینده راست، ترجمه‌ها راست‌چین.
   const rtl = language === 'fa';
   const rr = rtl ? styles.rowReverse : null;
   const insets = useSafeAreaInsets();
@@ -72,16 +97,15 @@ export const PodcastScreen: React.FC = () => {
 
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loadError, setLoadError] = useState(false);
-  // نقش‌آفرینیِ همین موقعیت (پادکست‌های «زندگی واقعی»)، اگر منتشر شده باشد.
   const [roleplay, setRoleplay] = useState<Roleplay | null>(null);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
   const [rate, setRate] = useState(1);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
   const trackedRef = useRef(false);
-  // تکرار جمله: وقتی روشن است، با رسیدن به پایانِ جمله‌ی فعلی دوباره از اولش پخش می‌شود.
+
   const [repeatLine, setRepeatLine] = useState(false);
   const repeatRef = useRef<{ on: boolean; start: number; end: number }>({ on: false, start: 0, end: 0 });
   const [trackWidth, setTrackWidth] = useState(1);
@@ -90,14 +114,13 @@ export const PodcastScreen: React.FC = () => {
   const lastActive = useRef(-1);
   const podcastDurationRef = useRef(0);
 
-  // محاسبه پادکست بعدی با در نظر گرفتن اشتراک (کاربر رایگان فقط تا ۴ قسمت اول)
+  // محاسبه پادکست بعدی با بررسی دسترسی اشتراک
   const currentIndex = playlist.findIndex((p) => p.id === currentId);
   const isLastFreeEpisode = !isSubscribed && currentIndex >= FREE_PODCASTS_COUNT - 1;
 
   let nextPodcast: Podcast | null = null;
   if (currentIndex >= 0 && currentIndex + 1 < playlist.length) {
     const nextIndex = currentIndex + 1;
-    // اگر کاربر اشتراک ندارد و به انتهای قسمت‌های رایگان رسیده، دیگر پخش نشود
     if (!isSubscribed && nextIndex >= FREE_PODCASTS_COUNT) {
       nextPodcast = null;
     } else {
@@ -109,8 +132,7 @@ export const PodcastScreen: React.FC = () => {
   const nextPodcastRef = useRef<Podcast | null>(null);
   nextPodcastRef.current = nextPodcast;
 
-  // هایلایتِ کلمه‌به‌کلمه: پلیر هر ۱۰۰ms موقعیت می‌دهد؛ بینِ دو رویداد، روی UI
-  // thread با سرعتِ پخش جلو می‌بریم تا حرکتِ هایلایت نرم باشد (بدون re-render).
+  // موقعیت نرم رندر کلمه‌به‌کلمه روی UI thread
   const positionSV = useSharedValue(0);
   const playingSV = useSharedValue(false);
   const rateSV = useSharedValue(1);
@@ -120,7 +142,6 @@ export const PodcastScreen: React.FC = () => {
     }
   });
 
-  // بارگذاری و آماده‌سازی یا پخش یک پادکست بر اساس شناسه
   const loadAndPlayPodcast = useCallback(
     async (id: string, autoPlayImmediately = false) => {
       if (!id) return;
@@ -140,7 +161,6 @@ export const PodcastScreen: React.FC = () => {
         setPodcast(p);
         podcastDurationRef.current = p.duration_seconds;
 
-        // صف پادکست‌های هم‌نوع (اگر درسی است، فقط درسی‌ها به ترتیب؛ اگر منتخب است، فقط منتخب‌ها)
         Promise.all([getPodcasts().catch(() => []), getMyLevel().catch(() => null)])
           .then(([all, lvl]) => {
             const scoped = atOrBelowLevel(all, lvl?.scene_level);
@@ -175,20 +195,14 @@ export const PodcastScreen: React.FC = () => {
     [positionSV, rate]
   );
 
-  // انتقال به پادکست بعدی همراه با اعلان صوتی و خواندن تایتل سرفصل پادکست بعدی
   const playNextEpisode = useCallback(async () => {
     const nextP = nextPodcastRef.current;
     if (!nextP || isTransitioningRef.current) return;
     isTransitioningRef.current = true;
 
     try {
-      // توقف موقت ترک‌پلیر
       await TrackPlayer.pause().catch(() => {});
-
-      // ۱. خواندن عنوان/سرفصل پادکست بعدی با ویس هوشمند یا فایل اعلان
       await announceNextPodcast(nextP.title);
-
-      // ۲. بارگذاری و شروع خودکار پادکست بعدی
       await loadAndPlayPodcast(nextP.id, true);
     } catch {
       await loadAndPlayPodcast(nextP.id, true).catch(() => {});
@@ -197,7 +211,6 @@ export const PodcastScreen: React.FC = () => {
     }
   }, [loadAndPlayPodcast]);
 
-  // خواندن تنظیم ذخیره‌شده در ابتدای ورود به صفحه
   useEffect(() => {
     AsyncStorage.getItem('@podcast_autoplay_next').then((val) => {
       const enabled = val === 'true';
@@ -218,7 +231,6 @@ export const PodcastScreen: React.FC = () => {
     AsyncStorage.setItem('@podcast_autoplay_next', String(val)).catch(() => {});
   };
 
-  // رویدادهای پلیر: موقعیت برای متن هم‌زمان، وضعیت برای دکمه‌ی پخش.
   useEffect(() => {
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
       const ms = Math.round(d.position * 1000);
@@ -232,7 +244,6 @@ export const PodcastScreen: React.FC = () => {
       positionSV.value = ms;
       setPositionMs(ms);
 
-      // اگر پخش به ثانیه‌های پایانی پادکست رسید، به طور خودکار به قسمت بعدی می‌رود
       if (
         podcastDurationRef.current > 0 &&
         d.position >= podcastDurationRef.current - 0.4 &&
@@ -243,18 +254,19 @@ export const PodcastScreen: React.FC = () => {
         playNextEpisode();
       }
     });
+
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
       const isPl = d.state === State.Playing;
       playingSV.value = isPl;
       setPlaying(isPl);
 
-      // در اندروید و ایمولاتور پایان پخش با State.Ended گزارش می‌شود
       if (d.state === State.Ended) {
         if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
           playNextEpisode();
         }
       }
     });
+
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
       playingSV.value = false;
       setPlaying(false);
@@ -263,20 +275,21 @@ export const PodcastScreen: React.FC = () => {
         playNextEpisode();
       }
     });
+
     const nextRemoteSub = TrackPlayer.addEventListener(Event.RemoteNext, () => {
       if (nextPodcastRef.current) {
         playNextEpisode();
       }
     });
+
     return () => {
       progressSub.remove();
       stateSub.remove();
       endedSub.remove();
       nextRemoteSub.remove();
     };
-  }, [positionSV, playingSV]);
+  }, [positionSV, playingSV, playNextEpisode]);
 
-  // تب‌ها بعد از خروج mount می‌مانند؛ پادکست نباید در پس‌زمینه ادامه دهد.
   useFocusEffect(
     useCallback(
       () => () => {
@@ -286,9 +299,6 @@ export const PodcastScreen: React.FC = () => {
     )
   );
 
-  // TrackPlayer سراسری است؛ صفحه‌ی دیگری که در پس‌زمینه mount مانده (مثل صحنه) ممکن است
-  // صف را با صدای خودش عوض کرده باشد و پخش بی‌صدا شود. قبل از هر پخش، اگر track
-  // پادکست در صف نیست، دوباره می‌گذاریمش و به همان جای قبلی برمی‌گردیم.
   const ensurePodcastTrack = async () => {
     if (!podcast) return;
     const active = await TrackPlayer.getActiveTrack().catch(() => undefined);
@@ -314,7 +324,6 @@ export const PodcastScreen: React.FC = () => {
       trackedRef.current = true;
       track('podcast_played', podcast.id);
     }
-    // بعد از پایان، دوباره از اول.
     await ensurePodcastTrack();
     if (podcast && positionMs >= podcast.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
     await TrackPlayer.play();
@@ -329,7 +338,6 @@ export const PodcastScreen: React.FC = () => {
 
   const seekToLine = async (startMs: number) => {
     if (!ready) return;
-    // پرش به جمله‌ی دیگر یعنی تکرارِ جمله‌ی قبلی تمام شد.
     repeatRef.current = { on: false, start: 0, end: 0 };
     setRepeatLine(false);
     await ensurePodcastTrack();
@@ -356,13 +364,13 @@ export const PodcastScreen: React.FC = () => {
   };
   const activeIdx = lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 350);
 
-  // جمله‌ی قبلی/بعدی: اگر بیش از یک ثانیه از جمله‌ی فعلی گذشته، «قبلی» همین جمله را از اول پخش می‌کند.
   const prevLine = () => {
     const idx = lines.findIndex((l) => positionMs >= l.start_ms && positionMs < l.end_ms + 350);
     if (idx >= 0 && positionMs - lines[idx].start_ms > 1000) return seekToLine(lines[idx].start_ms);
     const before = [...lines].reverse().find((l) => l.start_ms < positionMs - 200 && l !== lines[idx]);
     return seekToLine(before ? before.start_ms : 0);
   };
+
   const nextLine = () => {
     const after = lines.find((l) => l.start_ms > positionMs + 100);
     if (after) {
@@ -383,7 +391,6 @@ export const PodcastScreen: React.FC = () => {
     setRepeatLine(true);
   };
 
-  // لمس هر جای نوار پیشرفت = پرش به همان لحظه.
   const seekToFraction = async (x: number) => {
     if (!ready || !podcast) return;
     const ms = Math.max(0, Math.min(1, x / trackWidth)) * podcast.duration_seconds * 1000;
@@ -394,34 +401,35 @@ export const PodcastScreen: React.FC = () => {
     await TrackPlayer.seekTo(ms / 1000);
   };
 
-  // جمله‌ی در حال پخش همیشه در دید بماند (فقط وقتی متن باز است).
   useEffect(() => {
     if (!showTranscript) return;
     if (activeIdx < 0 || activeIdx === lastActive.current) return;
     lastActive.current = activeIdx;
-    const y = lineY.current[activeIdx];
-    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+    // کاربر مایل است آزادانه در صفحه اسکرول کند، بنابراین اسکرول اجباری حذف شد
+    // هایلایت خط فعال به صورت بصری و رنگی بدون تغییر موقعیت اسکرول ادامه می‌یابد
   }, [activeIdx, showTranscript]);
+
+  const ChevronIcon = rtl ? ChevronLeft : ChevronRight;
 
   if (loadError) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
         <Text style={styles.mutedText}>{t('podcastLoadError')}</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Text style={styles.linkText}>{t('podcastBack')}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+          <Text style={styles.retryBtnText}>{t('podcastBack')}</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
   if (!podcast) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator color={COLORS.primary} />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
-  // اسلایدشو: عکسِ فعال = آخرین عکسی که شروعش (جمله) قبل از جمله‌ی در حال پخش است.
   const slideImages = (podcast.images || []).filter((img) => !!img.url);
   const currentLine =
     activeIdx >= 0 ? activeIdx : lines.reduce((last, l, i) => (l.start_ms <= positionMs ? i : last), 0);
@@ -433,18 +441,25 @@ export const PodcastScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
+      {/* سربرگ مدرن پلیر با دکمه بازگشت و تغییر وضعیت متن */}
       <View style={[styles.topRow, rr]}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <X size={18} color={COLORS.text} />
+        <TouchableOpacity
+          style={styles.circleBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
+        >
+          <X size={18} color="#191C21" />
         </TouchableOpacity>
+
         <View style={styles.topTitleWrap}>
           <Text style={styles.topTitle} numberOfLines={1}>
             {podcast.title}
           </Text>
           <Text style={styles.topSub}>{t('podcastPlayerSub')}</Text>
         </View>
+
         <TouchableOpacity
-          style={[styles.topTranscriptBtn, showTranscript && styles.topTranscriptBtnActive]}
+          style={[styles.circleBtn, showTranscript && styles.circleBtnActive]}
           onPress={() => setShowTranscript((v) => !v)}
           activeOpacity={0.8}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -452,17 +467,17 @@ export const PodcastScreen: React.FC = () => {
           {showTranscript ? (
             <EyeOff size={18} color={COLORS.primary} />
           ) : (
-            <FileText size={18} color={COLORS.textSecondary} />
+            <FileText size={18} color="#697082" />
           )}
         </TouchableOpacity>
       </View>
 
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 160 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* تصویرِ پادکست (یا صحنه‌ی مرتبط)؛ بدون تصویر چیزی جایش نمی‌آید. */}
+        {/* کاور عکاسی یا اسلایدشو */}
         {slideImages.length > 0 ? (
           <Slideshow
             uris={slideImages.map((img) => absUrl(img.url))}
@@ -472,16 +487,21 @@ export const PodcastScreen: React.FC = () => {
           />
         ) : (
           !!podcast.cover_url && (
-            <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
+            <View style={styles.coverWrap}>
+              <Image source={{ uri: absUrl(podcast.cover_url) }} style={styles.cover} resizeMode="cover" />
+            </View>
           )
         )}
-        {/* توضیح و تنظیمات پادکست */}
+
+        {/* کارت توضیحات و تنظیمات پخش */}
         <View style={styles.infoCard}>
           {!!podcast.description_fa && (
-            <Text style={[styles.desc, { textAlign: rtl ? 'right' : 'left' }]}>{podcast.description_fa}</Text>
+            <Text style={[styles.desc, { textAlign: rtl ? 'right' : 'left' }]}>
+              {podcast.description_fa}
+            </Text>
           )}
 
-          {/* دکمه‌های کنترل سریع: نمایش/مخفی‌سازی متن و ترجمه فارسی */}
+          {/* ردیف دکمه‌های کنترل سریع متن و ترجمه */}
           <View style={[styles.optionsRow, rr]}>
             <TouchableOpacity
               style={[styles.pillBtn, !showTranscript && styles.pillBtnActive, rr]}
@@ -489,7 +509,7 @@ export const PodcastScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               {showTranscript ? (
-                <EyeOff size={14} color={COLORS.textSecondary} />
+                <EyeOff size={14} color="#697082" />
               ) : (
                 <FileText size={14} color={COLORS.primary} />
               )}
@@ -504,6 +524,7 @@ export const PodcastScreen: React.FC = () => {
                 onPress={() => setShowTranslation((v) => !v)}
                 activeOpacity={0.8}
               >
+                <Sparkles size={13} color={showTranslation ? COLORS.primary : '#697082'} />
                 <Text style={[styles.pillBtnText, showTranslation && styles.pillBtnTextActive]}>
                   {t('podcastShowTranslation')}
                 </Text>
@@ -511,26 +532,34 @@ export const PodcastScreen: React.FC = () => {
             )}
           </View>
 
-          {/* ردیف پخش خودکار قسمت بعدی و تست ویس */}
+          {/* ردیف پخش خودکار قسمت بعدی */}
           <View style={[styles.autoplayRow, rr]}>
             <View style={[styles.autoplayTextWrap, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
               <View style={[styles.autoplayTitleRow, rr]}>
-                <ListMusic size={15} color={autoplay ? COLORS.primary : COLORS.muted} />
+                <ListMusic size={15} color={autoplay ? COLORS.primary : '#8E95A5'} />
                 <Text style={styles.autoplayTitle}>{t('podcastAutoplayNext')}</Text>
               </View>
-              {autoplay && (
-                isLastFreeEpisode ? (
+              {autoplay &&
+                (isLastFreeEpisode ? (
                   <TouchableOpacity onPress={() => navigation.navigate('Paywall')} activeOpacity={0.8}>
-                    <Text style={[styles.autoplayNextName, styles.autoplayWarning, { textAlign: rtl ? 'right' : 'left' }]}>
+                    <Text
+                      style={[
+                        styles.autoplayNextName,
+                        styles.autoplayWarning,
+                        { textAlign: rtl ? 'right' : 'left' },
+                      ]}
+                    >
                       {t('podcastLastFreeEpisode')}
                     </Text>
                   </TouchableOpacity>
                 ) : nextPodcast ? (
-                  <Text style={[styles.autoplayNextName, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.autoplayNextName, { textAlign: rtl ? 'right' : 'left' }]}
+                    numberOfLines={1}
+                  >
                     {t('podcastNextEpisodeLabel').replace('{title}', nextPodcast.title)}
                   </Text>
-                ) : null
-              )}
+                ) : null)}
             </View>
 
             <View style={[styles.autoplayControls, rr]}>
@@ -545,23 +574,34 @@ export const PodcastScreen: React.FC = () => {
               <Switch
                 value={autoplay}
                 onValueChange={toggleAutoplay}
-                trackColor={{ true: COLORS.primary }}
+                trackColor={{ false: '#E2DDD5', true: COLORS.primary }}
+                thumbColor={COLORS.white}
               />
             </View>
           </View>
         </View>
 
+        {/* حالت فقط شنیداری (بدون متن) */}
         {!showTranscript ? (
           <View style={styles.listeningNotice}>
-            <Headphones size={20} color={COLORS.muted} />
-            <Text style={styles.listeningNoticeText}>{t('podcastListeningModeTitle')}</Text>
+            <View style={styles.listeningIconWrap}>
+              <Headphones size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.listeningTextWrap}>
+              <Text style={styles.listeningNoticeTitle}>{t('podcastListeningModeTitle')}</Text>
+              <Text style={styles.listeningNoticeSub}>
+                {rtl
+                  ? 'متن مخفی است تا تمرکز شما کاملاً بر تقویت مهارت شنیداری باشد.'
+                  : 'Transcript is hidden to focus purely on listening comprehension.'}
+              </Text>
+            </View>
           </View>
         ) : (
+          /* جملات گفتگو با هایلایت هم‌زمان کارائوکه */
           lines.map((l, i) => {
             const isActive = i === activeIdx;
-            // هر گوینده رنگ و سمت خودش را دارد (مثل گفتگوی چت) تا نوبتِ حرف زدن
-            // با یک نگاه معلوم باشد.
             const tone = speakerTone(l.speaker);
+
             return (
               <TouchableOpacity
                 key={l.id ?? i}
@@ -569,8 +609,8 @@ export const PodcastScreen: React.FC = () => {
                   lineY.current[i] = e.nativeEvent.layout.y;
                 }}
                 style={[
-                  styles.line,
-                  isActive && { backgroundColor: hexToRgba(tone.color, 0.07), borderColor: tone.color },
+                  styles.lineCard,
+                  isActive && styles.lineCardActive,
                 ]}
                 onPress={() => seekToLine(l.start_ms)}
                 activeOpacity={0.8}
@@ -579,10 +619,22 @@ export const PodcastScreen: React.FC = () => {
                   <View style={[styles.avatar, { backgroundColor: tone.color }]}>
                     <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
                   </View>
-                  <Text style={[styles.speaker, styles.flex1, { color: tone.color, textAlign: rtl ? 'right' : 'left' }]}>{l.speaker}</Text>
-                  {/* نشانه‌ی اینکه لمس هر جمله همان جمله را پخش می‌کند. */}
-                  <Play size={12} color={isActive ? tone.color : COLORS.muted} fill={isActive ? tone.color : 'transparent'} />
+                  <Text
+                    style={[
+                      styles.speaker,
+                      styles.flex1,
+                      { color: tone.color, textAlign: rtl ? 'right' : 'left' },
+                    ]}
+                  >
+                    {l.speaker}
+                  </Text>
+                  <Play
+                    size={13}
+                    color={isActive ? COLORS.primary : '#A09B90'}
+                    fill={isActive ? COLORS.primary : 'transparent'}
+                  />
                 </View>
+
                 {isActive ? (
                   <KaraokeText
                     text={l.text}
@@ -594,33 +646,51 @@ export const PodcastScreen: React.FC = () => {
                 ) : (
                   <Text style={styles.lineText}>{l.text}</Text>
                 )}
+
                 {showTranslation && !!l.translation_fa && (
-                  <Text style={[styles.translation, { textAlign: rtl ? 'right' : 'left' }]}>{l.translation_fa}</Text>
+                  <View style={styles.translationWrap}>
+                    <Text style={[styles.translation, { textAlign: rtl ? 'right' : 'left' }]}>
+                      {l.translation_fa}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
             );
           })
         )}
 
-        {/* «نسخه‌ی من» بعد از متن: اول گفتگو را بفهمد، بعد خودش ضبط کند (قبلاً بالای متن بود). */}
+        {/* دکمه ضبط صدای من */}
         {lines.length > 0 && (
           <TouchableOpacity
-            style={styles.myVersionBtn}
-            activeOpacity={0.85}
+            style={styles.actionCard}
+            activeOpacity={0.88}
             onPress={async () => {
               await TrackPlayer.pause().catch(() => {});
               navigation.navigate('PodcastMyVersion', { podcastId: podcast.id, openedAt: Date.now() });
             }}
           >
-            <Mic size={18} color={COLORS.primary} />
-            <Text style={styles.myVersionText}>{t('myVersionButton')}</Text>
+            <View style={[styles.actionCardInner, rr]}>
+              <View style={styles.actionIconWrap}>
+                <Mic size={20} color={COLORS.primary} />
+              </View>
+              <View style={[styles.actionCardText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text style={styles.actionCardTitle}>{t('myVersionButton')}</Text>
+                <Text style={styles.actionCardSub}>
+                  {rtl
+                    ? 'مکالمه را با صدای خودتان تکرار و ضبط کنید'
+                    : 'Shadow and record this dialogue in your own voice'}
+                </Text>
+              </View>
+              <ChevronIcon size={18} color={COLORS.primary} />
+            </View>
           </TouchableOpacity>
         )}
 
+        {/* اتصال به نقش‌آفرینی هوشمند */}
         {roleplay && (
           <TouchableOpacity
-            style={styles.myVersionBtn}
-            activeOpacity={0.85}
+            style={[styles.actionCard, { borderColor: '#2563EB' }]}
+            activeOpacity={0.88}
             onPress={async () => {
               await TrackPlayer.pause().catch(() => {});
               navigation.navigate('AIConversation', {
@@ -630,19 +700,41 @@ export const PodcastScreen: React.FC = () => {
               });
             }}
           >
-            <MessageCircle size={18} color={COLORS.primary} />
-            <Text style={styles.myVersionText}>{t('roleplayPractice')}</Text>
+            <View style={[styles.actionCardInner, rr]}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#EFF6FF' }]}>
+                <MessageCircle size={20} color="#2563EB" />
+              </View>
+              <View style={[styles.actionCardText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text style={[styles.actionCardTitle, { color: '#2563EB' }]}>{t('roleplayPractice')}</Text>
+                <Text style={styles.actionCardSub}>
+                  {rtl
+                    ? 'گفتگوی دوطرفه در این موقعیت با مربی هوش مصنوعی'
+                    : 'Practice real-life conversation with AI coach'}
+                </Text>
+              </View>
+              <ChevronIcon size={18} color="#2563EB" />
+            </View>
           </TouchableOpacity>
         )}
 
-        {podcast.vocabulary.length > 0 && (
+        {/* کارت واژگان کلیدی پادکست */}
+        {podcast.vocabulary && podcast.vocabulary.length > 0 && (
           <View style={styles.vocabCard}>
-            <Text style={[styles.vocabTitle, { textAlign: rtl ? 'right' : 'left' }]}>{t('podcastVocabulary')}</Text>
+            <View style={[styles.vocabTitleRow, rr]}>
+              <Sparkles size={16} color={COLORS.primary} />
+              <Text style={styles.vocabTitle}>{t('podcastVocabulary')}</Text>
+            </View>
             <View style={styles.vocabChips}>
               {podcast.vocabulary.map((v, i) => {
                 const c = VOCAB_COLORS[i % VOCAB_COLORS.length];
                 return (
-                  <View key={i} style={[styles.vocabChip, { backgroundColor: hexToRgba(c, 0.1), borderColor: hexToRgba(c, 0.35) }]}>
+                  <View
+                    key={i}
+                    style={[
+                      styles.vocabChip,
+                      { backgroundColor: hexToRgba(c, 0.08), borderColor: hexToRgba(c, 0.25) },
+                    ]}
+                  >
                     <Text style={[styles.vocabWord, { color: c }]}>{v.word}</Text>
                     <Text style={styles.vocabMeaning}>{v.meaning_fa}</Text>
                   </View>
@@ -653,7 +745,8 @@ export const PodcastScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <View style={[styles.player, { paddingBottom: insets.bottom + SPACING.m }]}>
+      {/* پلیر شناور و شیک پایین صفحه */}
+      <View style={[styles.player, { paddingBottom: insets.bottom + SPACING.s }]}>
         <TouchableOpacity
           activeOpacity={1}
           onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width || 1)}
@@ -664,52 +757,97 @@ export const PodcastScreen: React.FC = () => {
             <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
           </View>
         </TouchableOpacity>
+
         <View style={styles.timeRow}>
           <Text style={styles.time}>{formatDuration(positionMs / 1000)}</Text>
           <Text style={styles.time}>{formatDuration(podcast.duration_seconds)}</Text>
         </View>
+
         <View style={styles.controls}>
-          <TouchableOpacity onPress={prevLine} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
-            <SkipBack size={24} color={COLORS.text} />
+          <TouchableOpacity
+            style={styles.controlIconBtn}
+            onPress={prevLine}
+            disabled={!ready}
+            activeOpacity={0.75}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <SkipBack size={22} color="#191C21" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => seekBy(-10)} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
-            <RotateCcw size={24} color={COLORS.text} />
+
+          <TouchableOpacity
+            style={styles.controlIconBtn}
+            onPress={() => seekBy(-10)}
+            disabled={!ready}
+            activeOpacity={0.75}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <RotateCcw size={22} color="#191C21" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.playBtn} onPress={togglePlay} disabled={!ready} activeOpacity={0.85}>
+
+          <TouchableOpacity
+            style={styles.playBtn}
+            onPress={togglePlay}
+            disabled={!ready}
+            activeOpacity={0.88}
+          >
             {!ready ? (
               <ActivityIndicator color={COLORS.white} />
             ) : playing ? (
               <Pause size={28} color={COLORS.white} fill={COLORS.white} />
             ) : (
-              <Play size={28} color={COLORS.white} fill={COLORS.white} />
+              <Play size={28} color={COLORS.white} fill={COLORS.white} style={{ marginLeft: 2 }} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => seekBy(10)} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
-            <RotateCw size={24} color={COLORS.text} />
+
+          <TouchableOpacity
+            style={styles.controlIconBtn}
+            onPress={() => seekBy(10)}
+            disabled={!ready}
+            activeOpacity={0.75}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <RotateCw size={22} color="#191C21" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={nextLine} disabled={!ready} activeOpacity={0.8} hitSlop={8}>
-            <SkipForward size={24} color={COLORS.text} />
+
+          <TouchableOpacity
+            style={styles.controlIconBtn}
+            onPress={nextLine}
+            disabled={!ready}
+            activeOpacity={0.75}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <SkipForward size={22} color="#191C21" />
           </TouchableOpacity>
         </View>
+
         <View style={[styles.rates, rr]}>
           <TouchableOpacity
-            style={[styles.rateBtn, repeatLine && styles.rateBtnActive]}
+            style={[styles.repeatBtn, repeatLine && styles.repeatBtnActive]}
             onPress={toggleRepeat}
             disabled={!ready || (activeIdx < 0 && !repeatLine)}
             activeOpacity={0.85}
           >
-            <Repeat1 size={14} color={repeatLine ? COLORS.text : COLORS.textSecondary} />
+            <Repeat1 size={14} color={repeatLine ? COLORS.primary : '#697082'} />
+            <Text style={[styles.repeatText, repeatLine && styles.repeatTextActive]}>
+              {rtl ? 'تکرار جمله' : 'Loop line'}
+            </Text>
           </TouchableOpacity>
-          {RATES.map((r) => (
-            <TouchableOpacity
-              key={r}
-              style={[styles.rateBtn, rate === r && styles.rateBtnActive]}
-              onPress={() => changeRate(r)}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.rateText, rate === r && styles.rateTextActive]}>{r}x</Text>
-            </TouchableOpacity>
-          ))}
+
+          <View style={styles.ratePillsWrap}>
+            {RATES.map((r) => {
+              const isSelected = rate === r;
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.rateBtn, isSelected && styles.rateBtnActive]}
+                  onPress={() => changeRate(r)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.rateText, isSelected && styles.rateTextActive]}>{r}x</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
     </View>
@@ -717,40 +855,94 @@ export const PodcastScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  rowReverse: { flexDirection: 'row-reverse' },
-  topTranscriptBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#ECEAE4',
-    alignItems: 'center',
-    justifyContent: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: '#FDFBF7',
   },
-  topTranscriptBtnActive: {
-    backgroundColor: COLORS.primaryLight,
+  rowReverse: {
+    flexDirection: 'row-reverse',
   },
-  toggleTranscriptBtn: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.l,
+    paddingBottom: SPACING.s,
+  },
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: '#F0EBE3',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    backgroundColor: COLORS.primary,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  toggleTranscriptBtnActive: {
-    backgroundColor: '#F3EFEA',
-    borderWidth: 1,
-    borderColor: '#E3DDD3',
+  circleBtnActive: {
+    backgroundColor: '#FFF3ED',
+    borderColor: '#FF6422',
   },
-  toggleTranscriptText: {
+  topTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  topTitle: {
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 13.5,
-    color: COLORS.white,
+    fontSize: 16,
+    color: '#191C21',
+    textAlign: 'center',
   },
-  toggleTranscriptTextActive: {
-    color: COLORS.text,
+  topSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    color: '#8E95A5',
+    marginTop: 1,
+  },
+  content: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.s,
+    gap: SPACING.m,
+  },
+  coverWrap: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1.2,
+    borderColor: '#F0EBE3',
+    backgroundColor: '#FAF5EE',
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cover: {
+    width: '100%',
+    aspectRatio: 21 / 9,
+    borderRadius: 20,
+    backgroundColor: '#FAF5EE',
+  },
+  infoCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: '#F0EBE3',
+    padding: 16,
+    gap: 12,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  desc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13.5,
+    color: '#4B5162',
+    lineHeight: 21,
   },
   optionsRow: {
     flexDirection: 'row',
@@ -763,32 +955,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#F3EFEA',
+    backgroundColor: '#F7F4EE',
     borderWidth: 1,
-    borderColor: '#E8E2D8',
+    borderColor: '#EAE4D8',
   },
   pillBtnActive: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
+    backgroundColor: '#FFF3ED',
+    borderColor: '#FF6422',
   },
   pillBtnText: {
     fontFamily: FONT_FAMILY.medium,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#697082',
   },
   pillBtnTextActive: {
     fontFamily: FONT_FAMILY.bold,
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   autoplayRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F0ECE4',
+    borderTopColor: '#F2EDE4',
     marginTop: 2,
   },
   autoplayTextWrap: {
@@ -803,13 +995,13 @@ const styles = StyleSheet.create({
   autoplayTitle: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12.5,
-    color: COLORS.text,
+    color: '#191C21',
   },
   autoplayNextName: {
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
-    color: COLORS.primary,
-    marginTop: 2,
+    color: '#FF6422',
+    marginTop: 3,
   },
   autoplayWarning: {
     color: '#D97706',
@@ -827,106 +1019,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#FFF3ED',
+    borderWidth: 1,
+    borderColor: '#FCD7C7',
   },
   testVoiceText: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 10.5,
-    color: COLORS.primary,
+    color: '#FF6422',
   },
   listeningNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 18,
+    gap: 12,
+    padding: 16,
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ECEAE4',
-    marginBottom: SPACING.m,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#F0EBE3',
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  listeningNoticeText: {
-    fontFamily: FONT_FAMILY.medium,
-    fontSize: 12.5,
-    color: COLORS.muted,
-  },
-  topTitleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  topSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
-  infoCard: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: 14, gap: 10 },
-  flex1: { flex: 1 },
-  myVersionBtn: {
-    flexDirection: 'row',
+  listeningIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF3ED',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingVertical: 10,
-    marginTop: SPACING.s,
-    marginBottom: SPACING.m,
-    backgroundColor: COLORS.primaryLight,
   },
-  myVersionText: {
-    color: COLORS.primary,
+  listeningTextWrap: {
+    flex: 1,
+    gap: 3,
+  },
+  listeningNoticeTitle: {
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 14,
+    fontSize: 13.5,
+    color: '#191C21',
   },
-  // عکس کوتاه‌تر (قبلاً ۱۶:۹، حدود یک‌چهارم صفحه) تا متن گفتگو زودتر دیده شود.
-  cover: {
-    width: '100%',
-    aspectRatio: 21 / 9,
-    borderRadius: BORDER_RADIUS.l,
-    backgroundColor: COLORS.surfaceLight,
-    marginBottom: SPACING.m,
+  listeningNoticeSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#697082',
+    lineHeight: 18,
   },
-  container: { flex: 1, backgroundColor: '#F7F7F9' },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.s,
+  lineCard: {
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#F0EBE3',
+    backgroundColor: COLORS.white,
+    padding: 14,
+    gap: 8,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  mutedText: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+  lineCardActive: {
+    backgroundColor: '#FFF9F5',
+    borderColor: '#FF6422',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  linkText: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.primary,
-    fontFamily: FONT_FAMILY.semiBold,
-  },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.l, paddingBottom: SPACING.s },
-  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#ECECF0', alignItems: 'center', justifyContent: 'center' },
-  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text, textAlign: 'center' },
-  content: {
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.l,
-    gap: SPACING.s,
-  },
-  desc: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-  },
-  switchRow: {
+  speakerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F1E8',
   },
-  switchLabel: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.text,
-  },
-  line: { borderRadius: 16, borderWidth: 1.5, borderColor: '#EEEEF2', backgroundColor: COLORS.white, padding: 12, gap: 6 },
-  lineAlt: {
-    alignSelf: 'flex-end',
-  },
-  speakerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#F2F2F5' },
   avatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -936,84 +1106,257 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   speaker: {
-    fontFamily: FONT_FAMILY.semiBold,
-    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
   },
-  lineText: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
+  flex1: {
+    flex: 1,
+  },
+  lineText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 15,
+    color: '#191C21',
+    lineHeight: 23,
+  },
   lineTextActive: {
-    color: COLORS.text,
+    color: '#191C21',
     fontFamily: FONT_FAMILY.semiBold,
   },
-  translation: { ...TEXT_STYLES.labelMd, color: COLORS.muted },
-  vocabCard: { marginTop: SPACING.m, backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEEF2', padding: SPACING.m, gap: SPACING.s },
-  vocabTitle: {
-    fontFamily: FONT_FAMILY.semiBold,
+  translationWrap: {
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F1E8',
+    marginTop: 2,
+  },
+  translation: {
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#697082',
+    lineHeight: 20,
+  },
+  actionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#FF6422',
+    padding: 14,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF3ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionCardText: {
+    flex: 1,
+    gap: 2,
+  },
+  actionCardTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: '#191C21',
+  },
+  actionCardSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#8E95A5',
+  },
+  vocabCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: '#F0EBE3',
+    padding: 16,
+    gap: 12,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  vocabTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vocabTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: '#191C21',
   },
   vocabChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.s,
+    gap: 8,
   },
   vocabChip: {
-    borderRadius: BORDER_RADIUS.m,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     alignItems: 'center',
   },
   vocabWord: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.text,
-    fontFamily: FONT_FAMILY.semiBold,
-    flexShrink: 1,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
   },
   vocabMeaning: {
-    ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
-    flexShrink: 1,
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#697082',
+    marginTop: 2,
   },
-  player: { borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l, paddingTop: SPACING.s, gap: 6, shadowColor: '#1A1D26', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 6 },
+  player: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderTopWidth: 1.2,
+    borderColor: '#F0EBE3',
+    paddingHorizontal: SPACING.l,
+    paddingTop: 10,
+    gap: 6,
+    shadowColor: '#2C2014',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
+  },
+  progressHit: {
+    paddingVertical: 8,
+  },
   progressTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.surfaceHigh,
+    backgroundColor: '#EFEBE4',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 2,
   },
   time: {
-    ...TEXT_STYLES.labelSm,
-    color: COLORS.muted,
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 11.5,
+    color: '#8E95A5',
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.l,
+    gap: 20,
+    marginVertical: 4,
   },
-  progressHit: {
-    paddingVertical: 8,
+  controlIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  playBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E2643A', alignItems: 'center', justifyContent: 'center', ...SHADOWS.level2 },
+  playBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FF6422',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.38,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
   rates: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING.s,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
   },
-  rateBtn: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: '#EEF0F4' },
-  // سرعت انتخاب‌شده خنثی است؛ مرجانی فقط برای دکمه‌ی پخش.
-  rateBtnActive: { backgroundColor: '#1F2430' },
+  repeatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#F5F1E8',
+  },
+  repeatBtnActive: {
+    backgroundColor: '#FFF3ED',
+    borderWidth: 1,
+    borderColor: '#FF6422',
+  },
+  repeatText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#697082',
+  },
+  repeatTextActive: {
+    fontFamily: FONT_FAMILY.bold,
+    color: '#FF6422',
+  },
+  ratePillsWrap: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  rateBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#F5F1E8',
+  },
+  rateBtnActive: {
+    backgroundColor: '#191C21',
+  },
   rateText: {
-    ...TEXT_STYLES.labelMd,
-    color: COLORS.text,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: '#697082',
   },
-  rateTextActive: { color: COLORS.white, fontFamily: FONT_FAMILY.bold },
+  rateTextActive: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.m,
+  },
+  mutedText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 14,
+    color: '#697082',
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: '#FF6422',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.white,
+  },
 });

@@ -253,18 +253,19 @@ export const VideoClipListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      <View style={styles.topRow}>
-        <View style={styles.tagChip}>
-          <Text style={styles.tagChipText}>{t('videoSoonTag')}</Text>
-          <View style={styles.tagDot} />
-        </View>
+      <View style={styles.topHeader}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
-      </View>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('videoClipsTitle')}</Text>
-        <Text style={styles.headerSub}>{clips && clips.length === 0 ? t('videoSoonSub') : t('videoClipsSubtitle')}</Text>
+        <View style={styles.titleWrap}>
+          <Text style={styles.headerTitle}>{t('videoClipsTitle')}</Text>
+          {clips && clips.length > 0 && (
+            <View style={styles.totalCountBadge}>
+              <Text style={styles.totalCountText}>{clips.length} کلیپ آموزشی</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.headerSpacer} />
       </View>
 
       {clips === null && !error && (
@@ -1074,8 +1075,32 @@ const styles = StyleSheet.create({
   soonCtaText: { fontFamily: FONT_FAMILY.bold, fontSize: 14, color: COLORS.white },
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FDFBF7',
     paddingHorizontal: SPACING.l,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: SPACING.m,
+  },
+  titleWrap: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  totalCountBadge: {
+    backgroundColor: '#F4EFE6',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  totalCountText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#7A7265',
+  },
+  headerSpacer: {
+    width: 40,
   },
   header: {
     alignItems: 'flex-end',
@@ -1087,14 +1112,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.s,
   },
   headerTitle: {
-    ...TEXT_STYLES.headlineSm,
-    color: COLORS.text,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
+    color: '#191C21',
   },
   headerSub: {
     ...TEXT_STYLES.bodyMd,

@@ -144,25 +144,29 @@ export const WritingListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F4',
+    backgroundColor: '#FDFBF7',
     paddingHorizontal: SPACING.l,
   },
   header: {
     alignItems: 'center',
     marginBottom: SPACING.m,
   },
-  // دکمه‌ی بستن در فارسی سمت راست بالا (مثل بقیه‌ی صفحه‌های بازطراحی‌شده).
+  // دکمه‌ی بستن در فارسی سمت راست بالا
   closeBtn: {
     alignSelf: 'flex-end',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#EEEAE3',
+    borderColor: '#F0EBE3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.s,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   center: {
     flex: 1,
@@ -172,12 +176,12 @@ const styles = StyleSheet.create({
   },
   mutedText: {
     ...TEXT_STYLES.bodyMd,
-    color: COLORS.textSecondary,
+    color: '#716B62',
     textAlign: 'center',
   },
   linkText: {
     ...TEXT_STYLES.labelMd,
-    color: COLORS.primary,
+    color: '#FF6422',
     fontFamily: FONT_FAMILY.semiBold,
   },
   list: {

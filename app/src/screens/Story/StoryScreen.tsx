@@ -266,27 +266,38 @@ export const StoryScreen: React.FC = () => {
   const durationMs = Math.max(1, story.duration_seconds * 1000);
   const progress = Math.min(1, positionMs / durationMs);
 
+  const handleClose = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('StoryList');
+    }
+  };
+
   const finishWithoutQuestions = () => {
     markChapterRead(story.id);
     if (nextChapter) navigation.navigate('Story', { storyId: nextChapter.id, openedAt: Date.now() });
-    else navigation.goBack();
+    else handleClose();
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
-      {/* طرح: بستن سمت چپ، عنوان و فصل سمت راست. */}
-      <View style={styles.topRow}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+      {/* سربرگ مدرن داستان */}
+      <View style={[styles.topRow, rtl && styles.rowReverse]}>
+        <TouchableOpacity style={styles.closeBtn} onPress={handleClose} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
           <Text style={styles.topTitle} numberOfLines={1}>
             {story.series_title || story.title}
           </Text>
-          <Text style={[styles.topSub, { color: accent }]}>
-            {t('storyChapterN').replace('{n}', String(story.chapter_no || 1))} · {story.title}
-          </Text>
+          <View style={[styles.chapterPill, rtl && styles.rowReverse]}>
+            <Text style={styles.chapterPillText}>
+              {t('storyChapterN').replace('{n}', String(story.chapter_no || 1))} · {story.title}
+            </Text>
+          </View>
         </View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -301,28 +312,49 @@ export const StoryScreen: React.FC = () => {
         onLayout={(e) => {
           viewH.current = e.nativeEvent.layout.height;
         }}
-        contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={[styles.cover, { backgroundColor: accent }]}>
-          {!!story.cover_url && <Image source={{ uri: absUrl(story.cover_url) }} style={styles.coverImage} resizeMode="cover" />}
-          {!story.cover_url && <BookOpen size={40} color={hexToRgba(COLORS.white, 0.9)} />}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* کاور عکاسی داستان */}
+        <View style={styles.cover}>
+          {!!story.cover_url ? (
+            <Image source={{ uri: absUrl(story.cover_url) }} style={styles.coverImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <BookOpen size={44} color={COLORS.primary} />
+            </View>
+          )}
+          <View style={styles.coverScrim} />
+          <View style={[styles.coverBadge, rtl ? { right: 12 } : { left: 12 }]}>
+            <Text style={styles.coverBadgeText}>{story.series_title || story.title}</Text>
+          </View>
         </View>
+
+        {/* خلاصه داستان - سبک یادداشت کتاب */}
         {!!story.description_fa && (
-          <View style={[styles.recap, { borderColor: hexToRgba(accent, 0.3), backgroundColor: hexToRgba(accent, 0.06) }]}>
-            <Text style={[styles.recapText, ta]}>{story.description_fa}</Text>
+          <View style={styles.recapCard}>
+            <View style={[styles.recapHeader, rtl && styles.rowReverse]}>
+              <BookOpen size={15} color={COLORS.primary} />
+              <Text style={styles.recapLabel}>خلاصه این بخش</Text>
+            </View>
+            <Text style={[styles.recapText, styles.textRight]}>{story.description_fa}</Text>
           </View>
         )}
 
-        <View style={[styles.guide, rr, { backgroundColor: hexToRgba(accent, 0.08), borderColor: hexToRgba(accent, 0.22) }]}>
-          <View style={[styles.guideIcon, { backgroundColor: hexToRgba(accent, 0.14) }]}>
-            {readAlong ? <Headphones size={16} color={accent} /> : <BookOpen size={16} color={accent} />}
+        {/* راهنمای مطالعه مربی */}
+        <View style={[styles.guideCard, rtl && styles.rowReverse]}>
+          <View style={styles.guideIconWrap}>
+            {readAlong ? <Headphones size={18} color="#2563EB" /> : <BookOpen size={18} color="#059669" />}
           </View>
           <View style={[styles.flex, rtl ? styles.alignEnd : styles.alignStart]}>
-            <Text style={[styles.guideTitle, ta, { color: accent }]}>
+            <Text style={[styles.guideTitle, styles.textRight]}>
               {readAlong ? t('storyGuideListenTitle') : t('storyGuideSilentTitle')}
             </Text>
-            <Text style={[styles.guideText, ta]}>{readAlong ? t('storyGuideListenText') : t('storyGuideSilentText')}</Text>
+            <Text style={[styles.guideText, styles.textRight]}>
+              {readAlong ? t('storyGuideListenText') : t('storyGuideSilentText')}
+            </Text>
             {canReadAlong && !allAnswered && (
-              <View style={[styles.switchInline, rr]}>
+              <View style={[styles.switchInline, rtl && styles.rowReverse, { marginTop: 8 }]}>
                 <Text style={styles.switchLabel}>{t('storyReadAlongToggle')}</Text>
                 <Switch
                   value={readAlong}
@@ -330,23 +362,31 @@ export const StoryScreen: React.FC = () => {
                     setReadAlong(v);
                     if (!v) TrackPlayer.pause().catch(() => {});
                   }}
-                  trackColor={{ true: accent }}
+                  trackColor={{ true: COLORS.primary }}
                 />
               </View>
             )}
           </View>
         </View>
 
-        <View style={styles.switchRow}>
-          <View style={[styles.switchInline, rr]}>
+        {/* نوار ابزار تنظیمات ترجمه */}
+        <View style={styles.toolbarCard}>
+          <View style={[styles.switchInline, rtl && styles.rowReverse]}>
             <Text style={styles.switchLabel}>{t('podcastShowTranslation')}</Text>
-            <Switch value={showAllTranslations} onValueChange={setShowAllTranslations} trackColor={{ true: accent }} />
+            <Switch
+              value={showAllTranslations}
+              onValueChange={setShowAllTranslations}
+              trackColor={{ true: COLORS.primary }}
+            />
           </View>
-          <Text style={[styles.hint, ta]}>{audioOpen ? t('storyReadHint') : t('storyReadHintSilent')}</Text>
+          <Text style={[styles.hint, styles.textRight]}>
+            {audioOpen ? t('storyReadHint') : t('storyReadHintSilent')}
+          </Text>
         </View>
 
+        {/* صفحه اصلی کتاب - سفید با حاشیه‌های استاندارد و متون چپ‌چین */}
         <View
-          style={styles.page}
+          style={styles.bookPaper}
           onLayout={(e) => {
             pageY.current = e.nativeEvent.layout.y;
           }}
@@ -365,7 +405,7 @@ export const StoryScreen: React.FC = () => {
                 {paragraphStart(i) && !img && <View style={styles.paragraphGap} />}
                 {!!img && <Image source={{ uri: absUrl(img) }} style={styles.inlineImage} resizeMode="cover" />}
                 <TouchableOpacity
-                  style={[styles.sentence, isActive && { backgroundColor: hexToRgba(accent, 0.12) }]}
+                  style={[styles.sentence, isActive && styles.sentenceActive]}
                   onPress={() => (audioOpen ? playFrom(l.start_ms) : toggleTranslation(i))}
                   onLongPress={() => toggleTranslation(i)}
                   activeOpacity={0.75}
@@ -376,15 +416,15 @@ export const StoryScreen: React.FC = () => {
                       startMs={l.start_ms}
                       endMs={l.end_ms}
                       positionMs={positionSV}
-                      textStyle={StyleSheet.flatten([styles.sentenceText, styles.sentenceTextActive, ta])}
+                      textStyle={StyleSheet.flatten([styles.sentenceText, styles.sentenceTextActive])}
                     />
                   ) : (
-                    <Text style={[styles.sentenceText, ta]}>{l.text}</Text>
+                    <Text style={styles.sentenceText}>{l.text}</Text>
                   )}
                   {showFa && !!l.translation_fa && (
-                    <Text style={[styles.translation, ta, rtl ? styles.translationBarRight : styles.translationBarLeft]}>
-                      {l.translation_fa}
-                    </Text>
+                    <View style={styles.translationContainer}>
+                      <Text style={styles.translationText}>{l.translation_fa}</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               </View>
@@ -392,16 +432,21 @@ export const StoryScreen: React.FC = () => {
           })}
         </View>
 
+        {/* واژگان کلیدی داستان */}
         {story.vocabulary.length > 0 && (
-          <View style={styles.block}>
-            <Text style={[styles.blockTitle, { color: COLORS.pink }]}>✨ {t('podcastVocabulary')}</Text>
-            <View style={styles.chips}>
+          <View style={styles.vocabBlock}>
+            <View style={[styles.sectionHeaderRow, rtl && styles.rowReverse]}>
+              <Text style={styles.sectionHeaderTitle}>✨ {t('podcastVocabulary')}</Text>
+              <Text style={styles.sectionHeaderSub}>
+                {story.vocabulary.length} واژه منتخب
+              </Text>
+            </View>
+            <View style={styles.vocabChips}>
               {story.vocabulary.map((v, i) => {
-                const c = ACCENT_CYCLE[i % ACCENT_CYCLE.length];
                 return (
-                  <View key={i} style={[styles.chip, { backgroundColor: hexToRgba(c, 0.1), borderColor: hexToRgba(c, 0.35) }]}>
-                    <Text style={[styles.chipWord, { color: c }]}>{v.word}</Text>
-                    <Text style={styles.chipMeaning}>{v.meaning_fa}</Text>
+                  <View key={i} style={styles.vocabChip}>
+                    <Text style={styles.vocabChipWord}>{v.word}</Text>
+                    <Text style={styles.vocabChipMeaning}>{v.meaning_fa}</Text>
                   </View>
                 );
               })}
@@ -409,13 +454,19 @@ export const StoryScreen: React.FC = () => {
           </View>
         )}
 
+        {/* آزمون درک مطلب */}
         {questions.length > 0 && (
-          <View style={styles.block}>
-            <Text style={[styles.blockTitle, { color: COLORS.levelIntermediateBg }]}>💡 {t('storyQuestionsTitle')}</Text>
+          <View style={styles.quizBlock}>
+            <View style={[styles.sectionHeaderRow, rtl && styles.rowReverse]}>
+              <Text style={styles.sectionHeaderTitle}>💡 {t('storyQuestionsTitle')}</Text>
+              <Text style={styles.sectionHeaderSub}>
+                {questions.length} سوال تستی
+              </Text>
+            </View>
             {questions.map((q, qi) => {
               const picked = answers[qi];
               return (
-                <View key={qi} style={styles.question}>
+                <View key={qi} style={styles.quizCard}>
                   <Text style={styles.questionText}>
                     {qi + 1}. {q.q}
                   </Text>
@@ -436,7 +487,23 @@ export const StoryScreen: React.FC = () => {
                           answered && isPicked && !isRight && styles.optionWrong,
                         ]}
                       >
-                        <Text style={styles.optionText}>{opt}</Text>
+                        <View style={[
+                          styles.optionRadio,
+                          answered && isRight && styles.optionRadioRight,
+                          answered && isPicked && !isRight && styles.optionRadioWrong,
+                        ]}>
+                          <Text style={[
+                            styles.optionRadioLetter,
+                            answered && (isRight || isPicked) && styles.optionRadioLetterActive,
+                          ]}>
+                            {String.fromCharCode(65 + oi)}
+                          </Text>
+                        </View>
+                        <Text style={[
+                          styles.optionText,
+                          answered && isRight && styles.optionTextRight,
+                          answered && isPicked && !isRight && styles.optionTextWrong,
+                        ]}>{opt}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -444,8 +511,8 @@ export const StoryScreen: React.FC = () => {
               );
             })}
             {!!speed && (
-              <View style={[styles.speedCard, { borderColor: hexToRgba(accent, 0.35) }]}>
-                <Gauge size={22} color={accent} />
+              <View style={styles.speedCard}>
+                <Gauge size={22} color={COLORS.primary} />
                 <View style={styles.flex}>
                   <Text style={styles.speedValue}>
                     {t('storySpeedValue').replace('{wpm}', String(speed.wpm))}
@@ -461,7 +528,7 @@ export const StoryScreen: React.FC = () => {
               </View>
             )}
             {allAnswered && (
-              <View style={[styles.result, { backgroundColor: hexToRgba(accent, 0.1) }]}>
+              <View style={styles.result}>
                 <Text style={styles.resultText}>
                   {t('storyQuizResult').replace('{c}', String(correct)).replace('{n}', String(questions.length))}
                 </Text>
@@ -472,13 +539,13 @@ export const StoryScreen: React.FC = () => {
 
         {(allAnswered || questions.length === 0) && (
           <TouchableOpacity
-            style={[styles.nextBtn, { backgroundColor: accent }]}
+            style={styles.nextBtn}
             onPress={() =>
               questions.length === 0
                 ? finishWithoutQuestions()
                 : nextChapter
                 ? navigation.navigate('Story', { storyId: nextChapter.id, openedAt: Date.now() })
-                : navigation.goBack()
+                : handleClose()
             }
             activeOpacity={0.85}
           >
@@ -488,19 +555,20 @@ export const StoryScreen: React.FC = () => {
         )}
       </ScrollView>
 
+      {/* نوار پلیر صوتی شناور پایین */}
       <View style={[styles.player, { paddingBottom: insets.bottom + SPACING.s }]}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
+          <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: COLORS.primary }]} />
         </View>
         <View style={[styles.playerRow, rr]}>
           <TouchableOpacity
-            style={[styles.playBtn, { backgroundColor: audioOpen ? accent : COLORS.borderLight }]}
+            style={[styles.playBtn, { backgroundColor: audioOpen ? COLORS.primary : '#E5E0D6' }]}
             onPress={togglePlay}
             disabled={!ready || !audioOpen}
             activeOpacity={0.85}
           >
             {!audioOpen ? (
-              <Lock size={20} color={COLORS.muted} />
+              <Lock size={20} color="#7A7265" />
             ) : !ready ? (
               <ActivityIndicator color={COLORS.white} />
             ) : playing ? (
@@ -517,7 +585,7 @@ export const StoryScreen: React.FC = () => {
             {RATES.map((r) => (
               <TouchableOpacity
                 key={r}
-                style={[styles.rateBtn, rate === r && { backgroundColor: accent, borderColor: accent }]}
+                style={[styles.rateBtn, rate === r && styles.rateBtnActive]}
                 onPress={() => changeRate(r)}
                 activeOpacity={0.85}
               >
@@ -532,106 +600,496 @@ export const StoryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  rowReverse: { flexDirection: 'row-reverse' },
-  textRight: { textAlign: 'right' },
-  textLeft: { textAlign: 'left' },
-  alignEnd: { alignItems: 'flex-end' },
-  alignStart: { alignItems: 'flex-start' },
-  guideIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  translationBarRight: { borderRightWidth: 2, borderRightColor: '#E5E0D6', paddingRight: 8 },
-  translationBarLeft: { borderLeftWidth: 2, borderLeftColor: '#E5E0D6', paddingLeft: 8 },
-  playerSub: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
-  container: { flex: 1, backgroundColor: '#FAF8F4' },
-  center: { alignItems: 'center', justifyContent: 'center', gap: SPACING.s },
-  flex: { flex: 1 },
-  mutedText: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
-  linkText: { ...TEXT_STYLES.labelMd, color: COLORS.primary, fontFamily: FONT_FAMILY.semiBold },
+  container: {
+    flex: 1,
+    backgroundColor: '#FDFBF7',
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.s,
+  },
+  flex: {
+    flex: 1,
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  textRight: {
+    textAlign: 'right',
+  },
+  textLeft: {
+    textAlign: 'left',
+  },
+  alignEnd: {
+    alignItems: 'flex-end',
+  },
+  alignStart: {
+    alignItems: 'flex-start',
+  },
+  mutedText: {
+    ...TEXT_STYLES.bodyMd,
+    color: '#7A7265',
+    textAlign: 'center',
+  },
+  linkText: {
+    ...TEXT_STYLES.labelMd,
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+
+  // ---- هدر مدرن بالای صفحه ----
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.s,
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.s,
+    paddingBottom: SPACING.m,
   },
-  closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EFECE6', alignItems: 'center', justifyContent: 'center' },
-  topTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text, textAlign: 'left' },
-  topSub: { ...TEXT_STYLES.labelSm, fontFamily: FONT_FAMILY.semiBold },
-  content: { paddingHorizontal: SPACING.l, paddingBottom: SPACING.xl, gap: SPACING.m },
-  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  coverImage: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
-  recap: { borderRadius: 16, borderWidth: 1, padding: SPACING.m },
-  recapText: { ...TEXT_STYLES.bodyMd, color: COLORS.text },
-  switchRow: { gap: SPACING.xs },
-  guide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.s, borderRadius: 16, borderWidth: 1, padding: SPACING.m },
-  guideTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
-  guideText: { ...TEXT_STYLES.labelMd, color: COLORS.text, marginTop: 2 },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.level1,
+  },
+  topTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: '#191C21',
+  },
+  chapterPill: {
+    marginTop: 2,
+    backgroundColor: '#FFF4EE',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  chapterPillText: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 11,
+    color: COLORS.primary,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+
+  // ---- محتوای اسکرول ----
+  content: {
+    paddingHorizontal: SPACING.l,
+    paddingBottom: 130,
+    gap: SPACING.m,
+  },
+
+  // ---- کاور عکاسی داستان ----
+  cover: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#EDE7DC',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    ...SHADOWS.level1,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  coverBadge: {
+    position: 'absolute',
+    bottom: 12,
+    backgroundColor: 'rgba(25,28,33,0.72)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  coverBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+    color: COLORS.white,
+  },
+
+  // ---- کارت خلاصه داستان ----
+  recapCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    padding: SPACING.m,
+    gap: 6,
+    ...SHADOWS.level1,
+  },
+  recapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recapLabel: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  recapText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    lineHeight: 22,
+    color: '#4A453E',
+  },
+
+  // ---- کارت راهنمای مطالعه ----
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#FFFDF9',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EDE6DC',
+    padding: SPACING.m,
+  },
+  guideIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5EFE6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: '#191C21',
+  },
+  guideText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    lineHeight: 19,
+    color: '#697082',
+    marginTop: 2,
+  },
+
+  // ---- نوار ابزار تنظیمات ترجمه ----
+  toolbarCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    paddingHorizontal: SPACING.m,
+    paddingVertical: 10,
+  },
+  switchInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  switchLabel: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: '#4B5565',
+  },
+  hint: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#9CA3AF',
+    flex: 1,
+  },
+
+  // ---- صفحه اصلی کتاب (Book Paper) ----
+  bookPaper: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    padding: SPACING.l,
+    gap: 8,
+    ...SHADOWS.level1,
+  },
+  paragraphGap: {
+    height: SPACING.m,
+  },
+  inlineImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 18,
+    marginVertical: SPACING.m,
+  },
+  sentence: {
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  sentenceActive: {
+    backgroundColor: '#FFF4EE',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  sentenceText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 18,
+    lineHeight: 32,
+    color: '#191C21',
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    letterSpacing: 0.15,
+  },
+  sentenceTextActive: {
+    fontFamily: FONT_FAMILY.semiBold,
+    color: '#0F172A',
+  },
+  translationContainer: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F5EFE6',
+  },
+  translationText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    lineHeight: 22,
+    color: '#7A7265',
+    textAlign: 'right',
+  },
+
+  // ---- واژگان کلیدی ----
+  vocabBlock: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    padding: SPACING.l,
+    gap: SPACING.m,
+    ...SHADOWS.level1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionHeaderTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+    color: '#191C21',
+  },
+  sectionHeaderSub: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#7A7265',
+  },
+  vocabChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  vocabChip: {
+    backgroundColor: '#FFF8F4',
+    borderWidth: 1,
+    borderColor: '#F7DCCE',
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vocabChipWord: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.primary,
+  },
+  vocabChipMeaning: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#697082',
+  },
+
+  // ---- کوئیز درک مطلب ----
+  quizBlock: {
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    padding: SPACING.l,
+    gap: SPACING.l,
+    ...SHADOWS.level1,
+  },
+  quizCard: {
+    gap: 8,
+  },
+  questionText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+    color: '#191C21',
+    textAlign: 'left',
+    lineHeight: 22,
+  },
+  questionFa: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#7A7265',
+    textAlign: 'right',
+    lineHeight: 18,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E8E2D8',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.m,
+    backgroundColor: '#FFFDF9',
+  },
+  optionRight: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
+  },
+  optionWrong: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#DC2626',
+  },
+  optionRadio: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#D0C8B8',
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionRadioRight: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  optionRadioWrong: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  optionRadioLetter: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#7A7265',
+  },
+  optionRadioLetterActive: {
+    color: COLORS.white,
+  },
+  optionText: {
+    ...TEXT_STYLES.bodyMd,
+    color: '#191C21',
+    textAlign: 'left',
+    flex: 1,
+  },
+  optionTextRight: {
+    color: '#065F46',
+    fontFamily: FONT_FAMILY.semiBold,
+  },
+  optionTextWrong: {
+    color: '#991B1B',
+    fontFamily: FONT_FAMILY.semiBold,
+  },
   speedCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
     borderWidth: 1,
-    borderRadius: BORDER_RADIUS.m,
+    borderColor: '#F0EBE3',
+    borderRadius: 18,
+    backgroundColor: '#FFFBF7',
     padding: SPACING.m,
   },
-  speedValue: { fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
-  speedCompare: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary },
-  switchInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { ...TEXT_STYLES.labelMd, color: COLORS.text },
-  hint: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
-  page: { backgroundColor: COLORS.white, borderRadius: 18, borderWidth: 1, borderColor: '#EEEAE2', padding: SPACING.m },
-  paragraphGap: { height: SPACING.m },
-  inlineImage: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: BORDER_RADIUS.m,
-    marginVertical: SPACING.s,
+  speedValue: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: '#191C21',
   },
-  sentence: { borderRadius: BORDER_RADIUS.s, paddingVertical: 4, paddingHorizontal: 6 },
-  sentenceText: { fontFamily: FONT_FAMILY.regular, fontSize: 17, lineHeight: 28, color: COLORS.text, writingDirection: 'ltr' },
-  sentenceTextActive: { fontFamily: FONT_FAMILY.semiBold },
-  translation: { ...TEXT_STYLES.labelMd, color: COLORS.textSecondary, marginTop: 2 },
-  block: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
+  speedCompare: {
+    ...TEXT_STYLES.labelMd,
+    color: '#7A7265',
+  },
+  result: {
+    borderRadius: 16,
     padding: SPACING.m,
-    gap: SPACING.s,
-    ...SHADOWS.level1,
-  },
-  blockTitle: { fontFamily: FONT_FAMILY.bold, fontSize: 14 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.s },
-  chip: { borderRadius: BORDER_RADIUS.m, borderWidth: 1, paddingHorizontal: SPACING.m, paddingVertical: 6, alignItems: 'center' },
-  chipWord: { fontFamily: FONT_FAMILY.semiBold, fontSize: 15 },
-  chipMeaning: { ...TEXT_STYLES.labelSm, color: COLORS.textSecondary },
-  question: { gap: 6, marginTop: SPACING.xs },
-  questionText: { fontFamily: FONT_FAMILY.semiBold, fontSize: 15, color: COLORS.text, textAlign: 'left' },
-  questionFa: { ...TEXT_STYLES.labelSm, color: COLORS.muted },
-  option: {
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.m,
-    paddingVertical: 10,
-    paddingHorizontal: SPACING.m,
-    backgroundColor: COLORS.background,
+    borderColor: '#A7F3D0',
   },
-  optionRight: { backgroundColor: COLORS.successLight, borderColor: COLORS.success },
-  optionWrong: { backgroundColor: COLORS.errorLight, borderColor: COLORS.error },
-  optionText: { ...TEXT_STYLES.bodyMd, color: COLORS.text, textAlign: 'left' },
-  result: { borderRadius: BORDER_RADIUS.m, padding: SPACING.m, alignItems: 'center' },
-  resultText: { fontFamily: FONT_FAMILY.bold, fontSize: 15, color: COLORS.text },
+  resultText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 15,
+    color: '#065F46',
+  },
   nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderRadius: BORDER_RADIUS.l,
-    paddingVertical: SPACING.m,
+    gap: 8,
+    borderRadius: 18,
+    paddingVertical: 15,
+    backgroundColor: COLORS.primary,
     ...SHADOWS.level2,
   },
-  nextBtnText: { color: COLORS.white, fontFamily: FONT_FAMILY.bold, fontSize: 16 },
-  player: { borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: COLORS.white, paddingHorizontal: SPACING.l, paddingTop: SPACING.s, gap: SPACING.s, shadowColor: '#1A1D26', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 6 },
-  progressTrack: { height: 4, borderRadius: 2, backgroundColor: COLORS.surfaceHigh, overflow: 'hidden' },
-  progressFill: { height: '100%' },
-  playerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.m },
+  nextBtnText: {
+    color: COLORS.white,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+  },
+
+  // ---- پلیر شناور پایین صفحه ----
+  player: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.l,
+    paddingTop: 12,
+    gap: 10,
+    borderTopWidth: 1,
+    borderColor: '#F0EBE3',
+    ...SHADOWS.level2,
+    elevation: 8,
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#F0EBE3',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+  },
   playBtn: {
     width: 48,
     height: 48,
@@ -640,15 +1098,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.level2,
   },
-  playerLabel: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.text },
-  rates: { flexDirection: 'row', gap: SPACING.xs },
+  playerLabel: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: '#191C21',
+  },
+  playerSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#7A7265',
+    marginTop: 2,
+  },
+  rates: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   rateBtn: {
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#E8E2D8',
+    backgroundColor: '#FAF8F4',
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  rateText: { ...TEXT_STYLES.labelMd, color: COLORS.text },
-  rateTextActive: { color: COLORS.white },
+  rateBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  rateText: {
+    ...TEXT_STYLES.labelMd,
+    color: '#7A7265',
+  },
+  rateTextActive: {
+    color: COLORS.white,
+  },
 });

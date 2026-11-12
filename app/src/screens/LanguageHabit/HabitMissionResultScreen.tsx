@@ -1,6 +1,6 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect } from 'react';
+import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { CheckCircle2 } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../../theme/colors';
@@ -21,14 +21,22 @@ export const HabitMissionResultScreen = () => {
 
   const result: HabitMissionResult = route.params?.result;
 
-  const goDone = () => {
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'LanguageHabit' }],
-      })
-    );
-  };
+  const goDone = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('LanguageHabit');
+    }
+  }, [navigation]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      goDone();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [goDone]);
 
   return (
     <View style={styles.screen}>
@@ -80,11 +88,11 @@ export const HabitMissionResultScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FDFBF7',
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 70,
+    paddingTop: 60,
     paddingBottom: 60,
   },
   headerRow: {
@@ -93,17 +101,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 24,
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#F0EBE3',
     padding: 18,
     marginBottom: 24,
+    shadowColor: '#1A1D26',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -112,36 +125,43 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   rowLabel: {
-    color: COLORS.textSecondary,
+    color: '#716B62',
     fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
   },
   rowValue: {
-    color: COLORS.text,
+    color: '#1A1D26',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
   streakBanner: {
     marginTop: 10,
-    backgroundColor: COLORS.secondaryLight,
+    backgroundColor: '#FFF4EE',
+    borderWidth: 1,
+    borderColor: '#FAD8C7',
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
   },
   streakText: {
-    color: COLORS.secondary,
+    color: '#FF6422',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
   doneBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FF6422',
     borderRadius: 16,
-    height: 50,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#FF6422',
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   doneBtnText: {
-    color: COLORS.white,
+    color: '#FFFFFF',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
   },
