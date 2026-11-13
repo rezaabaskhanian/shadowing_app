@@ -533,44 +533,13 @@ export const PodcastScreen: React.FC = () => {
           </View>
 
           {/* ردیف پخش خودکار قسمت بعدی */}
-          <View style={[styles.autoplayRow, rr]}>
-            <View style={[styles.autoplayTextWrap, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+          <View style={styles.autoplayRow}>
+            {/* ردیف اصلی: عنوان و سوییچ فعال‌سازی */}
+            <View style={[styles.autoplayHeaderRow, rr]}>
               <View style={[styles.autoplayTitleRow, rr]}>
                 <ListMusic size={15} color={autoplay ? COLORS.primary : '#8E95A5'} />
                 <Text style={styles.autoplayTitle}>{t('podcastAutoplayNext')}</Text>
               </View>
-              {autoplay &&
-                (isLastFreeEpisode ? (
-                  <TouchableOpacity onPress={() => navigation.navigate('Paywall')} activeOpacity={0.8}>
-                    <Text
-                      style={[
-                        styles.autoplayNextName,
-                        styles.autoplayWarning,
-                        { textAlign: rtl ? 'right' : 'left' },
-                      ]}
-                    >
-                      {t('podcastLastFreeEpisode')}
-                    </Text>
-                  </TouchableOpacity>
-                ) : nextPodcast ? (
-                  <Text
-                    style={[styles.autoplayNextName, { textAlign: rtl ? 'right' : 'left' }]}
-                    numberOfLines={1}
-                  >
-                    {t('podcastNextEpisodeLabel').replace('{title}', nextPodcast.title)}
-                  </Text>
-                ) : null)}
-            </View>
-
-            <View style={[styles.autoplayControls, rr]}>
-              <TouchableOpacity
-                style={styles.testVoiceBtn}
-                onPress={() => announceNextPodcast(nextPodcast?.title || podcast?.title)}
-                activeOpacity={0.75}
-              >
-                <Volume2 size={13} color={COLORS.primary} />
-                <Text style={styles.testVoiceText}>{t('podcastTestCue')}</Text>
-              </TouchableOpacity>
               <Switch
                 value={autoplay}
                 onValueChange={toggleAutoplay}
@@ -578,6 +547,45 @@ export const PodcastScreen: React.FC = () => {
                 thumbColor={COLORS.white}
               />
             </View>
+
+            {/* جزئیات و دکمه تست در ردیف مجزا هنگام فعال بودن (جلوگیری از تداخل در گوشی‌های با صفحه کوچکتر مثل J5) */}
+            {autoplay && (
+              <View style={[styles.autoplayDetailsRow, rr]}>
+                <View style={[styles.autoplayNextInfo, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                  {isLastFreeEpisode ? (
+                    <TouchableOpacity onPress={() => navigation.navigate('Paywall')} activeOpacity={0.8}>
+                      <Text
+                        style={[
+                          styles.autoplayNextName,
+                          styles.autoplayWarning,
+                          { textAlign: rtl ? 'right' : 'left' },
+                        ]}
+                      >
+                        {t('podcastLastFreeEpisode')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : nextPodcast ? (
+                    <Text
+                      style={[styles.autoplayNextName, { textAlign: rtl ? 'right' : 'left' }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {t('podcastNextEpisodeLabel').replace('{title}', nextPodcast.title)}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.testVoiceBtn, rr]}
+                  onPress={() => announceNextPodcast(nextPodcast?.title || podcast?.title)}
+                  activeOpacity={0.75}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Volume2 size={13} color={COLORS.primary} />
+                  <Text style={styles.testVoiceText}>{t('podcastTestCue')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
@@ -975,53 +983,64 @@ const styles = StyleSheet.create({
     color: '#FF6422',
   },
   autoplayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F2EDE4',
-    marginTop: 2,
+    marginTop: 6,
+    gap: 8,
   },
-  autoplayTextWrap: {
-    flex: 1,
-    marginRight: 8,
+  autoplayHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   autoplayTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   autoplayTitle: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12.5,
     color: '#191C21',
   },
+  autoplayDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF7F2',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 8,
+    width: '100%',
+  },
+  autoplayNextInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   autoplayNextName: {
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     color: '#FF6422',
-    marginTop: 3,
   },
   autoplayWarning: {
     color: '#D97706',
     fontFamily: FONT_FAMILY.medium,
   },
-  autoplayControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   testVoiceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#FFF3ED',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: '#FFF0EA',
     borderWidth: 1,
-    borderColor: '#FCD7C7',
+    borderColor: '#FAD8C7',
+    flexShrink: 0,
   },
   testVoiceText: {
     fontFamily: FONT_FAMILY.bold,
