@@ -7,6 +7,9 @@ import { FONT_FAMILY } from '../../theme/typography';
 import { SHADOWS } from '../../theme/elevation';
 
 const appLogoMark = require('../../assets/brand/app-logo-mark.png');
+const slide1 = require('../../assets/hero/slide_1.jpg');
+const slide2 = require('../../assets/hero/slide_2.jpg');
+const slide3 = require('../../assets/hero/slide_3.jpg');
 
 interface SlideText {
   headlineTop: string;
@@ -18,7 +21,7 @@ interface SlideItem {
   id: number;
   en: SlideText;
   fa: SlideText;
-  imageUri: string;
+  image: any;
 }
 
 const HERO_SLIDES: SlideItem[] = [
@@ -34,7 +37,7 @@ const HERO_SLIDES: SlideItem[] = [
       headlineAccent: 'با زندگی یاد بگیر.',
       subtitle: 'مکالمات واقعی، در دل روزمرگی.',
     },
-    imageUri: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+    image: slide1,
   },
   {
     id: 1,
@@ -48,7 +51,7 @@ const HERO_SLIDES: SlideItem[] = [
       headlineAccent: 'صحبت کن.',
       subtitle: 'شادویینگ تعاملی با بازخورد هوشمند.',
     },
-    imageUri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
+    image: slide2,
   },
   {
     id: 2,
@@ -62,7 +65,7 @@ const HERO_SLIDES: SlideItem[] = [
       headlineAccent: 'مسلط شو.',
       subtitle: 'از کافه تا فرودگاه و محیط کار.',
     },
-    imageUri: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=800&q=80',
+    image: slide3,
   },
 ];
 
@@ -93,10 +96,16 @@ export const HomeHeroBanner: React.FC<HomeHeroBannerProps> = ({
   const slideText = rtl ? currentSlide.fa : currentSlide.en;
   const buttonText = ctaText || (rtl ? 'ادامه‌ی جلسه' : 'Continue Session');
 
-  const heroSource =
-    activeIndex === 0 && heroImageUri && typeof heroImageUri === 'string' && heroImageUri.startsWith('http')
-      ? { uri: heroImageUri }
-      : { uri: currentSlide.imageUri };
+  let heroSource = currentSlide.image;
+  if (activeIndex === 0 && heroImageUri) {
+    if (typeof heroImageUri === 'number') {
+      heroSource = heroImageUri;
+    } else if (typeof heroImageUri === 'string' && heroImageUri.startsWith('http')) {
+      heroSource = { uri: heroImageUri };
+    } else if (typeof heroImageUri === 'object' && heroImageUri?.uri) {
+      heroSource = heroImageUri;
+    }
+  }
 
   return (
     <View style={styles.container}>

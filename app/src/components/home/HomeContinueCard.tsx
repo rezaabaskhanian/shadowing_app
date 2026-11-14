@@ -16,7 +16,7 @@ interface HomeContinueCardProps {
   rtl: boolean;
 }
 
-const REAL_CONTINUE_IMAGE = 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80';
+const REAL_CONTINUE_IMAGE = require('../../assets/home/continue_cover.jpg');
 
 export const HomeContinueCard: React.FC<HomeContinueCardProps> = ({
   title,
@@ -34,7 +34,7 @@ export const HomeContinueCard: React.FC<HomeContinueCardProps> = ({
       ? imageUri
       : typeof imageUri === 'number'
       ? imageUri
-      : { uri: REAL_CONTINUE_IMAGE };
+      : REAL_CONTINUE_IMAGE;
   return (
     <TouchableOpacity
       style={styles.card}

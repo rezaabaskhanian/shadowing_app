@@ -29,7 +29,7 @@ interface HomeExploreCardProps {
   rtl: boolean;
 }
 
-const EXPLORE_COVER_IMAGE = 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80';
+const EXPLORE_COVER_IMAGE = require('../../assets/home/explore_cover.jpg');
 
 /**
  * کارت ادیتوریال و تصویری کاوش در کتابخانه محتوا
@@ -54,7 +54,7 @@ export const HomeExploreCard: React.FC<HomeExploreCardProps> = ({
         activeOpacity={0.9}
       >
         <Image
-          source={{ uri: EXPLORE_COVER_IMAGE }}
+          source={EXPLORE_COVER_IMAGE}
           style={styles.bannerImage}
           resizeMode="cover"
         />

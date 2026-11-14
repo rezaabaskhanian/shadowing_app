@@ -31,12 +31,12 @@ interface HomeRecommendedShelfProps {
 }
 
 const SCENE_REAL_PHOTOS = [
-  'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80',
+  require('../../assets/scenes/clothes_shopping.png'),
+  require('../../assets/scenes/hotel_reception.png'),
+  require('../../assets/scenes/driving_lesson.png'),
+  require('../../assets/scenes/weight_loss.png'),
+  require('../../assets/home/continue_cover.jpg'),
+  require('../../assets/home/explore_cover.jpg'),
 ];
 
 const getScenePhotoSource = (scene: RecommendedSceneItem, index: number) => {
@@ -50,7 +50,7 @@ const getScenePhotoSource = (scene: RecommendedSceneItem, index: number) => {
   if (typeof uri === 'number') {
     return uri;
   }
-  return { uri: SCENE_REAL_PHOTOS[index % SCENE_REAL_PHOTOS.length] };
+  return SCENE_REAL_PHOTOS[index % SCENE_REAL_PHOTOS.length];
 };
 
 /**
