@@ -1,13 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Image,
-  ScrollView,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -87,6 +89,8 @@ export const PodcastListScreen: React.FC = () => {
     ?.slice()
     .sort((a, b) => levelRank(b.level) - levelRank(a.level));
 
+  const [savedProgress, setSavedProgress] = useState<Record<string, number>>({});
+
   const load = useCallback(() => {
     setError(false);
     if (user?.role === 'admin') {
@@ -97,7 +101,24 @@ export const PodcastListScreen: React.FC = () => {
         .catch(() => setIsSubscribed(false));
     }
     getPodcasts()
-      .then(setPodcasts)
+      .then(async (list) => {
+        setPodcasts(list);
+        if (list && list.length > 0) {
+          const keys = list.map((p) => `@podcast_pos_${p.id}`);
+          const entries = await AsyncStorage.getMany(keys).catch(() => ({}));
+          const progressMap: Record<string, number> = {};
+          for (const [k, v] of Object.entries(entries)) {
+            if (v) {
+              const pId = k.replace('@podcast_pos_', '');
+              const ms = parseInt(v, 10);
+              if (ms > 3000) {
+                progressMap[pId] = ms;
+              }
+            }
+          }
+          setSavedProgress(progressMap);
+        }
+      })
       .catch(() => setError(true));
     getMyLevel()
       .then((l) => setMyLevel(l.scene_level))
@@ -107,6 +128,137 @@ export const PodcastListScreen: React.FC = () => {
   useFocusEffect(load);
 
   const ChevronIcon = rtl ? ChevronLeft : ChevronRight;
+
+  const renderPodcastItem = useCallback(
+    ({ item: p, index }: { item: Podcast; index: number }) => {
+      const level = LEVEL_META[p.level] ?? LEVEL_META.beginner;
+      const isLocked = !isSubscribed && index >= FREE_PODCASTS_COUNT;
+      const hasCover = !!p.cover_url;
+      const progressMs = savedProgress[p.id];
+      const hasProgress = !isLocked && progressMs && progressMs > 3000 && progressMs < (p.duration_seconds - 5) * 1000;
+      const progressPct = hasProgress
+        ? Math.min(100, Math.max(0, (progressMs / (p.duration_seconds * 1000)) * 100))
+        : 0;
+
+      return (
+        <TouchableOpacity
+          key={p.id}
+          style={styles.card}
+          activeOpacity={0.9}
+          onPress={() =>
+            isLocked
+              ? navigation.navigate('Paywall')
+              : navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })
+          }
+        >
+          {/* بنر تصویری با کاور عکاسی باکیفیت */}
+          <View style={styles.bannerWrap}>
+            {hasCover ? (
+              <Image
+                source={{ uri: absUrl(p.cover_url!) }}
+                style={styles.bannerImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.bannerPlaceholder, { backgroundColor: level.bg }]}>
+                <Headphones size={42} color={level.color} />
+              </View>
+            )}
+
+            {/* گرادینت تیره ملایم روی تصویر برای خوانایی */}
+            <View style={styles.bannerOverlay} />
+
+            {/* پچ نشانگر سطح در بالای تصویر */}
+            <View style={[styles.badgeTopRow, rtl && styles.rowReverse]}>
+              <View style={[styles.levelPill, { backgroundColor: level.bg, borderColor: level.color }]}>
+                <Text style={[styles.levelPillText, { color: level.color }]}>
+                  {t(level.labelKey)}
+                </Text>
+              </View>
+
+              {isLocked ? (
+                <View style={styles.lockedBadge}>
+                  <Lock size={12} color={COLORS.white} />
+                  <Text style={styles.lockedBadgeText}>
+                    {rtl ? 'اشتراک ویژه' : 'Premium'}
+                  </Text>
+                </View>
+              ) : hasProgress ? (
+                <View style={styles.resumePill}>
+                  <RotateCcw size={10} color={COLORS.white} />
+                  <Text style={styles.resumePillText}>
+                    {t('podcastResumeBadge').replace('{time}', formatDuration(Math.round(progressMs / 1000)))}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.durationPill}>
+                  <Clock size={11} color={COLORS.white} />
+                  <Text style={styles.durationText}>{formatDuration(p.duration_seconds)}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* نوار پیشرفت ادامه پخش در لبه پایین تصویر */}
+            {hasProgress && (
+              <View style={styles.cardProgressBarTrack}>
+                <View style={[styles.cardProgressBarFill, { width: `${progressPct}%` }]} />
+              </View>
+            )}
+
+            {/* دکمه شناور پخش در مرکز / راست بنر */}
+            <View style={[styles.playButtonOverlay, isLocked && styles.playButtonLocked]}>
+              {isLocked ? (
+                <Lock size={20} color={COLORS.white} />
+              ) : (
+                <Play size={20} color={COLORS.white} fill={COLORS.white} style={{ marginLeft: 2 }} />
+              )}
+            </View>
+          </View>
+
+          {/* بدنه و توضیحات کارت */}
+          <View style={styles.cardBody}>
+            <View style={[styles.titleRow, rtl && styles.rowReverse]}>
+              <Text style={[styles.cardTitle, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={1}>
+                {p.title}
+              </Text>
+            </View>
+
+            {!!p.description_fa && (
+              <Text
+                style={[styles.cardSubtitle, { textAlign: rtl ? 'right' : 'left' }]}
+                numberOfLines={2}
+              >
+                {p.description_fa}
+              </Text>
+            )}
+
+            <View style={[styles.cardFooter, rtl && styles.rowReverse]}>
+              <View style={[styles.metaItem, rtl && styles.rowReverse]}>
+                <Sparkles size={14} color={COLORS.primary} />
+                <Text style={styles.metaText}>
+                  {rtl
+                    ? `${p.lines?.length || p.line_count || 12} جمله مکالمه`
+                    : `${p.lines?.length || p.line_count || 12} dialogue lines`}
+                </Text>
+              </View>
+
+              <View style={[styles.actionRow, rtl && styles.rowReverse]}>
+                <Text style={styles.actionText}>
+                  {isLocked
+                    ? rtl ? 'باز کردن' : 'Unlock'
+                    : hasProgress
+                    ? rtl ? 'ادامه پادکست' : 'Resume'
+                    : rtl ? 'شنیدن پادکست' : 'Listen'}
+                </Text>
+                <ChevronIcon size={14} color={COLORS.primary} />
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [isSubscribed, savedProgress, rtl, t, navigation, ChevronIcon]
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
@@ -187,117 +339,19 @@ export const PodcastListScreen: React.FC = () => {
         </View>
       )}
 
-      {/* لیست کارت‌های اختصاصی پادکست */}
+      {/* لیست کارت‌های اختصاصی پادکست با FlatList بهینه و سریع */}
       {podcasts && podcasts.length > 0 && (
-        <ScrollView
+        <FlatList
+          data={podcasts}
+          renderItem={renderPodcastItem}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.xl }]}
           showsVerticalScrollIndicator={false}
-        >
-          {podcasts.map((p, index) => {
-            const level = LEVEL_META[p.level] ?? LEVEL_META.beginner;
-            const isLocked = !isSubscribed && index >= FREE_PODCASTS_COUNT;
-            const hasCover = !!p.cover_url;
-
-            return (
-              <TouchableOpacity
-                key={p.id}
-                style={styles.card}
-                activeOpacity={0.9}
-                onPress={() =>
-                  isLocked
-                    ? navigation.navigate('Paywall')
-                    : navigation.navigate('Podcast', { podcastId: p.id, openedAt: Date.now() })
-                }
-              >
-                {/* بنر تصویری با کاور عکاسی باکیفیت */}
-                <View style={styles.bannerWrap}>
-                  {hasCover ? (
-                    <Image
-                      source={{ uri: absUrl(p.cover_url!) }}
-                      style={styles.bannerImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.bannerPlaceholder, { backgroundColor: level.bg }]}>
-                      <Headphones size={42} color={level.color} />
-                    </View>
-                  )}
-
-                  {/* گرادینت تیره ملایم روی تصویر برای خوانایی */}
-                  <View style={styles.bannerOverlay} />
-
-                  {/* پچ نشانگر سطح در بالای تصویر */}
-                  <View style={[styles.badgeTopRow, rtl && styles.rowReverse]}>
-                    <View style={[styles.levelPill, { backgroundColor: level.bg, borderColor: level.color }]}>
-                      <Text style={[styles.levelPillText, { color: level.color }]}>
-                        {t(level.labelKey)}
-                      </Text>
-                    </View>
-
-                    {isLocked ? (
-                      <View style={styles.lockedBadge}>
-                        <Lock size={12} color={COLORS.white} />
-                        <Text style={styles.lockedBadgeText}>
-                          {rtl ? 'اشتراک ویژه' : 'Premium'}
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={styles.durationPill}>
-                        <Clock size={11} color={COLORS.white} />
-                        <Text style={styles.durationText}>{formatDuration(p.duration_seconds)}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* دکمه شناور پخش در مرکز / راست بنر */}
-                  <View style={[styles.playButtonOverlay, isLocked && styles.playButtonLocked]}>
-                    {isLocked ? (
-                      <Lock size={20} color={COLORS.white} />
-                    ) : (
-                      <Play size={20} color={COLORS.white} fill={COLORS.white} style={{ marginLeft: 2 }} />
-                    )}
-                  </View>
-                </View>
-
-                {/* بدنه و توضیحات کارت */}
-                <View style={styles.cardBody}>
-                  <View style={[styles.titleRow, rtl && styles.rowReverse]}>
-                    <Text style={[styles.cardTitle, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={1}>
-                      {p.title}
-                    </Text>
-                  </View>
-
-                  {!!p.description_fa && (
-                    <Text
-                      style={[styles.cardSubtitle, { textAlign: rtl ? 'right' : 'left' }]}
-                      numberOfLines={2}
-                    >
-                      {p.description_fa}
-                    </Text>
-                  )}
-
-                  <View style={[styles.cardFooter, rtl && styles.rowReverse]}>
-                    <View style={[styles.metaItem, rtl && styles.rowReverse]}>
-                      <Sparkles size={14} color={COLORS.primary} />
-                      <Text style={styles.metaText}>
-                        {rtl
-                          ? `${p.lines?.length || p.line_count || 12} جمله مکالمه`
-                          : `${p.lines?.length || p.line_count || 12} dialogue lines`}
-                      </Text>
-                    </View>
-
-                    <View style={[styles.actionRow, rtl && styles.rowReverse]}>
-                      <Text style={styles.actionText}>
-                        {isLocked ? (rtl ? 'باز کردن' : 'Unlock') : (rtl ? 'شنیدن پادکست' : 'Listen')}
-                      </Text>
-                      <ChevronIcon size={14} color={COLORS.primary} />
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+        />
       )}
     </View>
   );
@@ -501,6 +555,33 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.medium,
     fontSize: 11,
     color: COLORS.white,
+  },
+  resumePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FF6422',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  resumePillText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+    color: COLORS.white,
+  },
+  cardProgressBarTrack: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3.5,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  cardProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#FF6422',
+    borderRadius: 2,
   },
   playButtonOverlay: {
     position: 'absolute',

@@ -106,6 +106,8 @@ export const PodcastScreen: React.FC = () => {
   const [showTranscript, setShowTranscript] = useState(false);
   const trackedRef = useRef(false);
 
+  const [resumeMs, setResumeMs] = useState<number | null>(null);
+  const lastSavedSec = useRef(0);
   const [repeatLine, setRepeatLine] = useState(false);
   const repeatRef = useRef<{ on: boolean; start: number; end: number }>({ on: false, start: 0, end: 0 });
   const [trackWidth, setTrackWidth] = useState(1);
@@ -181,6 +183,21 @@ export const PodcastScreen: React.FC = () => {
           artist: 'LingoFlow',
         });
         await TrackPlayer.setRate(rate).catch(() => {});
+
+        // بررسی موقعیت ذخیره‌شده برای ادامه پخش خودکار (Resume Playback)
+        const savedPosStr = await AsyncStorage.getItem(`@podcast_pos_${id}`).catch(() => null);
+        const savedMs = savedPosStr ? parseInt(savedPosStr, 10) : 0;
+        const canResume = savedMs > 3000 && savedMs < (p.duration_seconds - 5) * 1000;
+
+        if (canResume) {
+          setResumeMs(savedMs);
+          positionSV.value = savedMs;
+          setPositionMs(savedMs);
+          await TrackPlayer.seekTo(savedMs / 1000).catch(() => {});
+        } else {
+          setResumeMs(null);
+        }
+
         setReady(true);
         if (autoPlayImmediately) {
           trackedRef.current = true;
@@ -231,6 +248,17 @@ export const PodcastScreen: React.FC = () => {
     AsyncStorage.setItem('@podcast_autoplay_next', String(val)).catch(() => {});
   };
 
+  const handleRestartPodcast = useCallback(async () => {
+    setResumeMs(null);
+    const currId = currentIdRef.current;
+    if (currId) {
+      await AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
+    }
+    await TrackPlayer.seekTo(0).catch(() => {});
+    positionSV.value = 0;
+    setPositionMs(0);
+  }, [positionSV]);
+
   useEffect(() => {
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (d) => {
       const ms = Math.round(d.position * 1000);
@@ -243,6 +271,21 @@ export const PodcastScreen: React.FC = () => {
       }
       positionSV.value = ms;
       setPositionMs(ms);
+
+      // ذخیره‌سازی دوره‌ای موقعیت برای ادامه پخش (Resume Playback)
+      const currentSec = Math.floor(d.position);
+      if (Math.abs(currentSec - lastSavedSec.current) >= 3 && podcastDurationRef.current > 0) {
+        lastSavedSec.current = currentSec;
+        const currId = currentIdRef.current;
+        if (currId) {
+          if (d.position >= podcastDurationRef.current - 4) {
+            AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
+            setResumeMs(null);
+          } else if (d.position >= 3) {
+            AsyncStorage.setItem(`@podcast_pos_${currId}`, String(ms)).catch(() => {});
+          }
+        }
+      }
 
       if (
         podcastDurationRef.current > 0 &&
@@ -261,6 +304,12 @@ export const PodcastScreen: React.FC = () => {
       setPlaying(isPl);
 
       if (d.state === State.Ended) {
+        const currId = currentIdRef.current;
+        if (currId) {
+          AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
+        }
+        setResumeMs(null);
+
         if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
           playNextEpisode();
         }
@@ -270,6 +319,11 @@ export const PodcastScreen: React.FC = () => {
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
       playingSV.value = false;
       setPlaying(false);
+      const currId = currentIdRef.current;
+      if (currId) {
+        AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
+      }
+      setResumeMs(null);
 
       if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
         playNextEpisode();
@@ -755,6 +809,26 @@ export const PodcastScreen: React.FC = () => {
 
       {/* پلیر شناور و شیک پایین صفحه */}
       <View style={[styles.player, { paddingBottom: insets.bottom + SPACING.s }]}>
+        {/* نوار اطلاع ادامه پخش همراه با دکمه شروع از ابتدا */}
+        {resumeMs !== null && resumeMs > 3000 && (
+          <View style={[styles.resumeNoticeRow, rr]}>
+            <View style={[styles.resumeNoticeLeft, rr]}>
+              <RotateCcw size={12} color={COLORS.primary} />
+              <Text style={styles.resumeNoticeText}>
+                {t('podcastResumeNotice').replace('{time}', formatDuration(Math.round(resumeMs / 1000)))}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.resumeStartOverBtn}
+              onPress={handleRestartPodcast}
+              activeOpacity={0.75}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text style={styles.resumeStartOverText}>{t('podcastStartOver')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <TouchableOpacity
           activeOpacity={1}
           onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width || 1)}
@@ -1253,6 +1327,40 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -4 },
     elevation: 12,
+  },
+  resumeNoticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF4EE',
+    borderWidth: 1,
+    borderColor: '#FCD7C7',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  resumeNoticeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  resumeNoticeText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
+    color: '#FF6422',
+  },
+  resumeStartOverBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: '#FFE5D9',
+  },
+  resumeStartOverText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+    color: '#D9480F',
   },
   progressHit: {
     paddingVertical: 8,

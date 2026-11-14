@@ -1784,6 +1784,9 @@ export const translations: Translations = {
     fa: 'آخرین قسمت رایگان؛ برای پخش قسمت‌های بعد نیاز به اشتراک است.',
   },
   podcastTestCue: { en: 'Test voice', fa: 'تست ویس' },
+  podcastResumeNotice: { en: 'Resumed from {time}', fa: 'ادامه از دقیقه {time}' },
+  podcastStartOver: { en: 'Start over', fa: 'پخش از اول' },
+  podcastResumeBadge: { en: 'Resume {time}', fa: 'ادامه از {time}' },
   podcastListeningModeTitle: { en: 'Listening Mode', fa: 'حالت تمرکز بر شنیدن' },
   podcastListeningModeSub: {
     en: 'Text is hidden so you can focus entirely on listening. Tap the button above whenever you want to check the transcript.',
