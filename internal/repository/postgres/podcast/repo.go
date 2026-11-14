@@ -61,6 +61,8 @@ type Podcast struct {
 	// سؤال‌های فهمِ آخر فصل (فقط برای story).
 	SeriesTitle     string            `json:"series_title"`
 	ChapterNo       int               `json:"chapter_no"`
+	SeriesID        string            `json:"series_id,omitempty"`
+	EpisodeNo       int               `json:"episode_no"`
 	Questions       []Question        `json:"questions"`
 	SceneID         string            `json:"scene_id"`
 	Vocabulary      []VocabItem       `json:"vocabulary"`
@@ -84,17 +86,34 @@ type Podcast struct {
 	Lines     []Line `json:"lines"`
 }
 
+type PodcastSeries struct {
+	ID            string    `json:"id"`
+	Title         string    `json:"title"`
+	DescriptionFa string    `json:"description_fa"`
+	Level         string    `json:"level"`
+	CoverURL      string    `json:"cover_url"`
+	Category      string    `json:"category"`
+	Position      int       `json:"position"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     string    `json:"created_at"`
+	EpisodesCount int       `json:"episodes_count"`
+	TotalDuration int       `json:"total_duration"`
+	Episodes      []Podcast `json:"episodes,omitempty"`
+}
+
 const podcastColumns = `p.id::text, p.title, p.description_fa, p.level, COALESCE(p.scene_id::text, ''), p.vocabulary, p.voices,
 	p.audio_url, p.audio_status, p.audio_error, p.duration_seconds, p.position, p.is_active, p.created_at::text,
 	(SELECT COUNT(*) FROM podcast_lines l WHERE l.podcast_id = p.id), p.image_url,
 	COALESCE(NULLIF(p.image_url, ''), (SELECT s.background_image_url FROM scenes s WHERE s.id = p.scene_id), ''),
-	p.speech_speed, p.line_gap_ms, p.kind, p.images, p.series_title, p.chapter_no, p.questions`
+	p.speech_speed, p.line_gap_ms, p.kind, p.images, p.series_title, p.chapter_no, p.questions,
+	COALESCE(p.series_id::text, ''), p.episode_no`
 
 func scanPodcast(row pgx.Row, p *Podcast) error {
 	var vocab, voices, images, questions []byte
 	if err := row.Scan(&p.ID, &p.Title, &p.DescriptionFa, &p.Level, &p.SceneID, &vocab, &voices,
 		&p.AudioURL, &p.AudioStatus, &p.AudioError, &p.DurationSeconds, &p.Position, &p.IsActive, &p.CreatedAt, &p.LineCount, &p.ImageURL, &p.CoverURL,
-		&p.SpeechSpeed, &p.LineGapMs, &p.Kind, &images, &p.SeriesTitle, &p.ChapterNo, &questions); err != nil {
+		&p.SpeechSpeed, &p.LineGapMs, &p.Kind, &images, &p.SeriesTitle, &p.ChapterNo, &questions,
+		&p.SeriesID, &p.EpisodeNo); err != nil {
 		return err
 	}
 	p.Vocabulary = []VocabItem{}
@@ -177,6 +196,10 @@ func (r DB) Save(ctx context.Context, p Podcast, keepAudio bool) (string, error)
 	if p.SceneID != "" {
 		sceneID = p.SceneID
 	}
+	var seriesID any
+	if p.SeriesID != "" {
+		seriesID = p.SeriesID
+	}
 
 	tx, err := r.conn.Begin(ctx)
 	if err != nil {
@@ -188,10 +211,10 @@ func (r DB) Save(ctx context.Context, p Podcast, keepAudio bool) (string, error)
 	if id == "" {
 		err = tx.QueryRow(ctx, `
 			INSERT INTO podcasts (title, description_fa, level, scene_id, vocabulary, voices, position, is_active, image_url,
-				speech_speed, line_gap_ms, kind, images, series_title, chapter_no, questions)
-			VALUES ($1, $2, $3, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id::text`,
+				speech_speed, line_gap_ms, kind, images, series_title, chapter_no, questions, series_id, episode_no)
+			VALUES ($1, $2, $3, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::uuid, $18) RETURNING id::text`,
 			p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL,
-			p.SpeechSpeed, p.LineGapMs, p.Kind, images, p.SeriesTitle, p.ChapterNo, questions).Scan(&id)
+			p.SpeechSpeed, p.LineGapMs, p.Kind, images, p.SeriesTitle, p.ChapterNo, questions, seriesID, p.EpisodeNo).Scan(&id)
 	} else {
 		audioReset := ""
 		if !keepAudio {
@@ -200,10 +223,11 @@ func (r DB) Save(ctx context.Context, p Podcast, keepAudio bool) (string, error)
 		_, err = tx.Exec(ctx, `
 			UPDATE podcasts SET title = $2, description_fa = $3, level = $4, scene_id = $5::uuid, vocabulary = $6,
 				voices = $7, position = $8, is_active = $9, image_url = $10, speech_speed = $11, line_gap_ms = $12,
-				kind = $13, images = $14, series_title = $15, chapter_no = $16, questions = $17`+audioReset+`
+				kind = $13, images = $14, series_title = $15, chapter_no = $16, questions = $17,
+				series_id = $18::uuid, episode_no = $19`+audioReset+`
 			WHERE id = $1::uuid`,
 			id, p.Title, p.DescriptionFa, p.Level, sceneID, vocab, voices, p.Position, p.IsActive, p.ImageURL,
-			p.SpeechSpeed, p.LineGapMs, p.Kind, images, p.SeriesTitle, p.ChapterNo, questions)
+			p.SpeechSpeed, p.LineGapMs, p.Kind, images, p.SeriesTitle, p.ChapterNo, questions, seriesID, p.EpisodeNo)
 	}
 	if err != nil {
 		return "", richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره‌ی پادکست")
@@ -284,6 +308,130 @@ func (r DB) ResetGenerating(ctx context.Context) error {
 		UPDATE podcasts SET audio_status = 'failed', audio_error = 'ساخت صدا با ری‌استارت سرور قطع شد؛ دوباره بساز'
 		WHERE audio_status = 'generating'`); err != nil {
 		return richerror.New(op).WithErr(err)
+	}
+	return nil
+}
+
+// ----------------- Podcast Series -----------------
+
+// ListSeries لیست مجموعه‌ها را با تعداد قسمت‌ها و مجموع زمان برمی‌گرداند.
+func (r DB) ListSeries(ctx context.Context, activeOnly bool) ([]PodcastSeries, error) {
+	const op = "postgrespodcast.ListSeries"
+	filter := ""
+	if activeOnly {
+		filter = "WHERE s.is_active"
+	}
+
+	query := `
+		SELECT
+			s.id::text, s.title, s.description_fa, s.level, s.cover_url, s.category,
+			s.position, s.is_active, s.created_at::text,
+			COUNT(p.id) FILTER (WHERE NOT $1 OR (p.is_active AND p.audio_status = 'ready')) AS episodes_count,
+			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $1 OR (p.is_active AND p.audio_status = 'ready')), 0) AS total_duration
+		FROM podcast_series s
+		LEFT JOIN podcasts p ON p.series_id = s.id
+		` + filter + `
+		GROUP BY s.id
+		ORDER BY s.position, s.created_at DESC`
+
+	rows, err := r.conn.Query(ctx, query, activeOnly)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+
+	out := make([]PodcastSeries, 0)
+	for rows.Next() {
+		var s PodcastSeries
+		if err := rows.Scan(
+			&s.ID, &s.Title, &s.DescriptionFa, &s.Level, &s.CoverURL, &s.Category,
+			&s.Position, &s.IsActive, &s.CreatedAt, &s.EpisodesCount, &s.TotalDuration,
+		); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+// GetSeries جزئیات مجموعه و لیست قسمت‌های آن را می‌آورد.
+func (r DB) GetSeries(ctx context.Context, id string, activeOnly bool) (PodcastSeries, error) {
+	const op = "postgrespodcast.GetSeries"
+	var s PodcastSeries
+	err := r.conn.QueryRow(ctx, `
+		SELECT
+			s.id::text, s.title, s.description_fa, s.level, s.cover_url, s.category,
+			s.position, s.is_active, s.created_at::text,
+			COUNT(p.id) FILTER (WHERE NOT $2 OR (p.is_active AND p.audio_status = 'ready')) AS episodes_count,
+			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $2 OR (p.is_active AND p.audio_status = 'ready')), 0) AS total_duration
+		FROM podcast_series s
+		LEFT JOIN podcasts p ON p.series_id = s.id
+		WHERE s.id = $1::uuid
+		GROUP BY s.id`, id, activeOnly).Scan(
+		&s.ID, &s.Title, &s.DescriptionFa, &s.Level, &s.CoverURL, &s.Category,
+		&s.Position, &s.IsActive, &s.CreatedAt, &s.EpisodesCount, &s.TotalDuration,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PodcastSeries{}, richerror.New(op).WithErr(err).WithMessage("مجموعه پادکست پیدا نشد").WithKind(richerror.KindNotFound)
+	}
+	if err != nil {
+		return PodcastSeries{}, richerror.New(op).WithErr(err)
+	}
+
+	filter := ""
+	if activeOnly {
+		filter = "AND p.is_active AND p.audio_status = 'ready'"
+	}
+	rows, err := r.conn.Query(ctx, `
+		SELECT `+podcastColumns+`
+		FROM podcasts p
+		WHERE p.series_id = $1::uuid `+filter+`
+		ORDER BY p.episode_no, p.created_at ASC`, id)
+	if err != nil {
+		return PodcastSeries{}, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+
+	s.Episodes = make([]Podcast, 0)
+	for rows.Next() {
+		var ep Podcast
+		if err := scanPodcast(rows, &ep); err != nil {
+			return PodcastSeries{}, richerror.New(op).WithErr(err)
+		}
+		s.Episodes = append(s.Episodes, ep)
+	}
+	return s, rows.Err()
+}
+
+// SaveSeries ایجاد یا ویرایش یک مجموعه پادکست.
+func (r DB) SaveSeries(ctx context.Context, s PodcastSeries) (string, error) {
+	const op = "postgrespodcast.SaveSeries"
+	id := s.ID
+	var err error
+	if id == "" {
+		err = r.conn.QueryRow(ctx, `
+			INSERT INTO podcast_series (title, description_fa, level, cover_url, category, position, is_active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id::text`,
+			s.Title, s.DescriptionFa, s.Level, s.CoverURL, s.Category, s.Position, s.IsActive).Scan(&id)
+	} else {
+		_, err = r.conn.Exec(ctx, `
+			UPDATE podcast_series
+			SET title = $2, description_fa = $3, level = $4, cover_url = $5, category = $6, position = $7, is_active = $8
+			WHERE id = $1::uuid`,
+			id, s.Title, s.DescriptionFa, s.Level, s.CoverURL, s.Category, s.Position, s.IsActive)
+	}
+	if err != nil {
+		return "", richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره مجموعه پادکست")
+	}
+	return id, nil
+}
+
+// DeleteSeries حذف مجموعه پادکست.
+func (r DB) DeleteSeries(ctx context.Context, id string) error {
+	const op = "postgrespodcast.DeleteSeries"
+	if _, err := r.conn.Exec(ctx, `DELETE FROM podcast_series WHERE id = $1::uuid`, id); err != nil {
+		return richerror.New(op).WithErr(err).WithMessage("خطا در حذف مجموعه پادکست")
 	}
 	return nil
 }

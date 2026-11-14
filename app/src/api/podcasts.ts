@@ -32,6 +32,9 @@ export interface Podcast {
   series_title?: string;
   chapter_no?: number;
   questions?: StoryQuestion[];
+  /** پادکست سریالی: شناسه‌ی مجموعه و شماره‌ی قسمت */
+  series_id?: string;
+  episode_no?: number;
   audio_url: string;
   duration_seconds: number;
   /** تصویرِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط؛ خالی = بدون عکس. */
@@ -57,6 +60,33 @@ export async function getStories(): Promise<Podcast[]> {
 export async function getPodcast(id: string): Promise<Podcast> {
   const res = await authFetch(`/v1/podcasts/${id}`, { method: 'GET' });
   return (await jsonOrThrow(res)) as Podcast;
+}
+
+export interface PodcastSeries {
+  id: string;
+  title: string;
+  description_fa: string;
+  level: 'starter' | 'beginner' | 'intermediate' | 'advanced' | 'proficient';
+  cover_url?: string;
+  category?: string;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+  episodes_count: number;
+  total_duration: number;
+  episodes?: Podcast[];
+}
+
+/** دریافت لیست تمام مجموعه‌های پادکست منتشرشده */
+export async function getPodcastSeriesList(): Promise<PodcastSeries[]> {
+  const res = await authFetch('/v1/podcasts/series', { method: 'GET' });
+  return ((await jsonOrThrow(res)) as PodcastSeries[]) || [];
+}
+
+/** دریافت یک مجموعه پادکست به همراه لیست قسمت‌های آن */
+export async function getPodcastSeriesDetail(id: string): Promise<PodcastSeries> {
+  const res = await authFetch(`/v1/podcasts/series/${id}`, { method: 'GET' });
+  return (await jsonOrThrow(res)) as PodcastSeries;
 }
 
 const LEVEL_ORDER: Podcast['level'][] = ['starter', 'beginner', 'intermediate', 'advanced', 'proficient'];

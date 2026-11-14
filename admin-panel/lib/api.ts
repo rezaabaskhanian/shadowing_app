@@ -23,6 +23,7 @@ import type {
   CourseLessonSuggestion,
   CourseUnit,
   Podcast,
+  PodcastSeries,
   PodcastScript,
   SpeakingTopicSuggestion,
   AssessmentItem,
@@ -1005,6 +1006,24 @@ export async function savePodcastLevelPresets(
 /** ساخت صدا در پس‌زمینه شروع می‌شود؛ وضعیت را با getPodcast دنبال کن. */
 export async function generatePodcastAudio(id: string): Promise<Podcast> {
   return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}/generate-audio`, { method: "POST" }));
+}
+
+export async function listPodcastSeries(): Promise<PodcastSeries[]> {
+  return (await jsonOrThrow(await authFetch("/v1/admin/podcasts/series", { method: "GET" }))) || [];
+}
+
+export async function getPodcastSeries(id: string): Promise<PodcastSeries> {
+  return jsonOrThrow(await authFetch(`/v1/admin/podcasts/series/${id}`, { method: "GET" }));
+}
+
+export async function savePodcastSeries(s: Omit<PodcastSeries, "id"> & { id?: string }): Promise<PodcastSeries> {
+  return jsonOrThrow(
+    await authFetch(s.id ? `/v1/admin/podcasts/series/${s.id}` : "/v1/admin/podcasts/series", jsonBody(s.id ? "PUT" : "POST", s))
+  );
+}
+
+export async function deletePodcastSeries(id: string): Promise<void> {
+  await jsonOrThrow(await authFetch(`/v1/admin/podcasts/series/${id}`, { method: "DELETE" }));
 }
 
 // ---------- کتابخانه‌ی محتوا (فایل‌های JSON مرجع) ----------

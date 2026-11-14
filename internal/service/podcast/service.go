@@ -30,10 +30,16 @@ type repository interface {
 	SetAudioReady(ctx context.Context, id, url string, durationSeconds int, timings map[string][2]int) error
 	SetAudioFailed(ctx context.Context, id, msg string) error
 	ResetGenerating(ctx context.Context) error
+
+	ListSeries(ctx context.Context, activeOnly bool) ([]postgrespodcast.PodcastSeries, error)
+	GetSeries(ctx context.Context, id string, activeOnly bool) (postgrespodcast.PodcastSeries, error)
+	SaveSeries(ctx context.Context, s postgrespodcast.PodcastSeries) (string, error)
+	DeleteSeries(ctx context.Context, id string) error
 }
 
 type Podcast = postgrespodcast.Podcast
 type Line = postgrespodcast.Line
+type PodcastSeries = postgrespodcast.PodcastSeries
 
 type Service struct {
 	repo     repository
@@ -115,6 +121,63 @@ func (s *Service) AdminGet(ctx context.Context, id string) (Podcast, error) {
 		return Podcast{}, err
 	}
 	return s.repo.Get(ctx, id)
+}
+
+// ----------------- Podcast Series -----------------
+
+// ListSeries لیست مجموعه‌های فعال برای اپلیکیشن.
+func (s *Service) ListSeries(ctx context.Context) ([]PodcastSeries, error) {
+	return s.repo.ListSeries(ctx, true)
+}
+
+// GetSeries جزئیات یک مجموعه فعال به همراه قسمت‌های منتشرشده.
+func (s *Service) GetSeries(ctx context.Context, id string) (PodcastSeries, error) {
+	const op = "podcast.GetSeries"
+	if err := parseID(op, id); err != nil {
+		return PodcastSeries{}, err
+	}
+	return s.repo.GetSeries(ctx, id, true)
+}
+
+// AdminListSeries تمام مجموعه‌ها (فعال و غیرفعال) برای پنل ادمین.
+func (s *Service) AdminListSeries(ctx context.Context) ([]PodcastSeries, error) {
+	return s.repo.ListSeries(ctx, false)
+}
+
+// AdminGetSeries جزئیات مجموعه و همه قسمت‌ها برای پنل ادمین.
+func (s *Service) AdminGetSeries(ctx context.Context, id string) (PodcastSeries, error) {
+	const op = "podcast.AdminGetSeries"
+	if err := parseID(op, id); err != nil {
+		return PodcastSeries{}, err
+	}
+	return s.repo.GetSeries(ctx, id, false)
+}
+
+// AdminSaveSeries ایجاد یا به‌روزرسانی مجموعه پادکست.
+func (s *Service) AdminSaveSeries(ctx context.Context, id string, series PodcastSeries) (PodcastSeries, error) {
+	const op = "podcast.AdminSaveSeries"
+	series.Title = strings.TrimSpace(series.Title)
+	if series.Title == "" {
+		return PodcastSeries{}, richerror.New(op).WithMessage("عنوان مجموعه الزامی است").WithKind(richerror.KindInvalid)
+	}
+	if !validLevels[series.Level] {
+		series.Level = "beginner"
+	}
+	series.ID = id
+	savedID, err := s.repo.SaveSeries(ctx, series)
+	if err != nil {
+		return PodcastSeries{}, err
+	}
+	return s.repo.GetSeries(ctx, savedID, false)
+}
+
+// AdminDeleteSeries حذف یک مجموعه پادکست.
+func (s *Service) AdminDeleteSeries(ctx context.Context, id string) error {
+	const op = "podcast.AdminDeleteSeries"
+	if err := parseID(op, id); err != nil {
+		return err
+	}
+	return s.repo.DeleteSeries(ctx, id)
 }
 
 // maxPodcastImages سقف عکس‌های اسلایدشوی هر پادکست.

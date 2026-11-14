@@ -28,7 +28,7 @@ import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
-import { getPodcasts, atOrBelowLevel, type Podcast } from '../../api/podcasts';
+import { getPodcasts, getPodcastSeriesList, atOrBelowLevel, type Podcast, type PodcastSeries } from '../../api/podcasts';
 import { getMyLevel } from '../../api/assessment';
 import { getSubscriptionStatus } from '../../api/billing';
 import { useAuth } from '../../data/AuthContext';
@@ -63,6 +63,7 @@ export const PodcastListScreen: React.FC = () => {
 
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [allPodcasts, setPodcasts] = useState<Podcast[] | null>(null);
+  const [seriesList, setSeriesList] = useState<PodcastSeries[] | null>(null);
   const [error, setError] = useState(false);
 
   // درسی / منتخب؛ از پارامترهای ورودی مسیر یا پیش‌فرض «همه»
@@ -123,6 +124,9 @@ export const PodcastListScreen: React.FC = () => {
     getMyLevel()
       .then((l) => setMyLevel(l.scene_level))
       .catch(() => {});
+    getPodcastSeriesList()
+      .then((list) => setSeriesList(list || []))
+      .catch(() => setSeriesList([]));
   }, [user?.role]);
 
   useFocusEffect(load);
@@ -260,6 +264,94 @@ export const PodcastListScreen: React.FC = () => {
     [isSubscribed, savedProgress, rtl, t, navigation, ChevronIcon]
   );
 
+  const renderSeriesCard = useCallback(
+    (item: PodcastSeries) => {
+      const level = LEVEL_META[item.level] ?? LEVEL_META.beginner;
+      const totalMinutes = Math.round((item.total_duration || 0) / 60);
+      const epsCount = item.episodes_count || (item.episodes ? item.episodes.length : 0);
+
+      return (
+        <TouchableOpacity
+          key={item.id}
+          style={styles.seriesCard}
+          onPress={() => navigation.navigate('PodcastSeriesDetail', { seriesId: item.id })}
+          activeOpacity={0.88}
+        >
+          <View style={styles.seriesCoverWrap}>
+            {item.cover_url ? (
+              <Image source={{ uri: absUrl(item.cover_url) }} style={styles.seriesCover} resizeMode="cover" />
+            ) : (
+              <View style={[styles.seriesCoverFallback, { backgroundColor: hexToRgba(COLORS.primary, 0.08) }]}>
+                <Headphones size={28} color={COLORS.primary} />
+              </View>
+            )}
+            <View style={[styles.seriesLevelBadge, { backgroundColor: level.bg }]}>
+              <Text style={[styles.seriesLevelText, { color: level.color }]}>
+                {t(level.labelKey as any)}
+              </Text>
+            </View>
+            <View style={styles.seriesEpisodesBadge}>
+              <Text style={styles.seriesEpisodesText}>
+                {rtl ? `${epsCount} قسمت` : `${epsCount} eps`}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.seriesBody}>
+            <Text style={[styles.seriesTitle, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {!!item.description_fa && (
+              <Text style={[styles.seriesDesc, { textAlign: rtl ? 'right' : 'left' }]} numberOfLines={2}>
+                {item.description_fa}
+              </Text>
+            )}
+            <View style={[styles.seriesFooter, rtl && styles.rowReverse]}>
+              <View style={[styles.metaItem, rtl && styles.rowReverse]}>
+                <Clock size={12} color="#8A8275" />
+                <Text style={styles.seriesDurationText}>
+                  {rtl
+                    ? totalMinutes > 0 ? `${totalMinutes} دقیقه` : `${epsCount} قسمت`
+                    : totalMinutes > 0 ? `${totalMinutes}m` : `${epsCount} episodes`}
+                </Text>
+              </View>
+              <View style={[styles.actionRow, rtl && styles.rowReverse]}>
+                <ChevronIcon size={14} color={COLORS.primary} />
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [rtl, t, navigation, ChevronIcon]
+  );
+
+  const renderHeaderComponent = useCallback(() => {
+    if (!seriesList || seriesList.length === 0) return null;
+    return (
+      <View style={styles.seriesShelfSection}>
+        <View style={[styles.shelfHeaderRow, rtl && styles.rowReverse]}>
+          <View style={[styles.shelfHeaderTitleWrap, rtl && { alignItems: 'flex-end' }]}>
+            <Text style={styles.shelfTitle}>{t('podcastSeriesSectionTitle')}</Text>
+            <Text style={styles.shelfSub}>{t('podcastSeriesSectionSub')}</Text>
+          </View>
+        </View>
+        <FlatList
+          horizontal
+          inverted={rtl}
+          data={seriesList}
+          renderItem={({ item }) => renderSeriesCard(item)}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.seriesListContent}
+        />
+        <View style={[styles.singleSectionDivider, rtl && styles.rowReverse]}>
+          <Text style={styles.singleSectionTitle}>{t('podcastSingleSectionTitle')}</Text>
+        </View>
+      </View>
+    );
+  }, [seriesList, renderSeriesCard, rtl, t]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
       {/* سربرگ مدرن با دکمه بازگشت و عنوان شفاف */}
@@ -344,6 +436,7 @@ export const PodcastListScreen: React.FC = () => {
         <FlatList
           data={podcasts}
           renderItem={renderPodcastItem}
+          ListHeaderComponent={renderHeaderComponent}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + SPACING.xl }]}
           showsVerticalScrollIndicator={false}
@@ -651,5 +744,128 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12.5,
     color: '#FF6422',
+  },
+  seriesShelfSection: {
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  shelfHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  shelfHeaderTitleWrap: {
+    flex: 1,
+  },
+  shelfTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
+    color: '#191C21',
+  },
+  shelfSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12.5,
+    color: '#8A8275',
+    marginTop: 2,
+  },
+  seriesListContent: {
+    gap: 14,
+    paddingVertical: 4,
+  },
+  seriesCard: {
+    width: 220,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EFEBE1',
+    overflow: 'hidden',
+    shadowColor: '#191C21',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  seriesCoverWrap: {
+    width: '100%',
+    height: 110,
+    backgroundColor: '#F5F2EB',
+    position: 'relative',
+  },
+  seriesCover: {
+    width: '100%',
+    height: '100%',
+  },
+  seriesCoverFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seriesLevelBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  seriesLevelText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+  },
+  seriesEpisodesBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(25, 28, 33, 0.75)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  seriesEpisodesText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 10.5,
+    color: '#FFFFFF',
+  },
+  seriesBody: {
+    padding: 12,
+    gap: 5,
+  },
+  seriesTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14.5,
+    color: '#191C21',
+  },
+  seriesDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 12,
+    color: '#697082',
+    lineHeight: 17,
+  },
+  seriesFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F6F2EC',
+  },
+  seriesDurationText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#8A8275',
+  },
+  singleSectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  singleSectionTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16.5,
+    color: '#191C21',
   },
 });

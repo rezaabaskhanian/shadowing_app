@@ -27,11 +27,18 @@ func (h Handler) SetPodcastRoutes(e *echo.Echo) {
 	app := e.Group("/v1/podcasts", auth)
 	app.GET("", h.List)
 	app.GET("/stories", h.ListStories)
+	app.GET("/series", h.ListSeries)
+	app.GET("/series/:id", h.GetSeries)
 	app.GET("/:id", h.Get)
 
 	admin := e.Group("/v1/admin/podcasts", auth, middlware.AdminOnly)
 	admin.GET("", h.AdminList)
 	admin.POST("", h.AdminCreate)
+	admin.GET("/series", h.AdminListSeries)
+	admin.POST("/series", h.AdminCreateSeries)
+	admin.GET("/series/:id", h.AdminGetSeries)
+	admin.PUT("/series/:id", h.AdminUpdateSeries)
+	admin.DELETE("/series/:id", h.AdminDeleteSeries)
 	admin.POST("/generate-script", h.AdminGenerateScript)
 	admin.GET("/level-presets", h.AdminGetLevelPresets)
 	admin.PUT("/level-presets", h.AdminSaveLevelPresets)
@@ -62,6 +69,16 @@ func (h Handler) ListStories(c echo.Context) error {
 	return respond(c, list, err)
 }
 
+func (h Handler) ListSeries(c echo.Context) error {
+	list, err := h.svc.ListSeries(c.Request().Context())
+	return respond(c, list, err)
+}
+
+func (h Handler) GetSeries(c echo.Context) error {
+	s, err := h.svc.GetSeries(c.Request().Context(), c.Param("id"))
+	return respond(c, s, err)
+}
+
 func (h Handler) Get(c echo.Context) error {
 	p, err := h.svc.Get(c.Request().Context(), c.Param("id"))
 	return respond(c, p, err)
@@ -70,6 +87,32 @@ func (h Handler) Get(c echo.Context) error {
 func (h Handler) AdminList(c echo.Context) error {
 	list, err := h.svc.AdminList(c.Request().Context())
 	return respond(c, list, err)
+}
+
+func (h Handler) AdminListSeries(c echo.Context) error {
+	list, err := h.svc.AdminListSeries(c.Request().Context())
+	return respond(c, list, err)
+}
+
+func (h Handler) AdminGetSeries(c echo.Context) error {
+	s, err := h.svc.AdminGetSeries(c.Request().Context(), c.Param("id"))
+	return respond(c, s, err)
+}
+
+func (h Handler) saveSeries(c echo.Context, id string) error {
+	var req podcastservice.PodcastSeries
+	if err := c.Bind(&req); err != nil {
+		return badRequest(c)
+	}
+	s, err := h.svc.AdminSaveSeries(c.Request().Context(), id, req)
+	return respond(c, s, err)
+}
+
+func (h Handler) AdminCreateSeries(c echo.Context) error { return h.saveSeries(c, "") }
+func (h Handler) AdminUpdateSeries(c echo.Context) error { return h.saveSeries(c, c.Param("id")) }
+
+func (h Handler) AdminDeleteSeries(c echo.Context) error {
+	return respond(c, echo.Map{"ok": true}, h.svc.AdminDeleteSeries(c.Request().Context(), c.Param("id")))
 }
 
 func (h Handler) AdminGet(c echo.Context) error {

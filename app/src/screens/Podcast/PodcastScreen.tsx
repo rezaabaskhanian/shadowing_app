@@ -165,6 +165,15 @@ export const PodcastScreen: React.FC = () => {
 
         Promise.all([getPodcasts().catch(() => []), getMyLevel().catch(() => null)])
           .then(([all, lvl]) => {
+            if (p.series_id) {
+              const seriesEps = all
+                .filter((item) => item.series_id === p.series_id)
+                .sort((a, b) => (a.episode_no || 0) - (b.episode_no || 0));
+              if (seriesEps.length > 0) {
+                setPlaylist(seriesEps);
+                return;
+              }
+            }
             const scoped = atOrBelowLevel(all, lvl?.scene_level);
             const filtered = (scoped.length > 0 ? scoped : all).filter((item) =>
               p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story'

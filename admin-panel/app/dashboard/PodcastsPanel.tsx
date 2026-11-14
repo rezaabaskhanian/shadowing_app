@@ -6,6 +6,7 @@ import SlideshowImagesField from "./SlideshowImagesField";
 import {
   API_BASE,
   deletePodcast,
+  deletePodcastSeries,
   generatePodcastAudio,
   generatePodcastScript,
   getPodcast,
@@ -13,14 +14,16 @@ import {
   getResource,
   getScene,
   listPodcasts,
+  listPodcastSeries,
   listResources,
   listScenes,
   listTTSVoices,
   savePodcast,
   savePodcastLevelPresets,
+  savePodcastSeries,
   type TTSVoice,
 } from "@/lib/api";
-import type { ContentResource, Podcast, PodcastLevelPreset, PodcastLine, SceneResp } from "@/lib/types";
+import type { ContentResource, Podcast, PodcastLevelPreset, PodcastLine, PodcastSeries, SceneResp } from "@/lib/types";
 
 type Draft = Omit<Podcast, "id"> & { id?: string };
 
@@ -46,6 +49,8 @@ const emptyDraft = (position = 0): Draft => ({
   kind: "lesson",
   series_title: "",
   chapter_no: 0,
+  series_id: "",
+  episode_no: 1,
   questions: [],
   scene_id: "",
   vocabulary: [],
@@ -138,6 +143,9 @@ export default function PodcastsPanel({
   const [resourceId, setResourceId] = useState("");
   const [presets, setPresets] = useState<Record<string, PodcastLevelPreset>>({});
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [seriesList, setSeriesList] = useState<PodcastSeries[]>([]);
+  const [seriesModalOpen, setSeriesModalOpen] = useState(false);
+  const [seriesDraft, setSeriesDraft] = useState<(Omit<PodcastSeries, "id"> & { id?: string }) | null>(null);
   const [scriptSettings, setScriptSettings] = useState<ScriptSettings>({
     max_words_per_sentence: 10,
     min_lines: 12,
@@ -162,10 +170,20 @@ export default function PodcastsPanel({
     <input dir="ltr" type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value) || 0)} />
   );
 
+  async function loadSeries() {
+    try {
+      setSeriesList(await listPodcastSeries());
+    } catch {
+      // ignore
+    }
+  }
+
   async function load() {
     setLoading(true);
     try {
-      setPodcasts(await listPodcasts());
+      const [pList, sList] = await Promise.all([listPodcasts(), listPodcastSeries().catch(() => [])]);
+      setPodcasts(pList);
+      setSeriesList(sList);
     } catch (err: any) {
       notify(err.message, "err");
     } finally {
@@ -281,6 +299,30 @@ export default function PodcastsPanel({
 
   const generating = draft?.audio_status === "generating";
 
+  const handleSaveSeries = async () => {
+    if (!seriesDraft || !seriesDraft.title.trim()) return;
+    try {
+      await savePodcastSeries(seriesDraft);
+      notify("مجموعه پادکست ذخیره شد", "ok");
+      setSeriesDraft(null);
+      loadSeries();
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  };
+
+  const handleDeleteSeries = async (s: PodcastSeries) => {
+    if (!confirm(`مجموعه «${s.title}» حذف شود؟ (پادکست‌های آن حذف نمی‌شوند و فقط بی‌مجموعه می‌شوند)`)) return;
+    try {
+      await deletePodcastSeries(s.id);
+      notify("مجموعه حذف شد", "ok");
+      if (seriesDraft?.id === s.id) setSeriesDraft(null);
+      loadSeries();
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  };
+
   return (
     <div>
       <div className="card">
@@ -294,6 +336,15 @@ export default function PodcastsPanel({
           </div>
           {!draft && (
             <div style={{ display: "flex", gap: 6 }}>
+              <button
+                className={`btn btn-sm ${seriesModalOpen ? "" : "btn-ghost"}`}
+                onClick={() => {
+                  setSeriesModalOpen((v) => !v);
+                  if (!seriesModalOpen) setPresetsOpen(false);
+                }}
+              >
+                🎙️ مجموعه‌ها ({seriesList.length})
+              </button>
               <button className="btn btn-sm btn-ghost" onClick={() => setPresetsOpen((v) => !v)}>
                 ⚙️ پیش‌فرض سطح‌ها
               </button>
@@ -360,6 +411,156 @@ export default function PodcastsPanel({
             </button>
           </div>
         )}
+
+        {seriesModalOpen && !draft && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border, #333)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <h4 style={{ margin: 0 }}>🎙️ مجموعه‌های پادکست (سریال‌ها)</h4>
+              {!seriesDraft && (
+                <button
+                  className="btn btn-sm"
+                  onClick={() =>
+                    setSeriesDraft({
+                      title: "",
+                      description_fa: "",
+                      level: "beginner",
+                      cover_url: "",
+                      category: "",
+                      position: seriesList.length + 1,
+                      is_active: true,
+                      episodes_count: 0,
+                      total_duration: 0,
+                      created_at: "",
+                    })
+                  }
+                >
+                  + مجموعه جدید
+                </button>
+              )}
+            </div>
+
+            {seriesDraft && (
+              <div
+                style={{
+                  border: "1px solid var(--primary, #FF6422)",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 14,
+                  backgroundColor: "rgba(255, 100, 34, 0.03)",
+                }}
+              >
+                <h5 style={{ margin: "0 0 10px" }}>{seriesDraft.id ? "ویرایش مجموعه" : "ایجاد مجموعه جدید"}</h5>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div style={{ flex: "2 1 220px" }}>
+                    <label>عنوان مجموعه (انگلیسی)</label>
+                    <input
+                      dir="ltr"
+                      value={seriesDraft.title}
+                      placeholder="e.g. The Journey Abroad"
+                      onChange={(e) => setSeriesDraft({ ...seriesDraft, title: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: "1 1 140px" }}>
+                    <label>سطح</label>
+                    <select
+                      value={seriesDraft.level}
+                      onChange={(e) => setSeriesDraft({ ...seriesDraft, level: e.target.value as any })}
+                    >
+                      {LEVELS.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ width: 90 }}>
+                    <label>ترتیب</label>
+                    <input
+                      type="number"
+                      value={seriesDraft.position}
+                      onChange={(e) => setSeriesDraft({ ...seriesDraft, position: Number(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <ImageField
+                    label="تصویر کاور مجموعه"
+                    value={seriesDraft.cover_url || ""}
+                    onChange={(url) => setSeriesDraft({ ...seriesDraft, cover_url: url })}
+                    notify={notify}
+                  />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label>توضیحات فارسی مجموعه</label>
+                  <textarea
+                    rows={2}
+                    value={seriesDraft.description_fa}
+                    placeholder="مثلاً: ماجرای آماده‌سازی برای سفر، عبور از فرودگاه و ورود به هتل در سه قسمت جذاب"
+                    onChange={(e) => setSeriesDraft({ ...seriesDraft, description_fa: e.target.value })}
+                  />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={seriesDraft.is_active}
+                    onChange={(e) => setSeriesDraft({ ...seriesDraft, is_active: e.target.checked })}
+                    style={{ width: "auto" }}
+                  />
+                  فعال (نمایش در اپلیکیشن)
+                </label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="btn btn-sm" onClick={handleSaveSeries} disabled={!seriesDraft.title.trim()}>
+                    ذخیره مجموعه
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSeriesDraft(null)}>
+                    انصراف
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {seriesList.length === 0 ? (
+              <p className="hint">هنوز هیچ مجموعه‌ای ثبت نشده است.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {seriesList.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                      border: "1px solid var(--border, #333)",
+                      borderRadius: 6,
+                      padding: "8px 10px",
+                      opacity: s.is_active ? 1 : 0.6,
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: 700 }} dir="ltr">
+                        {s.title}
+                      </span>
+                      <span className="hint" style={{ margin: "0 6px" }}>
+                        · {LEVELS.find((l) => l.id === s.level)?.label || s.level} · {s.episodes_count || 0} قسمت
+                        {(s.total_duration || 0) > 0 && ` · ${Math.round((s.total_duration || 0) / 60)} دقیقه`}
+                        {s.is_active ? " · فعال" : " · غیرفعال"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setSeriesDraft(s)}>
+                        ویرایش
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteSeries(s)}>
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {draft && (
@@ -407,6 +608,33 @@ export default function PodcastsPanel({
               <div className="hint" style={{ margin: 0 }}>
                 {(draft.questions ?? []).length} سؤال فهم (از MCP ساخته می‌شود)
               </div>
+            </div>
+          )}
+
+          {draft.kind !== "story" && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+              <div style={{ flex: "2 1 240px" }}>
+                <label>مجموعه پادکست (سریالی — اختیاری)</label>
+                <select value={draft.series_id || ""} onChange={(e) => update({ series_id: e.target.value })}>
+                  <option value="">— بدون مجموعه (پادکست مستقل) —</option>
+                  {seriesList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title} ({LEVELS.find((l) => l.id === s.level)?.label || s.level})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {draft.series_id ? (
+                <div style={{ flex: "0 1 120px" }}>
+                  <label>شماره قسمت</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={draft.episode_no || 1}
+                    onChange={(e) => update({ episode_no: Number(e.target.value) || 1 })}
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -689,6 +917,11 @@ export default function PodcastsPanel({
                     {p.kind === "featured" ? "⭐ منتخب" : p.kind === "story" ? `📖 ${p.series_title} · فصل ${p.chapter_no}` : "📚 درسی"} · {LEVELS.find((l) => l.id === p.level)?.label} ·{" "}
                     {p.line_count ?? 0} جمله · {STATUS_LABELS[p.audio_status]}
                     {p.duration_seconds > 0 && ` · ${Math.round(p.duration_seconds / 60)} دقیقه`}
+                    {p.series_id && (
+                      <span style={{ color: "#FF6422", fontWeight: 600 }}>
+                        {" "}· 🎙️ {seriesList.find((s) => s.id === p.series_id)?.title || "سریال"} (قسمت {p.episode_no || 1})
+                      </span>
+                    )}
                     {p.is_active ? " · منتشرشده" : ""}
                   </div>
                 </div>

@@ -1728,6 +1728,11 @@ export const translations: Translations = {
   podcastFilterAll: { en: 'All', fa: 'همه' },
   podcastFilterLessons: { en: 'Lessons', fa: 'درسی' },
   podcastFilterFeatured: { en: 'Featured', fa: 'منتخب' },
+  podcastSeriesSectionTitle: { en: 'Podcast Series', fa: 'مجموعه‌های سریالی' },
+  podcastSeriesSectionSub: { en: 'Multi-part conversations & stories', fa: 'داستان‌ها و گفتگوهای چندقسمتی' },
+  podcastSingleSectionTitle: { en: 'Single Episodes', fa: 'پادکست‌های تکی' },
+  podcastSeriesEpisodes: { en: '{n} episodes', fa: '{n} قسمت' },
+  podcastSeriesDuration: { en: '{m} min', fa: '{m} دقیقه' },
   pictureStoryBadge: { en: 'Picture story', fa: 'داستان تصویری' },
   pictureStoryHint: {
     en: 'Swipe through the pictures, then tell the story in order: what happens in each picture?',

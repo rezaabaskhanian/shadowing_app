@@ -79,6 +79,7 @@ import { SongTakesScreen } from '../screens/Song/SongTakesScreen';
 import { PodcastDictationScreen } from '../screens/Podcast/PodcastDictationScreen';
 import { DictationListScreen } from '../screens/Podcast/DictationListScreen';
 import { PodcastScreen } from '../screens/Podcast/PodcastScreen';
+import { PodcastSeriesDetailScreen } from '../screens/Podcast/PodcastSeriesDetailScreen';
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { RealtimePoCScreen } from '../screens/RealtimePoC';
@@ -115,6 +116,7 @@ const FreshStory = freshPerOpen(StoryScreen);
 const FreshSong = freshPerOpen(SongScreen);
 const FreshInterviewSession = freshPerOpen(InterviewSessionScreen);
 const FreshSpecialtyField = freshPerOpen(SpecialtyFieldScreen);
+const FreshPodcastSeriesDetail = freshPerOpen(PodcastSeriesDetailScreen);
 const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 const FreshPodcastDictation = freshPerOpen(PodcastDictationScreen);
 const FreshGoalMap = freshPerOpen(GoalMapScreen);
@@ -167,6 +169,7 @@ const HIDDEN_TAB_BAR_ROUTES = [
   'Story',
   'Song',
   'Podcast',
+  'PodcastSeriesDetail',
   'PodcastMyVersion',
   'Paywall',
   'TokenTopup',
@@ -418,6 +421,7 @@ export const AppNavigator = () => {
       <Tab.Screen name="SpecialtyHub" component={SpecialtyHubScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="SpecialtyField" component={FreshSpecialtyField} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Podcast" component={FreshPodcast} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="PodcastSeriesDetail" component={FreshPodcastSeriesDetail} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastMyVersion" component={FreshPodcastMyVersion} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="PodcastDictation" component={FreshPodcastDictation} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="DictationList" component={DictationListScreen} options={{ tabBarButton: () => null }} />

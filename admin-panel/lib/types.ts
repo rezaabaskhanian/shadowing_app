@@ -682,6 +682,8 @@ export interface Podcast {
   /** فقط story: عنوان داستان، شماره‌ی فصل و سؤال‌های فهم آخر فصل. */
   series_title?: string;
   chapter_no?: number;
+  series_id?: string;
+  episode_no?: number;
   questions?: { q: string; q_fa: string; options: string[]; answer: number }[];
   scene_id: string;
   vocabulary: { word: string; meaning_fa: string }[];
@@ -707,6 +709,21 @@ export interface PodcastScript {
   description_fa: string;
   lines: { speaker: string; text: string; translation_fa: string }[];
   vocabulary: { word: string; meaning_fa: string }[];
+}
+
+export interface PodcastSeries {
+  id: string;
+  title: string;
+  description_fa: string;
+  level: "starter" | "beginner" | "intermediate" | "advanced" | "proficient";
+  cover_url: string;
+  category: string;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+  episodes_count?: number;
+  total_duration?: number;
+  episodes?: Podcast[];
 }
 
 // ---------- کتابخانه‌ی محتوا (فایل‌های JSON مرجع) ----------
