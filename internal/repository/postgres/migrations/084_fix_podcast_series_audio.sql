@@ -8,3 +8,4 @@ WHERE series_id IS NOT NULL AND (audio_url IS NULL OR audio_url = '');
 
 -- +migrate Down
 -- no-op
+
