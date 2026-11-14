@@ -21,6 +21,7 @@ import {
   savePodcast,
   savePodcastLevelPresets,
   savePodcastSeries,
+  uploadAudio,
   type TTSVoice,
 } from "@/lib/api";
 import type { ContentResource, Podcast, PodcastLevelPreset, PodcastLine, PodcastSeries, SceneResp } from "@/lib/types";
@@ -320,6 +321,24 @@ export default function PodcastsPanel({
       loadSeries();
     } catch (err: any) {
       notify(err.message, "err");
+    }
+  };
+
+  const handleUploadAudio = async (file: File) => {
+    try {
+      setBusy("upload_audio");
+      const url = await uploadAudio(file);
+      update({
+        audio_url: url,
+        audio_status: "ready",
+        audio_error: "",
+        is_active: true,
+      });
+      notify("فایل صوتی با موفقیت آپلود شد. روی «ذخیره» بزنید تا ثبت شود.", "ok");
+    } catch (err: any) {
+      notify(err.message || "آپلود فایل صوتی ناموفق بود", "err");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -858,11 +877,33 @@ export default function PodcastsPanel({
             {draft.audio_status === "ready" && draft.audio_url && (
               <audio controls src={mediaUrl(draft.audio_url)} style={{ width: "100%", marginTop: 8 }} />
             )}
-            <div style={{ marginTop: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={makeAudio} disabled={!!busy || generating || !draft.id || lines.length === 0}>
-                {generating ? "در حال ساخت..." : draft.audio_status === "ready" ? "🎙 ساخت دوباره‌ی صدا" : "🎙 ساخت صدای پادکست"}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={makeAudio}
+                disabled={!!busy || generating || !draft.id || lines.length === 0}
+              >
+                {generating ? "در حال ساخت..." : draft.audio_status === "ready" ? "🎙 ساخت دوباره‌ی صدا با AI" : "🎙 ساخت صدا با AI"}
               </button>
-              {!draft.id && <span className="hint"> — اول ذخیره کن</span>}
+              <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer", margin: 0 }}>
+                📁 آپلود فایل MP3
+                <input
+                  type="file"
+                  accept="audio/mp3,audio/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadAudio(file);
+                  }}
+                />
+              </label>
+              {!draft.id && <span className="hint"> — اول پادکست را ذخیره کن</span>}
+              {draft.id && lines.length === 0 && (
+                <span className="hint" style={{ color: "var(--danger, #e55)" }}>
+                  — برای ساخت صدا با AI حداقل یک جمله در متن بالا لازم است
+                </span>
+              )}
             </div>
           </div>
 

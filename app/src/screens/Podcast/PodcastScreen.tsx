@@ -216,7 +216,8 @@ export const PodcastScreen: React.FC = () => {
           await TrackPlayer.play();
         }
         scrollRef.current?.scrollTo({ y: 0, animated: false });
-      } catch {
+      } catch (err) {
+        console.error('loadAndPlayPodcast error:', err);
         setLoadError(true);
       }
     },

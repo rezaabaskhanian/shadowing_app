@@ -103,6 +103,10 @@ export const PodcastListScreen: React.FC = () => {
     }
     getPodcasts()
       .then(async (list) => {
+        if (list && list.length > 0) {
+          const sampleWithAudio = list.find((p) => p.audio_url && p.audio_url.length > 0);
+          console.log('REAL_AUDIO_URL_SAMPLE:', sampleWithAudio?.title, sampleWithAudio?.audio_url);
+        }
         setPodcasts(list);
         if (list && list.length > 0) {
           const keys = list.map((p) => `@podcast_pos_${p.id}`);
