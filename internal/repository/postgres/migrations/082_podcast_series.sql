@@ -27,3 +27,4 @@ ALTER TABLE podcasts
     DROP COLUMN IF EXISTS episode_no,
     DROP COLUMN IF EXISTS series_id;
 DROP TABLE IF EXISTS podcast_series;
+
