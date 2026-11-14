@@ -10,8 +10,11 @@
     <!-- ذخیره‌ی «نسخه‌ی من» از آهنگ در پوشه‌ی Music گوشی؛ فقط اندروید ۹ و پایین‌تر این
          مجوز را لازم دارد (از ۱۰ به بعد نوشتن فایل صوتی در Music بدون مجوز ممکن است). -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <!-- پرمیژن‌های پخش پس‌زمینه‌ی react-native-track-player را خودِ کتابخانه
-         با manifest merge اضافه می‌کند؛ اینجا لازم نیست تکرار شود. -->
+
+    <!-- مجوزهای پخش صوت در پس‌زمینه و هنگام قفل شدن صفحه نمایش -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
       android:name=".MainApplication"

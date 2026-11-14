@@ -24,10 +24,10 @@ async function setupWithRetry(): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     try {
       await TrackPlayer.setupPlayer({
-        // این اپ music player نیست؛ فقط یک صدای مرجع کوتاه در یک لحظه پخش
-        // می‌شود، پس صف/کنترل‌های پیشرفته لازم نیست.
-        maxCacheSize: 1024 * 10, // ۱۰ مگابایت؛ صداهای جمله چند ده کیلوبایتی‌اند
-      });
+        maxCacheSize: 1024 * 50, // ۵۰ مگابایت کش برای پادکست‌ها و ترانه‌ها
+        autoHandleInterruptions: true,
+        androidWakeMode: 2, // 2 = C.WAKE_MODE_NETWORK: حفظ اتصال شبکه و WakeLock برای ادامه پخش هنگام خاموش شدن صفحه نمایش
+      } as any);
       return;
     } catch (err) {
       if (/already been initialized/i.test(String((err as Error)?.message ?? err))) return;
@@ -57,21 +57,16 @@ export function ensureTrackPlayerSetup(): Promise<void> {
             Capability.SkipToNext,
             Capability.SkipToPrevious,
           ],
-          // برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با پخش لازم است؛ پیش‌فرض
-          // کتابخانه (۱ ثانیه) خیلی درشت است.
+          // برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با پخش لازم است
           progressUpdateEventInterval: 0.1,
           android: {
-            // پیش‌فرض کتابخانه «ادامه‌ی پخش» است: با بستن اپ اعلانِ پخش در نوار
-            // اعلان‌ها می‌ماند و پاک نمی‌شد.
             appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-            stopForegroundGracePeriod: 1,
+            stopForegroundGracePeriod: 10,
           },
         })
       )
       .catch((err) => {
-        // اگر setupPlayer به هر دلیلی شکست خورد (مثلاً یک‌بار قبلاً موفق شده
-        // و این تلاش دوم است)، دفعه‌ی بعد دوباره امتحان می‌کنیم به‌جای اینکه
-        // برای همیشه در حالت خراب بمانیم.
+        // اگر setupPlayer به هر دلیلی شکست خورد، دفعه‌ی بعد دوباره امتحان می‌کنیم
         setupPromise = null;
         throw err;
       });
@@ -80,14 +75,23 @@ export function ensureTrackPlayerSetup(): Promise<void> {
 }
 
 /**
- * وقتی کاربر از اپ بیرون می‌رود: صدا قطع شود، ضبطِ نیمه‌کاره دور ریخته شود و
- * اعلانِ پخش از نوار اعلان‌ها برود (reset صف را خالی می‌کند و سرویس پخش از
- * حالت foreground بیرون می‌آید). برگشت به اپ با زدن دوباره‌ی پخش ادامه می‌یابد.
+ * وقتی کاربر از اپ بیرون می‌رود:
+ * برای محتوای طولانی (پادکست، ترانه، داستان) پخش نباید قطع شود تا با خاموش شدن
+ * صفحه یا سوییچ بین اپ‌ها صدا ادامه داشته باشد.
+ * اما صدای مرجع کوتاه (جملات شدویینگ) و ضبط صدای کاربر باید متوقف شوند.
  */
 export async function stopAllAudio(): Promise<void> {
   if (setupPromise) {
     await setupPromise.catch(() => {});
-    await TrackPlayer.reset().catch(() => {});
+    const active = await TrackPlayer.getActiveTrack().catch(() => undefined);
+    const isLongFormAudio =
+      active?.id === 'podcast' ||
+      active?.id === 'song' ||
+      active?.id === 'story';
+
+    if (!isLongFormAudio) {
+      await TrackPlayer.reset().catch(() => {});
+    }
   }
   await Sound.stopPlayer().catch(() => {});
   await Sound.stopRecorder().catch(() => {});
