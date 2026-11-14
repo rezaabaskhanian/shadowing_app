@@ -32,3 +32,4 @@ ON CONFLICT DO NOTHING;
 
 -- +migrate Down
 -- no-op
+
