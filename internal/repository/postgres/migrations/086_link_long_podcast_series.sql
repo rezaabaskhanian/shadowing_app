@@ -1,3 +1,4 @@
+-- +migrate Up
 -- 086_link_long_podcast_series.sql
 -- لینک کردن پادکست‌های کامل و بلند (هر قسمت بالای ۵ دقیقه و هر مجموعه بالای ۱۵ دقیقه) با صوت‌های واقعی
 
@@ -76,4 +77,7 @@ WHERE id = 'b4509e58-0407-4841-84ed-02ccc1d5ca27';
 UPDATE podcasts
 SET series_id = 'c3333333-3333-3333-3333-333333333333', episode_no = 3, is_active = TRUE
 WHERE id = '91b83f34-fd79-420e-92ff-8c7762beaaf9';
+
+-- +migrate Down
+-- no-op
 
