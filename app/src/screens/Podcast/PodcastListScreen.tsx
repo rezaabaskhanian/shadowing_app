@@ -274,7 +274,7 @@ export const PodcastListScreen: React.FC = () => {
         <TouchableOpacity
           key={item.id}
           style={styles.seriesCard}
-          onPress={() => navigation.navigate('PodcastSeriesDetail', { seriesId: item.id })}
+          onPress={() => navigation.navigate('PodcastSeriesDetail', { seriesId: item.id, openedAt: Date.now() })}
           activeOpacity={0.88}
         >
           <View style={styles.seriesCoverWrap}>

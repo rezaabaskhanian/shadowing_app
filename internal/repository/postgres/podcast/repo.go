@@ -326,8 +326,8 @@ func (r DB) ListSeries(ctx context.Context, activeOnly bool) ([]PodcastSeries, e
 		SELECT
 			s.id::text, s.title, s.description_fa, s.level, s.cover_url, s.category,
 			s.position, s.is_active, s.created_at::text,
-			COUNT(p.id) FILTER (WHERE NOT $1 OR (p.is_active AND p.audio_status = 'ready')) AS episodes_count,
-			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $1 OR (p.is_active AND p.audio_status = 'ready')), 0) AS total_duration
+			COUNT(p.id) FILTER (WHERE NOT $1 OR p.is_active) AS episodes_count,
+			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $1 OR p.is_active), 0) AS total_duration
 		FROM podcast_series s
 		LEFT JOIN podcasts p ON p.series_id = s.id
 		` + filter + `
@@ -362,8 +362,8 @@ func (r DB) GetSeries(ctx context.Context, id string, activeOnly bool) (PodcastS
 		SELECT
 			s.id::text, s.title, s.description_fa, s.level, s.cover_url, s.category,
 			s.position, s.is_active, s.created_at::text,
-			COUNT(p.id) FILTER (WHERE NOT $2 OR (p.is_active AND p.audio_status = 'ready')) AS episodes_count,
-			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $2 OR (p.is_active AND p.audio_status = 'ready')), 0) AS total_duration
+			COUNT(p.id) FILTER (WHERE NOT $2 OR p.is_active) AS episodes_count,
+			COALESCE(SUM(p.duration_seconds) FILTER (WHERE NOT $2 OR p.is_active), 0) AS total_duration
 		FROM podcast_series s
 		LEFT JOIN podcasts p ON p.series_id = s.id
 		WHERE s.id = $1::uuid
@@ -380,7 +380,7 @@ func (r DB) GetSeries(ctx context.Context, id string, activeOnly bool) (PodcastS
 
 	filter := ""
 	if activeOnly {
-		filter = "AND p.is_active AND p.audio_status = 'ready'"
+		filter = "AND p.is_active"
 	}
 	rows, err := r.conn.Query(ctx, `
 		SELECT `+podcastColumns+`

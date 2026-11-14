@@ -184,14 +184,16 @@ export const PodcastScreen: React.FC = () => {
 
         await ensureTrackPlayerSetup();
         await TrackPlayer.reset();
-        await TrackPlayer.add({
-          id: PODCAST_TRACK_ID,
-          url: absUrl(p.audio_url),
-          title: p.title,
-          artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
-          artist: 'LingoFlow',
-        });
-        await TrackPlayer.setRate(rate).catch(() => {});
+        if (p.audio_url) {
+          await TrackPlayer.add({
+            id: PODCAST_TRACK_ID,
+            url: absUrl(p.audio_url),
+            title: p.title,
+            artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
+            artist: 'LingoFlow',
+          });
+          await TrackPlayer.setRate(rate).catch(() => {});
+        }
 
         // بررسی موقعیت ذخیره‌شده برای ادامه پخش خودکار (Resume Playback)
         const savedPosStr = await AsyncStorage.getItem(`@podcast_pos_${id}`).catch(() => null);
