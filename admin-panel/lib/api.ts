@@ -54,6 +54,7 @@ import type {
   VerbMeaningSuggestion,
   VerbOccurrence,
   VerbSummary,
+  InstagramLesson,
 } from "./types";
 
 export const API_BASE =
@@ -413,6 +414,23 @@ export async function sendTelegramChannelNow(text?: string): Promise<{ message: 
 
 export async function previewTelegramChannel(): Promise<{ preview: string }> {
   const res = await authFetch("/v1/admin/telegram-channel/preview", { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+// ---------- پست‌های اینستاگرام ----------
+export async function getInstagramPost(offset?: number): Promise<InstagramLesson> {
+  const q = offset !== undefined ? `?offset=${offset}` : "";
+  const res = await authFetch(`/v1/admin/instagram-post${q}`, { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+export async function listInstagramLessons(): Promise<InstagramLesson[]> {
+  const res = await authFetch("/v1/admin/instagram-post/lessons", { method: "GET" });
+  return jsonOrThrow(res);
+}
+
+export async function buildCustomInstagramPost(lesson: Partial<InstagramLesson>): Promise<InstagramLesson> {
+  const res = await authFetch("/v1/admin/instagram-post/custom", jsonBody("POST", lesson));
   return jsonOrThrow(res);
 }
 

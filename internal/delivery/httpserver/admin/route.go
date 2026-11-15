@@ -71,6 +71,11 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.POST("/telegram-channel/send-now", h.SendTelegramChannelNow)
 	g.GET("/telegram-channel/preview", h.PreviewTelegramChannel)
 
+	// پست اینستاگرام (کارت‌های اسلایدی، کپشن و هشتگ‌ها)
+	g.GET("/instagram-post", h.GetInstagramPost)
+	g.GET("/instagram-post/lessons", h.ListInstagramLessons)
+	g.POST("/instagram-post/custom", h.BuildCustomInstagramPost)
+
 	// بررسی پیشنهادهای موضوع کاربران
 	g.GET("/topic-suggestions", h.ListTopicSuggestions)
 	g.GET("/topic-suggestions/:id", h.GetTopicSuggestion)

@@ -189,6 +189,26 @@ export interface TelegramChannelConfig {
   preview: string;
 }
 
+// ---------- پست‌های اینستاگرام ----------
+export interface InstagramLesson {
+  id: number;
+  theme: string;
+  hook_title: string;
+  subtitle: string;
+  key_phrase: string;
+  phonetic: string;
+  persian_mean: string;
+  dialogue_a: string;
+  dialogue_a_fa: string;
+  dialogue_b: string;
+  dialogue_b_fa: string;
+  tip: string;
+  app_practice?: string;
+  app_cta?: string;
+  caption: string;
+  hashtags: string;
+}
+
 // ---------- نوتیفیکیشن‌ها ----------
 export interface NotificationStatsResp {
   total_users: number;

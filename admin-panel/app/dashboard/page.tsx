@@ -29,6 +29,7 @@ import RoleplaysPanel from "./RoleplaysPanel";
 import LearningPathsPanel from "./LearningPathsPanel";
 import InterviewEspPanel from "./InterviewEspPanel";
 import TelegramChannelPanel from "./TelegramChannelPanel";
+import InstagramPanel from "./InstagramPanel";
 import type { SceneSubmission, TopicSuggestion } from "@/lib/types";
 
 type Tab =
@@ -37,6 +38,7 @@ type Tab =
   | "settings"
   | "notifications"
   | "telegramChannel"
+  | "instagramPost"
   | "review"
   | "topics"
   | "subscriptions"
@@ -143,6 +145,12 @@ export default function DashboardPage() {
             onClick={() => setTab("telegramChannel")}
           >
             📢 کانال تلگرام
+          </button>
+          <button
+            className={`sidebar-link ${tab === "instagramPost" ? "active" : ""}`}
+            onClick={() => setTab("instagramPost")}
+          >
+            📸 پست اینستاگرام
           </button>
           <button
             className={`sidebar-link ${tab === "review" ? "active" : ""}`}
@@ -311,6 +319,7 @@ export default function DashboardPage() {
         {tab === "settings" && <SettingsPanel notify={notify} />}
         {tab === "notifications" && <NotificationsPanel notify={notify} />}
         {tab === "telegramChannel" && <TelegramChannelPanel notify={notify} />}
+        {tab === "instagramPost" && <InstagramPanel notify={notify} />}
         {tab === "review" && (
           <SceneReviewQueue
             notify={notify}
