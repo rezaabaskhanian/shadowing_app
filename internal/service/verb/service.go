@@ -382,31 +382,48 @@ type VerbListItem struct {
 	LearnedCount int    `json:"learned_count"`
 }
 
-func (s *Service) ListVerbs(ctx context.Context, userID string) ([]VerbListItem, error) {
+func (s *Service) ListVerbs(ctx context.Context, userID string, limit, offset int) ([]VerbListItem, error) {
 	const op = "verb.ListVerbs"
 	uid, err := parseID(op, userID)
 	if err != nil {
 		return nil, err
 	}
-	verbs, err := s.repo.ListVerbs(ctx, true)
+	verbs, err := s.repo.ListVerbsPaginated(ctx, true, limit, offset)
 	if err != nil {
 		return nil, err
 	}
+	if len(verbs) == 0 {
+		return []VerbListItem{}, nil
+	}
+
+	verbIDs := make([]uuid.UUID, len(verbs))
+	for i, v := range verbs {
+		verbIDs[i] = v.ID
+	}
+
+	meanings, err := s.repo.ListMeaningsByVerbIDs(ctx, verbIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	progress, err := s.repo.UserProgress(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
+
+	meaningsByVerb := make(map[uuid.UUID][]postgresverb.Meaning, len(verbs))
+	for _, m := range meanings {
+		meaningsByVerb[m.VerbID] = append(meaningsByVerb[m.VerbID], m)
+	}
+
 	out := []VerbListItem{}
 	for _, v := range verbs {
-		meanings, err := s.repo.ListMeanings(ctx, v.ID)
-		if err != nil {
-			return nil, err
-		}
-		if len(meanings) == 0 {
+		ms := meaningsByVerb[v.ID]
+		if len(ms) == 0 {
 			continue
 		}
-		item := VerbListItem{ID: v.ID.String(), Lemma: v.Lemma, MeaningCount: len(meanings)}
-		for _, m := range meanings {
+		item := VerbListItem{ID: v.ID.String(), Lemma: v.Lemma, MeaningCount: len(ms)}
+		for _, m := range ms {
 			if isLearned(progress[m.ID]) {
 				item.LearnedCount++
 			}

@@ -2,6 +2,7 @@ package verbhandler
 
 import (
 	"net/http"
+	"strconv"
 
 	"shadowing-backend/internal/delivery/middlware"
 	"shadowing-backend/internal/pkg/claims"
@@ -72,7 +73,9 @@ func (h Handler) List(c echo.Context) error {
 	if uid == "" {
 		return err
 	}
-	list, err := h.svc.ListVerbs(c.Request().Context(), uid)
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	list, err := h.svc.ListVerbs(c.Request().Context(), uid, limit, offset)
 	return respond(c, list, err)
 }
 

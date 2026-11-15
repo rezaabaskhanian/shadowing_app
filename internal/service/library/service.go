@@ -22,6 +22,7 @@ type repository interface {
 	DeleteResource(ctx context.Context, id string) error
 
 	ListIdioms(ctx context.Context) ([]postgreslibrary.Idiom, error)
+	ListActiveIdiomsPaginated(ctx context.Context, limit, offset int, level string) ([]postgreslibrary.Idiom, error)
 	CreateIdiom(ctx context.Context, i postgreslibrary.Idiom) (postgreslibrary.Idiom, error)
 	UpdateIdiom(ctx context.Context, i postgreslibrary.Idiom) (postgreslibrary.Idiom, error)
 	DeleteIdioms(ctx context.Context, ids []string) error
@@ -147,7 +148,10 @@ func (s *Service) ListIdioms(ctx context.Context) ([]Idiom, error) {
 
 // ListActiveIdioms اصطلاح‌های فعال برای اپ (پیدا کردن خودکار در جمله‌های درس‌ها
 // و تب «اصطلاحات» لایتنر).
-func (s *Service) ListActiveIdioms(ctx context.Context) ([]Idiom, error) {
+func (s *Service) ListActiveIdioms(ctx context.Context, limit, offset int, level string) ([]Idiom, error) {
+	if limit > 0 || level != "" {
+		return s.repo.ListActiveIdiomsPaginated(ctx, limit, offset, level)
+	}
 	all, err := s.repo.ListIdioms(ctx)
 	if err != nil {
 		return nil, err

@@ -23,7 +23,7 @@ export const DialoguePhrases: React.FC<{
   t: (key: string) => string;
 }> = ({ phrases, sentence, accentColor, t }) => {
   const { has, add } = useVocab();
-  const { data: idioms } = useQuery({ queryKey: idiomKeys.list, queryFn: listIdioms, staleTime: 60 * 60 * 1000 });
+  const { data: idioms } = useQuery({ queryKey: idiomKeys.list, queryFn: () => listIdioms(), staleTime: 60 * 60 * 1000 });
 
   const items: PhraseEntry[] = [...(phrases || [])];
   if (sentence && idioms?.length) {

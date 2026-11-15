@@ -74,8 +74,13 @@ export interface VerbPending {
   meaning_fa: string;
 }
 
-export async function listVerbs(): Promise<VerbListItem[]> {
-  return (await jsonOrThrow(await authFetch('/v1/verbs', { method: 'GET' }))) || [];
+export async function listVerbs(params?: { limit?: number; offset?: number }): Promise<VerbListItem[]> {
+  const p = params && typeof params === 'object' && ('limit' in params || 'offset' in params) ? params : undefined;
+  const q = new URLSearchParams();
+  if (p?.limit !== undefined) q.set('limit', String(p.limit));
+  if (p?.offset !== undefined) q.set('offset', String(p.offset));
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  return (await jsonOrThrow(await authFetch(`/v1/verbs${qs}`, { method: 'GET' }))) || [];
 }
 
 export async function getVerb(id: string): Promise<VerbView> {

@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Check, Plus } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../theme/colors';
@@ -9,104 +18,253 @@ import { useLanguage } from '../data/i18n';
 import { useVocab } from '../data/VocabContext';
 import { CEFR_ORDER, SCENE_LEVEL_TO_CEFR, listIdioms, type Idiom } from '../api/idioms';
 import { getMyLevel } from '../api/assessment';
-import { idiomKeys } from '../screens/SceneScreen/shadowing/DialoguePhrases';
 
-/**
- * تب «اصطلاحات» در لایتنر: اصطلاح‌های پرکاربرد به ترتیب سطح CEFR. پیش‌فرض فقط
- * تا یک سطح بالاتر از سطح کاربر نشان داده می‌شود تا با اصطلاح‌های خیلی
- * پیشرفته غرق نشود؛ «همه‌ی سطح‌ها» بقیه را هم باز می‌کند.
- */
-export const IdiomList: React.FC<{ focusPhrases?: string[] }> = ({ focusPhrases }) => {
-  const { t } = useLanguage();
-  const { has, add } = useVocab();
-  const [showAll, setShowAll] = useState(false);
-  const { data, isLoading } = useQuery({ queryKey: idiomKeys.list, queryFn: listIdioms, staleTime: 60 * 60 * 1000 });
-  const { data: myLevel } = useQuery({ queryKey: ['myLevel'], queryFn: getMyLevel });
+const PAGE_SIZE = 25;
 
-  if (isLoading) return <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />;
-
-  const myCefr = SCENE_LEVEL_TO_CEFR[myLevel?.scene_level || 'starter'] || 'A1';
-  const maxIndex = showAll ? CEFR_ORDER.length - 1 : Math.min(CEFR_ORDER.indexOf(myCefr) + 1, CEFR_ORDER.length - 1);
-  const levels = CEFR_ORDER.slice(0, maxIndex + 1);
-
-  const idioms = data || [];
-  // اصطلاح‌های «این هفته» (از قدم مسیر)، بالای فهرست و مستقل از فیلتر سطح
-  // با خودِ عبارت (نه شناسه) جور می‌شود چون شناسه‌ها با ایمپورت دوباره عوض می‌شوند.
-  const norm = (x: string) => x.trim().toLowerCase();
-  const wanted = (focusPhrases || []).map(norm);
-  const focus = wanted.length ? idioms.filter((i) => wanted.includes(norm(i.phrase))) : [];
-  const byLevel = (lvl: string) => idioms.filter((i) => i.level === lvl);
-  const unlevelled = idioms.filter((i) => !CEFR_ORDER.includes(i.level));
-  const hidden = idioms.filter((i) => CEFR_ORDER.indexOf(i.level) > maxIndex).length;
-
-  return (
-    <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-      <Text style={styles.intro}>{t('idiomsIntro')}</Text>
-      {idioms.length === 0 && <Text style={styles.empty}>{t('idiomsEmpty')}</Text>}
-
-      {focus.length > 0 && (
-        <View style={{ gap: 8 }}>
-          <Text style={styles.levelTitle}>{t('idiomsThisWeek')}</Text>
-          {focus.map((i) => (
-            <IdiomRow key={i.id} idiom={i} saved={has(i.phrase)} onAdd={() => add({ word: i.phrase, meaning: i.meaning_fa })} />
-          ))}
-        </View>
-      )}
-
-      {levels.map((lvl) => {
-        const items = byLevel(lvl);
-        if (items.length === 0) return null;
-        return (
-          <View key={lvl} style={{ gap: 8 }}>
-            <Text style={styles.levelTitle}>
-              {lvl}
-              {lvl === myCefr ? ` · ${t('idiomsMyLevel')}` : ''}
-            </Text>
-            {items.map((i) => (
-              <IdiomRow key={i.id} idiom={i} saved={has(i.phrase)} onAdd={() => add({ word: i.phrase, meaning: i.meaning_fa })} />
-            ))}
-          </View>
-        );
-      })}
-
-      {showAll && unlevelled.length > 0 && (
-        <View style={{ gap: 8 }}>
-          {unlevelled.map((i) => (
-            <IdiomRow key={i.id} idiom={i} saved={has(i.phrase)} onAdd={() => add({ word: i.phrase, meaning: i.meaning_fa })} />
-          ))}
-        </View>
-      )}
-
-      {!showAll && (hidden > 0 || unlevelled.length > 0) && (
-        <TouchableOpacity onPress={() => setShowAll(true)}>
-          <Text style={styles.more}>{t('idiomsShowAll')}</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
-  );
-};
-
-const IdiomRow: React.FC<{ idiom: Idiom; saved: boolean; onAdd: () => void }> = ({ idiom, saved, onAdd }) => (
+const IdiomRow: React.FC<{
+  idiom: Idiom;
+  saved: boolean;
+  onAdd: () => void;
+}> = React.memo(({ idiom, saved, onAdd }) => (
   <View style={styles.row}>
     <View style={{ flex: 1, gap: 2 }}>
-      <Text style={styles.phrase}>{idiom.phrase}</Text>
+      <View style={styles.phraseRow}>
+        <Text style={styles.phrase}>{idiom.phrase}</Text>
+        {!!idiom.level && (
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>{idiom.level}</Text>
+          </View>
+        )}
+      </View>
       {!!idiom.meaning_fa && <Text style={styles.meaning}>{idiom.meaning_fa}</Text>}
       {!!idiom.example_en && <Text style={styles.example}>{idiom.example_en}</Text>}
       {!!idiom.example_fa && <Text style={styles.meaning}>{idiom.example_fa}</Text>}
     </View>
-    <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} disabled={saved} onPress={onAdd}>
-      {saved ? <Check size={20} color={COLORS.success} /> : <Plus size={20} color={COLORS.primary} />}
+    <TouchableOpacity
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      disabled={saved}
+      onPress={onAdd}
+      style={styles.actionBtn}
+    >
+      {saved ? (
+        <Check size={20} color={COLORS.success} />
+      ) : (
+        <Plus size={20} color={COLORS.primary} />
+      )}
     </TouchableOpacity>
   </View>
-);
+));
+
+/**
+ * تب «اصطلاحات» در لایتنر به صورت FlatList و بارگذاری تدریجی (Pagination):
+ * اصطلاحات به صورت دسته‌های ۲۵تایی از دیتابیس دریافت می‌شوند تا تأخیری در نمایش ایجاد نشود.
+ */
+export const IdiomList: React.FC<{ focusPhrases?: string[] }> = ({ focusPhrases }) => {
+  const { t } = useLanguage();
+  const { has, add } = useVocab();
+
+  const { data: myLevel } = useQuery({ queryKey: ['myLevel'], queryFn: getMyLevel });
+  const myCefr = SCENE_LEVEL_TO_CEFR[myLevel?.scene_level || 'starter'] || 'A1';
+
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: ['idioms_paged', selectedLevel],
+    queryFn: ({ pageParam = 0 }) =>
+      listIdioms({
+        limit: PAGE_SIZE,
+        offset: pageParam,
+        level: selectedLevel === 'all' ? undefined : selectedLevel,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage || lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length * PAGE_SIZE;
+    },
+    initialPageParam: 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const idioms = useMemo(() => {
+    return data?.pages.flatMap((page) => page) ?? [];
+  }, [data]);
+
+  const norm = (x: string) => x.trim().toLowerCase();
+  const wanted = useMemo(() => (focusPhrases || []).map(norm), [focusPhrases]);
+
+  const focusItems = useMemo(() => {
+    if (!wanted.length) return [];
+    return idioms.filter((i) => wanted.includes(norm(i.phrase)));
+  }, [idioms, wanted]);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Idiom }) => (
+      <IdiomRow
+        idiom={item}
+        saved={has(item.phrase)}
+        onAdd={() => add({ word: item.phrase, meaning: item.meaning_fa })}
+      />
+    ),
+    [has, add]
+  );
+
+  const keyExtractor = useCallback((item: Idiom) => item.id, []);
+
+  const headerComponent = useMemo(() => {
+    return (
+      <View style={styles.headerWrap}>
+        <Text style={styles.intro}>{t('idiomsIntro')}</Text>
+
+        {/* فیلتر سطوح CEFR */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.levelFilterRow}
+        >
+          <TouchableOpacity
+            style={[styles.levelFilterPill, selectedLevel === 'all' && styles.levelFilterPillActive]}
+            onPress={() => setSelectedLevel('all')}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.levelFilterText,
+                selectedLevel === 'all' && styles.levelFilterTextActive,
+              ]}
+            >
+              {t('all')}
+            </Text>
+          </TouchableOpacity>
+
+          {CEFR_ORDER.map((lvl) => {
+            const isSelected = selectedLevel === lvl;
+            const isUserLevel = lvl === myCefr;
+            return (
+              <TouchableOpacity
+                key={lvl}
+                style={[styles.levelFilterPill, isSelected && styles.levelFilterPillActive]}
+                onPress={() => setSelectedLevel(lvl)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.levelFilterText, isSelected && styles.levelFilterTextActive]}>
+                  {lvl}
+                  {isUserLevel ? ` (${t('idiomsMyLevel')})` : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* اصطلاح‌های این هفته اگر وجود داشت */}
+        {focusItems.length > 0 && (
+          <View style={styles.focusSection}>
+            <Text style={styles.levelTitle}>{t('idiomsThisWeek')}</Text>
+            {focusItems.map((i) => (
+              <IdiomRow
+                key={`focus-${i.id}`}
+                idiom={i}
+                saved={has(i.phrase)}
+                onAdd={() => add({ word: i.phrase, meaning: i.meaning_fa })}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }, [t, selectedLevel, myCefr, focusItems, has, add]);
+
+  if (isLoading && idioms.length === 0) {
+    return <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />;
+  }
+
+  return (
+    <FlatList
+      data={idioms}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      contentContainerStyle={styles.list}
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      removeClippedSubviews={true}
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.4}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
+      }
+      ListHeaderComponent={headerComponent}
+      ListEmptyComponent={
+        !isLoading ? <Text style={styles.empty}>{t('idiomsEmpty')}</Text> : null
+      }
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 16 }} />
+        ) : (
+          <View style={{ height: 40 }} />
+        )
+      }
+    />
+  );
+};
 
 const styles = StyleSheet.create({
-  list: { gap: 14, paddingBottom: 120 },
+  list: {
+    gap: 12,
+    paddingBottom: 120,
+  },
+  headerWrap: {
+    gap: 12,
+    marginBottom: 4,
+  },
   intro: {
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     lineHeight: 20,
+  },
+  levelFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  levelFilterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  levelFilterPillActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  levelFilterText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 13,
+  },
+  levelFilterTextActive: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  focusSection: {
+    gap: 8,
+    marginTop: 6,
   },
   empty: {
     color: COLORS.textSecondary,
@@ -129,11 +287,29 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 14,
   },
+  phraseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   phrase: {
     color: COLORS.text,
     fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
     textAlign: 'left',
+  },
+  levelBadge: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: COLORS.borderLight,
+  },
+  levelBadgeText: {
+    color: COLORS.textSecondary,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
   },
   meaning: {
     color: COLORS.textSecondary,
@@ -147,10 +323,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginTop: 4,
   },
-  more: {
-    color: COLORS.primary,
-    fontFamily: FONT_FAMILY.semiBold,
-    textAlign: 'center',
-    marginTop: 4,
+  actionBtn: {
+    padding: 6,
   },
 });

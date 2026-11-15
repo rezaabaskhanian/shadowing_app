@@ -2,6 +2,7 @@ package postgresverb
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"shadowing-backend/internal/pkg/richerror"
@@ -83,13 +84,26 @@ func scanVerb(row pgx.Row) (Verb, error) {
 }
 
 func (d DB) ListVerbs(ctx context.Context, onlyPublished bool) ([]Verb, error) {
-	const op = "postgresverb.ListVerbs"
+	return d.ListVerbsPaginated(ctx, onlyPublished, 0, 0)
+}
+
+func (d DB) ListVerbsPaginated(ctx context.Context, onlyPublished bool, limit, offset int) ([]Verb, error) {
+	const op = "postgresverb.ListVerbsPaginated"
 	query := `SELECT ` + verbColumns + ` FROM verbs`
 	if onlyPublished {
 		query += ` WHERE is_published`
 	}
 	query += ` ORDER BY sort_order, lemma`
-	rows, err := d.conn.Query(ctx, query)
+	var args []any
+	if limit > 0 {
+		args = append(args, limit)
+		query += fmt.Sprintf(` LIMIT $%d`, len(args))
+		if offset > 0 {
+			args = append(args, offset)
+			query += fmt.Sprintf(` OFFSET $%d`, len(args))
+		}
+	}
+	rows, err := d.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}
@@ -160,6 +174,27 @@ func scanMeaning(row pgx.Row) (Meaning, error) {
 func (d DB) ListMeanings(ctx context.Context, verbID uuid.UUID) ([]Meaning, error) {
 	const op = "postgresverb.ListMeanings"
 	rows, err := d.conn.Query(ctx, `SELECT `+meaningColumns+` FROM verb_meanings WHERE verb_id = $1 ORDER BY sort_order, created_at`, verbID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+	var list []Meaning
+	for rows.Next() {
+		m, err := scanMeaning(rows)
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		list = append(list, m)
+	}
+	return list, rows.Err()
+}
+
+func (d DB) ListMeaningsByVerbIDs(ctx context.Context, verbIDs []uuid.UUID) ([]Meaning, error) {
+	const op = "postgresverb.ListMeaningsByVerbIDs"
+	if len(verbIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := d.conn.Query(ctx, `SELECT `+meaningColumns+` FROM verb_meanings WHERE verb_id = ANY($1) ORDER BY sort_order, created_at`, verbIDs)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}

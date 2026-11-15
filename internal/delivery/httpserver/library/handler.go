@@ -2,6 +2,7 @@ package libraryhandler
 
 import (
 	"net/http"
+	"strconv"
 
 	"shadowing-backend/internal/delivery/middlware"
 	"shadowing-backend/internal/pkg/errorhandling"
@@ -46,7 +47,10 @@ func (h Handler) SetLibraryRoutes(e *echo.Echo) {
 }
 
 func (h Handler) ListActiveIdioms(c echo.Context) error {
-	list, err := h.svc.ListActiveIdioms(c.Request().Context())
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	level := c.QueryParam("level")
+	list, err := h.svc.ListActiveIdioms(c.Request().Context(), limit, offset, level)
 	return respond(c, list, err)
 }
 

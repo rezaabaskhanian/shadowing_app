@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"shadowing-backend/internal/pkg/richerror"
 
@@ -161,6 +162,40 @@ func isUniqueViolation(err error) bool {
 func (r DB) ListIdioms(ctx context.Context) ([]Idiom, error) {
 	const op = "postgreslibrary.ListIdioms"
 	rows, err := r.conn.Query(ctx, `SELECT `+idiomColumns+` FROM idioms ORDER BY created_at DESC, phrase`)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+
+	out := make([]Idiom, 0)
+	for rows.Next() {
+		var i Idiom
+		if err := scanIdiom(rows, &i); err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		out = append(out, i)
+	}
+	return out, rows.Err()
+}
+
+func (r DB) ListActiveIdiomsPaginated(ctx context.Context, limit, offset int, level string) ([]Idiom, error) {
+	const op = "postgreslibrary.ListActiveIdiomsPaginated"
+	query := `SELECT ` + idiomColumns + ` FROM idioms WHERE is_active`
+	var args []any
+	if level != "" {
+		args = append(args, level)
+		query += fmt.Sprintf(` AND level = $%d`, len(args))
+	}
+	query += ` ORDER BY created_at DESC, phrase`
+	if limit > 0 {
+		args = append(args, limit)
+		query += fmt.Sprintf(` LIMIT $%d`, len(args))
+		if offset > 0 {
+			args = append(args, offset)
+			query += fmt.Sprintf(` OFFSET $%d`, len(args))
+		}
+	}
+	rows, err := r.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, richerror.New(op).WithErr(err)
 	}

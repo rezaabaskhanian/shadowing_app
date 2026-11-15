@@ -13,8 +13,14 @@ export interface Idiom {
   category: string;
 }
 
-export async function listIdioms(): Promise<Idiom[]> {
-  const res = await authFetch('/v1/idioms', { method: 'GET' });
+export async function listIdioms(params?: { limit?: number; offset?: number; level?: string }): Promise<Idiom[]> {
+  const p = params && typeof params === 'object' && ('limit' in params || 'offset' in params || 'level' in params) ? params : undefined;
+  const q = new URLSearchParams();
+  if (p?.limit !== undefined) q.set('limit', String(p.limit));
+  if (p?.offset !== undefined) q.set('offset', String(p.offset));
+  if (p?.level) q.set('level', p.level);
+  const qs = q.toString() ? `?${q.toString()}` : '';
+  const res = await authFetch(`/v1/idioms${qs}`, { method: 'GET' });
   return ((await jsonOrThrow(res)) as Idiom[]) || [];
 }
 
