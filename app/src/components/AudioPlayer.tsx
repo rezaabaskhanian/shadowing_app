@@ -256,8 +256,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     if (actionCommand === 'start_record') {
       let cancelled = false;
       (async () => {
-        // صدای مرجع و ضبط قبلی نباید هم‌زمان با شروع ضبط پخش بمانند.
-        await TrackPlayer.pause().catch(() => {});
+        // در حالت ضبط معمولی، صدای مرجع قطع می‌شود؛ اما در حالت سایه‌زنی
+        // (shouldPlay = true)، صدای مرجع هم‌زمان پخش می‌شود تا کاربر روی آن تکرار کند.
+        if (!shouldPlay) {
+          await TrackPlayer.pause().catch(() => {});
+        } else {
+          await TrackPlayer.seekTo(0).catch(() => {});
+          await TrackPlayer.play().catch(() => {});
+        }
         await Sound.stopPlayer().catch(() => {});
 
         // مسیر صریح می‌دهیم (نه پیش‌فرض کتابخانه) تا بدانیم دقیقاً کجاست؛

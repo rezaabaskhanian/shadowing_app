@@ -16,6 +16,7 @@ import {
   Play,
   RotateCcw,
   Sparkles,
+  Square,
   Users,
   Volume2,
   X,
@@ -412,6 +413,45 @@ export const VideoClipScreen: React.FC = () => {
     setPaused(true);
     setPlayPath(rec.filePath);
     sendRec('play_recording');
+  };
+
+  const handleTogglePlay = () => {
+    setPaused((p) => !p);
+  };
+
+  const handleManualRecord = async () => {
+    if (recording || recStateRef.current === 'recording') {
+      recStateRef.current = 'stopping';
+      sendRec('stop_record');
+      return;
+    }
+    const granted = await ensureMicPermission();
+    if (!granted) return;
+
+    const curIdx =
+      currentIdx >= 0 && lines[currentIdx]?.speaker === speaker
+        ? currentIdx
+        : (myLineIdx.find((i) => lines[i].end_ms >= positionMs) ?? myLineIdx[0] ?? 0);
+
+    const targetLine = lines[curIdx];
+    if (targetLine) {
+      videoRef.current?.seek(targetLine.start_ms / 1000);
+      setPositionMs(targetLine.start_ms);
+      setMuted(true);
+      setPaused(false);
+      doneLinesRef.current.add(curIdx);
+      recLineRef.current = curIdx;
+      recStateRef.current = 'starting';
+      sendRec('start_record');
+    }
+  };
+
+  const handleManualStop = () => {
+    if (recording || recStateRef.current === 'recording' || recStateRef.current === 'starting') {
+      recStateRef.current = 'stopping';
+      sendRec('stop_record');
+    }
+    setPaused(true);
   };
 
   // ---------- رندر ----------
@@ -1079,10 +1119,44 @@ export const VideoClipScreen: React.FC = () => {
       {step === 'perform' &&
         footer(
           <>
-            <TouchableOpacity style={[styles.darkBtn, row]} onPress={() => setPaused((p) => !p)} activeOpacity={0.85}>
-              {paused ? <Play size={16} color={COLORS.white} /> : <Pause size={16} color={COLORS.white} />}
-              <Text style={styles.darkBtnText}>{t(paused ? 'videoClipResume' : 'videoClipPause')}</Text>
-            </TouchableOpacity>
+            {/* نوار ۳ دکمه‌ای کنترل کامل: پخش، ضبط، استپ */}
+            <View style={[styles.controlRow, row]}>
+              {/* ۱. پخش / مکث */}
+              <TouchableOpacity
+                style={[styles.controlBtn, paused ? styles.controlBtnPlay : styles.controlBtnPause]}
+                onPress={handleTogglePlay}
+                activeOpacity={0.85}
+              >
+                {paused ? (
+                  <Play size={17} color={COLORS.white} fill={COLORS.white} />
+                ) : (
+                  <Pause size={17} color={COLORS.white} fill={COLORS.white} />
+                )}
+                <Text style={styles.controlBtnText}>{t(paused ? 'videoClipPlay' : 'videoClipPause')}</Text>
+              </TouchableOpacity>
+
+              {/* ۲. ضبط صدا */}
+              <TouchableOpacity
+                style={[styles.controlBtn, recording ? styles.controlBtnRecActive : styles.controlBtnRec]}
+                onPress={handleManualRecord}
+                activeOpacity={0.85}
+              >
+                <Mic size={17} color={COLORS.white} />
+                <Text style={styles.controlBtnText}>
+                  {recording ? t('videoClipRecShort') : t('videoClipRecord')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* ۳. استپ / توقف */}
+              <TouchableOpacity
+                style={[styles.controlBtn, styles.controlBtnStop]}
+                onPress={handleManualStop}
+                activeOpacity={0.85}
+              >
+                <Square size={15} color={COLORS.white} fill={COLORS.white} />
+                <Text style={styles.controlBtnText}>{t('videoClipStop')}</Text>
+              </TouchableOpacity>
+            </View>
             <View style={[styles.cardTop, row]}>
               <Text style={styles.mutedSmall}>
                 {t('videoClipLineProgress').replace('{n}', num(doneCount)).replace('{total}', num(myLineIdx.length))}
@@ -1912,6 +1986,42 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: SPACING.s,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  controlBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 13,
+    borderRadius: BORDER_RADIUS.l,
+    ...SHADOWS.level1,
+  },
+  controlBtnPlay: {
+    backgroundColor: '#2563EB',
+  },
+  controlBtnPause: {
+    backgroundColor: '#374151',
+  },
+  controlBtnRec: {
+    backgroundColor: COLORS.primary,
+  },
+  controlBtnRecActive: {
+    backgroundColor: '#EF4444',
+  },
+  controlBtnStop: {
+    backgroundColor: '#4B5563',
+  },
+  controlBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.white,
   },
   primaryBtn: {
     flexDirection: 'row',

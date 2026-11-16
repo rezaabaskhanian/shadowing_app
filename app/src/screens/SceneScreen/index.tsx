@@ -1170,10 +1170,18 @@ export const SceneScreen = () => {
           // باشد خودکار برویم خط بعد چه نه.
           if (status === 'finished') {
             dispatch({ type: 'AUDIO_FINISHED' });
+            // در مرحله‌ی سایه‌زنی (مرحله ۱): اگر در حال ضبط بودیم، با اتمام صدای مرجع،
+            // پس از اندکی مهلت (۴۰۰ میلی‌ثانیه برای ادای آخرین هجا) ضبط خودکار بسته شود
+            // تا دکمه در حالت استپ گیر نکند!
+            if (activeStepIndex === 1 && actionCommand === 'start_record') {
+              setTimeout(() => {
+                dispatch({ type: 'STOP_RECORD' });
+              }, 400);
+            }
           }
-          // در مرحله‌های دست‌کاربر (ضبط/مقایسه) بعد از پایان صدای اصلی خودکار
-          // نمی‌پریم؛ کاربر باید فرصت ضبط و گوش‌دادن داشته باشد.
-          const autoAdvance = !isShadowingMode || isAutoStep;
+          // در مرحله‌های دست‌کاربر (ضبط/مقایسه) یا زمانی که کاربر در حال ضبط است
+          // بعد از پایان صدای اصلی خودکار نمی‌پریم؛ کاربر باید فرصت ذخیره و گوش‌دادن داشته باشد.
+          const autoAdvance = (!isShadowingMode || isAutoStep) && actionCommand !== 'start_record';
           if (status === 'finished' && autoMode && autoAdvance) {
             if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
             autoTimeoutRef.current = setTimeout(() => {

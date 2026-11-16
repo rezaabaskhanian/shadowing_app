@@ -2370,12 +2370,12 @@ export default function InstagramPanel({
                   onClick={() => setIsPlayingReel(!isPlayingReel)}
                   style={{
                     flex: 1,
-                    background: isPlayingReel ? "#ef4444" : "var(--primary)",
+                    background: isPlayingReel ? "#d97706" : "var(--primary)",
                     padding: "10px 14px",
                     fontSize: 13,
                   }}
                 >
-                  {isPlayingReel ? "⏸️ توقف پیش‌نمایش" : "▶️ پخش پیش‌نمایش متحرک"}
+                  {isPlayingReel ? "⏸️ مکث" : "▶️ پخش پیش‌نمایش"}
                 </button>
 
                 <button
@@ -2384,14 +2384,32 @@ export default function InstagramPanel({
                   onClick={handleRecordAndDownloadReel}
                   disabled={isRecordingReel}
                   style={{
-                    flex: 1.3,
+                    flex: 1.2,
                     background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)",
                     padding: "10px 14px",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
                 >
-                  {isRecordingReel ? "⏺️ در حال ضبط..." : "🎬 ضبط و دانلود ویدیوی Reels"}
+                  {isRecordingReel ? "⏺️ در حال ضبط..." : "🎬 ضبط و دانلود ریلز"}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setIsPlayingReel(false);
+                    setReelTime(0);
+                    audioEngineRef.current?.stop();
+                  }}
+                  style={{
+                    background: "#4b5563",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                  }}
+                  title="توقف کامل و بازگشت به ابتدا"
+                >
+                  ⏹️ استپ
                 </button>
               </div>
 

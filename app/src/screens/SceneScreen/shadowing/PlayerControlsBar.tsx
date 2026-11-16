@@ -141,14 +141,22 @@ export const PlayerControlsBar: React.FC<{
         ]}
         disabled={activeStepIndex === 2 && !hasRecordingForCurrentLine}
         onPress={
-          activeStepIndex === 2
+          activeStepIndex === 1
+            ? (playing ? togglePlay : onReplay)
+            : activeStepIndex === 2
             ? onPlayMyRecording
             : activeStepIndex === 3
               ? () => startRecord(false)
               : onReplay
         }
       >
-        {activeStepIndex === 3 ? (
+        {activeStepIndex === 1 ? (
+          playing ? (
+            <Pause size={16} color={accentColor} />
+          ) : (
+            <Play size={16} color={accentColor} />
+          )
+        ) : activeStepIndex === 3 ? (
           <RotateCcw size={16} color={accentColor} />
         ) : (
           <Play size={16} color={accentColor} />

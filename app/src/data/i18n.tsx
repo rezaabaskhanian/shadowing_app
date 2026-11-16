@@ -1464,6 +1464,9 @@ export const translations: Translations = {
   videoClipOtherCharacter: { en: 'Another character', fa: 'شخصیت دیگر' },
   videoClipPause: { en: 'Pause', fa: 'توقف' },
   videoClipResume: { en: 'Resume', fa: 'ادامه' },
+  videoClipPlay: { en: 'Play', fa: 'پخش' },
+  videoClipRecord: { en: 'Record', fa: 'ضبط' },
+  videoClipStop: { en: 'Stop', fa: 'استپ' },
 
   // تمرین نوشتن (داستان کوتاه + تصحیح با AI)
   writingTitle: { en: 'Write a Short Story', fa: 'نوشتن داستان کوتاه' },
