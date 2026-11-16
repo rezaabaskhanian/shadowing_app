@@ -1,7 +1,9 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Mic, Sparkles, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
+import { FONT_FAMILY } from '../../../theme/typography';
 import type { AudioActionCommand } from '../types';
 import type { EvaluationResult } from '../../../api/shadowing';
 import { WaveBars } from './WaveBars';
@@ -58,11 +60,41 @@ export const PracticeWaveformCard: React.FC<{
     ]}
   >
     {activeStepIndex === 1 ? (
-      <>
-        <WaveBars active color={COLORS.audioOriginal} />
+      <View style={styles.shadowCoachWrap}>
+        {/* ردیف صدای مرجع نیتیو */}
+        <View style={[styles.channelRow, rtl && styles.rowReverse]}>
+          <View style={[styles.channelTag, { backgroundColor: 'rgba(36, 83, 219, 0.10)' }, rtl && styles.rowReverse]}>
+            <Volume2 size={13} color={COLORS.audioOriginal} />
+            <Text style={[styles.channelTagText, { color: COLORS.audioOriginal }]}>{t('audioOriginal') || 'گوینده'}</Text>
+          </View>
+          <View style={styles.channelWave}>
+            <WaveBars active={playing} color={COLORS.audioOriginal} />
+          </View>
+        </View>
+
         <View style={styles.waveformDivider} />
-        <WaveBars active={actionCommand === 'start_record'} color={COLORS.audioMine} />
-      </>
+
+        {/* ردیف صدای کاربر */}
+        <View style={[styles.channelRow, rtl && styles.rowReverse]}>
+          <View style={[styles.channelTag, { backgroundColor: 'rgba(255, 100, 34, 0.12)' }, rtl && styles.rowReverse]}>
+            <Mic size={13} color={COLORS.audioMine} />
+            <Text style={[styles.channelTagText, { color: COLORS.audioMine }]}>{t('audioMine') || 'شما'}</Text>
+          </View>
+          <View style={styles.channelWave}>
+            <WaveBars active={actionCommand === 'start_record'} color={COLORS.audioMine} />
+          </View>
+        </View>
+
+        {/* نشانگر وضعیت همگام‌سازی */}
+        <View style={[styles.syncStatusPill, actionCommand === 'start_record' && styles.syncStatusPillActive]}>
+          <Sparkles size={13} color={actionCommand === 'start_record' ? '#EF4444' : accentColor} />
+          <Text style={[styles.syncStatusText, actionCommand === 'start_record' && { color: '#B91C1C' }]}>
+            {actionCommand === 'start_record'
+              ? '🎙️ در حال سایه‌زنی همزمان... با لحن و ریتم گوینده ادامه دهید'
+              : '🎧 گوش دهید و با دکمه میکروفون روی صدای گوینده سایه بزنید'}
+          </Text>
+        </View>
+      </View>
     ) : activeStepIndex === 3 ? (
       <CompareAudioSection
         hasRecordingForCurrentLine={hasRecordingForCurrentLine}
@@ -144,5 +176,56 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 4,
+  },
+  shadowCoachWrap: {
+    width: '100%',
+    gap: 8,
+  },
+  channelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  channelTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    minWidth: 70,
+  },
+  channelTagText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+  },
+  channelWave: {
+    flex: 1,
+  },
+  syncStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F7F5F0',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 4,
+  },
+  syncStatusPillActive: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  syncStatusText: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 11.5,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

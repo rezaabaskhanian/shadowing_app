@@ -44,11 +44,19 @@ export const HighlightedDialogueText: React.FC<{
   ];
 
   const canHighlight = !!wordTimings && wordTimings.length > 0 && wordTimings.length === wordTokenIndexes.length;
-  if (!canHighlight) {
-    return <Text style={textStyle}>{text}</Text>;
-  }
 
-  const activeIdx = activeWordIndex(wordTimings!, currentTimeSeconds);
+  const activeIdx = useMemo(() => {
+    if (canHighlight) {
+      return activeWordIndex(wordTimings!, currentTimeSeconds);
+    }
+    // اگر زمان‌بندی دقیق در دسترس نبود، تخمین هوشمند بر اساس موقعیت جاری پخش
+    if (currentTimeSeconds <= 0 || wordTokenIndexes.length === 0) return -1;
+    const estimatedTotalSeconds = Math.max(1.5, wordTokenIndexes.length * 0.38);
+    const progress = Math.min(1, Math.max(0, currentTimeSeconds / estimatedTotalSeconds));
+    const rawIdx = Math.floor(progress * wordTokenIndexes.length);
+    return Math.min(wordTokenIndexes.length - 1, rawIdx);
+  }, [canHighlight, wordTimings, currentTimeSeconds, wordTokenIndexes]);
+
   const activeTokenIndex = activeIdx >= 0 ? wordTokenIndexes[activeIdx] : -1;
 
   return (
