@@ -6,6 +6,7 @@ import { COLORS, BORDER_RADIUS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { SHADOWS } from '../../../theme/elevation';
 import type { DialogueItem } from '../../../data/scenarios';
+import type { EvaluationResult } from '../../../api/shadowing';
 import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
 import { DialogueSentenceContent } from './DialogueSentenceContent';
 import { DialogueVocabChips } from './DialogueVocabChips';
@@ -27,6 +28,8 @@ export const DialogueSentenceBox: React.FC<{
   onChangeTextDisplayMode: (mode: TextDisplayMode) => void;
   accentColor: string;
   accentLightColor: string;
+  evaluation?: EvaluationResult;
+  recordingPositionSeconds?: number;
   rtl?: boolean;
   t: (key: string) => string;
 }> = ({
@@ -40,6 +43,8 @@ export const DialogueSentenceBox: React.FC<{
   onChangeTextDisplayMode,
   accentColor,
   accentLightColor,
+  evaluation,
+  recordingPositionSeconds,
   rtl = false,
   t,
 }) => {
@@ -92,11 +97,21 @@ export const DialogueSentenceBox: React.FC<{
       {/* محتوای جمله انگلیسی */}
       {textDisplayMode === 'card' && (
         <View style={styles.sentenceWrap}>
+          {evaluation && (
+            <View style={[styles.evaluationPill, rtl && styles.rowReverse]}>
+              <Sparkles size={14} color="#059669" />
+              <Text style={styles.evaluationScoreText}>
+                {`نمره تلفظ هوش مصنوعی: ${Math.round(evaluation.overall_score)}٪`}
+              </Text>
+            </View>
+          )}
           <DialogueSentenceContent
             activeStepIndex={activeStepIndex}
             currentDialogue={currentDialogue}
             textRevealed={textRevealed}
             masterPositionSeconds={masterPositionSeconds}
+            evaluation={evaluation}
+            recordingPositionSeconds={recordingPositionSeconds}
           />
         </View>
       )}
@@ -302,6 +317,24 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: BORDER_RADIUS.full,
     marginTop: 8,
+  },
+  evaluationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    marginBottom: 10,
+  },
+  evaluationScoreText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#065F46',
   },
   shadowBannerText: {
     fontFamily: FONT_FAMILY.semiBold,

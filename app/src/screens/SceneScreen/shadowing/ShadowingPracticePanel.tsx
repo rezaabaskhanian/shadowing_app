@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import type { DialogueItem } from '../../../data/scenarios';
 import type { EvaluationResult } from '../../../api/shadowing';
 import type { AudioActionCommand } from '../types';
-import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
+import type { PracticeFlowMode, TextDisplayMode } from '../../../data/PracticeSettingsContext';
 
 import { StepTabs } from './StepTabs';
 import { LineChipsRow } from './LineChipsRow';
@@ -88,6 +88,10 @@ interface ShadowingPracticePanelProps {
   /** جمله در حباب بالای شخصیت نشان داده شود یا کارتِ پایین. */
   textDisplayMode: TextDisplayMode;
   onChangeTextDisplayMode: (mode: TextDisplayMode) => void;
+  /** حالت تمرین: جریان هوشمند پیوسته یا ۴ مرحله‌ای سنتی. */
+  flowMode?: PracticeFlowMode;
+  onChangeFlowMode?: (mode: PracticeFlowMode) => void;
+  smartPhase?: 'listen' | 'shadow' | 'score';
 }
 
 /**
@@ -148,6 +152,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   recordingPositionSeconds,
   textDisplayMode,
   onChangeTextDisplayMode,
+  flowMode,
+  onChangeFlowMode,
+  smartPhase,
 }) => {
   const rtl = language === 'fa';
   return (
@@ -157,6 +164,9 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         activeStepIndex={activeStepIndex}
         completedSteps={completedSteps}
         onChangeStep={onChangeStep}
+        flowMode={flowMode}
+        onChangeFlowMode={onChangeFlowMode}
+        smartPhase={smartPhase}
         t={t}
       />
 
@@ -195,6 +205,8 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onChangeTextDisplayMode={onChangeTextDisplayMode}
         accentColor={accentColor}
         accentLightColor={accentLightColor}
+        evaluation={evaluation}
+        recordingPositionSeconds={recordingPositionSeconds}
         rtl={rtl}
         t={t}
       />

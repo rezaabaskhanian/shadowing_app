@@ -1,9 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Mic, Sparkles, Volume2 } from 'lucide-react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Mic, RotateCcw, Sparkles, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
+import { SHADOWS } from '../../../theme/elevation';
 import type { AudioActionCommand } from '../types';
 import type { EvaluationResult } from '../../../api/shadowing';
 import { WaveBars } from './WaveBars';
@@ -59,7 +60,48 @@ export const PracticeWaveformCard: React.FC<{
       activeStepIndex === 3 && styles.waveformCardCompare,
     ]}
   >
-    {activeStepIndex === 1 ? (
+    {evalState === 'scoring' ? (
+      <View style={styles.scoringCard}>
+        <ActivityIndicator color={COLORS.primary} size="small" />
+        <Text style={styles.scoringText}>🤖 هوش مصنوعی در حال تحلیل تلفظ و لهجه...</Text>
+      </View>
+    ) : evaluation ? (
+      <View style={styles.smartResultCard}>
+        <View style={[styles.smartResultTopRow, rtl && styles.rowReverse]}>
+          <View style={styles.smartScoreBadge}>
+            <Text style={styles.smartScoreNum}>{Math.round(evaluation.overall_score)}٪</Text>
+            <Text style={styles.smartScoreLabel}>
+              {evaluation.overall_score >= 80
+                ? 'عالی و روان ✨'
+                : evaluation.overall_score >= 60
+                ? 'خوب، ادامه بده 💪'
+                : 'نیاز به تمرین 💡'}
+            </Text>
+          </View>
+          <View style={styles.smartScoreDetails}>
+            <Text style={styles.smartScoreDetailItem}>
+              تلفظ: {Math.round(evaluation.pronunciation_score || evaluation.overall_score)}٪
+            </Text>
+            <Text style={styles.smartScoreDetailItem}>
+              روانی کلام: {Math.round(evaluation.fluency_score || evaluation.overall_score)}٪
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.smartActionRow, rtl && styles.rowReverse]}>
+          <TouchableOpacity style={styles.smartRetryBtn} onPress={onPlayOriginal} activeOpacity={0.8}>
+            <RotateCcw size={14} color={COLORS.primary} />
+            <Text style={styles.smartRetryText}>تکرار جمله</Text>
+          </TouchableOpacity>
+          {hasRecordingForCurrentLine && (
+            <TouchableOpacity style={styles.smartListenBtn} onPress={onPlayMyRecording} activeOpacity={0.8}>
+              <Volume2 size={14} color="#2563EB" />
+              <Text style={styles.smartListenText}>شنیدن صدای من</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    ) : activeStepIndex === 1 ? (
       <View style={styles.shadowCoachWrap}>
         {/* ردیف صدای مرجع نیتیو */}
         <View style={[styles.channelRow, rtl && styles.rowReverse]}>
@@ -227,5 +269,91 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  scoringCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+  },
+  scoringText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.primary,
+  },
+  smartResultCard: {
+    width: '100%',
+    gap: 12,
+  },
+  smartResultTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  smartScoreBadge: {
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  smartScoreNum: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 26,
+    color: '#059669',
+  },
+  smartScoreLabel: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 2,
+  },
+  smartScoreDetails: {
+    flex: 1,
+    gap: 4,
+  },
+  smartScoreDetailItem: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12.5,
+    color: '#4B5563',
+  },
+  smartActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  smartRetryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 100, 34, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 9,
+  },
+  smartRetryText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  smartListenBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 9,
+  },
+  smartListenText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#2563EB',
   },
 });

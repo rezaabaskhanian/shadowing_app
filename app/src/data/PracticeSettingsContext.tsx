@@ -19,6 +19,14 @@ export const DEFAULT_REPEATS: RepeatsPerStep = 3;
 export type TextDisplayMode = 'bubble' | 'card';
 export const DEFAULT_TEXT_DISPLAY_MODE: TextDisplayMode = 'card';
 
+/**
+ * سبک تمرین شادوئینگ:
+ *  - smart_flow: جریان پیوسته و هوشمند (شنیدن ➔ اکو و سایه‌زنی ➔ نمره آنی و جمله بعدی در یک چرخه روان)
+ *  - classic_steps: روش سنتی با تب‌های ۴گانه دستی (Listen / Shadow / Record / Compare)
+ */
+export type PracticeFlowMode = 'smart_flow' | 'classic_steps';
+export const DEFAULT_FLOW_MODE: PracticeFlowMode = 'smart_flow';
+
 /** پالت رنگ‌های مجاز برای هایلایتِ کلمه‌به‌کلمه؛ کاربر از پروفایل انتخاب می‌کند. */
 export const HIGHLIGHT_COLOR_OPTIONS: string[] = [
   COLORS.primary, // نارنجی (پیش‌فرض)
@@ -33,6 +41,7 @@ export const DEFAULT_HIGHLIGHT_COLOR: string = COLORS.primary;
 const STORAGE_KEY = 'practice_repeats_per_step';
 const TEXT_DISPLAY_MODE_KEY = 'practice_text_display_mode';
 const HIGHLIGHT_COLOR_KEY = 'practice_highlight_color';
+const FLOW_MODE_KEY = 'practice_flow_mode';
 
 interface PracticeSettingsContextType {
   repeatsPerStep: RepeatsPerStep;
@@ -41,6 +50,8 @@ interface PracticeSettingsContextType {
   setTextDisplayMode: (value: TextDisplayMode) => void;
   highlightColor: string;
   setHighlightColor: (value: string) => void;
+  flowMode: PracticeFlowMode;
+  setFlowMode: (value: PracticeFlowMode) => void;
 }
 
 const PracticeSettingsContext = createContext<PracticeSettingsContextType>({
@@ -50,12 +61,15 @@ const PracticeSettingsContext = createContext<PracticeSettingsContextType>({
   setTextDisplayMode: () => {},
   highlightColor: DEFAULT_HIGHLIGHT_COLOR,
   setHighlightColor: () => {},
+  flowMode: DEFAULT_FLOW_MODE,
+  setFlowMode: () => {},
 });
 
 export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [repeatsPerStep, setRepeatsPerStepState] = useState<RepeatsPerStep>(DEFAULT_REPEATS);
   const [textDisplayMode, setTextDisplayModeState] = useState<TextDisplayMode>(DEFAULT_TEXT_DISPLAY_MODE);
   const [highlightColor, setHighlightColorState] = useState<string>(DEFAULT_HIGHLIGHT_COLOR);
+  const [flowMode, setFlowModeState] = useState<PracticeFlowMode>(DEFAULT_FLOW_MODE);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -77,6 +91,12 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
         if (raw && HIGHLIGHT_COLOR_OPTIONS.includes(raw)) setHighlightColorState(raw);
       })
       .catch(() => {});
+
+    AsyncStorage.getItem(FLOW_MODE_KEY)
+      .then((raw) => {
+        if (raw === 'smart_flow' || raw === 'classic_steps') setFlowModeState(raw);
+      })
+      .catch(() => {});
   }, []);
 
   const setRepeatsPerStep = useCallback((value: RepeatsPerStep) => {
@@ -94,6 +114,11 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
     AsyncStorage.setItem(HIGHLIGHT_COLOR_KEY, value).catch(() => {});
   }, []);
 
+  const setFlowMode = useCallback((value: PracticeFlowMode) => {
+    setFlowModeState(value);
+    AsyncStorage.setItem(FLOW_MODE_KEY, value).catch(() => {});
+  }, []);
+
   const value = useMemo<PracticeSettingsContextType>(
     () => ({
       repeatsPerStep,
@@ -102,6 +127,8 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       setTextDisplayMode,
       highlightColor,
       setHighlightColor,
+      flowMode,
+      setFlowMode,
     }),
     [
       repeatsPerStep,
@@ -110,6 +137,8 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       setTextDisplayMode,
       highlightColor,
       setHighlightColor,
+      flowMode,
+      setFlowMode,
     ]
   );
 

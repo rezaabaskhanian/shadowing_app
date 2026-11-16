@@ -99,7 +99,13 @@ export const SceneScreen = () => {
   });
   const { language, t } = useLanguage();
   const toast = useToast();
-  const { repeatsPerStep, textDisplayMode, setTextDisplayMode } = usePracticeSettings();
+  const {
+    repeatsPerStep,
+    textDisplayMode,
+    setTextDisplayMode,
+    flowMode,
+    setFlowMode,
+  } = usePracticeSettings();
   const { user } = useAuth();
   const [streakCount, setStreakCount] = useState(0);
   const [streakFreezes, setStreakFreezes] = useState<number | undefined>(undefined);
@@ -326,6 +332,13 @@ export const SceneScreen = () => {
 
   // نتیجه‌ی نمره‌دهی همین جمله (اگر ضبطی ارزیابی شده باشد).
   const currentEvaluation = evaluations[activeIndex];
+
+  // فاز جاری در شادوئینگ هوشمند (شنیدن ➔ سایه و ضبط ➔ نمره هوش مصنوعی)
+  const smartPhase: 'listen' | 'shadow' | 'score' = useMemo(() => {
+    if (actionCommand === 'start_record') return 'shadow';
+    if (evalStates[activeIndex] === 'scoring' || currentEvaluation) return 'score';
+    return 'listen';
+  }, [actionCommand, evalStates, activeIndex, currentEvaluation]);
 
   const currentEvalState = evalStates[activeIndex] ?? 'idle';
   const currentEvalError = evalErrors[activeIndex] ?? null;
@@ -605,12 +618,60 @@ export const SceneScreen = () => {
   }, [activeIndex, playDialogueAt]);
 
   /**
-   * پایان ضبط: صدا در حافظه‌ی صفحه (برای پخش دوباره) و روی گوشی (برای
-   * «ضبط‌های من») می‌نشیند.
-   *
-   * نمره‌دهی اینجا انجام *نمی‌شود* — کاربر در مرحله‌ی مقایسه خودش دکمه‌اش را
-   * می‌زند. این‌طور مرحله‌ی ضبط سریع و آفلاین می‌ماند و ضبط‌های پشت‌سرهم،
-   * درخواست‌های بی‌مصرف به سرور نمی‌فرستند.
+   * فرستادن ضبط یک جمله‌ی مشخص به هوش مصنوعی برای ارزیابی تلفظ و لهجه.
+   * اگر recOverride داده شده باشد (ضبط تازه تمام‌شده در جریان هوشمند)،
+   * مستقیماً همان ارزیابی می‌شود بدون تأخیر در خواندن از state.
+   */
+  const scoreLine = useCallback(
+    (
+      lineIndex: number,
+      recOverride?: { filePath: string; mimeType?: string; duration: number }
+    ) => {
+      const rec = recOverride || recordings[lineIndex];
+      if (!rec || evalStates[lineIndex] === 'scoring') return;
+
+      const dialogue = dialogueItems[lineIndex];
+
+      setEvalStates((prev) => ({ ...prev, [lineIndex]: 'scoring' }));
+      setEvalErrors((prev) => ({ ...prev, [lineIndex]: null }));
+      evaluateRecording({
+        filePath: rec.filePath,
+        mimeType: rec.mimeType,
+        dialogueId: dialogue?.dialogueId,
+        targetText: dialogue?.dialogue,
+        duration: rec.duration,
+        expectedDuration: DEFAULT_LINE_SECONDS,
+      })
+        .then((result) => {
+          setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
+          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'done' }));
+
+          const sceneId = scenarioId ?? scenario?.id;
+          if (sceneId && dialogue?.dialogueId) {
+            progressMutation.mutate({
+              sceneId: String(sceneId),
+              dialogueId: dialogue.dialogueId,
+              score: result.overall_score,
+              textRevealed: revealedLinesRef.current.has(lineIndex),
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn('[SceneScreen] pronunciation scoring failed:', err);
+          setEvalErrors((prev) => ({ ...prev, [lineIndex]: err?.message || null }));
+          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'error' }));
+        });
+    },
+    [recordings, dialogueItems, evalStates, scenarioId, scenario, progressMutation]
+  );
+
+  const scoreCurrentLine = useCallback(() => {
+    scoreLine(activeIndex);
+  }, [scoreLine, activeIndex]);
+
+  /**
+   * پایان ضبط: صدا در حافظه‌ی صفحه و روی گوشی می‌نشیند و به طور خودکار
+   * برای نمره‌دهی فوری هوش مصنوعی ارسال می‌شود تا فیدبک درجا به کاربر برسد.
    */
   const handleRecordingStatus = useCallback(
     (status: 'recording' | 'stopped' | 'error', filePath?: string, mimeType?: string) => {
@@ -620,32 +681,23 @@ export const SceneScreen = () => {
         return;
       }
       if (status === 'error') {
-        // اگر native module اصلاً نتوانسته ضبط کند (مثلاً مجوز میکروفن رد
-        // شده)، به کاربر بگوییم به‌جای اینکه دکمه بی‌صدا کار نکند.
         setCanRecord(false);
         return;
       }
       if (status !== 'stopped' || !filePath) return;
 
-      // مدت واقعی ضبط؛ اگر به هر دلیل شروع را از دست دادیم، سراغ مدت مرجع
-      // جمله می‌رویم تا نمره‌ی روانی از یک عدد بی‌معنی حساب نشود.
       const elapsedSeconds = recordStartedAtRef.current
         ? (Date.now() - recordStartedAtRef.current) / 1000
         : 0;
       const duration = Math.max(1, Math.round(elapsedSeconds || DEFAULT_LINE_SECONDS));
 
       const lineIndex = activeIndex;
+      const newRec = { filePath, mimeType, duration };
       track('shadow_recorded', scenarioId ? String(scenarioId) : undefined);
-      setRecordings((prev) => ({ ...prev, [lineIndex]: { filePath, mimeType, duration } }));
-      // ضبط دوباره یعنی نمره‌ی قبلی این جمله دیگر معتبر نیست.
-      setEvaluations((prev) => {
-        if (!(lineIndex in prev)) return prev;
-        const next = { ...prev };
-        delete next[lineIndex];
-        return next;
-      });
-      setEvalStates((prev) => ({ ...prev, [lineIndex]: 'idle' }));
-      setEvalErrors((prev) => ({ ...prev, [lineIndex]: null }));
+      setRecordings((prev) => ({ ...prev, [lineIndex]: newRec }));
+
+      // نمره‌دهی هوشمند درجا به محض اتمام ضبط
+      scoreLine(lineIndex, newRec);
 
       setSaveState('saving');
       saveRecording({
@@ -659,21 +711,24 @@ export const SceneScreen = () => {
         .then((meta) => {
           setSavedFileName(meta.fileName);
           setSaveState('saved');
-          // بعد از move شدن فایل به مسیر نهایی، حافظه‌ی این جمله هم باید
-          // مسیر جدید را بداند وگرنه پخش/نمره‌دهی سراغ فایلی می‌رود که دیگر
-          // آنجا نیست.
           setRecordings((prev) =>
-            prev[lineIndex]?.filePath === filePath
+            prev[lineIndex]
               ? { ...prev, [lineIndex]: { ...prev[lineIndex], filePath: meta.path } }
               : prev
           );
         })
-        .catch((err) => {
-          console.warn('[SceneScreen] failed to save recording:', err);
+        .catch(() => {
           setSaveState('error');
         });
     },
-    [scenarioId, scenario, activeIndex, currentDialogue.dialogue]
+    [
+      activeIndex,
+      scenarioId,
+      scenario?.id,
+      scenario?.title,
+      currentDialogue.dialogue,
+      scoreLine,
+    ]
   );
 
   /**
@@ -721,58 +776,6 @@ export const SceneScreen = () => {
   }, []);
 
   /**
-   * فرستادن ضبطِ یک جمله‌ی مشخص به بک‌اند برای نمره‌دهی گفتار. هم از مرحله‌ی
-   * مقایسه دستی (برای جمله‌ی جاری) صدا زده می‌شود، هم خودکار برای همه‌ی
-   * جمله‌های ضبط‌شده وقتی وارد Compare می‌شویم (پایین‌تر) — چند تا هم‌زمان و
-   * موازی، برای همین وضعیت/خطا به‌ازای هر جمله جداست، نه یک مقدار سراسری.
-   */
-  const scoreLine = useCallback(
-    (lineIndex: number) => {
-      const rec = recordings[lineIndex];
-      if (!rec || evalStates[lineIndex] === 'scoring') return;
-
-      const dialogue = dialogueItems[lineIndex];
-
-      setEvalStates((prev) => ({ ...prev, [lineIndex]: 'scoring' }));
-      setEvalErrors((prev) => ({ ...prev, [lineIndex]: null }));
-      evaluateRecording({
-        filePath: rec.filePath,
-        mimeType: rec.mimeType,
-        dialogueId: dialogue?.dialogueId,
-        targetText: dialogue?.dialogue,
-        duration: rec.duration,
-        expectedDuration: DEFAULT_LINE_SECONDS,
-      })
-        .then((result) => {
-          setEvaluations((prev) => ({ ...prev, [lineIndex]: result }));
-          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'done' }));
-
-          // این جمله کامل شد؛ به بک‌اند خبر می‌دهیم تا وقتی همه‌ی جمله‌های
-          // صحنه تمام شدند، صحنه در لیست خانه تیک بخورد.
-          const sceneId = scenarioId ?? scenario?.id;
-          if (sceneId && dialogue?.dialogueId) {
-            progressMutation.mutate({
-              sceneId: String(sceneId),
-              dialogueId: dialogue.dialogueId,
-              score: result.overall_score,
-              textRevealed: revealedLinesRef.current.has(lineIndex),
-            });
-          }
-        })
-        .catch((err) => {
-          console.warn('[SceneScreen] pronunciation scoring failed:', err);
-          setEvalErrors((prev) => ({ ...prev, [lineIndex]: err?.message || null }));
-          setEvalStates((prev) => ({ ...prev, [lineIndex]: 'error' }));
-        });
-    },
-    [recordings, dialogueItems, evalStates, scenarioId, scenario, progressMutation]
-  );
-
-  const scoreCurrentLine = useCallback(() => {
-    scoreLine(activeIndex);
-  }, [scoreLine, activeIndex]);
-
-  /**
    * ورودِ به Compare یعنی کاربر می‌خواهد نتیجه ببیند — به‌جای مجبورکردنش به
    * زدن دکمه‌ی «بررسی گفتارم» برای تک‌تک جمله‌ها، همه‌ی جمله‌های ضبط‌شده‌ای
    * که هنوز نمره ندارند را همین‌جا و موازی می‌فرستیم؛ هرکدام که جواب آمد،
@@ -795,6 +798,23 @@ export const SceneScreen = () => {
         }
       });
   }, [activeStepIndex, recordings, evaluations, evalStates, scoreLine, dialogueItems]);
+
+  // در حالت جریان هوشمند: اگر نمره‌دهی انجام شد و حالت خودکار فعال بود،
+  // پس از ۲.۸ ثانیه مشاهده‌ی بازخورد، روان می‌رویم جمله‌ی بعدی
+  useEffect(() => {
+    if (
+      flowMode !== 'smart_flow' ||
+      !autoMode ||
+      !currentEvaluation ||
+      actionCommand !== 'none'
+    ) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      handleNextDialogue();
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, [flowMode, autoMode, currentEvaluation, actionCommand, handleNextDialogue]);
 
   /**
    * انتخاب یک جمله از لیست ضبط‌ها/دایره‌های بالا. عمداً خودش پخش را شروع
@@ -1275,6 +1295,9 @@ export const SceneScreen = () => {
               accentLightColor={stepAccentLightColor}
               activeStepIndex={activeStepIndex}
               onChangeStep={requestStepChange}
+              flowMode={flowMode}
+              onChangeFlowMode={setFlowMode}
+              smartPhase={smartPhase}
               currentDialogue={currentDialogue}
               playing={playing}
               actionCommand={actionCommand}
