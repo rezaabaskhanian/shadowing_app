@@ -9,15 +9,35 @@ import {
 } from "@/lib/api";
 import type { InstagramLesson, VideoClip } from "@/lib/types";
 
+const DEFAULT_FALLBACK_LESSON: InstagramLesson = {
+  id: 1,
+  theme: "اصطلاح روزمره (Daily Idiom)",
+  hook_title: "دیگه حاشیه نرو! ❌",
+  subtitle: "چطوری به انگلیسی بگیم «برو سر اصل مطلب»؟",
+  key_phrase: "Cut to the chase",
+  phonetic: "/kʌt tuː ðə tʃeɪs/",
+  persian_mean: "یک‌راست رفتن سر اصل مطلب، حاشیه نرفتن",
+  dialogue_a: "We don't have much time before the meeting.",
+  dialogue_a_fa: "قبل جلسه وقت زیادی نداریم.",
+  dialogue_b: "Alright, let's cut to the chase: what's the final price?",
+  dialogue_b_fa: "باشه، بیا بریم سر اصل مطلب: قیمت نهایی چنده؟",
+  tip: "این اصطلاح از سینمای کلاسیک آمده؛ جایی که صحنه‌های خسته‌کننده کات می‌شد و یک‌راست به صحنه تعقیب‌وگریز می‌رفتند.",
+  app_practice: "می‌خوای این عبارت رو با لهجه نیتیو تمرین کنی؟ میکروفون اپلیکیشن لینگوفلو رو باز کن!",
+  app_cta: "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و لینک بیو",
+  caption: `🔥 دیگه حاشیه نرو! ❌\n\n🇬🇧 Cut to the chase\n🗣 تلفظ: /kʌt tuː ðə tʃeɪs/\n🇮🇷 معنی: یک‌راست رفتن سر اصل مطلب\n\n💬 مکالمه در دنیای واقعی:\n🅰️ We don't have much time before the meeting.\n   ↳ قبل جلسه وقت زیادی نداریم.\n🅱️ Alright, let's cut to the chase: what's the final price?\n   ↳ باشه، بیا بریم سر اصل مطلب: قیمت نهایی چنده؟\n\n━━━━━━━━━━━━━━━\n🎙️ می‌خوای تلفظت مثل یک نیتیو بشه؟ همین الان اپلیکیشن «لینگوفلو» رو از کافه‌بازار یا بیو دانلود کن!\n\n#آموزش_زبان #اصطلاحات_انگلیسی #لینگوفلو #shadowing`,
+  reel_caption: `🚀 دیگه حاشیه نرو! ❌\n\n🇬🇧 Cut to the chase\n🇮🇷 یک‌راست رفتن سر اصل مطلب\n🗣️ تلفظ: /kʌt tuː ðə tʃeɪs/\n\n💬 مثال:\nAlright, let's cut to the chase: what's the final price?\n↳ باشه، بیا بریم سر اصل مطلب: قیمت چنده؟\n\n━━━━━━━━━━━━━━━\n🎙️ دوست داری با تکرار پشت سر فیلم‌ها و هوش مصنوعی مکالمه‌ات روان بشه؟ اپلیکیشن «لینگوفلو» رو از بیو دانلود کن!\n\n💬 این اصطلاح رو تو کامنت‌ها بنویس تا تو ذهنت بمونه 👇\n\n#ریلز #ریلز_آموزشی #آموزش_زبان #اصطلاحات_انگلیسی #لینگوفلو #reels`,
+  hashtags: "#آموزش_زبان #اصطلاحات_انگلیسی #لینگوفلو #shadowing",
+};
+
 export default function InstagramPanel({
   notify,
 }: {
   notify: (msg: string, type?: "ok" | "err") => void;
 }) {
-  const [lessons, setLessons] = useState<InstagramLesson[]>([]);
+  const [lessons, setLessons] = useState<InstagramLesson[]>([DEFAULT_FALLBACK_LESSON]);
   const [videoClips, setVideoClips] = useState<VideoClip[]>([]);
-  const [currentLesson, setCurrentLesson] = useState<InstagramLesson | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [currentLesson, setCurrentLesson] = useState<InstagramLesson>(DEFAULT_FALLBACK_LESSON);
+  const [loading, setLoading] = useState(false);
 
   // Tab mode: "carousel" (1080x1080) vs "reel" (1080x1920)
   const [mode, setMode] = useState<"carousel" | "reel">("carousel");
@@ -27,7 +47,6 @@ export default function InstagramPanel({
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   // Reel state
-  const [reelType, setReelType] = useState<"animated" | "movie">("animated");
   const [selectedClipId, setSelectedClipId] = useState<string>("");
   const [isPlayingReel, setIsPlayingReel] = useState(false);
   const [reelTime, setReelTime] = useState(0); // 0 to 15 seconds
@@ -41,41 +60,55 @@ export default function InstagramPanel({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reelCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-  // Load initial data
+  // Load initial data safely
   useEffect(() => {
+    let mounted = true;
     async function init() {
-      setLoading(true);
       try {
         const [today, list, clips] = await Promise.all([
-          getInstagramPost(0),
-          listInstagramLessons(),
+          getInstagramPost(0).catch(() => null),
+          listInstagramLessons().catch(() => []),
           listVideoClips().catch(() => []),
         ]);
-        setLessons(list);
-        setCurrentLesson(today);
-        setVideoClips(clips);
-        if (clips.length > 0) {
-          setSelectedClipId(clips[0].id);
+
+        if (!mounted) return;
+
+        if (Array.isArray(list) && list.length > 0) {
+          setLessons(list);
+        }
+        if (today && today.key_phrase) {
+          setCurrentLesson(today);
+        } else if (Array.isArray(list) && list.length > 0) {
+          setCurrentLesson(list[0]);
+        }
+        if (Array.isArray(clips)) {
+          setVideoClips(clips);
+          if (clips.length > 0) {
+            setSelectedClipId(clips[0].id);
+          }
         }
       } catch (err: any) {
-        notify(err.message || "خطا در دریافت اطلاعات اینستاگرام", "err");
-      } finally {
-        setLoading(false);
+        console.error("InstagramPanel init error:", err);
       }
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // -------------------------------------------------------------
   // 1. CAROUSEL RENDERING (1080x1080)
   // -------------------------------------------------------------
   useEffect(() => {
-    if (mode !== "carousel" || !currentLesson || !canvasRef.current) return;
-    drawCarouselSlide(canvasRef.current, activeSlide, currentLesson);
+    if (mode !== "carousel" || !canvasRef.current) return;
+    try {
+      drawCarouselSlide(canvasRef.current, activeSlide, currentLesson || DEFAULT_FALLBACK_LESSON);
+    } catch (e) {
+      console.error("Error drawing carousel slide:", e);
+    }
   }, [mode, activeSlide, currentLesson]);
 
   function drawCarouselSlide(canvas: HTMLCanvasElement, slideNum: 1 | 2 | 3 | 4, lesson: InstagramLesson) {
@@ -113,7 +146,7 @@ export default function InstagramPanel({
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
-    drawHeader(ctx, lesson.theme || "آموزش زبان انگلیسی");
+    drawHeader(ctx, lesson?.theme || "آموزش زبان انگلیسی");
 
     if (slideNum === 1) {
       drawCoverSlide(ctx, lesson);
@@ -133,7 +166,7 @@ export default function InstagramPanel({
     const pillX = 80;
     const pillY = 80;
     const pillH = 48;
-    const pillText = `LingoFlow • ${theme}`;
+    const pillText = `LingoFlow • ${theme || "آموزش زبان"}`;
     ctx.font = "bold 22px Vazirmatn, Tahoma, sans-serif";
     const textMetrics = ctx.measureText(pillText);
     const pillW = textMetrics.width + 48;
@@ -169,7 +202,7 @@ export default function InstagramPanel({
 
     ctx.font = "bold 64px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#ffffff";
-    wrapText(ctx, lesson.hook_title, 540, 380, 880, 84, "center");
+    wrapText(ctx, lesson?.hook_title || "", 540, 380, 880, 84, "center");
 
     const lineY = 560;
     const lineGrad = ctx.createLinearGradient(200, lineY, 880, lineY);
@@ -185,7 +218,7 @@ export default function InstagramPanel({
 
     ctx.font = "500 36px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#cbd5e1";
-    wrapText(ctx, lesson.subtitle, 540, 640, 840, 56, "center");
+    wrapText(ctx, lesson?.subtitle || "", 540, 640, 840, 56, "center");
 
     const cardY = 770;
     roundRect(ctx, 160, cardY, 760, 110, 20);
@@ -197,7 +230,7 @@ export default function InstagramPanel({
 
     ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif";
     ctx.fillStyle = "#38bdf8";
-    ctx.fillText(`“ ${lesson.key_phrase} ”`, 540, cardY + 58);
+    ctx.fillText(`“ ${lesson?.key_phrase || ""} ”`, 540, cardY + 58);
     ctx.restore();
   }
 
@@ -211,9 +244,9 @@ export default function InstagramPanel({
 
     ctx.font = "bold 68px 'Segoe UI', Tahoma, sans-serif";
     ctx.fillStyle = "#ffffff";
-    wrapText(ctx, lesson.key_phrase, 540, 300, 900, 80, "center");
+    wrapText(ctx, lesson?.key_phrase || "", 540, 300, 900, 80, "center");
 
-    if (lesson.phonetic) {
+    if (lesson?.phonetic) {
       ctx.font = "400 32px 'Segoe UI', sans-serif";
       ctx.fillStyle = "#38bdf8";
       ctx.fillText(lesson.phonetic, 540, 395);
@@ -233,9 +266,9 @@ export default function InstagramPanel({
 
     ctx.font = "bold 38px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#f8fafc";
-    wrapText(ctx, lesson.persian_mean, 540, cardY + 105, 800, 52, "center");
+    wrapText(ctx, lesson?.persian_mean || "", 540, cardY + 105, 800, 52, "center");
 
-    if (lesson.tip) {
+    if (lesson?.tip) {
       const tipY = 660;
       roundRect(ctx, 100, tipY, 880, 210, 24);
       ctx.fillStyle = "rgba(30, 41, 59, 0.6)";
@@ -281,12 +314,12 @@ export default function InstagramPanel({
     ctx.textAlign = "left";
     ctx.font = "600 32px 'Segoe UI', Tahoma, sans-serif";
     ctx.fillStyle = "#f8fafc";
-    wrapText(ctx, lesson.dialogue_a, 220, aY + 50, 720, 42, "left");
+    wrapText(ctx, lesson?.dialogue_a || "", 220, aY + 50, 720, 42, "left");
 
     ctx.textAlign = "right";
     ctx.font = "400 26px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#94a3b8";
-    wrapText(ctx, `↳ ${lesson.dialogue_a_fa}`, 940, aY + 160, 800, 38, "right");
+    wrapText(ctx, `↳ ${lesson?.dialogue_a_fa || ""}`, 940, aY + 160, 800, 38, "right");
 
     const bY = 540;
     roundRect(ctx, 100, bY, 880, 260, 24);
@@ -307,12 +340,12 @@ export default function InstagramPanel({
     ctx.textAlign = "left";
     ctx.font = "600 32px 'Segoe UI', Tahoma, sans-serif";
     ctx.fillStyle = "#f8fafc";
-    wrapText(ctx, lesson.dialogue_b, 220, bY + 50, 720, 42, "left");
+    wrapText(ctx, lesson?.dialogue_b || "", 220, bY + 50, 720, 42, "left");
 
     ctx.textAlign = "right";
     ctx.font = "400 26px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#a7f3d0";
-    wrapText(ctx, `↳ ${lesson.dialogue_b_fa}`, 940, bY + 175, 800, 38, "right");
+    wrapText(ctx, `↳ ${lesson?.dialogue_b_fa || ""}`, 940, bY + 175, 800, 38, "right");
 
     ctx.textAlign = "center";
     ctx.font = "600 24px Vazirmatn, sans-serif";
@@ -368,7 +401,7 @@ export default function InstagramPanel({
     ctx.textAlign = "center";
     ctx.font = "bold 34px Vazirmatn, Tahoma, sans-serif";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(lesson.app_cta || "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و بیو", 540, ctaY + 57);
+    ctx.fillText(lesson?.app_cta || "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و بیو", 540, ctaY + 57);
     ctx.restore();
   }
 
@@ -405,9 +438,13 @@ export default function InstagramPanel({
   // 2. REEL RENDERING (1080x1920 - 9:16 Vertical Video)
   // -------------------------------------------------------------
   useEffect(() => {
-    if (mode !== "reel" || !currentLesson || !reelCanvasRef.current) return;
-    drawReelFrame(reelCanvasRef.current, reelTime, currentLesson);
-  }, [mode, reelTime, currentLesson, reelType, selectedClipId]);
+    if (mode !== "reel" || !reelCanvasRef.current) return;
+    try {
+      drawReelFrame(reelCanvasRef.current, reelTime, currentLesson || DEFAULT_FALLBACK_LESSON);
+    } catch (e) {
+      console.error("Error drawing reel frame:", e);
+    }
+  }, [mode, reelTime, currentLesson, selectedClipId]);
 
   // Reel Animation loop
   useEffect(() => {
@@ -416,7 +453,7 @@ export default function InstagramPanel({
       return;
     }
 
-    const duration = 15; // 15 seconds
+    const duration = 15;
     const startRealTime = performance.now() - reelTime * 1000;
 
     function step(now: number) {
@@ -427,8 +464,12 @@ export default function InstagramPanel({
         return;
       }
       setReelTime(elapsedSec);
-      if (reelCanvasRef.current && currentLesson) {
-        drawReelFrame(reelCanvasRef.current, elapsedSec, currentLesson);
+      if (reelCanvasRef.current) {
+        try {
+          drawReelFrame(reelCanvasRef.current, elapsedSec, currentLesson || DEFAULT_FALLBACK_LESSON);
+        } catch (e) {
+          console.error("Error in reel frame loop:", e);
+        }
       }
       animationFrameRef.current = requestAnimationFrame(step);
     }
@@ -448,7 +489,6 @@ export default function InstagramPanel({
     canvas.width = W;
     canvas.height = H;
 
-    // Background: Dark vertical cinematic canvas
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, "#030712");
     bgGrad.addColorStop(0.3, "#0f172a");
@@ -457,7 +497,6 @@ export default function InstagramPanel({
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Glowing atmospheric spots
     ctx.save();
     const g1 = ctx.createRadialGradient(W * 0.5, H * 0.35, 50, W * 0.5, H * 0.35, 600);
     g1.addColorStop(0, "rgba(99, 102, 241, 0.2)");
@@ -466,7 +505,7 @@ export default function InstagramPanel({
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
-    // Top progress bar (0% -> 100% across 15 seconds)
+    // Top progress bar
     const totalSec = 15;
     const progress = Math.min(1, Math.max(0, timeSec / totalSec));
     ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
@@ -495,28 +534,18 @@ export default function InstagramPanel({
     ctx.textAlign = "right";
     ctx.fillText("@lingoflow.ir", 1000, 130);
 
-    // -------------------------------------------------------------
-    // Dynamic Phases of Animated Reel:
-    // Phase 1 (0s - 3.5s): Hook question & mystery
-    // Phase 2 (3.5s - 7.5s): Key Phrase + Pronunciation + Meaning
-    // Phase 3 (7.5s - 12s): Real Dialogue + Shadowing repetition
-    // Phase 4 (12s - 15s): Download App CTA
-    // -------------------------------------------------------------
+    // Dynamic Phases
     if (timeSec < 3.5) {
-      // PHASE 1: HOOK
       drawReelHookPhase(ctx, lesson, timeSec);
     } else if (timeSec < 7.5) {
-      // PHASE 2: KEY PHRASE
       drawReelPhrasePhase(ctx, lesson, timeSec - 3.5);
     } else if (timeSec < 12.0) {
-      // PHASE 3: SHADOWING DIALOGUE
       drawReelDialoguePhase(ctx, lesson, timeSec - 7.5);
     } else {
-      // PHASE 4: CTA
       drawReelCtaPhase(ctx, lesson, timeSec - 12.0);
     }
 
-    // Bottom Persistent Branding & Shadowing Tip
+    // Bottom Persistent Branding
     roundRect(ctx, 80, 1750, 920, 100, 24);
     ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
     ctx.fill();
@@ -532,10 +561,8 @@ export default function InstagramPanel({
 
   function drawReelHookPhase(ctx: CanvasRenderingContext2D, lesson: InstagramLesson, phaseTime: number) {
     ctx.save();
-    // Pulse animation
     const scale = 1 + Math.sin(phaseTime * 4) * 0.03;
 
-    // Glowing Center Ring
     ctx.beginPath();
     ctx.arc(540, 750, 240 * scale, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(99, 102, 241, 0.3)";
@@ -547,7 +574,6 @@ export default function InstagramPanel({
     ctx.fillStyle = "rgba(30, 27, 75, 0.6)";
     ctx.fill();
 
-    // Hook Tag
     roundRect(ctx, 360, 480, 360, 64, 32);
     ctx.fillStyle = "#ef4444";
     ctx.fill();
@@ -556,17 +582,14 @@ export default function InstagramPanel({
     ctx.textAlign = "center";
     ctx.fillText("❌ این اشتباه رایج رو نکن!", 540, 522);
 
-    // Big Question
     ctx.font = "bold 72px Vazirmatn, sans-serif";
     ctx.fillStyle = "#ffffff";
-    wrapText(ctx, lesson.hook_title, 540, 740, 800, 96, "center");
+    wrapText(ctx, lesson?.hook_title || "", 540, 740, 800, 96, "center");
 
-    // Subtitle
     ctx.font = "500 38px Vazirmatn, sans-serif";
     ctx.fillStyle = "#cbd5e1";
-    wrapText(ctx, lesson.subtitle, 540, 1150, 820, 60, "center");
+    wrapText(ctx, lesson?.subtitle || "", 540, 1150, 820, 60, "center");
 
-    // Audio Cue prompt
     roundRect(ctx, 220, 1380, 640, 80, 40);
     ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
     ctx.fill();
@@ -591,19 +614,16 @@ export default function InstagramPanel({
     ctx.textAlign = "center";
     ctx.fillText("🇬🇧 اصطلاح نیتیو انگلیسی", 540, 420);
 
-    // Big English Phrase (Gold / Vibrant Cyan)
     ctx.font = "bold 82px 'Segoe UI', Tahoma, sans-serif";
     ctx.fillStyle = "#fbbf24";
-    wrapText(ctx, lesson.key_phrase, 540, 580, 920, 95, "center");
+    wrapText(ctx, lesson?.key_phrase || "", 540, 580, 920, 95, "center");
 
-    // Phonetic
-    if (lesson.phonetic) {
+    if (lesson?.phonetic) {
       ctx.font = "500 40px 'Segoe UI', sans-serif";
       ctx.fillStyle = "#38bdf8";
       ctx.fillText(lesson.phonetic, 540, 730);
     }
 
-    // Persian Card
     const cardY = 850;
     roundRect(ctx, 100, cardY, 880, 240, 32);
     ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
@@ -618,10 +638,9 @@ export default function InstagramPanel({
 
     ctx.font = "bold 44px Vazirmatn, sans-serif";
     ctx.fillStyle = "#ffffff";
-    wrapText(ctx, lesson.persian_mean, 540, cardY + 145, 800, 58, "center");
+    wrapText(ctx, lesson?.persian_mean || "", 540, cardY + 145, 800, 58, "center");
 
-    // Golden Tip
-    if (lesson.tip) {
+    if (lesson?.tip) {
       const tipY = 1160;
       roundRect(ctx, 100, tipY, 880, 260, 28);
       ctx.fillStyle = "rgba(30, 41, 59, 0.75)";
@@ -656,7 +675,6 @@ export default function InstagramPanel({
     ctx.textAlign = "center";
     ctx.fillText("💬 مکالمه در شرایط واقعی", 540, 380);
 
-    // Bubble A
     const aY = 440;
     roundRect(ctx, 90, aY, 900, 280, 28);
     ctx.fillStyle = "rgba(30, 41, 59, 0.85)";
@@ -675,14 +693,13 @@ export default function InstagramPanel({
     ctx.textAlign = "left";
     ctx.font = "600 36px 'Segoe UI', sans-serif";
     ctx.fillStyle = "#f8fafc";
-    wrapText(ctx, lesson.dialogue_a, 230, aY + 60, 720, 48, "left");
+    wrapText(ctx, lesson?.dialogue_a || "", 230, aY + 60, 720, 48, "left");
 
     ctx.textAlign = "right";
     ctx.font = "400 30px Vazirmatn, sans-serif";
     ctx.fillStyle = "#94a3b8";
-    wrapText(ctx, `↳ ${lesson.dialogue_a_fa}`, 940, aY + 190, 800, 42, "right");
+    wrapText(ctx, `↳ ${lesson?.dialogue_a_fa || ""}`, 940, aY + 190, 800, 42, "right");
 
-    // Bubble B (Accent)
     const bY = 780;
     roundRect(ctx, 90, bY, 900, 320, 28);
     ctx.fillStyle = "rgba(49, 46, 129, 0.6)";
@@ -702,14 +719,13 @@ export default function InstagramPanel({
     ctx.textAlign = "left";
     ctx.font = "600 38px 'Segoe UI', sans-serif";
     ctx.fillStyle = "#f8fafc";
-    wrapText(ctx, lesson.dialogue_b, 230, bY + 65, 720, 50, "left");
+    wrapText(ctx, lesson?.dialogue_b || "", 230, bY + 65, 720, 50, "left");
 
     ctx.textAlign = "right";
     ctx.font = "400 32px Vazirmatn, sans-serif";
     ctx.fillStyle = "#a7f3d0";
-    wrapText(ctx, `↳ ${lesson.dialogue_b_fa}`, 940, bY + 220, 800, 44, "right");
+    wrapText(ctx, `↳ ${lesson?.dialogue_b_fa || ""}`, 940, bY + 220, 800, 44, "right");
 
-    // Audio Waveform Animation
     const waveY = 1260;
     ctx.textAlign = "center";
     ctx.font = "bold 32px Vazirmatn, sans-serif";
@@ -733,7 +749,7 @@ export default function InstagramPanel({
 
     ctx.font = "bold 34px Vazirmatn, sans-serif";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText("🗣️ « " + lesson.key_phrase + " »", 540, 1475);
+    ctx.fillText("🗣️ « " + (lesson?.key_phrase || "") + " »", 540, 1475);
 
     ctx.restore();
   }
@@ -796,7 +812,12 @@ export default function InstagramPanel({
   // 3. REEL VIDEO RECORDING (MP4 / WebM via MediaRecorder)
   // -------------------------------------------------------------
   async function handleRecordAndDownloadReel() {
-    if (!reelCanvasRef.current || !currentLesson) return;
+    if (!reelCanvasRef.current) return;
+    if (typeof MediaRecorder === "undefined") {
+      notify("مرورگر شما از قابلیت ضبط مدیا پشتیبانی نمی‌کند. لطفاً از مرورگر جدیدتر (Chrome / Edge) استفاده کنید.", "err");
+      return;
+    }
+
     setIsRecordingReel(true);
     setRecordProgress(0);
     notify("در حال ضبط ویدیوی ریلز (۱۵ ثانیه)... لطفاً چند لحظه صبر کنید", "ok");
@@ -812,51 +833,59 @@ export default function InstagramPanel({
       mimeType = "video/mp4";
     }
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 5000000,
-    });
-    mediaRecorderRef.current = recorder;
+    try {
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 5000000,
+      });
+      mediaRecorderRef.current = recorder;
 
-    const chunks: Blob[] = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunks.push(e.data);
-    };
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
 
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const phraseSlug = currentLesson.key_phrase.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      link.download = `lingoflow-reel-${phraseSlug}.${mimeType.includes("mp4") ? "mp4" : "webm"}`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const phraseSlug = (currentLesson?.key_phrase || "lesson").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        link.download = `lingoflow-reel-${phraseSlug}.${mimeType.includes("mp4") ? "mp4" : "webm"}`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        setIsRecordingReel(false);
+        notify("ویدیوی ریلز با موفقیت ذخیره و دانلود شد 🎉 آماده انتشار در اینستاگرام!", "ok");
+      };
+
+      recorder.start();
+
+      const totalFrames = 15 * 30; // 450 frames
+      let currentFrame = 0;
+
+      const interval = setInterval(() => {
+        currentFrame++;
+        const timeSec = currentFrame / 30;
+        setReelTime(timeSec);
+        setRecordProgress(Math.round((currentFrame / totalFrames) * 100));
+        try {
+          drawReelFrame(canvas, timeSec, currentLesson || DEFAULT_FALLBACK_LESSON);
+        } catch (e) {
+          console.error(e);
+        }
+
+        if (currentFrame >= totalFrames) {
+          clearInterval(interval);
+          recorder.stop();
+        }
+      }, 1000 / 30);
+    } catch (err: any) {
       setIsRecordingReel(false);
-      notify("ویدیوی ریلز با موفقیت ذخیره و دانلود شد 🎉 آماده انتشار در اینستاگرام!", "ok");
-    };
-
-    recorder.start();
-
-    // Render frame by frame accurately for 15 seconds
-    const totalFrames = 15 * 30; // 450 frames
-    let currentFrame = 0;
-
-    const interval = setInterval(() => {
-      currentFrame++;
-      const timeSec = currentFrame / 30;
-      setReelTime(timeSec);
-      setRecordProgress(Math.round((currentFrame / totalFrames) * 100));
-      drawReelFrame(canvas, timeSec, currentLesson);
-
-      if (currentFrame >= totalFrames) {
-        clearInterval(interval);
-        recorder.stop();
-      }
-    }, 1000 / 30);
+      notify("خطا در راه‌اندازی ضبط ویدیو: " + (err.message || err), "err");
+    }
   }
 
-  // Text wrapping helper
+  // Safe Text wrapping helper (never crashes on undefined/null)
   function wrapText(
     ctx: CanvasRenderingContext2D,
     text: string,
@@ -867,7 +896,7 @@ export default function InstagramPanel({
     align: CanvasTextAlign = "center"
   ) {
     ctx.textAlign = align;
-    const words = text.split(" ");
+    const words = String(text || "").split(" ");
     let line = "";
     let currentY = y;
 
@@ -904,29 +933,26 @@ export default function InstagramPanel({
     ctx.closePath();
   }
 
-  // Download single slide
   function handleDownloadCurrentSlide() {
-    if (!canvasRef.current || !currentLesson) return;
+    if (!canvasRef.current) return;
     const link = document.createElement("a");
-    const phraseSlug = currentLesson.key_phrase.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const phraseSlug = (currentLesson?.key_phrase || "lesson").toLowerCase().replace(/[^a-z0-9]+/g, "-");
     link.download = `lingoflow-slide-${activeSlide}-${phraseSlug}.png`;
     link.href = canvasRef.current.toDataURL("image/png");
     link.click();
     notify(`اسلاید ${activeSlide} با موفقیت دانلود شد ✅`, "ok");
   }
 
-  // Download all 4 slides sequentially
   async function handleDownloadAllSlides() {
-    if (!currentLesson) return;
     setIsDownloadingAll(true);
     notify("در حال تولید و دانلود تمام ۴ اسلاید...", "ok");
 
     const offscreen = document.createElement("canvas");
-    const phraseSlug = currentLesson.key_phrase.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const phraseSlug = (currentLesson?.key_phrase || "lesson").toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
     try {
       for (const s of [1, 2, 3, 4] as const) {
-        drawCarouselSlide(offscreen, s, currentLesson);
+        drawCarouselSlide(offscreen, s, currentLesson || DEFAULT_FALLBACK_LESSON);
         const link = document.createElement("a");
         link.download = `lingoflow-slide-${s}-${phraseSlug}.png`;
         link.href = offscreen.toDataURL("image/png");
@@ -942,9 +968,8 @@ export default function InstagramPanel({
   }
 
   async function handleCopyCaption() {
-    if (!currentLesson) return;
     try {
-      await navigator.clipboard.writeText(currentLesson.caption);
+      await navigator.clipboard.writeText(currentLesson?.caption || DEFAULT_FALLBACK_LESSON.caption);
       setCopiedCaption(true);
       notify("کپشن پست اسلایدی کپی شد 📋", "ok");
       setTimeout(() => setCopiedCaption(false), 3000);
@@ -954,9 +979,10 @@ export default function InstagramPanel({
   }
 
   async function handleCopyReelCaption() {
-    if (!currentLesson) return;
     try {
-      await navigator.clipboard.writeText(currentLesson.reel_caption || currentLesson.caption);
+      await navigator.clipboard.writeText(
+        currentLesson?.reel_caption || currentLesson?.caption || DEFAULT_FALLBACK_LESSON.reel_caption || ""
+      );
       setCopiedReelCaption(true);
       notify("کپشن و هشتگ‌های اختصاصی ریلز کپی شد 📋", "ok");
       setTimeout(() => setCopiedReelCaption(false), 3000);
@@ -966,7 +992,7 @@ export default function InstagramPanel({
   }
 
   function handleSelectLesson(id: number) {
-    const found = lessons.find((l) => l.id === id);
+    const found = (lessons || []).find((l) => l.id === id);
     if (found) {
       setCurrentLesson(found);
       setActiveSlide(1);
@@ -976,28 +1002,18 @@ export default function InstagramPanel({
   }
 
   async function handleFieldChange(field: keyof InstagramLesson, value: string) {
-    if (!currentLesson) return;
-    const updated = { ...currentLesson, [field]: value };
+    const updated = { ...(currentLesson || DEFAULT_FALLBACK_LESSON), [field]: value };
     setCurrentLesson(updated);
   }
 
   async function handleRebuildCaption() {
-    if (!currentLesson) return;
     try {
-      const refreshed = await buildCustomInstagramPost(currentLesson);
+      const refreshed = await buildCustomInstagramPost(currentLesson || DEFAULT_FALLBACK_LESSON);
       setCurrentLesson(refreshed);
       notify("کپشن‌ها با موفقیت به‌روزرسانی شدند ✅", "ok");
     } catch (err: any) {
       notify(err.message || "خطا در ساخت کپشن", "err");
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="card" style={{ padding: 40, textAlign: "center" }}>
-        <p style={{ color: "var(--text-2)" }}>در حال بارگذاری استودیوی محتوای اینستاگرام...</p>
-      </div>
-    );
   }
 
   return (
@@ -1031,7 +1047,7 @@ export default function InstagramPanel({
           <label style={{ fontSize: 13, color: "#e0e7ff" }}>موضوع درس:</label>
           <select
             className="input"
-            value={currentLesson?.id || ""}
+            value={currentLesson?.id || 1}
             onChange={(e) => handleSelectLesson(Number(e.target.value))}
             style={{
               background: "rgba(255, 255, 255, 0.15)",
@@ -1042,7 +1058,7 @@ export default function InstagramPanel({
               cursor: "pointer",
             }}
           >
-            {lessons.map((l) => (
+            {(lessons || []).map((l) => (
               <option key={l.id} value={l.id} style={{ color: "#000" }}>
                 درس {l.id}: {l.key_phrase} ({l.persian_mean})
               </option>
@@ -1436,7 +1452,6 @@ export default function InstagramPanel({
 
             {/* Playback & Record Controls */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {/* Timeline scrubber */}
               <input
                 type="range"
                 min="0"
@@ -1532,7 +1547,7 @@ export default function InstagramPanel({
                   🎬 ساخت ریلز از روی کلیپ‌های فیلم اپلیکیشن
                 </h3>
                 <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-                  {videoClips.length} کلیپ آماده در دیتابیس
+                  {(videoClips || []).length} کلیپ آماده در دیتابیس
                 </span>
               </div>
 
@@ -1541,7 +1556,7 @@ export default function InstagramPanel({
                 برای ریلز اینستاگرام کات و با زیرنویس دو زبانه و المان شادوئینگ خروجی بگیرید.
               </p>
 
-              {videoClips.length > 0 ? (
+              {(videoClips || []).length > 0 ? (
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <select
                     className="input"
@@ -1549,7 +1564,7 @@ export default function InstagramPanel({
                     onChange={(e) => setSelectedClipId(e.target.value)}
                     style={{ flex: 1 }}
                   >
-                    {videoClips.map((c) => (
+                    {(videoClips || []).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.movie_title || "فیلم"} — {c.title} ({c.duration_seconds}s)
                       </option>
@@ -1558,7 +1573,7 @@ export default function InstagramPanel({
 
                   {selectedClipId && (
                     <a
-                      href={videoClips.find((c) => c.id === selectedClipId)?.video_url}
+                      href={(videoClips || []).find((c) => c.id === selectedClipId)?.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn"
