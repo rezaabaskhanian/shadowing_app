@@ -206,6 +206,7 @@ export interface InstagramLesson {
   app_practice?: string;
   app_cta?: string;
   caption: string;
+  reel_caption?: string;
   hashtags: string;
 }
 

@@ -18,8 +18,12 @@ func (s Service) BuildCustomPost(l InstagramLesson) InstagramLesson {
 	if l.Caption == "" {
 		l.Caption = BuildInstagramCaption(l)
 	}
+	if l.ReelCaption == "" {
+		l.ReelCaption = BuildInstagramReelCaption(l)
+	}
 	if l.Hashtags == "" {
 		l.Hashtags = DefaultHashtags
 	}
 	return l
 }
+

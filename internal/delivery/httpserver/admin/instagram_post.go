@@ -50,3 +50,4 @@ func (h Handler) BuildCustomInstagramPost(c echo.Context) error {
 	built := h.instagramPostSvc.BuildCustomPost(req)
 	return c.JSON(http.StatusOK, built)
 }
+

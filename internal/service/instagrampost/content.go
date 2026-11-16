@@ -22,7 +22,8 @@ type InstagramLesson struct {
 	Tip         string `json:"tip"`          // نکته کاربردی
 	AppPractice string `json:"app_practice"` // تمرین پیشنهادی در اپلیکیشن
 	AppCTA      string `json:"app_cta"`      // دعوت به اقدام اپلیکیشن
-	Caption     string `json:"caption"`      // متن کامل کپشن
+	Caption     string `json:"caption"`      // متن کامل کپشن پست اسلایدی
+	ReelCaption string `json:"reel_caption"` // متن کپشن اختصاصی ریلز ویدیویی
 	Hashtags    string `json:"hashtags"`     // هشتگ‌های ترند
 }
 
@@ -181,6 +182,23 @@ func BuildInstagramCaption(l InstagramLesson) string {
 }
 
 const DefaultHashtags = `#آموزش_زبان #اصطلاحات_انگلیسی #زبان_انگلیسی #مکالمه_انگلیسی #تلفظ_انگلیسی #انگلیسی_روزمره #لینگوفلو #سایه_زنی #یادگیری_زبان #shadowing #lingoflow`
+const DefaultReelHashtags = `#ریلز #ریلز_آموزشی #آموزش_زبان #اصطلاحات_انگلیسی #تلفظ_انگلیسی #مکالمه_انگلیسی #لینگوفلو #سایه_زنی #reels #explore #englishlearning #shadowing`
+
+// BuildInstagramReelCaption ساخت کپشن اختصاصی برای ریلز ویدیویی با هدف تعامل بالا در کامنت و بیو
+func BuildInstagramReelCaption(l InstagramLesson) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("🚀 %s\n\n", l.HookTitle))
+	sb.WriteString(fmt.Sprintf("🇬🇧 %s\n", l.KeyPhrase))
+	sb.WriteString(fmt.Sprintf("🇮🇷 %s\n\n", l.PersianMean))
+	sb.WriteString(fmt.Sprintf("🗣️ تلفظ دقیق: %s\n\n", l.Phonetic))
+	sb.WriteString(fmt.Sprintf("💬 مثال کاربردی:\n%s\n↳ %s\n\n", l.DialogueB, l.DialogueBFa))
+	sb.WriteString("━━━━━━━━━━━━━━━\n")
+	sb.WriteString("🎙️ دوست داری با تکرار پشت سر فیلم‌ها و هوش مصنوعی مکالمه‌ات روان بشه؟\n")
+	sb.WriteString("همین الان اپلیکیشن «لینگوفلو» رو از کافه‌بازار یا لینک بیو دانلود کن!\n\n")
+	sb.WriteString("💬 این اصطلاح رو تو کامنت‌ها بنویس تا تو ذهنت تثبیت بشه 👇\n\n")
+	sb.WriteString(DefaultReelHashtags)
+	return sb.String()
+}
 
 // GetLessonByDay بر اساس روز جاری یا شماره اندیس درس مناسب را برمی‌گرداند
 func GetLessonByDay(dayOffset int) InstagramLesson {
@@ -195,6 +213,7 @@ func GetLessonByDay(dayOffset int) InstagramLesson {
 		lesson.AppCTA = "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و لینک بیو"
 	}
 	lesson.Caption = BuildInstagramCaption(lesson)
+	lesson.ReelCaption = BuildInstagramReelCaption(lesson)
 	lesson.Hashtags = DefaultHashtags
 	return lesson
 }
@@ -207,6 +226,7 @@ func GetAllLessons() []InstagramLesson {
 			l.AppCTA = "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و لینک بیو"
 		}
 		l.Caption = BuildInstagramCaption(l)
+		l.ReelCaption = BuildInstagramReelCaption(l)
 		l.Hashtags = DefaultHashtags
 		result[i] = l
 	}
