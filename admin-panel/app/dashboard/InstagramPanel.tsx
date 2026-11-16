@@ -32,6 +32,8 @@ const DEFAULT_FALLBACK_LESSON: InstagramLesson = {
 // -------------------------------------------------------------
 // Web Audio Royalty-Free Synthesizer Engine for Reels
 // -------------------------------------------------------------
+type MusicStyle = "lofi" | "upbeat" | "acoustic" | "piano" | "random" | "custom" | "none";
+
 class ReelAudioEngine {
   ctx: AudioContext | null = null;
   dest: MediaStreamAudioDestinationNode | null = null;
@@ -39,6 +41,7 @@ class ReelAudioEngine {
   customAudio: HTMLAudioElement | null = null;
   customSource: MediaElementAudioSourceNode | null = null;
   scheduledOscillators: (OscillatorNode | AudioBufferSourceNode)[] = [];
+  randomSeed: number = 1;
 
   init() {
     if (this.ctx) return;
@@ -64,6 +67,10 @@ class ReelAudioEngine {
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), this.ctx.currentTime);
     }
+  }
+
+  randomizeTrack() {
+    this.randomSeed = Math.floor(Math.random() * 1000) + 1;
   }
 
   stop() {
@@ -97,7 +104,8 @@ class ReelAudioEngine {
     this.customAudio.play().catch(() => {});
   }
 
-  playBuiltin(style: "lofi" | "upbeat", durationSec = 15, startTimeSec = 0) {
+  playBuiltin(style: MusicStyle, durationSec = 15, startTimeSec = 0) {
+    if (style === "none" || style === "custom") return;
     this.init();
     if (!this.ctx || !this.masterGain) return;
     if (this.ctx.state === "suspended") {
@@ -106,19 +114,74 @@ class ReelAudioEngine {
     this.stop();
 
     const now = this.ctx.currentTime;
-    const bpm = style === "upbeat" ? 116 : 88;
+    let bpm = 88;
+    if (style === "upbeat") bpm = 118;
+    else if (style === "acoustic") bpm = 94;
+    else if (style === "piano") bpm = 76;
+    else if (style === "random") bpm = 80 + (this.randomSeed % 36);
+
     const beatDuration = 60 / bpm;
 
-    // Harmonic Chord Progression
-    const chordProgression = [
-      { freqs: [220, 261.63, 329.63, 392], startBeat: 0, beats: 4 }, // Am7
-      { freqs: [174.61, 220, 261.63, 329.63], startBeat: 4, beats: 4 }, // Fmaj7
-      { freqs: [130.81, 164.81, 196, 246.94], startBeat: 8, beats: 4 }, // Cmaj7
-      { freqs: [196, 246.94, 293.66, 349.23], startBeat: 12, beats: 4 }, // G7
-      { freqs: [220, 261.63, 329.63, 392], startBeat: 16, beats: 4 }, // Am7
-      { freqs: [174.61, 220, 261.63, 329.63], startBeat: 20, beats: 4 }, // Fmaj7
-    ];
+    // Harmonic Chord Progression based on selected style
+    let chordProgression: { freqs: number[]; startBeat: number; beats: number }[] = [];
 
+    if (style === "upbeat") {
+      // Dm - Bb - F - C
+      chordProgression = [
+        { freqs: [146.83, 220, 261.63, 349.23], startBeat: 0, beats: 4 },
+        { freqs: [116.54, 174.61, 233.08, 293.66], startBeat: 4, beats: 4 },
+        { freqs: [174.61, 220, 261.63, 349.23], startBeat: 8, beats: 4 },
+        { freqs: [130.81, 196, 261.63, 329.63], startBeat: 12, beats: 4 },
+        { freqs: [146.83, 220, 261.63, 349.23], startBeat: 16, beats: 4 },
+        { freqs: [116.54, 174.61, 233.08, 293.66], startBeat: 20, beats: 4 },
+      ];
+    } else if (style === "acoustic") {
+      // G - Em7 - Cadd9 - D
+      chordProgression = [
+        { freqs: [196, 246.94, 293.66, 392], startBeat: 0, beats: 4 },
+        { freqs: [164.81, 196, 246.94, 329.63], startBeat: 4, beats: 4 },
+        { freqs: [130.81, 164.81, 196, 293.66], startBeat: 8, beats: 4 },
+        { freqs: [146.83, 220, 293.66, 369.99], startBeat: 12, beats: 4 },
+        { freqs: [196, 246.94, 293.66, 392], startBeat: 16, beats: 4 },
+        { freqs: [164.81, 196, 246.94, 329.63], startBeat: 20, beats: 4 },
+      ];
+    } else if (style === "piano") {
+      // C - Am - F - G (Gentle piano)
+      chordProgression = [
+        { freqs: [130.81, 164.81, 196, 261.63], startBeat: 0, beats: 4 },
+        { freqs: [110, 164.81, 220, 261.63], startBeat: 4, beats: 4 },
+        { freqs: [174.61, 220, 261.63, 349.23], startBeat: 8, beats: 4 },
+        { freqs: [196, 246.94, 293.66, 392], startBeat: 12, beats: 4 },
+        { freqs: [130.81, 164.81, 196, 261.63], startBeat: 16, beats: 4 },
+        { freqs: [110, 164.81, 220, 261.63], startBeat: 20, beats: 4 },
+      ];
+    } else if (style === "random") {
+      // Procedurally generated chord roots based on seed
+      const roots = [130.81, 146.83, 164.81, 174.61, 196, 220]; // C, D, E, F, G, A
+      const r1 = roots[this.randomSeed % roots.length];
+      const r2 = roots[(this.randomSeed + 2) % roots.length];
+      const r3 = roots[(this.randomSeed + 4) % roots.length];
+      const r4 = roots[(this.randomSeed + 5) % roots.length];
+      chordProgression = [
+        { freqs: [r1, r1 * 1.25, r1 * 1.5, r1 * 1.8], startBeat: 0, beats: 4 },
+        { freqs: [r2, r2 * 1.2, r2 * 1.5, r2 * 1.8], startBeat: 4, beats: 4 },
+        { freqs: [r3, r3 * 1.25, r3 * 1.5, r3 * 1.75], startBeat: 8, beats: 4 },
+        { freqs: [r4, r4 * 1.25, r4 * 1.5, r4 * 2.0], startBeat: 12, beats: 4 },
+        { freqs: [r1, r1 * 1.25, r1 * 1.5, r1 * 1.8], startBeat: 16, beats: 4 },
+      ];
+    } else {
+      // Default: Chill Lo-Fi (Am7 - Fmaj7 - Cmaj7 - G7)
+      chordProgression = [
+        { freqs: [220, 261.63, 329.63, 392], startBeat: 0, beats: 4 },
+        { freqs: [174.61, 220, 261.63, 329.63], startBeat: 4, beats: 4 },
+        { freqs: [130.81, 164.81, 196, 246.94], startBeat: 8, beats: 4 },
+        { freqs: [196, 246.94, 293.66, 349.23], startBeat: 12, beats: 4 },
+        { freqs: [220, 261.63, 329.63, 392], startBeat: 16, beats: 4 },
+        { freqs: [174.61, 220, 261.63, 329.63], startBeat: 20, beats: 4 },
+      ];
+    }
+
+    // Schedule chords
     chordProgression.forEach((chord) => {
       const chordStart = now + chord.startBeat * beatDuration - startTimeSec;
       const chordEnd = chordStart + chord.beats * beatDuration;
@@ -128,7 +191,14 @@ class ReelAudioEngine {
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
 
-        osc.type = style === "upbeat" ? (idx === 0 ? "sawtooth" : "triangle") : "sine";
+        if (style === "upbeat") {
+          osc.type = idx === 0 ? "sawtooth" : "triangle";
+        } else if (style === "acoustic") {
+          osc.type = "triangle";
+        } else {
+          osc.type = "sine";
+        }
+
         osc.frequency.setValueAtTime(freq, Math.max(now, chordStart));
 
         const baseGain = style === "upbeat" ? 0.07 : 0.11;
@@ -146,7 +216,7 @@ class ReelAudioEngine {
       });
     });
 
-    // Rhythmic Kick & Soft Hats
+    // Schedule drum beat
     const totalBeats = Math.ceil((durationSec * bpm) / 60);
     for (let b = 0; b < totalBeats; b++) {
       const beatTime = now + b * beatDuration - startTimeSec;
@@ -159,7 +229,7 @@ class ReelAudioEngine {
         kickOsc.frequency.setValueAtTime(120, beatTime);
         kickOsc.frequency.exponentialRampToValueAtTime(42, beatTime + 0.12);
 
-        kickGain.gain.setValueAtTime(0.22, beatTime);
+        kickGain.gain.setValueAtTime(style === "upbeat" ? 0.28 : 0.2, beatTime);
         kickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.14);
 
         kickOsc.connect(kickGain);
@@ -236,6 +306,7 @@ export default function InstagramPanel({
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   // Reel state
+  const [reelTemplate, setReelTemplate] = useState<"phone_mockup" | "animated_cards">("phone_mockup");
   const [selectedClipId, setSelectedClipId] = useState<string>("");
   const [isPlayingReel, setIsPlayingReel] = useState(false);
   const [reelTime, setReelTime] = useState(0); // 0 to 15 seconds
@@ -247,9 +318,10 @@ export default function InstagramPanel({
   const [copiedReelCaption, setCopiedReelCaption] = useState(false);
 
   // Reel Audio state
-  const [musicStyle, setMusicStyle] = useState<"lofi" | "upbeat" | "custom" | "none">("lofi");
+  const [musicStyle, setMusicStyle] = useState<MusicStyle>("lofi");
   const [musicVolume, setMusicVolume] = useState(0.35);
   const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
+  const [customAudioName, setCustomAudioName] = useState<string>("");
   const audioEngineRef = useRef<ReelAudioEngine | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -646,7 +718,7 @@ export default function InstagramPanel({
     } catch (e) {
       console.error("Error drawing reel frame:", e);
     }
-  }, [mode, reelTime, currentLesson, selectedClipId]);
+  }, [mode, reelTime, currentLesson, selectedClipId, reelTemplate]);
 
   // Reel Animation & Audio loop
   useEffect(() => {
@@ -661,7 +733,7 @@ export default function InstagramPanel({
       audioEngineRef.current.setVolume(musicVolume);
       if (musicStyle === "custom" && customAudioUrl) {
         audioEngineRef.current.playCustom(customAudioUrl, reelTime);
-      } else if (musicStyle === "lofi" || musicStyle === "upbeat") {
+      } else {
         audioEngineRef.current.playBuiltin(musicStyle, 15, reelTime);
       }
     }
@@ -749,7 +821,13 @@ export default function InstagramPanel({
     ctx.textAlign = "right";
     ctx.fillText("@lingoflow.ir", 1000, 130);
 
-    // Dynamic Phases
+    // Dynamic Phases based on template
+    if (reelTemplate === "phone_mockup") {
+      drawReelPhoneMockup(ctx, timeSec, lesson);
+      return;
+    }
+
+    // Dynamic Phases for Animated Cards template
     if (timeSec < 3.5) {
       drawReelHookPhase(ctx, lesson, timeSec);
     } else if (timeSec < 7.5) {
@@ -772,6 +850,480 @@ export default function InstagramPanel({
     ctx.fillStyle = "#f8fafc";
     ctx.textAlign = "center";
     ctx.fillText("🗣️ تکنیک شادوئینگ: گوش بده و بلافاصله تکرار کن!", 540, 1808);
+  }
+
+  // =============================================================
+  // SMARTPHONE PHONE MOCKUP REEL TEMPLATE (UI Screen Recording)
+  // =============================================================
+  function drawReelPhoneMockup(ctx: CanvasRenderingContext2D, timeSec: number, lesson: InstagramLesson) {
+    const W = 1080;
+    const H = 1920;
+
+    // Atmospheric Studio Backdrop
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, "#080c16");
+    bgGrad.addColorStop(0.5, "#0f172a");
+    bgGrad.addColorStop(1, "#1e1b4b");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    const gPhone = ctx.createRadialGradient(W * 0.5, H * 0.5, 100, W * 0.5, H * 0.5, 550);
+    gPhone.addColorStop(0, "rgba(99, 102, 241, 0.25)");
+    gPhone.addColorStop(1, "rgba(99, 102, 241, 0)");
+    ctx.fillStyle = gPhone;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    // Top progress bar
+    const totalSec = 15;
+    const progress = Math.min(1, Math.max(0, timeSec / totalSec));
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fillRect(40, 40, W - 80, 8);
+    const pGrad = ctx.createLinearGradient(40, 40, 40 + (W - 80) * progress, 40);
+    pGrad.addColorStop(0, "#6366f1");
+    pGrad.addColorStop(1, "#ec4899");
+    ctx.fillStyle = pGrad;
+    ctx.fillRect(40, 40, (W - 80) * progress, 8);
+
+    // Reel Top Hook Headline
+    ctx.font = "bold 32px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("📲 تست زنده مکالمه با هوش مصنوعی در اپلیکیشن", 540, 105);
+
+    ctx.font = "600 22px 'Segoe UI', sans-serif";
+    ctx.fillStyle = "#a5b4fc";
+    ctx.fillText("@lingoflow.ir", 540, 145);
+
+    // Smartphone Outer Bezel
+    const phoneX = 160;
+    const phoneY = 180;
+    const phoneW = 760;
+    const phoneH = 1540;
+    const phoneR = 56;
+
+    roundRect(ctx, phoneX, phoneY, phoneW, phoneH, phoneR);
+    ctx.fillStyle = "#1e293b";
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#475569";
+    ctx.stroke();
+
+    // Smartphone Inner Screen
+    const screenX = phoneX + 10;
+    const screenY = phoneY + 10;
+    const screenW = phoneW - 20;
+    const screenH = phoneH - 20;
+    const screenR = 48;
+
+    ctx.save();
+    roundRect(ctx, screenX, screenY, screenW, screenH, screenR);
+    ctx.clip();
+
+    // Screen Background
+    const appBg = ctx.createLinearGradient(screenX, screenY, screenX, screenY + screenH);
+    appBg.addColorStop(0, "#0b0f19");
+    appBg.addColorStop(0.5, "#111827");
+    appBg.addColorStop(1, "#1e1b4b");
+    ctx.fillStyle = appBg;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // Dynamic Island
+    const islandW = 180;
+    const islandH = 34;
+    roundRect(ctx, 540 - islandW / 2, screenY + 14, islandW, islandH, 17);
+    ctx.fillStyle = "#000000";
+    ctx.fill();
+
+    // Phone Status Bar
+    ctx.font = "600 20px 'Segoe UI', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.fillText("09:41", screenX + 44, screenY + 38);
+
+    ctx.textAlign = "right";
+    ctx.fillText("5G  100% 🔋", screenX + screenW - 44, screenY + 38);
+
+    // LingoFlow App Bar
+    const appHeaderY = screenY + 75;
+    ctx.textAlign = "left";
+    ctx.font = "bold 26px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#818cf8";
+    ctx.fillText("🎙️ LingoFlow", screenX + 36, appHeaderY + 24);
+
+    // Streak and XP pills right
+    roundRect(ctx, screenX + screenW - 240, appHeaderY, 100, 36, 18);
+    ctx.fillStyle = "rgba(239, 68, 68, 0.2)";
+    ctx.fill();
+    ctx.font = "bold 18px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#f87171";
+    ctx.textAlign = "center";
+    ctx.fillText("🔥 ۵ روز", screenX + screenW - 190, appHeaderY + 24);
+
+    roundRect(ctx, screenX + screenW - 130, appHeaderY, 96, 36, 18);
+    ctx.fillStyle = "rgba(245, 158, 11, 0.2)";
+    ctx.fill();
+    ctx.fillStyle = "#fbbf24";
+    ctx.fillText("⭐ 2450", screenX + screenW - 82, appHeaderY + 24);
+
+    // Divider line inside app
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(screenX + 30, appHeaderY + 50);
+    ctx.lineTo(screenX + screenW - 30, appHeaderY + 50);
+    ctx.stroke();
+
+    // App Section Title
+    const bodyY = appHeaderY + 70;
+    roundRect(ctx, screenX + 30, bodyY, screenW - 60, 48, 14);
+    ctx.fillStyle = "rgba(99, 102, 241, 0.15)";
+    ctx.fill();
+    ctx.font = "600 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#c7d2fe";
+    ctx.textAlign = "center";
+    ctx.fillText(`تمرین سایه‌زنی (Shadowing) • ${lesson.theme || "مکالمه روزمره"}`, 540, bodyY + 30);
+
+    // Sub-phases inside the phone
+    if (timeSec < 4.5) {
+      drawPhonePhaseSpeaker(ctx, screenX, screenW, bodyY + 70, lesson, timeSec);
+    } else if (timeSec < 8.5) {
+      drawPhonePhaseRecording(ctx, screenX, screenW, bodyY + 70, lesson, timeSec - 4.5);
+    } else if (timeSec < 12.5) {
+      drawPhonePhaseAiScore(ctx, screenX, screenW, bodyY + 70, lesson, timeSec - 8.5);
+    } else {
+      drawPhonePhaseVictory(ctx, screenX, screenW, bodyY + 70, lesson, timeSec - 12.5);
+    }
+
+    // Phone Home Indicator
+    roundRect(ctx, 540 - 100, screenY + screenH - 20, 200, 6, 3);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.fill();
+
+    ctx.restore();
+
+    // Bottom persistent CTA outside phone
+    ctx.font = "bold 26px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("دانلود رایگان اپلیکیشن «لینگوفلو» از لینک بیو 👈", 540, 1860);
+  }
+
+  function drawPhonePhaseSpeaker(
+    ctx: CanvasRenderingContext2D,
+    sX: number,
+    sW: number,
+    topY: number,
+    lesson: InstagramLesson,
+    timeSec: number
+  ) {
+    ctx.save();
+
+    // Speaker Dialogue Card
+    roundRect(ctx, sX + 30, topY, sW - 60, 380, 24);
+    ctx.fillStyle = "rgba(30, 41, 59, 0.85)";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(99, 102, 241, 0.4)";
+    ctx.stroke();
+
+    // Speaker Badge
+    roundRect(ctx, sX + 54, topY + 24, 180, 36, 18);
+    ctx.fillStyle = "#6366f1";
+    ctx.fill();
+    ctx.font = "bold 18px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("👨‍💼 گوینده نیتیو", sX + 144, topY + 44);
+
+    // Audio Waveform animation
+    for (let i = 0; i < 18; i++) {
+      const h = 12 + Math.sin(timeSec * 8 + i * 0.6) * 24;
+      const x = sX + sW - 220 + i * 9;
+      roundRect(ctx, x, topY + 42 - h / 2, 5, h, 2.5);
+      ctx.fillStyle = "#818cf8";
+      ctx.fill();
+    }
+
+    // English Dialogue
+    ctx.textAlign = "left";
+    ctx.font = "bold 32px 'Segoe UI', Tahoma, sans-serif";
+    ctx.fillStyle = "#f8fafc";
+    wrapText(ctx, lesson?.dialogue_a || "", sX + 54, topY + 110, sW - 108, 44, "left");
+
+    // Persian Dialogue
+    ctx.textAlign = "right";
+    ctx.font = "400 24px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    wrapText(ctx, `↳ ${lesson?.dialogue_a_fa || ""}`, sX + sW - 54, topY + 240, sW - 108, 38, "right");
+
+    // Target Phrase Preview Card
+    const targetY = topY + 420;
+    roundRect(ctx, sX + 30, targetY, sW - 60, 360, 24);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.3)";
+    ctx.stroke();
+
+    ctx.font = "bold 24px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#fbbf24";
+    ctx.textAlign = "center";
+    ctx.fillText("🎯 اصطلاح هدف برای شادوئینگ", 540, targetY + 50);
+
+    ctx.font = "bold 48px 'Segoe UI', sans-serif";
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillText(`“ ${lesson?.key_phrase || ""} ”`, 540, targetY + 140);
+
+    if (lesson?.phonetic) {
+      ctx.font = "400 26px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(lesson.phonetic, 540, targetY + 200);
+    }
+
+    ctx.font = "bold 28px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#f1f5f9";
+    wrapText(ctx, lesson?.persian_mean || "", 540, targetY + 265, sW - 120, 38, "center");
+
+    // Bottom prompt
+    const micPromptY = targetY + 410;
+    roundRect(ctx, sX + 60, micPromptY, sW - 120, 90, 45);
+    ctx.fillStyle = "rgba(99, 102, 241, 0.2)";
+    ctx.fill();
+    ctx.strokeStyle = "#818cf8";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = "bold 24px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#c7d2fe";
+    ctx.textAlign = "center";
+    ctx.fillText("🎧 در حال پخش صدای گوینده... گوش دهید", 540, micPromptY + 48);
+
+    ctx.restore();
+  }
+
+  function drawPhonePhaseRecording(
+    ctx: CanvasRenderingContext2D,
+    sX: number,
+    sW: number,
+    topY: number,
+    lesson: InstagramLesson,
+    phaseTime: number
+  ) {
+    ctx.save();
+
+    // Highlighted User Practice Card
+    roundRect(ctx, sX + 30, topY, sW - 60, 420, 24);
+    ctx.fillStyle = "rgba(49, 46, 129, 0.5)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#818cf8";
+    ctx.stroke();
+
+    roundRect(ctx, sX + 54, topY + 24, 200, 36, 18);
+    ctx.fillStyle = "#10b981";
+    ctx.fill();
+    ctx.font = "bold 18px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("🎤 نوبت شما برای تکرار", sX + 154, topY + 44);
+
+    ctx.textAlign = "center";
+    ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif";
+    ctx.fillStyle = "#fbbf24";
+    wrapText(ctx, lesson?.dialogue_b || lesson?.key_phrase || "", 540, topY + 120, sW - 100, 52, "center");
+
+    ctx.font = "400 24px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#a7f3d0";
+    wrapText(ctx, `↳ ${lesson?.dialogue_b_fa || lesson?.persian_mean || ""}`, 540, topY + 250, sW - 100, 38, "center");
+
+    roundRect(ctx, sX + 60, topY + 320, sW - 120, 70, 16);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.7)";
+    ctx.fill();
+    ctx.font = "bold 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#cbd5e1";
+    ctx.fillText("🗣️ با صدای رسا و دقیقاً هم‌ریتم با نیتیو تکرار کنید", 540, topY + 360);
+
+    // Big Pulsing Red Microphone Area
+    const micCenterY = topY + 620;
+    const pulseScale = 1 + Math.sin(phaseTime * 6) * 0.12;
+
+    ctx.beginPath();
+    ctx.arc(540, micCenterY, 80 * pulseScale, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(540, micCenterY, 65, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+
+    ctx.font = "bold 38px sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("🎙️", 540, micCenterY + 12);
+
+    roundRect(ctx, 540 - 160, micCenterY + 100, 320, 50, 25);
+    ctx.fillStyle = "rgba(239, 68, 68, 0.2)";
+    ctx.fill();
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.font = "bold 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#fca5a5";
+    ctx.fillText("🔴 در حال شنیدن صدای شما...", 540, micCenterY + 132);
+
+    ctx.restore();
+  }
+
+  function drawPhonePhaseAiScore(
+    ctx: CanvasRenderingContext2D,
+    sX: number,
+    sW: number,
+    topY: number,
+    lesson: InstagramLesson,
+    phaseTime: number
+  ) {
+    ctx.save();
+
+    roundRect(ctx, sX + 30, topY, sW - 60, 680, 28);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#10b981";
+    ctx.stroke();
+
+    roundRect(ctx, 540 - 140, topY + 30, 280, 44, 22);
+    ctx.fillStyle = "rgba(16, 185, 129, 0.2)";
+    ctx.fill();
+    ctx.font = "bold 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#34d399";
+    ctx.textAlign = "center";
+    ctx.fillText("🤖 ارزیابی هوش مصنوعی", 540, topY + 58);
+
+    const circleY = topY + 220;
+    const ringRadius = 90;
+
+    ctx.beginPath();
+    ctx.arc(540, circleY, ringRadius + 14, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.2)";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(540, circleY, ringRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(6, 78, 59, 0.5)";
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#10b981";
+    ctx.stroke();
+
+    ctx.font = "bold 64px 'Segoe UI', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("۹۸٪", 540, circleY + 18);
+
+    ctx.font = "bold 28px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#34d399";
+    ctx.fillText("🎯 لهجه نیتیو (Native Accent)", 540, circleY + 150);
+
+    ctx.font = "26px sans-serif";
+    ctx.fillText("⭐⭐⭐⭐⭐", 540, circleY + 195);
+
+    const barY = circleY + 240;
+    roundRect(ctx, sX + 60, barY, sW - 120, 80, 16);
+    ctx.fillStyle = "rgba(30, 41, 59, 0.7)";
+    ctx.fill();
+
+    ctx.font = "500 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    ctx.textAlign = "right";
+    ctx.fillText("دقت تلفظ و فونتیک:", sX + sW - 80, barY + 32);
+    ctx.fillStyle = "#10b981";
+    ctx.textAlign = "left";
+    ctx.fillText("۱۰۰٪ عالی", sX + 80, barY + 32);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.textAlign = "right";
+    ctx.fillText("ریتم و استرس کلمات:", sX + sW - 80, barY + 62);
+    ctx.fillStyle = "#10b981";
+    ctx.textAlign = "left";
+    ctx.fillText("۹۶٪ بی‌نظیر", sX + 80, barY + 62);
+
+    const xpY = topY + 740;
+    roundRect(ctx, sX + 50, xpY, sW - 100, 80, 24);
+    const xGrad = ctx.createLinearGradient(sX + 50, xpY, sX + sW - 50, xpY);
+    xGrad.addColorStop(0, "#4f46e5");
+    xGrad.addColorStop(1, "#7c3aed");
+    ctx.fillStyle = xGrad;
+    ctx.fill();
+
+    ctx.font = "bold 26px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("🎉 ۵۰+ امتیاز XP به پروفایل اضافه شد!", 540, xpY + 48);
+
+    ctx.restore();
+  }
+
+  function drawPhonePhaseVictory(
+    ctx: CanvasRenderingContext2D,
+    sX: number,
+    sW: number,
+    topY: number,
+    lesson: InstagramLesson,
+    phaseTime: number
+  ) {
+    ctx.save();
+
+    roundRect(ctx, sX + 30, topY, sW - 60, 680, 28);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#fbbf24";
+    ctx.stroke();
+
+    ctx.font = "72px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("🏆", 540, topY + 120);
+
+    ctx.font = "bold 36px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("تمرین شادوئینگ امروز ثبت شد!", 540, topY + 200);
+
+    ctx.font = "400 24px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#cbd5e1";
+    wrapText(
+      ctx,
+      "می‌خوای هر روز با هوش مصنوعی و فیلم‌های واقعی مکالمه کنی و لهجه‌ات اصلاح بشه؟",
+      540,
+      topY + 260,
+      sW - 100,
+      40,
+      "center"
+    );
+
+    const btnY = topY + 420;
+    roundRect(ctx, sX + 50, btnY, sW - 100, 110, 24);
+    const bGrad = ctx.createLinearGradient(sX + 50, btnY, sX + sW - 50, btnY);
+    bGrad.addColorStop(0, "#10b981");
+    bGrad.addColorStop(1, "#059669");
+    ctx.fillStyle = bGrad;
+    ctx.fill();
+
+    ctx.font = "bold 30px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("دانلود رایگان اپلیکیشن «لینگوفلو»", 540, btnY + 48);
+
+    ctx.font = "500 20px Vazirmatn, sans-serif";
+    ctx.fillStyle = "#d1fae5";
+    ctx.fillText("از کافه‌بازار و لینک بیو پیج 👈", 540, btnY + 84);
+
+    ctx.restore();
   }
 
   function drawReelHookPhase(ctx: CanvasRenderingContext2D, lesson: InstagramLesson, phaseTime: number) {
@@ -1045,7 +1597,7 @@ export default function InstagramPanel({
       audioEngineRef.current.setVolume(musicVolume);
       if (musicStyle === "custom" && customAudioUrl) {
         audioEngineRef.current.playCustom(customAudioUrl, 0);
-      } else if (musicStyle === "lofi" || musicStyle === "upbeat") {
+      } else {
         audioEngineRef.current.playBuiltin(musicStyle, 15, 0);
       }
 
@@ -1114,6 +1666,28 @@ export default function InstagramPanel({
       setIsRecordingReel(false);
       notify("خطا در راه‌اندازی ضبط ویدیو: " + (err.message || err), "err");
     }
+  }
+
+  function handleRandomizeMusic() {
+    audioEngineRef.current?.randomizeTrack();
+    setMusicStyle("random");
+    if (isPlayingReel) {
+      audioEngineRef.current?.playBuiltin("random", 15, reelTime);
+    }
+    notify("آکوردها و ملودی تصادفی جدید برای ریلز ساخته شد 🎲 (پیش‌نمایش را پخش کنید)", "ok");
+  }
+
+  function handleCustomAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCustomAudioUrl(url);
+    setCustomAudioName(file.name);
+    setMusicStyle("custom");
+    if (isPlayingReel) {
+      audioEngineRef.current?.playCustom(url, reelTime);
+    }
+    notify(`آهنگ «${file.name}» با موفقیت برای ریلز انتخاب شد 🎵`, "ok");
   }
 
   // Safe Text wrapping helper (never crashes on undefined/null)
@@ -1673,6 +2247,54 @@ export default function InstagramPanel({
               </span>
             </div>
 
+            {/* Template Switcher */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
+                background: "var(--surface-2)",
+                padding: 4,
+                borderRadius: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setReelTemplate("phone_mockup")}
+                style={{
+                  border: "none",
+                  padding: "8px 8px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: reelTemplate === "phone_mockup" ? 700 : 500,
+                  cursor: "pointer",
+                  background: reelTemplate === "phone_mockup" ? "var(--primary)" : "transparent",
+                  color: reelTemplate === "phone_mockup" ? "#fff" : "var(--text-2)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                📲 شبیه‌ساز صفحه گوشی
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setReelTemplate("animated_cards")}
+                style={{
+                  border: "none",
+                  padding: "8px 8px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: reelTemplate === "animated_cards" ? 700 : 500,
+                  cursor: "pointer",
+                  background: reelTemplate === "animated_cards" ? "var(--primary)" : "transparent",
+                  color: reelTemplate === "animated_cards" ? "#fff" : "var(--text-2)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                🗂️ کارت‌های انیمیشنی
+              </button>
+            </div>
+
             {/* Reel Canvas Screen */}
             <div
               style={{
@@ -1781,7 +2403,7 @@ export default function InstagramPanel({
                   borderRadius: 12,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 10,
+                  gap: 12,
                   marginTop: 6,
                 }}
               >
@@ -1792,51 +2414,90 @@ export default function InstagramPanel({
                   <span style={{ fontSize: 11, color: "var(--text-2)" }}>۱۰۰٪ بدون کپی‌رایت</span>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMusicStyle("lofi");
-                      audioEngineRef.current?.setVolume(musicVolume);
-                    }}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: musicStyle === "lofi" ? 700 : 500,
-                      cursor: "pointer",
-                      background: musicStyle === "lofi" ? "var(--primary)" : "var(--surface)",
-                      color: musicStyle === "lofi" ? "#fff" : "var(--text)",
-                      border: musicStyle === "lofi" ? "1px solid var(--primary)" : "1px solid var(--border)",
-                    }}
-                  >
-                    🎧 ریتم Lo-Fi (پیش‌فرض)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMusicStyle("upbeat");
-                      audioEngineRef.current?.setVolume(musicVolume);
-                    }}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: musicStyle === "upbeat" ? 700 : 500,
-                      cursor: "pointer",
-                      background: musicStyle === "upbeat" ? "var(--primary)" : "var(--surface)",
-                      color: musicStyle === "upbeat" ? "#fff" : "var(--text)",
-                      border: musicStyle === "upbeat" ? "1px solid var(--primary)" : "1px solid var(--border)",
-                    }}
-                  >
-                    ⚡ ریتم پرانرژی اینستاگرامی
-                  </button>
+                {/* 4 Preset styles */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {[
+                    { id: "lofi", label: "🎧 Lo-Fi آرامش‌بخش" },
+                    { id: "upbeat", label: "⚡ ریتم پرانرژی" },
+                    { id: "acoustic", label: "🎸 آکوستیک لایت" },
+                    { id: "piano", label: "🎹 پیانو امبینت" },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setMusicStyle(m.id as MusicStyle);
+                        audioEngineRef.current?.setVolume(musicVolume);
+                        if (isPlayingReel) {
+                          audioEngineRef.current?.playBuiltin(m.id as MusicStyle, 15, reelTime);
+                        }
+                      }}
+                      style={{
+                        padding: "7px 8px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: musicStyle === m.id ? 700 : 500,
+                        cursor: "pointer",
+                        background: musicStyle === m.id ? "var(--primary)" : "var(--surface)",
+                        color: musicStyle === m.id ? "#fff" : "var(--text)",
+                        border: musicStyle === m.id ? "1px solid var(--primary)" : "1px solid var(--border)",
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Randomize Track & Upload Custom MP3 */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={handleRandomizeMusic}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: musicStyle === "random" ? 700 : 500,
+                      cursor: "pointer",
+                      background: musicStyle === "random" ? "#8b5cf6" : "var(--surface)",
+                      color: musicStyle === "random" ? "#fff" : "var(--text)",
+                      border: "1px solid rgba(139, 92, 246, 0.4)",
+                    }}
+                  >
+                    🎲 ساخت ملودی تصادفی
+                  </button>
+
+                  <label
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: musicStyle === "custom" ? 700 : 500,
+                      cursor: "pointer",
+                      background: musicStyle === "custom" ? "#ec4899" : "var(--surface)",
+                      color: musicStyle === "custom" ? "#fff" : "var(--text)",
+                      border: "1px solid rgba(236, 72, 153, 0.4)",
+                      textAlign: "center",
+                      display: "block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {customAudioName ? `📁 ${customAudioName}` : "📁 آپلود آهنگ (MP3)"}
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleCustomAudioUpload}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                </div>
+
+                {/* Volume Slider & Mute Toggle */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
                   <label style={{ fontSize: 12, color: "var(--text-2)", whiteSpace: "nowrap" }}>
-                    ولوم موزیک: {Math.round(musicVolume * 100)}%
+                    ولوم: {Math.round(musicVolume * 100)}%
                   </label>
                   <input
                     type="range"
