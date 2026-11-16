@@ -1001,6 +1001,32 @@ export default function InstagramPanel({
     }
   }
 
+  function handleCreateNewPost() {
+    const newLesson: InstagramLesson = {
+      id: Date.now(),
+      theme: "اصطلاح جدید (New Phrase)",
+      hook_title: "عنوان جذاب کاور خود را اینجا بنویسید 🎯",
+      subtitle: "چطور این مفهوم را مثل یک نیتیو به انگلیسی بگیم؟",
+      key_phrase: "New English Phrase",
+      phonetic: "/.../",
+      persian_mean: "معنی فارسی اصطلاح",
+      dialogue_a: "How do you use this in real life?",
+      dialogue_a_fa: "چطور در زندگی واقعی استفاده می‌شود؟",
+      dialogue_b: "Just like this! Practice it out loud.",
+      dialogue_b_fa: "دقیقاً همین‌طوری! با صدای بلند تکرار کنید.",
+      tip: "یک نکته کاربردی و جذاب در مورد نحوه کاربرد این اصطلاح بنویسید.",
+      app_practice: "تمرین شادوئینگ در اپلیکیشن لینگوفلو",
+      app_cta: "دانلود رایگان اپلیکیشن «لینگوفلو» از کافه‌بازار و لینک بیو",
+      caption: "",
+      reel_caption: "",
+      hashtags: "",
+    };
+    setCurrentLesson(newLesson);
+    setLessons((prev) => [newLesson, ...prev]);
+    setActiveSlide(1);
+    notify("فرم پست جدید ایجاد شد ✨ حالا متن‌های دلخواه را در باکس سمت راست وارد کنید.", "ok");
+  }
+
   async function handleFieldChange(field: keyof InstagramLesson, value: string) {
     const updated = { ...(currentLesson || DEFAULT_FALLBACK_LESSON), [field]: value };
     setCurrentLesson(updated);
@@ -1042,8 +1068,8 @@ export default function InstagramPanel({
           </p>
         </div>
 
-        {/* Lesson Picker */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Lesson Picker & Create New Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <label style={{ fontSize: 13, color: "#e0e7ff" }}>موضوع درس:</label>
           <select
             className="input"
@@ -1056,14 +1082,33 @@ export default function InstagramPanel({
               borderRadius: 8,
               padding: "8px 12px",
               cursor: "pointer",
+              maxWidth: 240,
             }}
           >
             {(lessons || []).map((l) => (
               <option key={l.id} value={l.id} style={{ color: "#000" }}>
-                درس {l.id}: {l.key_phrase} ({l.persian_mean})
+                {l.key_phrase} ({l.persian_mean})
               </option>
             ))}
           </select>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={handleCreateNewPost}
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              color: "#fff",
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            ➕ پست جدید
+          </button>
         </div>
       </div>
 
