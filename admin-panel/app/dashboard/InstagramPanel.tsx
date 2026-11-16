@@ -29,6 +29,195 @@ const DEFAULT_FALLBACK_LESSON: InstagramLesson = {
   hashtags: "#آموزش_زبان #اصطلاحات_انگلیسی #لینگوفلو #shadowing",
 };
 
+// -------------------------------------------------------------
+// Web Audio Royalty-Free Synthesizer Engine for Reels
+// -------------------------------------------------------------
+class ReelAudioEngine {
+  ctx: AudioContext | null = null;
+  dest: MediaStreamAudioDestinationNode | null = null;
+  masterGain: GainNode | null = null;
+  customAudio: HTMLAudioElement | null = null;
+  customSource: MediaElementAudioSourceNode | null = null;
+  scheduledOscillators: (OscillatorNode | AudioBufferSourceNode)[] = [];
+
+  init() {
+    if (this.ctx) return;
+    if (typeof window === "undefined") return;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    this.ctx = new AudioContextClass();
+    this.dest = this.ctx.createMediaStreamDestination();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.35;
+    this.masterGain.connect(this.dest);
+    this.masterGain.connect(this.ctx.destination);
+  }
+
+  getAudioTrack(): MediaStreamTrack | null {
+    this.init();
+    if (!this.dest) return null;
+    const tracks = this.dest.stream.getAudioTracks();
+    return tracks.length > 0 ? tracks[0] : null;
+  }
+
+  setVolume(vol: number) {
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), this.ctx.currentTime);
+    }
+  }
+
+  stop() {
+    this.scheduledOscillators.forEach((node) => {
+      try {
+        node.stop();
+      } catch {}
+    });
+    this.scheduledOscillators = [];
+    if (this.customAudio) {
+      this.customAudio.pause();
+      this.customAudio.currentTime = 0;
+    }
+  }
+
+  playCustom(url: string, startTimeSec = 0) {
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+    this.stop();
+
+    if (!this.customAudio || this.customAudio.src !== url) {
+      this.customAudio = new Audio(url);
+      this.customAudio.crossOrigin = "anonymous";
+      this.customSource = this.ctx.createMediaElementSource(this.customAudio);
+      this.customSource.connect(this.masterGain);
+    }
+    this.customAudio.currentTime = startTimeSec;
+    this.customAudio.play().catch(() => {});
+  }
+
+  playBuiltin(style: "lofi" | "upbeat", durationSec = 15, startTimeSec = 0) {
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+    this.stop();
+
+    const now = this.ctx.currentTime;
+    const bpm = style === "upbeat" ? 116 : 88;
+    const beatDuration = 60 / bpm;
+
+    // Harmonic Chord Progression
+    const chordProgression = [
+      { freqs: [220, 261.63, 329.63, 392], startBeat: 0, beats: 4 }, // Am7
+      { freqs: [174.61, 220, 261.63, 329.63], startBeat: 4, beats: 4 }, // Fmaj7
+      { freqs: [130.81, 164.81, 196, 246.94], startBeat: 8, beats: 4 }, // Cmaj7
+      { freqs: [196, 246.94, 293.66, 349.23], startBeat: 12, beats: 4 }, // G7
+      { freqs: [220, 261.63, 329.63, 392], startBeat: 16, beats: 4 }, // Am7
+      { freqs: [174.61, 220, 261.63, 329.63], startBeat: 20, beats: 4 }, // Fmaj7
+    ];
+
+    chordProgression.forEach((chord) => {
+      const chordStart = now + chord.startBeat * beatDuration - startTimeSec;
+      const chordEnd = chordStart + chord.beats * beatDuration;
+      if (chordEnd <= now) return;
+
+      chord.freqs.forEach((freq, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+
+        osc.type = style === "upbeat" ? (idx === 0 ? "sawtooth" : "triangle") : "sine";
+        osc.frequency.setValueAtTime(freq, Math.max(now, chordStart));
+
+        const baseGain = style === "upbeat" ? 0.07 : 0.11;
+        const actualStart = Math.max(now, chordStart);
+        gain.gain.setValueAtTime(0.001, actualStart);
+        gain.gain.exponentialRampToValueAtTime(baseGain, actualStart + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, chordEnd);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain!);
+
+        osc.start(actualStart);
+        osc.stop(chordEnd);
+        this.scheduledOscillators.push(osc);
+      });
+    });
+
+    // Rhythmic Kick & Soft Hats
+    const totalBeats = Math.ceil((durationSec * bpm) / 60);
+    for (let b = 0; b < totalBeats; b++) {
+      const beatTime = now + b * beatDuration - startTimeSec;
+      if (beatTime < now) continue;
+
+      // Kick drum
+      if (b % 2 === 0) {
+        const kickOsc = this.ctx.createOscillator();
+        const kickGain = this.ctx.createGain();
+        kickOsc.frequency.setValueAtTime(120, beatTime);
+        kickOsc.frequency.exponentialRampToValueAtTime(42, beatTime + 0.12);
+
+        kickGain.gain.setValueAtTime(0.22, beatTime);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.14);
+
+        kickOsc.connect(kickGain);
+        kickGain.connect(this.masterGain);
+
+        kickOsc.start(beatTime);
+        kickOsc.stop(beatTime + 0.15);
+        this.scheduledOscillators.push(kickOsc);
+      }
+
+      // Soft Hi-Hat
+      const hatOsc = this.ctx.createOscillator();
+      const hatGain = this.ctx.createGain();
+      hatOsc.type = "triangle";
+      hatOsc.frequency.setValueAtTime(5500 + (b % 4) * 400, beatTime);
+
+      hatGain.gain.setValueAtTime(0.05, beatTime);
+      hatGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.05);
+
+      hatOsc.connect(hatGain);
+      hatGain.connect(this.masterGain);
+
+      hatOsc.start(beatTime);
+      hatOsc.stop(beatTime + 0.06);
+      this.scheduledOscillators.push(hatOsc);
+    }
+
+    // Melodic Sound Effects for each Reel phase
+    const soundCues = [
+      { time: 0.1, freq: 880 }, // Hook pop
+      { time: 3.5, freq: 1046.5 }, // Phrase reveal
+      { time: 7.5, freq: 1174.66 }, // Dialogue start
+      { time: 12.0, freq: 1318.51 }, // CTA reveal
+    ];
+
+    soundCues.forEach((cue) => {
+      const cueTime = now + cue.time - startTimeSec;
+      if (cueTime < now) return;
+
+      const cueOsc = this.ctx!.createOscillator();
+      const cueGain = this.ctx!.createGain();
+
+      cueOsc.type = "sine";
+      cueOsc.frequency.setValueAtTime(cue.freq, cueTime);
+
+      cueGain.gain.setValueAtTime(0.18, cueTime);
+      cueGain.gain.exponentialRampToValueAtTime(0.001, cueTime + 0.6);
+
+      cueOsc.connect(cueGain);
+      cueGain.connect(this.masterGain!);
+
+      cueOsc.start(cueTime);
+      cueOsc.stop(cueTime + 0.7);
+      this.scheduledOscillators.push(cueOsc);
+    });
+  }
+}
+
 export default function InstagramPanel({
   notify,
 }: {
@@ -57,10 +246,23 @@ export default function InstagramPanel({
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [copiedReelCaption, setCopiedReelCaption] = useState(false);
 
+  // Reel Audio state
+  const [musicStyle, setMusicStyle] = useState<"lofi" | "upbeat" | "custom" | "none">("lofi");
+  const [musicVolume, setMusicVolume] = useState(0.35);
+  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
+  const audioEngineRef = useRef<ReelAudioEngine | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reelCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  useEffect(() => {
+    audioEngineRef.current = new ReelAudioEngine();
+    return () => {
+      audioEngineRef.current?.stop();
+    };
+  }, []);
 
   // Load initial data safely
   useEffect(() => {
@@ -446,11 +648,22 @@ export default function InstagramPanel({
     }
   }, [mode, reelTime, currentLesson, selectedClipId]);
 
-  // Reel Animation loop
+  // Reel Animation & Audio loop
   useEffect(() => {
     if (!isPlayingReel) {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      audioEngineRef.current?.stop();
       return;
+    }
+
+    // Start music on preview
+    if (audioEngineRef.current && musicStyle !== "none") {
+      audioEngineRef.current.setVolume(musicVolume);
+      if (musicStyle === "custom" && customAudioUrl) {
+        audioEngineRef.current.playCustom(customAudioUrl, reelTime);
+      } else if (musicStyle === "lofi" || musicStyle === "upbeat") {
+        audioEngineRef.current.playBuiltin(musicStyle, 15, reelTime);
+      }
     }
 
     const duration = 15;
@@ -461,6 +674,7 @@ export default function InstagramPanel({
       if (elapsedSec >= duration) {
         setReelTime(0);
         setIsPlayingReel(false);
+        audioEngineRef.current?.stop();
         return;
       }
       setReelTime(elapsedSec);
@@ -477,8 +691,9 @@ export default function InstagramPanel({
     animationFrameRef.current = requestAnimationFrame(step);
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      audioEngineRef.current?.stop();
     };
-  }, [isPlayingReel, currentLesson]);
+  }, [isPlayingReel, currentLesson, musicStyle, musicVolume, customAudioUrl]);
 
   function drawReelFrame(canvas: HTMLCanvasElement, timeSec: number, lesson: InstagramLesson) {
     const ctx = canvas.getContext("2d");
@@ -825,6 +1040,21 @@ export default function InstagramPanel({
     const canvas = reelCanvasRef.current;
     const stream = canvas.captureStream(30);
 
+    // Attach royalty-free background music to video stream
+    if (audioEngineRef.current && musicStyle !== "none") {
+      audioEngineRef.current.setVolume(musicVolume);
+      if (musicStyle === "custom" && customAudioUrl) {
+        audioEngineRef.current.playCustom(customAudioUrl, 0);
+      } else if (musicStyle === "lofi" || musicStyle === "upbeat") {
+        audioEngineRef.current.playBuiltin(musicStyle, 15, 0);
+      }
+
+      const audioTrack = audioEngineRef.current.getAudioTrack();
+      if (audioTrack) {
+        stream.addTrack(audioTrack);
+      }
+    }
+
     let mimeType = "video/webm;codecs=vp9";
     if (!MediaRecorder.isTypeSupported(mimeType)) {
       mimeType = "video/webm";
@@ -846,6 +1076,7 @@ export default function InstagramPanel({
       };
 
       recorder.onstop = () => {
+        audioEngineRef.current?.stop();
         const blob = new Blob(chunks, { type: mimeType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -855,7 +1086,7 @@ export default function InstagramPanel({
         link.click();
         URL.revokeObjectURL(url);
         setIsRecordingReel(false);
-        notify("ویدیوی ریلز با موفقیت ذخیره و دانلود شد 🎉 آماده انتشار در اینستاگرام!", "ok");
+        notify("ویدیوی ریلز به همراه موزیک پس‌زمینه با موفقیت دانلود شد 🎉 آماده انتشار در اینستاگرام!", "ok");
       };
 
       recorder.start();
@@ -1540,6 +1771,100 @@ export default function InstagramPanel({
                 >
                   {isRecordingReel ? "⏺️ در حال ضبط..." : "🎬 ضبط و دانلود ویدیوی Reels"}
                 </button>
+              </div>
+
+              {/* Music Setting Card */}
+              <div
+                style={{
+                  background: "var(--surface-2)",
+                  padding: 14,
+                  borderRadius: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginTop: 6,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                    🎵 موزیک پس‌زمینه ویدیو
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--text-2)" }}>۱۰۰٪ بدون کپی‌رایت</span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMusicStyle("lofi");
+                      audioEngineRef.current?.setVolume(musicVolume);
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: musicStyle === "lofi" ? 700 : 500,
+                      cursor: "pointer",
+                      background: musicStyle === "lofi" ? "var(--primary)" : "var(--surface)",
+                      color: musicStyle === "lofi" ? "#fff" : "var(--text)",
+                      border: musicStyle === "lofi" ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    }}
+                  >
+                    🎧 ریتم Lo-Fi (پیش‌فرض)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMusicStyle("upbeat");
+                      audioEngineRef.current?.setVolume(musicVolume);
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: musicStyle === "upbeat" ? 700 : 500,
+                      cursor: "pointer",
+                      background: musicStyle === "upbeat" ? "var(--primary)" : "var(--surface)",
+                      color: musicStyle === "upbeat" ? "#fff" : "var(--text)",
+                      border: musicStyle === "upbeat" ? "1px solid var(--primary)" : "1px solid var(--border)",
+                    }}
+                  >
+                    ⚡ ریتم پرانرژی اینستاگرامی
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <label style={{ fontSize: 12, color: "var(--text-2)", whiteSpace: "nowrap" }}>
+                    ولوم موزیک: {Math.round(musicVolume * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={musicVolume}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setMusicVolume(v);
+                      audioEngineRef.current?.setVolume(v);
+                    }}
+                    style={{ flex: 1, accentColor: "var(--primary)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMusicStyle(musicStyle === "none" ? "lofi" : "none")}
+                    style={{
+                      border: "none",
+                      background: "none",
+                      fontSize: 12,
+                      color: musicStyle === "none" ? "#ef4444" : "var(--primary)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {musicStyle === "none" ? "🔇 بی‌صدا است" : "🔊 فعال"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
