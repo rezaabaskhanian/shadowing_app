@@ -124,21 +124,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   // همان لحظه با «بعدی» باز شده) را دوباره می‌بست — همان چیزی که باعث می‌شد
   // حباب گاهی بیاید گاهی نه.
   const switchingTrackRef = useRef(false);
-
+  const hasFiredFinishedRef = useRef(false);
 
   useEffect(() => {
+    const triggerFinished = () => {
+      if (switchingTrackRef.current || hasFiredFinishedRef.current) return;
+      hasFiredFinishedRef.current = true;
+      onPlaybackStatusUpdateRef.current?.('finished');
+    };
+
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (data) => {
-      if (data.state === State.Playing) onPlaybackStatusUpdateRef.current?.('playing');
-      else if (data.state === State.Paused) onPlaybackStatusUpdateRef.current?.('paused');
-      else if (data.state === State.Error) onPlaybackStatusUpdateRef.current?.('error');
-      else if (data.state === State.Loading || data.state === State.Buffering) {
+      if (data.state === State.Playing) {
+        hasFiredFinishedRef.current = false;
+        onPlaybackStatusUpdateRef.current?.('playing');
+      } else if (data.state === State.Paused) {
+        onPlaybackStatusUpdateRef.current?.('paused');
+      } else if (data.state === State.Error) {
+        onPlaybackStatusUpdateRef.current?.('error');
+      } else if (data.state === State.Ended) {
+        triggerFinished();
+      } else if (data.state === State.Loading || data.state === State.Buffering) {
         onPlaybackStatusUpdateRef.current?.('loading');
       }
     });
     // پایان صف = پایان صدای مرجع؛ چون همیشه فقط یک track در صف داریم.
     const endedSub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
-      if (switchingTrackRef.current) return;
-      onPlaybackStatusUpdateRef.current?.('finished');
+      triggerFinished();
     });
     const progressSub = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (data) => {
       onProgressRef.current?.(data.position, 'original');
@@ -157,33 +168,34 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     actionCommand === 'stop_record' ||
     actionCommand === 'play_recording';
 
+  const lastExecutedNonceRef = useRef<number>(-1);
+
   useEffect(() => {
     if (isRecordingCommand) return;
 
     let cancelled = false;
-    switchingTrackRef.current = true;
+    const isNewCommand = actionNonce !== lastExecutedNonceRef.current;
+    lastExecutedNonceRef.current = actionNonce;
+
     (async () => {
       await ensureTrackPlayerSetup();
       if (cancelled) return;
 
-      const wantsPlay =
-        actionCommand === 'play_original' ||
-        actionCommand === 'resume' ||
-        (actionCommand === 'none' && shouldPlay);
-      // فقط `play_original` یعنی «از اول». `resume` و مکث و تغییر سرعت نباید
-      // موقعیت پخش را از دست بدهند.
-      const wantsRestart = actionCommand === 'play_original';
+      // فقط زمانی از سر گرفته شود که دستور جدید صادر شده باشد، نه هر بار که رندر/وضعیت عوض می‌شود
+      const wantsRestart = actionCommand === 'play_original' && isNewCommand;
+      const wantsPlay = Boolean(
+        shouldPlay &&
+          (actionCommand === 'play_original' ||
+            actionCommand === 'resume' ||
+            actionCommand === 'none')
+      );
 
       if (!uri) {
-        await TrackPlayer.pause();
+        await TrackPlayer.pause().catch(() => {});
         // این جمله اصلاً صدای مرجع ندارد. باید صریحاً خبر بدهیم: چون هیچ
         // پخشی شروع نمی‌شود، هیچ‌وقت PlaybackQueueEnded («finished») هم
         // نمی‌آید و بدون این خبر، جریانِ خودکارِ «گوش دادن» روی همین جمله
         // برای همیشه می‌ماند و کاربر فکر می‌کند پخش خراب شده.
-        //
-        // فقط روی درخواستِ صریحِ پخش خبر می‌دهیم، نه روی حالتِ پیش‌فرضِ
-        // (command='none' و shouldPlay=true) که هنوز هیچ جمله‌ای انتخاب نشده —
-        // وگرنه همان لحظه‌ی اولِ باز شدن صفحه هم «صدا ندارد» اعلام می‌شد.
         if (wantsRestart || actionCommand === 'resume') {
           onPlaybackStatusUpdateRef.current?.('no_audio');
         }
@@ -195,23 +207,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       // با یک تلق کوتاهِ reload نمی‌پرد.
       const active = await TrackPlayer.getActiveTrack();
       // track ممکن است از فایل کش (`file://`) پخش شود، پس URL اصلی را کنارش
-      // نگه می‌داریم و با آن می‌فهمیم صدا عوض شده یا نه. TrackPlayer سراسری
-      // است و صفحه‌های دیگر هم در آن track می‌گذارند، برای همین این را از
-      // خودِ track می‌خوانیم نه از state این کامپوننت.
+      // نگه می‌داریم و با آن می‌فهمیم صدا عوض شده یا نه.
       if (active?.sourceUrl !== uri) {
-        await TrackPlayer.reset();
+        switchingTrackRef.current = true;
+        await TrackPlayer.pause().catch(() => {});
+        await TrackPlayer.reset().catch(() => {});
         await TrackPlayer.add({ id: MASTER_TRACK_ID, url: getCachedAudio(uri), sourceUrl: uri });
       } else if (wantsRestart) {
-        await TrackPlayer.seekTo(0);
+        await TrackPlayer.seekTo(0).catch(() => {});
       }
       if (cancelled) return;
 
-      await TrackPlayer.setRate(playbackRate);
+      await TrackPlayer.setRate(playbackRate).catch(() => {});
 
       if (wantsPlay) {
-        await TrackPlayer.play();
+        hasFiredFinishedRef.current = false;
+        await TrackPlayer.play().catch(() => {});
       } else {
-        await TrackPlayer.pause();
+        await TrackPlayer.pause().catch(() => {});
       }
     })()
       .catch((err) => {

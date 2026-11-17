@@ -92,6 +92,12 @@ interface ShadowingPracticePanelProps {
   flowMode?: PracticeFlowMode;
   onChangeFlowMode?: (mode: PracticeFlowMode) => void;
   smartPhase?: 'listen' | 'shadow' | 'score';
+  shadowPromptState?: 'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback';
+  countdownNum?: number;
+  onConfirmReady?: () => void;
+  onStopRecord?: () => void;
+  onReplayCurrent?: () => void;
+  onOpenGuide?: () => void;
 }
 
 /**
@@ -155,6 +161,12 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   flowMode,
   onChangeFlowMode,
   smartPhase,
+  shadowPromptState,
+  countdownNum,
+  onConfirmReady,
+  onStopRecord,
+  onReplayCurrent,
+  onOpenGuide,
 }) => {
   const rtl = language === 'fa';
   return (
@@ -167,6 +179,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         flowMode={flowMode}
         onChangeFlowMode={onChangeFlowMode}
         smartPhase={smartPhase}
+        onOpenGuide={onOpenGuide}
         t={t}
       />
 
@@ -227,6 +240,12 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         isPlayingRecording={actionCommand === 'play_recording'}
         rtl={rtl}
         t={t}
+        shadowPromptState={shadowPromptState}
+        countdownNum={countdownNum}
+        onConfirmReady={onConfirmReady}
+        onStopRecord={onStopRecord}
+        onReplayCurrent={onReplayCurrent}
+        flowMode={flowMode}
       />
 
       {activeStepIndex === 2 && (

@@ -1,14 +1,18 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Mic, RotateCcw, Sparkles, Volume2 } from 'lucide-react-native';
+import { Mic, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { SHADOWS } from '../../../theme/elevation';
 import type { AudioActionCommand } from '../types';
 import type { EvaluationResult } from '../../../api/shadowing';
+import type { PracticeFlowMode } from '../../../data/PracticeSettingsContext';
 import { WaveBars } from './WaveBars';
 import { CompareAudioSection } from './CompareAudioSection';
+
+const toLocaleDigits = (n: number | string, isRtl: boolean) =>
+  isRtl ? String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(n);
 
 /**
  * کارت ویوفرم وسط پنل تمرین. محتوایش کاملاً به مرحله‌ی فعلی بستگی دارد:
@@ -36,6 +40,13 @@ export const PracticeWaveformCard: React.FC<{
   isPlayingRecording?: boolean;
   rtl?: boolean;
   t: (key: string) => string;
+  /** وضعیت جریان سایه‌زنی تعاملی */
+  shadowPromptState?: 'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback';
+  countdownNum?: number;
+  onConfirmReady?: () => void;
+  onStopRecord?: () => void;
+  onReplayCurrent?: () => void;
+  flowMode?: PracticeFlowMode;
 }> = ({
   activeStepIndex,
   accentColor,
@@ -52,6 +63,12 @@ export const PracticeWaveformCard: React.FC<{
   isPlayingRecording,
   rtl = false,
   t,
+  shadowPromptState = 'idle',
+  countdownNum = 3,
+  onConfirmReady,
+  onStopRecord,
+  onReplayCurrent,
+  flowMode = 'smart_flow',
 }) => (
   <View
     style={[
@@ -60,7 +77,135 @@ export const PracticeWaveformCard: React.FC<{
       activeStepIndex === 3 && styles.waveformCardCompare,
     ]}
   >
-    {evalState === 'scoring' ? (
+    {activeStepIndex === 1 ? (
+      <View style={styles.shadowCoachWrap}>
+        {flowMode === 'classic_steps' ? (
+          <View style={styles.classicShadowCard}>
+            <View style={[styles.classicShadowHeader, rtl && styles.rowReverse]}>
+              <View style={styles.classicShadowIconBadge}>
+                <Volume2 size={20} color={COLORS.primary} />
+              </View>
+              <View style={[styles.classicShadowTexts, rtl && { alignItems: 'flex-end' }]}>
+                <Text style={styles.classicShadowTitle}>
+                  {rtl ? 'هم‌خوانی هم‌زمان (سایه‌زنی)' : 'Simultaneous Shadowing'}
+                </Text>
+                <Text style={[styles.classicShadowDesc, rtl && { textAlign: 'right' }]}>
+                  {rtl
+                    ? 'هم‌زمان با پخش صدا، با گوینده تکرار کنید. در این مرحله صدایی ضبط نمی‌شود تا با آرامش تمرین کنید؛ ضبط مستقل در مرحله‌ی بعد است.'
+                    : 'Repeat aloud alongside the audio. Your voice is not recorded here so you can practice freely; solo recording is in the next step.'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.classicWaveWrap}>
+              <WaveBars active={playing} color={COLORS.primary} />
+            </View>
+          </View>
+        ) : evalState === 'scoring' ? (
+          <View style={styles.scoringCard}>
+            <ActivityIndicator color={COLORS.primary} size="small" />
+            <Text style={styles.scoringText}>🤖 هوش مصنوعی در حال تحلیل تلفظ و لهجه...</Text>
+          </View>
+        ) : shadowPromptState === 'waiting_ready' ? (
+          <View style={styles.readyCard}>
+            <View style={[styles.readyHeader, rtl && styles.rowReverse]}>
+              <View style={styles.readyMicBadge}>
+                <Sparkles size={20} color="#FFF" />
+              </View>
+              <View style={styles.readyTexts}>
+                <Text style={styles.readyTitle}>
+                  {rtl ? '✨ نوبت شماست!' : '✨ Your Turn!'}
+                </Text>
+                <Text style={styles.readySubtitle}>
+                  {rtl
+                    ? 'دکمه «آماده‌ام» روی تصویر صحنه بالا را لمس کنید تا شمارش معکوس آغاز شود'
+                    : 'Tap "I\'m Ready" on the scene image above to start countdown'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : shadowPromptState === 'countdown' ? (
+          <View style={styles.countdownCard}>
+            <View style={styles.countdownBadge}>
+              <Text style={styles.countdownNum}>{toLocaleDigits(countdownNum, rtl)}</Text>
+            </View>
+            <Text style={styles.countdownTitle}>
+              {rtl
+                ? countdownNum > 1
+                  ? `آماده‌باش... ${toLocaleDigits(countdownNum, true)}`
+                  : 'آماده‌باش... شروع صحبت! 🎙️'
+                : countdownNum > 1
+                  ? `Get ready... ${countdownNum}`
+                  : 'Get ready... Speak now! 🎙️'}
+            </Text>
+            <Text style={styles.countdownSubtitle}>
+              {rtl ? 'با ریتم طبیعی و واضح جمله را تکرار کنید' : 'Repeat clearly and with natural rhythm'}
+            </Text>
+          </View>
+        ) : shadowPromptState === 'recording' || actionCommand === 'start_record' ? (
+          <View style={styles.elsaSpeakingState}>
+            <View style={styles.elsaMicPulseBadge}>
+              <Mic size={22} color="#EF4444" />
+            </View>
+            <Text style={styles.elsaSpeakingTitle}>🔴 در حال ضبط خودکار صدای شما...</Text>
+            <Text style={styles.elsaSpeakingSubtitle}>
+              جمله را تکرار کنید؛ پس از اتمام دکمه پایان را بزنید
+            </Text>
+            <View style={styles.elsaWaveContainer}>
+              <WaveBars active={true} color="#EF4444" />
+            </View>
+            {onStopRecord && (
+              <TouchableOpacity
+                style={styles.stopSpeechBtn}
+                onPress={onStopRecord}
+                activeOpacity={0.85}
+              >
+                <Square size={13} color="#FFF" fill="#FFF" />
+                <Text style={styles.stopSpeechBtnText}>پایان گفتار ⏹️</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : shadowPromptState === 'feedback' && evaluation ? (
+          <View style={styles.feedbackCard}>
+            <View style={[styles.feedbackTopRow, rtl && styles.rowReverse]}>
+              <View style={styles.feedbackScoreBadge}>
+                <Text style={styles.feedbackScoreNum}>{Math.round(evaluation.overall_score)}٪</Text>
+                <Text style={styles.feedbackScoreLabel}>
+                  {evaluation.overall_score >= 80 ? 'عالی ✨' : 'خوب 💪'}
+                </Text>
+              </View>
+              <View style={styles.feedbackTexts}>
+                <Text style={styles.feedbackNextText}>جمله بعد در حال بارگذاری...</Text>
+                <Text style={styles.feedbackDetailText}>
+                  تلفظ: {Math.round(evaluation.pronunciation_score || evaluation.overall_score)}٪ · روانی: {Math.round(evaluation.fluency_score || evaluation.overall_score)}٪
+                </Text>
+              </View>
+            </View>
+            {onReplayCurrent && (
+              <TouchableOpacity
+                style={styles.retryCurrentBtn}
+                onPress={onReplayCurrent}
+                activeOpacity={0.8}
+              >
+                <RotateCcw size={13} color={COLORS.primary} />
+                <Text style={styles.retryCurrentText}>تکرار همین جمله 🔄</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.elsaIdleState}>
+            <View style={[styles.channelRow, rtl && styles.rowReverse]}>
+              <View style={[styles.channelTag, { backgroundColor: 'rgba(36, 83, 219, 0.10)' }, rtl && styles.rowReverse]}>
+                <Volume2 size={13} color={COLORS.audioOriginal} />
+                <Text style={[styles.channelTagText, { color: COLORS.audioOriginal }]}>صدای گوینده (گوش دهید)</Text>
+              </View>
+              <View style={styles.channelWave}>
+                <WaveBars active={playing} color={COLORS.audioOriginal} />
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+    ) : evalState === 'scoring' ? (
       <View style={styles.scoringCard}>
         <ActivityIndicator color={COLORS.primary} size="small" />
         <Text style={styles.scoringText}>🤖 هوش مصنوعی در حال تحلیل تلفظ و لهجه...</Text>
@@ -99,42 +244,6 @@ export const PracticeWaveformCard: React.FC<{
               <Text style={styles.smartListenText}>شنیدن صدای من</Text>
             </TouchableOpacity>
           )}
-        </View>
-      </View>
-    ) : activeStepIndex === 1 ? (
-      <View style={styles.shadowCoachWrap}>
-        {/* ردیف صدای مرجع نیتیو */}
-        <View style={[styles.channelRow, rtl && styles.rowReverse]}>
-          <View style={[styles.channelTag, { backgroundColor: 'rgba(36, 83, 219, 0.10)' }, rtl && styles.rowReverse]}>
-            <Volume2 size={13} color={COLORS.audioOriginal} />
-            <Text style={[styles.channelTagText, { color: COLORS.audioOriginal }]}>{t('audioOriginal') || 'گوینده'}</Text>
-          </View>
-          <View style={styles.channelWave}>
-            <WaveBars active={playing} color={COLORS.audioOriginal} />
-          </View>
-        </View>
-
-        <View style={styles.waveformDivider} />
-
-        {/* ردیف صدای کاربر */}
-        <View style={[styles.channelRow, rtl && styles.rowReverse]}>
-          <View style={[styles.channelTag, { backgroundColor: 'rgba(255, 100, 34, 0.12)' }, rtl && styles.rowReverse]}>
-            <Mic size={13} color={COLORS.audioMine} />
-            <Text style={[styles.channelTagText, { color: COLORS.audioMine }]}>{t('audioMine') || 'شما'}</Text>
-          </View>
-          <View style={styles.channelWave}>
-            <WaveBars active={actionCommand === 'start_record'} color={COLORS.audioMine} />
-          </View>
-        </View>
-
-        {/* نشانگر وضعیت همگام‌سازی */}
-        <View style={[styles.syncStatusPill, actionCommand === 'start_record' && styles.syncStatusPillActive]}>
-          <Sparkles size={13} color={actionCommand === 'start_record' ? '#EF4444' : accentColor} />
-          <Text style={[styles.syncStatusText, actionCommand === 'start_record' && { color: '#B91C1C' }]}>
-            {actionCommand === 'start_record'
-              ? '🎙️ در حال سایه‌زنی همزمان... با لحن و ریتم گوینده ادامه دهید'
-              : '🎧 گوش دهید و با دکمه میکروفون روی صدای گوینده سایه بزنید'}
-          </Text>
         </View>
       </View>
     ) : activeStepIndex === 3 ? (
@@ -355,5 +464,317 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
     color: '#2563EB',
+  },
+  elsaSpeakingState: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 6,
+  },
+  elsaMicPulseBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  elsaSpeakingTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  elsaSpeakingSubtitle: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  elsaWaveContainer: {
+    width: '100%',
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  elsaIdleState: {
+    width: '100%',
+    gap: 10,
+  },
+  elsaPromptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255, 100, 34, 0.08)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  elsaPromptIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 100, 34, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  elsaPromptTexts: {
+    flex: 1,
+  },
+  elsaPromptTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.primary,
+  },
+  elsaPromptSubtitle: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 2,
+  },
+  elsaButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  elsaBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    borderRadius: 10,
+    paddingVertical: 7,
+  },
+  elsaBtnPrimaryText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11.5,
+    color: '#2563EB',
+  },
+  elsaBtnSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingVertical: 7,
+  },
+  elsaBtnSecondaryText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
+    color: '#4B5563',
+  },
+  readyCard: {
+    width: '100%',
+    gap: 12,
+    backgroundColor: '#FFF7ED',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    padding: 14,
+  },
+  readyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  readyMicBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.level1,
+  },
+  readyTexts: {
+    flex: 1,
+  },
+  readyTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14.5,
+    color: '#9A3412',
+  },
+  readySubtitle: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    color: '#7C2D12',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  readyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 11,
+    ...SHADOWS.level1,
+  },
+  readyBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: '#FFF',
+  },
+  countdownCard: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  countdownBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.level2,
+  },
+  countdownNum: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 26,
+    color: '#FFF',
+  },
+  countdownTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: COLORS.primary,
+    marginTop: 4,
+  },
+  countdownSubtitle: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
+    color: '#6B7280',
+  },
+  stopSpeechBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    marginTop: 6,
+  },
+  stopSpeechBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#FFF',
+  },
+  feedbackCard: {
+    width: '100%',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: 12,
+  },
+  feedbackTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  feedbackScoreBadge: {
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  feedbackScoreNum: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 20,
+    color: '#15803D',
+  },
+  feedbackScoreLabel: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: '#166534',
+  },
+  feedbackTexts: {
+    flex: 1,
+  },
+  feedbackNextText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
+    color: '#166534',
+  },
+  feedbackDetailText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 2,
+  },
+  retryCurrentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingVertical: 7,
+  },
+  retryCurrentText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11.5,
+    color: COLORS.primary,
+  },
+  classicShadowCard: {
+    width: '100%',
+    gap: 12,
+    backgroundColor: '#FFF7ED',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    padding: 14,
+  },
+  classicShadowHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  classicShadowIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 100, 34, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  classicShadowTexts: {
+    flex: 1,
+  },
+  classicShadowTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: '#9A3412',
+    marginBottom: 3,
+  },
+  classicShadowDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    color: '#7C2D12',
+    lineHeight: 17,
+  },
+  classicWaveWrap: {
+    width: '100%',
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
   },
 });

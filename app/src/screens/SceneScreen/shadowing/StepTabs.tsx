@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Check, Mic, Sparkles, Volume2 } from 'lucide-react-native';
+import { Check, HelpCircle, Mic, Sparkles, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -33,10 +33,23 @@ export const STEP_ACCENT_LIGHT_COLOR: Record<number, string> = {
   3: 'rgba(5, 150, 105, 0.12)',
 };
 
+interface SmartTabItem {
+  id: 'listen' | 'shadow' | 'score';
+  stepIdx: number;
+  label: string;
+  icon: typeof Volume2;
+  color: string;
+}
+
+const SMART_TABS: SmartTabItem[] = [
+  { id: 'listen', stepIdx: 0, label: '۱. شنیدن کل داستان', icon: Volume2, color: '#2563EB' },
+  { id: 'shadow', stepIdx: 1, label: '۲. سایه‌زنی هوشمند', icon: Mic, color: COLORS.primary },
+];
+
 /**
  * نوار بالای تمرین:
- *  - سوئیچ بین «سایه‌زنی هوشمند» (جریان پیوسته تک‌حلقه‌ای) و «۴ مرحله‌ای سنتی»
- *  - در حالت هوشمند: پیشرفت ۳ فاز جمله جاری (شنیدن ➔ سایه و ضبط ➔ نمره AI)
+ *  - سوئیچ بین «سایه‌زنی هوشمند» (جریان پیوسته ۳ فازی) و «۴ مرحله‌ای سنتی»
+ *  - در حالت هوشمند: تب‌های لمسی ۳ مرحله (شنیدن ➔ سایه و ضبط ➔ نمره AI)
  *  - در حالت سنتی: تب‌های ۴گانه Listen / Shadow / Record / Compare
  */
 export const StepTabs: React.FC<{
@@ -47,6 +60,7 @@ export const StepTabs: React.FC<{
   flowMode?: PracticeFlowMode;
   onChangeFlowMode?: (mode: PracticeFlowMode) => void;
   smartPhase?: 'listen' | 'shadow' | 'score';
+  onOpenGuide?: () => void;
   t: (key: string) => string;
 }> = ({
   language,
@@ -56,16 +70,18 @@ export const StepTabs: React.FC<{
   flowMode = 'smart_flow',
   onChangeFlowMode,
   smartPhase = 'listen',
+  onOpenGuide,
   t,
 }) => {
   const isRtl = language === 'fa';
   const orderedStepTabs = isRtl ? [...STEP_TABS].reverse() : STEP_TABS;
+  const orderedSmartTabs = isRtl ? [...SMART_TABS].reverse() : SMART_TABS;
 
   return (
     <View style={styles.wrapper}>
-      {/* سوییچر سبک تمرین (هوشمند vs ۴ مرحله‌ای) */}
+      {/* سوییچر سبک تمرین (هوشمند vs ۴ مرحله‌ای) + دکمه راهنما */}
       <View style={[styles.modeToggleHeader, isRtl && styles.rowReverse]}>
-        <View style={[styles.modeToggleGroup, isRtl && styles.rowReverse]}>
+        <View style={styles.modeToggleGroup}>
           <TouchableOpacity
             activeOpacity={0.8}
             style={[
@@ -106,70 +122,62 @@ export const StepTabs: React.FC<{
             </Text>
           </TouchableOpacity>
         </View>
+
+        {onOpenGuide && (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={[styles.guideHelpBtn, isRtl && styles.rowReverse]}
+            onPress={onOpenGuide}
+          >
+            <HelpCircle size={14} color="#6B7280" />
+            <Text style={styles.guideHelpText}>{isRtl ? 'راهنما' : 'Guide'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* محتوای تب‌ها بر اساس حالت انتخاب‌شده */}
       {flowMode === 'smart_flow' ? (
         <View style={styles.smartFlowContainer}>
-          <View
-            style={[
-              styles.smartPhasePill,
-              smartPhase === 'listen' && styles.smartPhasePillActiveListen,
-            ]}
-          >
-            <Volume2
-              size={13}
-              color={smartPhase === 'listen' ? '#2563EB' : '#9CA3AF'}
-            />
-            <Text
-              style={[
-                styles.smartPhaseText,
-                smartPhase === 'listen' && styles.smartPhaseTextActiveListen,
-              ]}
-            >
-              ۱. شنیدن
-            </Text>
-          </View>
+          {orderedSmartTabs.map((tab) => {
+            const active =
+              (tab.id === 'listen' && (activeStepIndex === 0 || smartPhase === 'listen') && activeStepIndex !== 1 && activeStepIndex !== 2 && activeStepIndex !== 3) ||
+              (tab.id === 'shadow' && (activeStepIndex === 1 || activeStepIndex === 2 || smartPhase === 'shadow') && activeStepIndex !== 3) ||
+              (tab.id === 'score' && (activeStepIndex === 3 || smartPhase === 'score'));
 
-          <View
-            style={[
-              styles.smartPhasePill,
-              smartPhase === 'shadow' && styles.smartPhasePillActiveShadow,
-            ]}
-          >
-            <Mic
-              size={13}
-              color={smartPhase === 'shadow' ? COLORS.primary : '#9CA3AF'}
-            />
-            <Text
-              style={[
-                styles.smartPhaseText,
-                smartPhase === 'shadow' && styles.smartPhaseTextActiveShadow,
-              ]}
-            >
-              ۲. سایه‌زنی
-            </Text>
-          </View>
+            const Icon = tab.icon;
 
-          <View
-            style={[
-              styles.smartPhasePill,
-              smartPhase === 'score' && styles.smartPhasePillActiveScore,
-            ]}
-          >
-            <Sparkles
-              size={13}
-              color={smartPhase === 'score' ? '#059669' : '#9CA3AF'}
-            />
-            <Text
-              style={[
-                styles.smartPhaseText,
-                smartPhase === 'score' && styles.smartPhaseTextActiveScore,
-              ]}
-            >
-              ۳. نمره هوش مصنوعی
-            </Text>
-          </View>
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                activeOpacity={0.8}
+                onPress={() => onChangeStep(tab.stepIdx)}
+                style={[
+                  styles.smartPhasePill,
+                  active &&
+                    (tab.id === 'listen'
+                      ? styles.smartPhasePillActiveListen
+                      : tab.id === 'shadow'
+                      ? styles.smartPhasePillActiveShadow
+                      : styles.smartPhasePillActiveScore),
+                ]}
+              >
+                <Icon size={13} color={active ? tab.color : '#9CA3AF'} />
+                <Text
+                  style={[
+                    styles.smartPhaseText,
+                    active &&
+                      (tab.id === 'listen'
+                        ? styles.smartPhaseTextActiveListen
+                        : tab.id === 'shadow'
+                        ? styles.smartPhaseTextActiveShadow
+                        : styles.smartPhaseTextActiveScore),
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ) : (
         <View style={styles.segmentedContainer}>
@@ -223,8 +231,24 @@ const styles = StyleSheet.create({
   },
   modeToggleHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  guideHelpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  guideHelpText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+    color: '#6B7280',
   },
   modeToggleGroup: {
     flexDirection: 'row',

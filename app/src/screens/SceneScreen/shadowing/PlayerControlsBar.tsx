@@ -1,12 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Square } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { SHADOWS } from '../../../theme/elevation';
 import { ensureMicPermission } from '../../../services/micPermission';
 import type { AudioActionCommand } from '../types';
+import type { PracticeFlowMode } from '../../../data/PracticeSettingsContext';
 
 /**
  * ردیف کنترل‌های یکپارچه‌ی پایین: قبلی · سرعت · دکمه‌ی اصلی (پخش/ضبط) ·
@@ -37,6 +38,7 @@ export const PlayerControlsBar: React.FC<{
   onPlayMyRecording: () => void;
   /** در فارسی ترتیب دکمه‌ها برعکس است: «قبلی» سمت راست. */
   rtl?: boolean;
+  flowMode?: PracticeFlowMode;
 }> = ({
   activeStepIndex,
   accentColor,
@@ -53,6 +55,7 @@ export const PlayerControlsBar: React.FC<{
   hasRecordingForCurrentLine,
   onPlayMyRecording,
   rtl = false,
+  flowMode = 'smart_flow',
 }) => {
   // مجوز میکروفن را زودتر (وقتی وارد مرحله‌ی ضبط می‌شویم) می‌گیریم تا لحظه‌ی
   // زدنِ دکمه، ensureMicPermission دیگر async/کند نباشد و ضبط بدون تأخیر
@@ -94,35 +97,50 @@ export const PlayerControlsBar: React.FC<{
 
       <TouchableOpacity
         activeOpacity={0.85}
+        disabled={(activeStepIndex === 2 && playing && !recording) || (flowMode === 'smart_flow' && activeStepIndex === 1 && !recording)}
         style={[
           styles.centerMicBtn,
           { backgroundColor: accentColor },
           recording ? styles.centerMicBtnActive : null,
+          (activeStepIndex === 2 && playing && !recording) || (flowMode === 'smart_flow' && activeStepIndex === 1 && !recording)
+            ? styles.centerMicBtnPlaying
+            : null,
         ]}
         onPress={() => {
-          // مرحله‌های ۱ و ۲ هر دو ضبط‌اند و یک‌جور کار می‌کنند: یک‌بار زدن شروع،
-          // یک‌بار دیگر پایان. (قبلاً مرحله‌ی ۲ نگه‌داشتنی بود؛ هم با بقیه‌ی اپ
-          // ناهماهنگ بود و هم نگه‌داشتنِ کوتاه باعث می‌شد stop_record زودتر از
-          // start_record بنشیند.)
-          if (activeStepIndex === 1 || activeStepIndex === 2) {
+          if (activeStepIndex === 2) {
+            // روش ۴ مرحله‌ای سنتی: دکمه میکروفون پایین برای شروع و پایان ضبط دستی است
             if (recording) {
               onStopRecord();
-            } else {
-              // فقط در مرحله‌ی Shadow صدای مرجع هم‌زمان پخش می‌شود؛ در مرحله‌ی
-              // Record کاربر تنها صدای خودش را ضبط می‌کند.
-              startRecord(activeStepIndex === 1);
+            } else if (!playing) {
+              startRecord(false);
+            }
+          } else if (flowMode === 'smart_flow' && activeStepIndex === 1) {
+            // جریان هوشمند: شروع ضبط خودکار از طریق دکمه وسط صحنه و شمارش معکوس است؛
+            // دکمه پایین در صورت نیاز برای توقف دستی حین ضبط فعال است.
+            if (recording) {
+              onStopRecord();
             }
           } else {
-            // Steps 0 (Listen) and 3 (Compare) share a simple play/pause toggle.
+            // در مرحله گوش دادن، سایه‌زنی ۴ مرحله‌ای و مقایسه، دکمه پخش و مکث است
             togglePlay();
           }
         }}
       >
-        {activeStepIndex === 1 || activeStepIndex === 2 ? (
+        {activeStepIndex === 2 ? (
           recording ? (
             <Square size={22} color={COLORS.white} fill={COLORS.white} />
+          ) : playing ? (
+            <Volume2 size={24} color={COLORS.white} />
           ) : (
             <Mic size={24} color={COLORS.white} />
+          )
+        ) : flowMode === 'smart_flow' && activeStepIndex === 1 ? (
+          recording ? (
+            <Square size={22} color={COLORS.white} fill={COLORS.white} />
+          ) : playing ? (
+            <Volume2 size={24} color={COLORS.white} />
+          ) : (
+            <Sparkles size={22} color={COLORS.white} />
           )
         ) : playing ? (
           <Pause size={22} color={COLORS.white} fill={COLORS.white} />
@@ -206,6 +224,9 @@ const styles = StyleSheet.create({
   centerMicBtnActive: {
     backgroundColor: '#DC2626',
     shadowColor: '#DC2626',
+  },
+  centerMicBtnPlaying: {
+    opacity: 0.75,
   },
   smallPlayBtn: {
     width: 46,

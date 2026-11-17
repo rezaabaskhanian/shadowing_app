@@ -92,11 +92,20 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       })
       .catch(() => {});
 
+    // پیش‌فرض باز شدن اپلیکیشن همیشه روی سایه‌زنی هوشمند باشد
     AsyncStorage.getItem(FLOW_MODE_KEY)
       .then((raw) => {
-        if (raw === 'smart_flow' || raw === 'classic_steps') setFlowModeState(raw);
+        if (raw === 'smart_flow') {
+          setFlowModeState('smart_flow');
+        } else {
+          // پیش‌فرض در شروع همیشه سایه‌زنی هوشمند است
+          setFlowModeState('smart_flow');
+          AsyncStorage.setItem(FLOW_MODE_KEY, 'smart_flow').catch(() => {});
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        setFlowModeState('smart_flow');
+      });
   }, []);
 
   const setRepeatsPerStep = useCallback((value: RepeatsPerStep) => {

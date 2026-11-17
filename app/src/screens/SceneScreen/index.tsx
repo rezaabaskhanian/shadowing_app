@@ -20,11 +20,13 @@ import { SceneLockedError, isSceneLockedError } from '../../api/scenes';
 import { getUserStreak, recordDialogueProgress } from '../../api/progress';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../data/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
 import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
+import { ShadowingGuideModal } from './shadowing/ShadowingGuideModal';
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
 import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from './playbackReducer';
@@ -106,6 +108,12 @@ export const SceneScreen = () => {
     flowMode,
     setFlowMode,
   } = usePracticeSettings();
+
+  // هر بار که کاربر یک صحنه را باز می‌کند، حالت پیش‌فرض همیشه روی «سایه‌زنی هوشمند» قرار می‌گیرد
+  useEffect(() => {
+    setFlowMode('smart_flow');
+  }, [setFlowMode]);
+
   const { user } = useAuth();
   const [streakCount, setStreakCount] = useState(0);
   const [streakFreezes, setStreakFreezes] = useState<number | undefined>(undefined);
@@ -333,12 +341,15 @@ export const SceneScreen = () => {
   // نتیجه‌ی نمره‌دهی همین جمله (اگر ضبطی ارزیابی شده باشد).
   const currentEvaluation = evaluations[activeIndex];
 
-  // فاز جاری در شادوئینگ هوشمند (شنیدن ➔ سایه و ضبط ➔ نمره هوش مصنوعی)
+  // فاز جاری در شادوئینگ هوشمند (شنیدن ➔ صحبت و تکرار ➔ نمره هوش مصنوعی)
   const smartPhase: 'listen' | 'shadow' | 'score' = useMemo(() => {
+    if (activeStepIndex === 0) return 'listen';
+    if (activeStepIndex === 1 || activeStepIndex === 2) return 'shadow';
+    if (activeStepIndex === 3) return 'score';
     if (actionCommand === 'start_record') return 'shadow';
     if (evalStates[activeIndex] === 'scoring' || currentEvaluation) return 'score';
     return 'listen';
-  }, [actionCommand, evalStates, activeIndex, currentEvaluation]);
+  }, [activeStepIndex, actionCommand, evalStates, activeIndex, currentEvaluation]);
 
   const currentEvalState = evalStates[activeIndex] ?? 'idle';
   const currentEvalError = evalErrors[activeIndex] ?? null;
@@ -444,12 +455,80 @@ export const SceneScreen = () => {
   );
 
   const autoTimeoutRef = useRef<any>(null);
+  const maxRecordTimeoutRef = useRef<any>(null);
+
+  const [guideModalVisible, setGuideModalVisible] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('has_seen_shadowing_guide_v2')
+      .then((val) => {
+        if (!val) {
+          setGuideModalVisible(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // وضعیت جریان سایه‌زنی تعاملی هوشمند در مرحله ۱
+  const [shadowPromptState, setShadowPromptState] = useState<
+    'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback'
+  >('idle');
+  const [hasConfirmedReady, setHasConfirmedReady] = useState<boolean>(false);
+  const [countdownNum, setCountdownNum] = useState<number>(3);
+  const countdownTimerRef = useRef<any>(null);
+  const feedbackTimerRef = useRef<any>(null);
 
   useEffect(() => {
     return () => {
       if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+      if (maxRecordTimeoutRef.current) clearTimeout(maxRecordTimeoutRef.current);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     };
   }, []);
+
+  // شروع شمارش معکوس و سپس ضبط خودکار
+  const startCountdownAndRecord = useCallback((initialCount: number) => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+
+    setShadowPromptState('countdown');
+    setCountdownNum(initialCount);
+
+    let count = initialCount;
+    countdownTimerRef.current = setInterval(() => {
+      count -= 1;
+      if (count > 0) {
+        setCountdownNum(count);
+      } else {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setShadowPromptState('recording');
+        dispatch({ type: 'START_RECORD', withReference: false });
+      }
+    }, 1000);
+  }, []);
+
+  const handleConfirmReady = useCallback(() => {
+    setHasConfirmedReady(true);
+    startCountdownAndRecord(3);
+  }, [startCountdownAndRecord]);
+
+  const handleStopRecord = useCallback(() => {
+    dispatch({ type: 'STOP_RECORD' });
+  }, []);
+
+  // محافظ هوشمند حداکثر زمان ضبط (۱۵ ثانیه) تا در صورت فراموشی کاربر، ضبط بی‌پایان نماند
+  useEffect(() => {
+    if (actionCommand === 'start_record') {
+      if (maxRecordTimeoutRef.current) clearTimeout(maxRecordTimeoutRef.current);
+      maxRecordTimeoutRef.current = setTimeout(() => {
+        dispatch({ type: 'STOP_RECORD' });
+      }, 15000);
+    } else {
+      if (maxRecordTimeoutRef.current) clearTimeout(maxRecordTimeoutRef.current);
+    }
+  }, [actionCommand]);
 
   /**
    * تنها نقطه‌ای که خط دیالوگ فعال را عوض و صدایش را پخش می‌کند. همه‌ی مسیرها
@@ -475,11 +554,33 @@ export const SceneScreen = () => {
     [dialogueItems, activeStepIndex, firstUnrecordedLineIndex, toast, t]
   );
 
+  const handleCloseGuide = useCallback(() => {
+    setGuideModalVisible(false);
+    AsyncStorage.setItem('has_seen_shadowing_guide_v2', 'true').catch(() => {});
+    // پس از بسته‌شدن مودال راهنما در داخل صحنه، پخش صدا و حرکت صحنه شروع می‌شود
+    playDialogueAt(activeIndex);
+  }, [activeIndex, playDialogueAt]);
+
+  const handleCloseIntroGuide = useCallback(() => {
+    setGuideModalVisible(false);
+    AsyncStorage.setItem('has_seen_shadowing_guide_v2', 'true').catch(() => {});
+  }, []);
+
+  const handleOpenGuide = useCallback(() => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+    setGuideModalVisible(true);
+  }, []);
+
   const handleEnterScene = () => {
     if (!audioPrep.finished) return;
     track('scene_opened', scenarioId ? String(scenarioId) : undefined);
     setInScene(true);
-    playDialogueAt(0);
+    // اگر مودال راهنما باز است، صدا و حرکت تا بسته‌شدن مودال متوقف می‌ماند
+    if (!guideModalVisible) {
+      playDialogueAt(0);
+    }
   };
 
   // ورود به مرحله‌ی «مقایسه» (idx 3) بدون هیچ ضبطی توی کل صحنه معنی نداره —
@@ -526,6 +627,15 @@ export const SceneScreen = () => {
   // یا خود کاربر دکمه‌ی «مرحله بعد» را زده)، نه وقتی صرفاً روی تب دیگری پریده.
   const goToNextStep = useCallback(
     (markDone = true) => {
+      if (flowMode === 'smart_flow') {
+        if (activeStepIndex === 0) {
+          dispatch({ type: 'CHANGE_STEP', step: 1, items: dialogueItems, forceIndex: 0 });
+        } else {
+          setShowResult(true);
+        }
+        return;
+      }
+
       if (activeStepIndex === 2 && Object.keys(recordings).length === 0) {
         toast.warning(t('recordingRequiredMessage'), { title: t('recordingRequiredTitle') });
         return;
@@ -543,7 +653,7 @@ export const SceneScreen = () => {
         setShowResult(true);
       }
     },
-    [activeStepIndex, recordings, t, toast, jumpToCompare, dialogueItems]
+    [flowMode, activeStepIndex, recordings, t, toast, jumpToCompare, dialogueItems]
   );
 
   const handleNextDialogue = useCallback(() => {
@@ -614,6 +724,13 @@ export const SceneScreen = () => {
   );
 
   const handleReplay = useCallback(() => {
+    playDialogueAt(activeIndex);
+  }, [activeIndex, playDialogueAt]);
+
+  const handleReplayCurrent = useCallback(() => {
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    setShadowPromptState('idle');
     playDialogueAt(activeIndex);
   }, [activeIndex, playDialogueAt]);
 
@@ -698,6 +815,22 @@ export const SceneScreen = () => {
 
       // نمره‌دهی هوشمند درجا به محض اتمام ضبط
       scoreLine(lineIndex, newRec);
+
+      // در جریان هوشمند: در همان مرحله ۱ می‌مانیم، وضعیت را به feedback می‌بریم،
+      // و بعد از ۲.۲ ثانیه مشاهده‌ی نمره، روان به جمله‌ی بعد یا کارنامه نهایی می‌رویم
+      if (flowMode === 'smart_flow' && activeStepIndex === 1) {
+        setShadowPromptState('feedback');
+        if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = setTimeout(() => {
+          if (lineIndex + 1 < dialogueItems.length) {
+            setShadowPromptState('idle');
+            playDialogueAt(lineIndex + 1);
+          } else {
+            setShadowPromptState('idle');
+            setShowResult(true);
+          }
+        }, 2200);
+      }
 
       setSaveState('saving');
       saveRecording({
@@ -799,23 +932,6 @@ export const SceneScreen = () => {
       });
   }, [activeStepIndex, recordings, evaluations, evalStates, scoreLine, dialogueItems]);
 
-  // در حالت جریان هوشمند: اگر نمره‌دهی انجام شد و حالت خودکار فعال بود،
-  // پس از ۲.۸ ثانیه مشاهده‌ی بازخورد، روان می‌رویم جمله‌ی بعدی
-  useEffect(() => {
-    if (
-      flowMode !== 'smart_flow' ||
-      !autoMode ||
-      !currentEvaluation ||
-      actionCommand !== 'none'
-    ) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      handleNextDialogue();
-    }, 2800);
-    return () => clearTimeout(timer);
-  }, [flowMode, autoMode, currentEvaluation, actionCommand, handleNextDialogue]);
-
   /**
    * انتخاب یک جمله از لیست ضبط‌ها/دایره‌های بالا. عمداً خودش پخش را شروع
    * نمی‌کند: کاربر آمده که دوباره ضبط کند یا مقایسه کند، نه اینکه صدای مرجع
@@ -833,9 +949,17 @@ export const SceneScreen = () => {
         toast.warning(t('sequentialRecordingRequiredMessage'), { title: t('recordingRequiredTitle') });
         return;
       }
-      dispatch({ type: 'SELECT_LINE', index: lineIndex, items: dialogueItems });
+      // در مرحله ۲ (روش ۴ مرحله‌ای ضبط) یا مرحله ۱ (سایه‌زنی هوشمند)، با رفتن روی هر شماره، جمله ابتدا پخش می‌شود
+      if (activeStepIndex === 2 || (flowMode === 'smart_flow' && activeStepIndex === 1)) {
+        if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+        if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+        setShadowPromptState('idle');
+        playDialogueAt(lineIndex);
+      } else {
+        dispatch({ type: 'SELECT_LINE', index: lineIndex, items: dialogueItems });
+      }
     },
-    [dialogueItems, activeStepIndex, firstUnrecordedLineIndex, toast, t]
+    [dialogueItems, activeStepIndex, flowMode, firstUnrecordedLineIndex, toast, t, playDialogueAt]
   );
 
   /**
@@ -1084,25 +1208,36 @@ export const SceneScreen = () => {
   // ================= SCENE OVERVIEW INTRO SCREEN =================
   if (!inScene) {
     return (
-      <SceneIntroScreen
-        scenario={scenario || metaScenario}
-        dialogueItems={dialogueItems}
-        coverImage={coverImage}
-        screenHeight={screenHeight}
-        showAllDialogues={showAllDialogues}
-        onShowAllDialogues={() => setShowAllDialogues(true)}
-        onClose={resetToHome}
-        onEnterScene={handleEnterScene}
-        audioPrep={audioPrep}
-        onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
-        loadFailed={loadFailed}
-        onRetryLoad={() => setLoadRun((n) => n + 1)}
-        isLocked={isLocked}
-        lockMessage={lockMessage}
-        onOpenPaywall={() => navigation.navigate('Paywall')}
-        rtl={language === 'fa'}
-        t={t}
-      />
+      <View style={styles.container}>
+        <SceneIntroScreen
+          scenario={scenario || metaScenario}
+          dialogueItems={dialogueItems}
+          coverImage={coverImage}
+          screenHeight={screenHeight}
+          showAllDialogues={showAllDialogues}
+          onShowAllDialogues={() => setShowAllDialogues(true)}
+          onClose={resetToHome}
+          onEnterScene={handleEnterScene}
+          onOpenGuide={handleOpenGuide}
+          audioPrep={audioPrep}
+          onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
+          loadFailed={loadFailed}
+          onRetryLoad={() => setLoadRun((n) => n + 1)}
+          isLocked={isLocked}
+          lockMessage={lockMessage}
+          onOpenPaywall={() => navigation.navigate('Paywall')}
+          rtl={language === 'fa'}
+          flowMode={flowMode}
+          t={t}
+        />
+        <ShadowingGuideModal
+          visible={guideModalVisible}
+          onClose={handleCloseIntroGuide}
+          language={language}
+          initialMode={flowMode}
+          onSelectMode={(mode) => setFlowMode(mode)}
+        />
+      </View>
     );
   }
 
@@ -1174,7 +1309,7 @@ export const SceneScreen = () => {
       {/* موتور صدا — کاملاً imperative، هیچ UI ای رندر نمی‌کند. */}
       <AudioPlayer
         uri={audioUri}
-        shouldPlay={playing}
+        shouldPlay={playing && !guideModalVisible}
         playbackRate={playbackRate}
         actionCommand={actionCommand}
         actionNonce={audioNonce}
@@ -1186,34 +1321,38 @@ export const SceneScreen = () => {
           else setRecordingPositionSeconds(positionSeconds);
         }}
         onPlaybackStatusUpdate={(status) => {
+          if (guideModalVisible) return;
           // صدای این خط تمام شد؛ حباب دیالوگ بالای سرش بسته شود — چه قرار
           // باشد خودکار برویم خط بعد چه نه.
           if (status === 'finished') {
             dispatch({ type: 'AUDIO_FINISHED' });
-            // در مرحله‌ی سایه‌زنی (مرحله ۱): اگر در حال ضبط بودیم، با اتمام صدای مرجع،
-            // پس از اندکی مهلت (۴۰۰ میلی‌ثانیه برای ادای آخرین هجا) ضبط خودکار بسته شود
-            // تا دکمه در حالت استپ گیر نکند!
-            if (activeStepIndex === 1 && actionCommand === 'start_record') {
-              setTimeout(() => {
-                dispatch({ type: 'STOP_RECORD' });
-              }, 400);
+
+            // مرحله ۰ (شنیدن کل داستان سناریو): با مکث ۷۰۰ میلی‌ثانیه‌ای روان به جمله بعد می‌رویم
+            if (activeStepIndex === 0 && autoMode && actionCommand !== 'start_record') {
+              if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+              autoTimeoutRef.current = setTimeout(() => {
+                handleNextDialogue();
+              }, 700);
+              return;
+            }
+
+            // مرحله ۱ (سایه‌زنی تعاملی هوشمند): پخش صدای این جمله تمام شد
+            if (flowMode === 'smart_flow' && activeStepIndex === 1 && actionCommand !== 'start_record') {
+              if (hasConfirmedReady) {
+                // از دفعات بعد: شمارش معکوس روی تصویر صحنه آغاز و سپس ضبط خودکار انجام می‌شود
+                startCountdownAndRecord(2);
+              } else {
+                // بار اول: دکمه تایید «آماده‌ام! 🚀» وسط صحنه نمایش داده می‌شود
+                setShadowPromptState('waiting_ready');
+              }
             }
           }
-          // در مرحله‌های دست‌کاربر (ضبط/مقایسه) یا زمانی که کاربر در حال ضبط است
-          // بعد از پایان صدای اصلی خودکار نمی‌پریم؛ کاربر باید فرصت ذخیره و گوش‌دادن داشته باشد.
-          const autoAdvance = (!isShadowingMode || isAutoStep) && actionCommand !== 'start_record';
-          if (status === 'finished' && autoMode && autoAdvance) {
-            if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
-            autoTimeoutRef.current = setTimeout(() => {
-              handleNextDialogue();
-            }, 1000);
-          }
-          // این جمله فایل صدا ندارد: به کاربر می‌گوییم چرا ساکت است و در
+          // این جمله فایل صدا ندارد یا خطا داد: به کاربر می‌گوییم چرا ساکت است و در
           // مرحله‌های خودکار می‌رویم جمله‌ی بعد، وگرنه روی یک جمله‌ی بی‌صدا
           // گیر می‌کردیم و به‌نظر می‌رسید کل پخش خراب شده.
-          if (status === 'no_audio') {
+          if (status === 'no_audio' || status === 'error') {
             dispatch({ type: 'AUDIO_MISSING' });
-            if (autoMode && autoAdvance) {
+            if (autoMode && activeStepIndex === 0) {
               if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
               autoTimeoutRef.current = setTimeout(() => {
                 handleNextDialogue();
@@ -1261,6 +1400,17 @@ export const SceneScreen = () => {
             ) : undefined
           }
           bubbleVisible={bubbleVisible}
+          shadowOverlayState={
+            flowMode === 'smart_flow' &&
+            activeStepIndex === 1 &&
+            (shadowPromptState === 'waiting_ready' || shadowPromptState === 'countdown')
+              ? shadowPromptState
+              : 'idle'
+          }
+          countdownNum={countdownNum}
+          onConfirmReady={handleConfirmReady}
+          language={language}
+          rtl={language === 'fa'}
         />
 
         {/* Bottom Sheet Dialogue Card */}
@@ -1334,6 +1484,12 @@ export const SceneScreen = () => {
               recordingPositionSeconds={recordingPositionSeconds}
               textDisplayMode={textDisplayMode}
               onChangeTextDisplayMode={setTextDisplayMode}
+              shadowPromptState={shadowPromptState}
+              countdownNum={countdownNum}
+              onConfirmReady={handleConfirmReady}
+              onStopRecord={handleStopRecord}
+              onReplayCurrent={handleReplayCurrent}
+              onOpenGuide={handleOpenGuide}
             />
           )}
         </View>
@@ -1366,11 +1522,16 @@ export const SceneScreen = () => {
             hasRecordingForCurrentLine={!!recordings[activeIndex]}
             onPlayMyRecording={() => playRecordingOfLine(activeIndex)}
             rtl={language === 'fa'}
+            flowMode={flowMode}
           />
           {lineAudioMissing && <Text style={styles.noAudioHint}>{t('lineHasNoAudio')}</Text>}
           {activeStepIndex === 2 && canRecord && (
             <Text style={[styles.recordHint, { color: stepAccentColor }]}>
-              {actionCommand === 'start_record' ? t('tapToStopRecord') : t('tapToRecord')}
+              {actionCommand === 'start_record'
+                ? t('tapToStopRecord')
+                : playing
+                ? (language === 'fa' ? 'در حال پخش جمله... گوش دهید 🎧' : 'Playing sentence... Listen 🎧')
+                : (language === 'fa' ? 'نوبت شماست! برای ضبط لمس کنید 🎙️' : t('tapToRecord'))}
             </Text>
           )}
         </View>
@@ -1381,6 +1542,14 @@ export const SceneScreen = () => {
         onClose={() => setStreakInfoVisible(false)}
         streak={streakCount}
         freezes={streakFreezes}
+      />
+
+      <ShadowingGuideModal
+        visible={guideModalVisible}
+        onClose={handleCloseGuide}
+        language={language}
+        initialMode={flowMode}
+        onSelectMode={(mode) => setFlowMode(mode)}
       />
     </View>
   );

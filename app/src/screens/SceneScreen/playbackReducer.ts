@@ -61,10 +61,10 @@ export const initialPlaybackState: PlaybackState = {
   stepLines: {},
 };
 
-/** مرحله‌هایی که دور خودکار دارند (گوش دادن و شدو). */
-export const AUTO_REPEAT_STEPS = [0, 1];
+/** مرحله‌هایی که دور خودکار دارند (فقط مرحله‌ی ۰ گوش دادن؛ مراحل صحبت، ضبط و نمره منتظر کاربر می‌مانند). */
+export const AUTO_REPEAT_STEPS = [0];
 
-export const isAutoStep = (step: number) => AUTO_REPEAT_STEPS.includes(step);
+export const isAutoStep = (step: number) => step === 0;
 
 export type PlaybackAction =
   /** پخش یک جمله از اول — تنها راهِ عوض کردن جمله‌ی فعال همراه با پخش. */
@@ -155,6 +155,7 @@ export function playbackReducer(state: PlaybackState, action: PlaybackAction): P
         activeIndex: action.index,
         audioUri: uriOf(action.items, action.index),
         playing: false,
+        command: 'none',
         bubbleVisible: true,
         lineAudioMissing: false,
         playAllQueue: [],
@@ -203,13 +204,15 @@ export function playbackReducer(state: PlaybackState, action: PlaybackAction): P
       if (action.hasRecording && !action.hasRecording(target)) target = state.activeIndex;
 
       const base = { ...state, stepLines, step: action.step, repeatCount: 1 };
-      return isAutoStep(action.step)
+      // در مرحله‌های ۰ (شنیدن)، ۱ (سایه‌زنی) و ۲ (ضبط)، ابتدا صدای جمله یک‌بار پخش می‌شود
+      return action.step === 0 || action.step === 1 || action.step === 2
         ? playLine(base, target, action.items)
         : {
             ...base,
             activeIndex: target,
             audioUri: uriOf(action.items, target),
             playing: false,
+            command: 'none',
             bubbleVisible: true,
             lineAudioMissing: false,
             playAllQueue: [],
@@ -230,10 +233,10 @@ export function playbackReducer(state: PlaybackState, action: PlaybackAction): P
       return { ...state, sceneFinished: true };
 
     case 'AUDIO_FINISHED':
-      return { ...state, bubbleVisible: false };
+      return { ...state, playing: false, command: 'none', bubbleVisible: false };
 
     case 'AUDIO_MISSING':
-      return { ...state, lineAudioMissing: true };
+      return { ...state, playing: false, command: 'none', lineAudioMissing: true };
 
     case 'PLAY_RECORDING':
       return {

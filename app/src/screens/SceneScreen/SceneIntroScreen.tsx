@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Lightbulb, Lock, MapPin, MessageCircle, Pause, Play, Share2, Volume2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HelpCircle, Lightbulb, Lock, MapPin, MessageCircle, Pause, Play, Share2, Sparkles, Volume2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
@@ -17,6 +17,7 @@ import { FONT_FAMILY } from '../../theme/typography';
 import { LEVEL_BADGE_STYLE, LEVEL_LABEL_KEY } from '../../components/SceneListCard';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import type { DialogueItem, Scenario, WordEntry } from '../../data/scenarios';
+import type { PracticeFlowMode } from '../../data/PracticeSettingsContext';
 
 /** چند واژه‌ی هر هات‌اسپات قبل از «+N تا دیگه» نشان داده می‌شود. */
 const WORDS_PREVIEW_COUNT = 6;
@@ -30,6 +31,7 @@ interface SceneIntroScreenProps {
   onShowAllDialogues: () => void;
   onClose: () => void;
   onEnterScene: () => void;
+  onOpenGuide?: () => void;
   /** وضعیت دانلود صدای جمله‌ها؛ تا finished نشده دکمه‌ی ورود منتظر می‌ماند. */
   audioPrep: { done: number; total: number; failed: number; finished: boolean };
   onRetryAudio: () => void;
@@ -41,6 +43,7 @@ interface SceneIntroScreenProps {
   onOpenPaywall?: () => void;
   /** فارسی: چیدمان راست‌به‌چپ. */
   rtl?: boolean;
+  flowMode?: PracticeFlowMode;
   t: (key: string) => string;
 }
 
@@ -67,6 +70,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onShowAllDialogues,
   onClose,
   onEnterScene,
+  onOpenGuide,
   audioPrep,
   onRetryAudio,
   loadFailed,
@@ -75,6 +79,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   lockMessage,
   onOpenPaywall,
   rtl = false,
+  flowMode = 'smart_flow',
   t,
 }) => {
   const insets = useSafeAreaInsets();
@@ -184,14 +189,27 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           {rtl ? <ChevronRight size={22} color={COLORS.white} /> : <ChevronLeft size={22} color={COLORS.white} />}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={handleShare}
-          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-          activeOpacity={0.8}
-        >
-          <Share2 size={18} color={COLORS.white} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {onOpenGuide && (
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={onOpenGuide}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              activeOpacity={0.8}
+            >
+              <HelpCircle size={18} color={COLORS.white} />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={handleShare}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            activeOpacity={0.8}
+          >
+            <Share2 size={18} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -352,16 +370,40 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           </View>
         )}
 
-        {/* 4-Step Method Tip Banner */}
-        <View style={[styles.tipBanner, row]}>
-          <View style={styles.tipIconCircle}>
-            <Lightbulb size={18} color="#F5A623" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.tipTitle, tr]}>{t('fourStepMethodTitle')}</Text>
-            <Text style={[styles.tipText, tr]}>{t('sceneRuleTip')}</Text>
-          </View>
-        </View>
+        {/* Method Tip Banner */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.tipBanner, row]}
+          onPress={onOpenGuide}
+        >
+          {flowMode === 'classic_steps' ? (
+            <>
+              <View style={styles.tipIconCircle}>
+                <Lightbulb size={18} color="#F5A623" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.tipTitle, tr]}>{t('fourStepMethodTitle')}</Text>
+                <Text style={[styles.tipText, tr]}>{t('sceneRuleTip')}</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={[styles.tipIconCircle, { backgroundColor: 'rgba(5, 150, 105, 0.12)' }]}>
+                <Sparkles size={18} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.tipTitle, tr, { color: '#059669' }]}>
+                  {rtl ? 'سایه‌زنی هوشمند با هوش مصنوعی ✨' : 'Smart Shadowing with AI ✨'}
+                </Text>
+                <Text style={[styles.tipText, tr]}>
+                  {rtl
+                    ? 'شنیدن داستان، سایه‌زنی هم‌زمان با صدای گوینده، و دریافت کارنامه و نمره آنی کلمات.'
+                    : 'Listen to native dialogues, shadow aloud with rhythm, and receive instant AI feedback.'}
+                </Text>
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
 
         {/* Dialogue Preview */}
         <Text style={[styles.conversationsLabel, tr]}>{t('dialoguePreview')}</Text>

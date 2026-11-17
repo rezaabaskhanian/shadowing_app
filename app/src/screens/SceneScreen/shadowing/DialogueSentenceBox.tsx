@@ -116,14 +116,9 @@ export const DialogueSentenceBox: React.FC<{
         </View>
       )}
 
-      {/* ترجمه فارسی */}
-      {!!currentDialogue.translation && (
-        <Text
-          style={[
-            styles.translationText,
-            activeStepIndex === 2 && !textRevealed && styles.translationRecall,
-          ]}
-        >
+      {/* ترجمه فارسی — در مرحله ضبط (گام ۲) اگر متن مخفی باشد، ترجمه فارسی هم همزمان مخفی می‌شود */}
+      {!!currentDialogue.translation && (activeStepIndex !== 2 || textRevealed) && (
+        <Text style={styles.translationText}>
           {currentDialogue.translation}
         </Text>
       )}

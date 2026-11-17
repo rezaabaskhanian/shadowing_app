@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Flame, X } from 'lucide-react-native';
+import { Flame, Mic, Sparkles, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
+import { SHADOWS } from '../../theme/elevation';
 import { HotspotPulse } from '../../components/HotspotPulse';
 
 // زوم‌اوت (۴۵۰) + زوم‌این (۵۵۰): پالس بعد از نشستنِ دوربین روی نقطه ظاهر می‌شود.
@@ -120,7 +121,16 @@ interface SceneCameraHeroProps {
   bubbleContent?: React.ReactNode;
   /** فقط وقتی true است حباب نمایش داده می‌شود (با پایان صدای هر خط، بسته می‌شود). */
   bubbleVisible: boolean;
+  /** وضعیت نمایش پیام آماده‌باش یا شمارش معکوس روی تصویر صحنه */
+  shadowOverlayState?: 'idle' | 'waiting_ready' | 'countdown';
+  countdownNum?: number;
+  onConfirmReady?: () => void;
+  language?: string;
+  rtl?: boolean;
 }
+
+const toLocaleDigits = (n: number | string, isRtl: boolean) =>
+  isRtl ? String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(n);
 
 /**
  * ناحیه‌ی تصویر بالای صفحه‌ی صحنه: عکس صحنه + دوربینی که با زوم و pan روی
@@ -145,6 +155,11 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   bubbleText,
   bubbleContent,
   bubbleVisible,
+  shadowOverlayState = 'idle',
+  countdownNum = 3,
+  onConfirmReady,
+  language = 'fa',
+  rtl = true,
 }) => {
   const zoomAnim = useRef(new Animated.Value(1)).current;
   const panXAnim = useRef(new Animated.Value(0)).current;
@@ -395,6 +410,54 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
         </TouchableOpacity>
       </View>
 
+      {/* پیام آماده‌باش یا شمارش معکوس روی خود تصویر صحنه */}
+      {shadowOverlayState === 'waiting_ready' && (
+        <View style={styles.sceneOverlayCenterWrap} pointerEvents="box-none">
+          <View style={styles.sceneReadyCard}>
+            <View style={styles.sceneReadyIconWrap}>
+              <Mic size={24} color="#FFF" />
+            </View>
+            <Text style={styles.sceneReadyTitle}>
+              {rtl ? '🎙️ نوبت شماست!' : '🎙️ Your Turn!'}
+            </Text>
+            <Text style={styles.sceneReadySub}>
+              {rtl
+                ? 'گوش دادید؛ هر زمان آماده بودید برای شروع سایه‌زنی لمس کنید'
+                : 'Tap the button below when you are ready to shadow'}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.sceneReadyBtn}
+              onPress={onConfirmReady}
+            >
+              <Sparkles size={16} color="#FFF" />
+              <Text style={styles.sceneReadyBtnText}>
+                {rtl ? 'آماده‌ام! شروع تمرین 🚀' : "I'm Ready! Let's Go 🚀"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {shadowOverlayState === 'countdown' && (
+        <View style={styles.sceneOverlayCenterWrap} pointerEvents="none">
+          <View style={styles.sceneCountdownCard}>
+            <View style={styles.sceneCountdownCircle}>
+              <Text style={styles.sceneCountdownNum}>{toLocaleDigits(countdownNum, rtl)}</Text>
+            </View>
+            <Text style={styles.sceneCountdownTitle}>
+              {rtl
+                ? countdownNum > 1
+                  ? `آماده‌باش... ${toLocaleDigits(countdownNum, true)}`
+                  : 'آماده‌باش... شروع صحبت! 🎙️'
+                : countdownNum > 1
+                  ? `Get ready... ${countdownNum}`
+                  : 'Get ready... Speak now! 🎙️'}
+            </Text>
+          </View>
+        </View>
+      )}
+
     </View>
   );
 };
@@ -497,5 +560,99 @@ const styles = StyleSheet.create({
   },
   hiddenOverlay: {
     opacity: 0,
+  },
+  sceneOverlayCenterWrap: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99,
+    elevation: 20,
+    paddingHorizontal: 20,
+  },
+  sceneReadyCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: 'rgba(15, 23, 42, 0.90)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 100, 34, 0.5)',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 8,
+    ...SHADOWS.level2,
+  },
+  sceneReadyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    ...SHADOWS.level1,
+  },
+  sceneReadyTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 16,
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  sceneReadySub: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  sceneReadyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    width: '100%',
+    ...SHADOWS.level1,
+  },
+  sceneReadyBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: '#FFF',
+  },
+  sceneCountdownCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingVertical: 18,
+    paddingHorizontal: 28,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 100, 34, 0.6)',
+    gap: 12,
+    ...SHADOWS.level2,
+  },
+  sceneCountdownCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.level2,
+  },
+  sceneCountdownNum: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 34,
+    color: '#FFF',
+  },
+  sceneCountdownTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14.5,
+    color: '#FFF',
+    textAlign: 'center',
   },
 });
