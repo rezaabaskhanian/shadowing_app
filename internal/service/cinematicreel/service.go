@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -139,6 +140,7 @@ func (s *Service) StartPocTest(modelChoice string) (*PocStatus, error) {
 }
 
 func (s *Service) runPocBackground(pocID, modelChoice, falKey string) {
+	slog.Info("cinematic: starting PoC generation", "poc_id", pocID, "model", modelChoice)
 	startTime := time.Now()
 	defer func() {
 		s.mu.Lock()
@@ -174,12 +176,15 @@ func (s *Service) runPocBackground(pocID, modelChoice, falKey string) {
 		"Warm morning soft lighting streaming through rain-streaked London cafe windows, soft steam from an espresso machine, 35mm film photography, cinematic lighting, vertical 9:16 aspect ratio."
 
 	update("generating_image", 20, "در حال رندر تصویر مرجع پرجزئیات کاراکترها در کافه لندن...", "", "", "")
+	slog.Info("cinematic: generating reference character image with Flux Dev...")
 
 	refImgURL, err := s.generateImageFal(ctx, falKey, imagePrompt)
 	if err != nil {
+		slog.Error("cinematic: failed to generate reference image", "err", err)
 		update("failed", 0, "خطا در ساخت تصویر مرجع: "+err.Error(), "", "", err.Error())
 		return
 	}
+	slog.Info("cinematic: reference image generated successfully", "image_url", refImgURL)
 
 	totalCost := CostFluxDevUSD
 	update("generating_video", 50, "تصویر مرجع ساخته شد! اکنون در حال متحرک‌سازی سکانس ۵ ثانیه‌ای با Image-to-Video...", refImgURL, "", "")
@@ -208,18 +213,23 @@ func (s *Service) runPocBackground(pocID, modelChoice, falKey string) {
 		"Emma the female barista behind the counter smiles warmly and listens attentively with natural eye contact and head movement. " +
 		"Subtle natural handheld camera motion, warm cozy coffeehouse lighting, photorealistic human movement, 9:16 vertical video."
 
+	slog.Info("cinematic: generating 5s video", "endpoint", videoEndpoint, "duration", videoDuration, "cost", videoCost)
 	vidURL, err := s.generateVideoFal(ctx, falKey, videoEndpoint, videoPrompt, refImgURL, videoDuration)
 	if err != nil {
+		slog.Error("cinematic: failed to generate video", "err", err)
 		update("failed", 50, "خطا در تولید ویدیوی صحنه: "+err.Error(), refImgURL, "", err.Error())
 		return
 	}
+	slog.Info("cinematic: video generated successfully on Fal.ai", "video_url", vidURL)
 
 	// ۳. دانلود ویدیو و ذخیره در محل دائمی filestore
 	update("generating_video", 85, "در حال انتقال ویدیو به حافظه محلی سرور لینگوفلو...", refImgURL, vidURL, "")
 	localVidURL, err := s.saveRemoteMedia(ctx, vidURL, ".mp4", "video/mp4")
 	if err != nil {
-		// اگر در دانلود لوکال مشکلی پیش آمد، همان URL ریموت معتبر را نگه می‌داریم
+		slog.Warn("cinematic: local download failed, using remote url", "err", err)
 		localVidURL = vidURL
+	} else {
+		slog.Info("cinematic: video saved locally", "local_url", localVidURL)
 	}
 
 	s.mu.Lock()
@@ -232,6 +242,7 @@ func (s *Service) runPocBackground(pocID, modelChoice, falKey string) {
 		s.lastPoc.ElapsedSec = time.Since(startTime).Seconds()
 	}
 	s.mu.Unlock()
+	slog.Info("cinematic: PoC generation completed successfully!", "elapsed_sec", time.Since(startTime).Seconds(), "cost", totalCost)
 }
 
 // generateImageFal فراخوانی Flux روی fal.ai برای تصویر مرجع
@@ -333,6 +344,8 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 		}
 	}
 
+	slog.Info("cinematic: fal task queued", "endpoint", endpoint, "request_id", submitResp.RequestID)
+
 	// پولینگ دوره‌ای تا وضعیت COMPLETED
 	statusURL := submitResp.StatusURL
 	if statusURL == "" {
@@ -346,11 +359,13 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
+	pollCount := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-ticker.C:
+			pollCount++
 			pollReq, err := http.NewRequestWithContext(ctx, "GET", statusURL, nil)
 			if err != nil {
 				return nil, err
@@ -359,6 +374,7 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 
 			pollResp, err := client.Do(pollReq)
 			if err != nil {
+				slog.Warn("cinematic: fal poll request error", "err", err)
 				continue
 			}
 
@@ -370,6 +386,10 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 				Error  string `json:"error"`
 			}
 			json.Unmarshal(pollBytes, &statusObj)
+
+			if pollCount%5 == 1 || statusObj.Status == "COMPLETED" || statusObj.Status == "ERROR" {
+				slog.Info("cinematic: fal polling progress", "endpoint", endpoint, "status", statusObj.Status, "req_id", submitResp.RequestID)
+			}
 
 			if statusObj.Status == "COMPLETED" {
 				// دریافت خروجی نهایی
@@ -394,6 +414,7 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 			}
 
 			if statusObj.Status == "ERROR" {
+				slog.Error("cinematic: fal reported error", "error", statusObj.Error, "req_id", submitResp.RequestID)
 				return nil, fmt.Errorf("خطا در پردازش هوش مصنوعی fal.ai: %s", statusObj.Error)
 			}
 		}

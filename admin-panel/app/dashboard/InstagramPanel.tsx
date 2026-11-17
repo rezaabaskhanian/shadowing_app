@@ -392,12 +392,14 @@ export default function InstagramPanel({
     async function checkStatus() {
       try {
         const s = await getCinematicPocStatus();
-        if (mounted) setPocStatus(s);
-        if (s.status === "generating_image" || s.status === "generating_video") {
-          timer = setTimeout(checkStatus, 2500);
+        if (mounted) {
+          setPocStatus(s);
+          if (s.status === "generating_image" || s.status === "generating_video") {
+            timer = setTimeout(checkStatus, 2000);
+          }
         }
       } catch (e) {
-        // ignore
+        if (mounted) timer = setTimeout(checkStatus, 3000);
       }
     }
 
@@ -406,7 +408,7 @@ export default function InstagramPanel({
       mounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [mode]);
+  }, [mode, pocStatus?.status]);
 
   // -------------------------------------------------------------
   // 1. CAROUSEL RENDERING (1080x1080)
@@ -3047,9 +3049,25 @@ export default function InstagramPanel({
                   </span>
                   <strong style={{ fontSize: 14 }}>{pocStatus.message}</strong>
                 </div>
-                <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-                  {pocStatus.elapsed_sec ? `زمان سپری‌شده: ${pocStatus.elapsed_sec.toFixed(1)} ثانیه` : ""}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+                    {pocStatus.elapsed_sec ? `زمان سپری‌شده: ${pocStatus.elapsed_sec.toFixed(1)} ثانیه` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const s = await getCinematicPocStatus();
+                        setPocStatus(s);
+                      } catch {}
+                    }}
+                    className="btn"
+                    style={{ fontSize: 11, padding: "3px 8px", background: "var(--surface-2)" }}
+                    title="دریافت آخرین وضعیت از سرور"
+                  >
+                    🔄 استعلام
+                  </button>
+                </div>
               </div>
 
               {/* Progress Bar */}
