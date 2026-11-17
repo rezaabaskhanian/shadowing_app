@@ -95,6 +95,7 @@ services:
       # ست شود، به جای xray استفاده می‌شود؛ خالی = همان پراکسی بالا.
       AI_RELAY_URL: ${AI_RELAY_URL:-}
       AI_RELAY_KEY: ${AI_RELAY_KEY:-}
+      FAL_KEY: ${FAL_KEY:-}
       XRAY_CONFIG_PATH: /xray-config/config.json
     volumes:
       - uploads_data:/root/uploads

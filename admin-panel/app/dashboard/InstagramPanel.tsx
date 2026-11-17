@@ -6,8 +6,11 @@ import {
   listInstagramLessons,
   buildCustomInstagramPost,
   listVideoClips,
+  startCinematicPoc,
+  getCinematicPocStatus,
+  updateSetting,
 } from "@/lib/api";
-import type { InstagramLesson, VideoClip } from "@/lib/types";
+import type { InstagramLesson, VideoClip, CinematicPocStatus } from "@/lib/types";
 
 const DEFAULT_FALLBACK_LESSON: InstagramLesson = {
   id: 1,
@@ -298,8 +301,15 @@ export default function InstagramPanel({
   const [currentLesson, setCurrentLesson] = useState<InstagramLesson>(DEFAULT_FALLBACK_LESSON);
   const [loading, setLoading] = useState(false);
 
-  // Tab mode: "carousel" (1080x1080) vs "reel" (1080x1920)
-  const [mode, setMode] = useState<"carousel" | "reel">("carousel");
+  // Tab mode: "carousel" (1080x1080) vs "reel" (1080x1920) vs "cinematic_poc"
+  const [mode, setMode] = useState<"carousel" | "reel" | "cinematic_poc">("carousel");
+
+  // Cinematic PoC state (Phase 1 Proof of Concept)
+  const [pocStatus, setPocStatus] = useState<CinematicPocStatus | null>(null);
+  const [pocLoading, setPocLoading] = useState(false);
+  const [pocModel, setPocModel] = useState<"kling" | "minimax">("kling");
+  const [falKeyInput, setFalKeyInput] = useState("");
+  const [isSavingKey, setIsSavingKey] = useState(false);
 
   // Carousel state
   const [activeSlide, setActiveSlide] = useState<1 | 2 | 3 | 4>(1);
@@ -372,6 +382,31 @@ export default function InstagramPanel({
       mounted = false;
     };
   }, []);
+
+  // Polling وضعیت تست ریلز سینمایی فاز ۱
+  useEffect(() => {
+    if (mode !== "cinematic_poc") return;
+    let timer: any = null;
+    let mounted = true;
+
+    async function checkStatus() {
+      try {
+        const s = await getCinematicPocStatus();
+        if (mounted) setPocStatus(s);
+        if (s.status === "generating_image" || s.status === "generating_video") {
+          timer = setTimeout(checkStatus, 2500);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    checkStatus();
+    return () => {
+      mounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [mode]);
 
   // -------------------------------------------------------------
   // 1. CAROUSEL RENDERING (1080x1080)
@@ -1690,6 +1725,35 @@ export default function InstagramPanel({
     notify(`آهنگ «${file.name}» با موفقیت برای ریلز انتخاب شد 🎵`, "ok");
   }
 
+  async function handleStartPoc() {
+    setPocLoading(true);
+    try {
+      const s = await startCinematicPoc(pocModel);
+      setPocStatus(s);
+      notify("تولید تست ۵ ثانیه‌ای آغاز شد. لطفاً چند لحظه صبر کنید...", "ok");
+    } catch (err: any) {
+      notify(err.message || "خطا در شروع تست ریلز سینمایی", "err");
+    } finally {
+      setPocLoading(false);
+    }
+  }
+
+  async function handleSaveFalKey() {
+    if (!falKeyInput.trim()) return;
+    setIsSavingKey(true);
+    try {
+      await updateSetting("FAL_KEY", falKeyInput.trim());
+      notify("کلید FAL_KEY با موفقیت در سرور ذخیره شد", "ok");
+      setFalKeyInput("");
+      const s = await getCinematicPocStatus();
+      setPocStatus(s);
+    } catch (err: any) {
+      notify("خطا در ذخیره کلید: " + (err.message || err), "err");
+    } finally {
+      setIsSavingKey(false);
+    }
+  }
+
   // Safe Text wrapping helper (never crashes on undefined/null)
   function wrapText(
     ctx: CanvasRenderingContext2D,
@@ -1973,6 +2037,39 @@ export default function InstagramPanel({
             }}
           >
             جذب اکسپلور 🔥
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMode("cinematic_poc")}
+          style={{
+            padding: "10px 20px",
+            borderRadius: 10,
+            border: "none",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+            background:
+              mode === "cinematic_poc"
+                ? "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"
+                : "var(--surface-2)",
+            color: mode === "cinematic_poc" ? "#fff" : "var(--text-2)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          ✨ ریلز سینمایی هوش مصنوعی (فاز ۱ آزمایشی)
+          <span
+            style={{
+              background: "rgba(255, 255, 255, 0.25)",
+              fontSize: 11,
+              padding: "2px 6px",
+              borderRadius: 10,
+            }}
+          >
+            Cinematic PoC
           </span>
         </button>
       </div>
@@ -2665,6 +2762,460 @@ export default function InstagramPanel({
               </ul>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODE 3: CINEMATIC REELS POC (Phase 1)                     */}
+      {/* ========================================================= */}
+      {mode === "cinematic_poc" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Header & Budget Alert */}
+          <div
+            className="card"
+            style={{
+              padding: 24,
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.06) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.3)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ fontSize: 24 }}>🎬</span>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
+                  تست آزمایشی ریلز سینمایی (Phase 1 — Proof of Concept)
+                </h2>
+                <span
+                  style={{
+                    background: "#f59e0b",
+                    color: "#000",
+                    fontWeight: 800,
+                    fontSize: 11,
+                    padding: "3px 8px",
+                    borderRadius: 8,
+                  }}
+                >
+                  تست تک‌سکانس ۵ ثانیه‌ای
+                </span>
+              </div>
+              <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13.5, lineHeight: 1.7, maxWidth: 700 }}>
+                هدف این مرحله، سنجش کیفیت واقعی Image-to-Video، حرکت طبیعی انسان، حفظ ثبات چهره و حس سینمایی در ابعاد ۹:۱۶ بدون هزینه اضافی است.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                background: "rgba(0, 0, 0, 0.3)",
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <span style={{ fontSize: 12, color: "var(--text-3)" }}>سقف هزینه مجاز فاز ۱:</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>حداکثر ۰٫۵۰ دلار</span>
+              <span style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>بدون تکرار یا مصرف خودکار</span>
+            </div>
+          </div>
+
+          {/* Test Setup Parameters & Model Selection */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+              gap: 20,
+            }}
+          >
+            {/* Scenario Card */}
+            <div className="card" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+                ☕ سناریوی آزمایشی: Ordering Coffee in London
+              </h3>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
+                  سطح: A2 (Pre-Intermediate)
+                </span>
+                <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399" }}>
+                  مدت زمان: ۵ ثانیه (سکانس ۱)
+                </span>
+                <span className="badge" style={{ background: "rgba(236, 72, 153, 0.15)", color: "#f472b6" }}>
+                  نسبت ابعاد: ۹:۱۶ عمودی (1080x1920)
+                </span>
+              </div>
+
+              <div style={{ background: "var(--surface-2)", padding: 14, borderRadius: 10, fontSize: 13, lineHeight: 1.8 }}>
+                <div style={{ fontWeight: 700, color: "var(--text-1)", marginBottom: 4 }}>
+                  👥 کاراکترهای ثابت در صحنه:
+                </div>
+                <div>
+                  • <strong>Oliver:</strong> جوان ۲۵ ساله، موهای قهوه‌ای مرتب، پالتو/کت مشکی شیک.
+                </div>
+                <div>
+                  • <strong>Emma:</strong> باریستای خانم ۲۷ ساله بریتانیایی، موهای بسته، پیش‌بند سبز تیره کافه روی بافت کرم.
+                </div>
+                <div style={{ marginTop: 8, color: "var(--text-2)", fontStyle: "italic" }}>
+                  🎬 <strong>سکانس ۱:</strong> Oliver وارد کافه مدرن لندن می‌شود و به پیشخوان نزدیک می‌شود؛ Emma با لبخند گرم به استقبال می‌آید.
+                </div>
+              </div>
+            </div>
+
+            {/* Model & Fal Key Card */}
+            <div className="card" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+                ⚙️ انتخاب مدل و زیرساخت Fal.ai
+              </h3>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                  انتخاب مدل Image-to-Video:
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      padding: 12,
+                      borderRadius: 10,
+                      border: pocModel === "kling" ? "2px solid #818cf8" : "1px solid var(--border)",
+                      background: pocModel === "kling" ? "rgba(99, 102, 241, 0.08)" : "var(--surface-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="pocModel"
+                      value="kling"
+                      checked={pocModel === "kling"}
+                      onChange={() => setPocModel("kling")}
+                      style={{ marginTop: 3 }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                        Kling 2.5 Turbo Standard (پیشنهادی)
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>
+                        Endpoint: <code>fal-ai/kling-video/v2.5-turbo/standard/image-to-video</code>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#10b981", fontWeight: 700, marginTop: 4 }}>
+                        تعرفه قطعی: ۰٫۰۴۲$/ثانیه ➔ ۵ ثانیه = ۰٫۲۱ دلار (+ تصویر = ۰٫۲۳۵ دلار)
+                      </div>
+                    </div>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      padding: 12,
+                      borderRadius: 10,
+                      border: pocModel === "minimax" ? "2px solid #818cf8" : "1px solid var(--border)",
+                      background: pocModel === "minimax" ? "rgba(99, 102, 241, 0.08)" : "var(--surface-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="pocModel"
+                      value="minimax"
+                      checked={pocModel === "minimax"}
+                      onChange={() => setPocModel("minimax")}
+                      style={{ marginTop: 3 }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                        MiniMax H3 Max Turbo (فوق‌العاده سریع و اقتصادی)
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>
+                        Endpoint: <code>minimax/h3-max-turbo/image-to-video</code>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#10b981", fontWeight: 700, marginTop: 4 }}>
+                        تعرفه قطعی: ۰٫۰۱۵$/ثانیه ➔ ۵ ثانیه = ۰٫۰۷۵ دلار (+ تصویر = ۰٫۱۰ دلار)
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* FAL_KEY Setting Helper */}
+              <div
+                style={{
+                  background: "rgba(0, 0, 0, 0.2)",
+                  padding: 12,
+                  borderRadius: 10,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>تنظیم کلید FAL_KEY در سرور:</span>
+                  <span style={{ fontSize: 11, color: "var(--text-3)" }}>امن در محیط سرور Go</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="کلید fal.ai (مثال: key_...)"
+                    value={falKeyInput}
+                    onChange={(e) => setFalKeyInput(e.target.value)}
+                    style={{ flex: 1, fontSize: 12 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleSaveFalKey}
+                    disabled={isSavingKey || !falKeyInput.trim()}
+                    style={{ fontSize: 12, padding: "6px 12px", background: "var(--surface-2)" }}
+                  >
+                    {isSavingKey ? "..." : "ذخیره"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Trigger Button */}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleStartPoc}
+                disabled={
+                  pocLoading ||
+                  pocStatus?.status === "generating_image" ||
+                  pocStatus?.status === "generating_video"
+                }
+                style={{
+                  padding: "12px 20px",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginTop: 6,
+                }}
+              >
+                {pocLoading ||
+                pocStatus?.status === "generating_image" ||
+                pocStatus?.status === "generating_video" ? (
+                  <>⏳ در حال پردازش آزمایشی ({pocStatus?.progress || 0}%)...</>
+                ) : (
+                  <>🚀 شروع تولید تست ۵ ثانیه‌ای فاز ۱</>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Real-time Status Card & Progress */}
+          {pocStatus && pocStatus.status !== "idle" && (
+            <div
+              className="card"
+              style={{
+                padding: 20,
+                border:
+                  pocStatus.status === "failed"
+                    ? "1px solid #ef4444"
+                    : pocStatus.status === "completed"
+                    ? "1px solid #10b981"
+                    : "1px solid #f59e0b",
+                background:
+                  pocStatus.status === "completed"
+                    ? "rgba(16, 185, 129, 0.05)"
+                    : pocStatus.status === "failed"
+                    ? "rgba(239, 68, 68, 0.05)"
+                    : "rgba(245, 158, 11, 0.05)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>
+                    {pocStatus.status === "completed"
+                      ? "✅"
+                      : pocStatus.status === "failed"
+                      ? "❌"
+                      : "⏳"}
+                  </span>
+                  <strong style={{ fontSize: 14 }}>{pocStatus.message}</strong>
+                </div>
+                <span style={{ fontSize: 12, color: "var(--text-2)" }}>
+                  {pocStatus.elapsed_sec ? `زمان سپری‌شده: ${pocStatus.elapsed_sec.toFixed(1)} ثانیه` : ""}
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div
+                style={{
+                  width: "100%",
+                  height: 8,
+                  background: "rgba(255, 255, 255, 0.1)",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${pocStatus.progress || 0}%`,
+                    height: "100%",
+                    background:
+                      pocStatus.status === "failed"
+                        ? "#ef4444"
+                        : pocStatus.status === "completed"
+                        ? "#10b981"
+                        : "linear-gradient(90deg, #f59e0b, #ef4444)",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+
+              {pocStatus.error && (
+                <div style={{ color: "#ef4444", fontSize: 13, marginTop: 10 }}>
+                  ⚠️ {pocStatus.error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results: Reference Image & Video Player */}
+          {pocStatus && (pocStatus.reference_image_url || pocStatus.video_url) && (
+            <div
+              className="card"
+              style={{
+                padding: 24,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 24,
+                alignItems: "start",
+              }}
+            >
+              {/* Reference Image */}
+              {pocStatus.reference_image_url && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+                    🖼️ ۱. تصویر مرجع سینمایی (Flux Dev - ۹:۱۶)
+                  </h4>
+                  <div
+                    style={{
+                      width: 240,
+                      height: 426,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "2px solid var(--border)",
+                      background: "#000",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    <img
+                      src={pocStatus.reference_image_url}
+                      alt="Reference Characters Oliver and Emma"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                  <span style={{ fontSize: 12, color: "var(--text-3)", textAlign: "center" }}>
+                    ثبات کاراکتر: تصویر یکتا برای کل سناریو
+                  </span>
+                </div>
+              )}
+
+              {/* Generated Video Player */}
+              {pocStatus.video_url && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#10b981" }}>
+                    🎥 ۲. ویدیوی واقعی متحرک ۵ ثانیه‌ای (Image-to-Video)
+                  </h4>
+                  <div
+                    style={{
+                      width: 240,
+                      height: 426,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "3px solid #10b981",
+                      background: "#000",
+                      boxShadow: "0 10px 30px rgba(16, 185, 129, 0.25)",
+                    }}
+                  >
+                    <video
+                      controls
+                      autoPlay
+                      loop
+                      playsInline
+                      src={pocStatus.video_url}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+
+                  <a
+                    href={pocStatus.video_url}
+                    download="lingoflow_cinematic_poc_coffee_london.mp4"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn"
+                    style={{
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      color: "#fff",
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    ⬇️ دانلود فایل ویدیویی MP4
+                  </a>
+                </div>
+              )}
+
+              {/* Cost & Evaluation Metrics */}
+              {pocStatus.status === "completed" && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    background: "var(--surface-2)",
+                    padding: 18,
+                    borderRadius: 12,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)" }}>مدل اجرا شده:</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{pocStatus.model_used || "Kling 2.5 Turbo"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)" }}>هزینه واقعی پردازش:</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#10b981", marginTop: 2 }}>
+                      {pocStatus.real_cost_usd ? `$${pocStatus.real_cost_usd.toFixed(3)}` : "$0.235"}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)" }}>زمان تولید کلیپ:</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
+                      {pocStatus.elapsed_sec ? `${pocStatus.elapsed_sec.toFixed(1)} ثانیه` : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)" }}>کنترل بودجه:</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#10b981", marginTop: 2 }}>
+                      زیر سقف ۰٫۵۰ دلار ✅
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

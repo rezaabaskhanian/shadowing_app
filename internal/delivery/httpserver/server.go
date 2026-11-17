@@ -63,6 +63,7 @@ import (
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	"shadowing-backend/internal/service/instagrampost"
+	"shadowing-backend/internal/service/cinematicreel"
 	"shadowing-backend/internal/service/telegramchannel"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicspeakingservice "shadowing-backend/internal/service/topicspeaking"
@@ -182,6 +183,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 	go telegramChannelSvc.StartScheduler(context.Background())
 
 	instagramPostSvc := instagrampost.New()
+	cinematicReelSvc := cinematicreel.New(settingsSvc, store)
 
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
@@ -212,7 +214,7 @@ func New(cfg config.Config, userSvc userservice.Service,
 			authSvc, authConfig, store,
 			verbSvc,
 			adminBot,
-		).WithTelegramChannel(telegramChannelSvc).WithInstagramPost(&instagramPostSvc),
+		).WithTelegramChannel(telegramChannelSvc).WithInstagramPost(&instagramPostSvc).WithCinematicReel(cinematicReelSvc),
 
 		verbHandler: verbhandler.New(verbSvc, authSvc, authConfig, uploadDir),
 

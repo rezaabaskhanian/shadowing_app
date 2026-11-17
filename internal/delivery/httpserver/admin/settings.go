@@ -52,6 +52,7 @@ type settingsResponse struct {
 	BaleChatID         string      `json:"bale_chat_id"`
 	FeatureInterview   string      `json:"feature_interview_enabled"`
 	FeatureESP         string      `json:"feature_esp_enabled"`
+	FalKey             settingItem `json:"fal_key"`
 }
 
 // GetSettings وضعیت فعلی تنظیمات را برمی‌گرداند؛ خودِ کلیدها هیچ‌وقت کامل نمایش
@@ -95,6 +96,7 @@ func (h Handler) GetSettings(c echo.Context) error {
 		BaleChatID:         s.Get(settingsservice.KeyBaleChatID),
 		FeatureInterview:   s.Get(settingsservice.KeyFeatureInterview),
 		FeatureESP:         s.Get(settingsservice.KeyFeatureESP),
+		FalKey:             get(settingsservice.KeyFalKey),
 	})
 }
 

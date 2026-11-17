@@ -33,6 +33,7 @@ const (
 	KeyFCMServiceAccount   = "FCM_SERVICE_ACCOUNT_JSON"
 	KeyAIDailyTokenLimit   = "AI_DAILY_TOKEN_LIMIT"
 	KeyAITokenPricing      = "AI_TOKEN_PRICING"
+	KeyFalKey              = "FAL_KEY"
 	// ربات اعلان‌های ادمین (تلگرام از رله/پراکسی، بله مستقیم) — ببینید adminbotservice.
 	KeyTelegramBotToken = "TELEGRAM_BOT_TOKEN"
 	KeyTelegramChatID   = "TELEGRAM_CHAT_ID"
@@ -91,6 +92,7 @@ var AllowedKeys = map[string]bool{
 	KeyTelegramChannelCustomText: true,
 	KeyTelegramChannelLastDate:   true,
 	KeyTelegramChannelLastStatus: true,
+	KeyFalKey:                    true,
 }
 
 type repository interface {

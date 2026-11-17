@@ -17,6 +17,7 @@ import (
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
 	"shadowing-backend/internal/service/instagrampost"
+	"shadowing-backend/internal/service/cinematicreel"
 	"shadowing-backend/internal/service/telegramchannel"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicsuggestionservice "shadowing-backend/internal/service/topicsuggestion"
@@ -57,6 +58,8 @@ type Handler struct {
 	telegramChannelSvc *telegramchannel.Service
 	// instagramPostSvc تولید کارت‌های اسلایدی و محتوای پست اینستاگرام
 	instagramPostSvc *instagrampost.Service
+	// cinematicReelSvc تولید ریلز ویدیویی سینمایی هوش مصنوعی
+	cinematicReelSvc *cinematicreel.Service
 }
 
 func (h Handler) WithTelegramChannel(svc *telegramchannel.Service) Handler {
@@ -66,6 +69,11 @@ func (h Handler) WithTelegramChannel(svc *telegramchannel.Service) Handler {
 
 func (h Handler) WithInstagramPost(svc *instagrampost.Service) Handler {
 	h.instagramPostSvc = svc
+	return h
+}
+
+func (h Handler) WithCinematicReel(svc *cinematicreel.Service) Handler {
+	h.cinematicReelSvc = svc
 	return h
 }
 

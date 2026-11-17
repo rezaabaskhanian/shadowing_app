@@ -76,6 +76,10 @@ func (h Handler) SetAdminRoutes(e *echo.Echo) {
 	g.GET("/instagram-post/lessons", h.ListInstagramLessons)
 	g.POST("/instagram-post/custom", h.BuildCustomInstagramPost)
 
+	// ریلز سینمایی با هوش مصنوعی (فاز ۱ - تست Proof of Concept)
+	g.POST("/cinematic-reels/poc/start", h.StartCinematicPoc)
+	g.GET("/cinematic-reels/poc/status", h.GetCinematicPocStatus)
+
 	// بررسی پیشنهادهای موضوع کاربران
 	g.GET("/topic-suggestions", h.ListTopicSuggestions)
 	g.GET("/topic-suggestions/:id", h.GetTopicSuggestion)

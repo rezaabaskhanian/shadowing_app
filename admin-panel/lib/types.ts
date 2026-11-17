@@ -210,6 +210,21 @@ export interface InstagramLesson {
   hashtags: string;
 }
 
+export interface CinematicPocStatus {
+  id?: string;
+  status: "idle" | "generating_image" | "generating_video" | "completed" | "failed";
+  progress: number;
+  message: string;
+  reference_image_url?: string;
+  video_url?: string;
+  model_used?: string;
+  real_cost_usd?: number;
+  duration_sec?: number;
+  elapsed_sec?: number;
+  error?: string;
+  created_at?: string;
+}
+
 // ---------- نوتیفیکیشن‌ها ----------
 export interface NotificationStatsResp {
   total_users: number;

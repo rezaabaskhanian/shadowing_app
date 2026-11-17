@@ -55,6 +55,7 @@ import type {
   VerbOccurrence,
   VerbSummary,
   InstagramLesson,
+  CinematicPocStatus,
 } from "./types";
 
 export const API_BASE =
@@ -431,6 +432,17 @@ export async function listInstagramLessons(): Promise<InstagramLesson[]> {
 
 export async function buildCustomInstagramPost(lesson: Partial<InstagramLesson>): Promise<InstagramLesson> {
   const res = await authFetch("/v1/admin/instagram-post/custom", jsonBody("POST", lesson));
+  return jsonOrThrow(res);
+}
+
+// ---------- ریلز سینمایی با هوش مصنوعی (فاز ۱ - PoC) ----------
+export async function startCinematicPoc(model: string = "kling"): Promise<CinematicPocStatus> {
+  const res = await authFetch("/v1/admin/cinematic-reels/poc/start", jsonBody("POST", { model }));
+  return jsonOrThrow(res);
+}
+
+export async function getCinematicPocStatus(): Promise<CinematicPocStatus> {
+  const res = await authFetch("/v1/admin/cinematic-reels/poc/status", { method: "GET" });
   return jsonOrThrow(res);
 }
 
