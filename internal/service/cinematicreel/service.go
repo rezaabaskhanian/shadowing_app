@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"shadowing-backend/internal/pkg/filestore"
+	"shadowing-backend/internal/pkg/outboundhttp"
 	settingsservice "shadowing-backend/internal/service/settings"
 
 	"github.com/google/uuid"
@@ -65,6 +66,18 @@ func New(settings *settingsservice.Service, store filestore.Store) *Service {
 		store:    store,
 		client:   &http.Client{Timeout: 300 * time.Second},
 	}
+}
+
+func (s *Service) getClient() *http.Client {
+	c, err := outboundhttp.Client()
+	if err == nil && c != nil {
+		c.Timeout = 300 * time.Second
+		return c
+	}
+	if s.client != nil {
+		return s.client
+	}
+	return &http.Client{Timeout: 300 * time.Second}
 }
 
 func (s *Service) getFalKey() string {
@@ -291,7 +304,8 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 	req.Header.Set("Authorization", "Key "+falKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := s.client.Do(req)
+	client := s.getClient()
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("خطای ارتباط با سرور fal.ai: %w", err)
 	}
@@ -343,7 +357,7 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 			}
 			pollReq.Header.Set("Authorization", "Key "+falKey)
 
-			pollResp, err := s.client.Do(pollReq)
+			pollResp, err := client.Do(pollReq)
 			if err != nil {
 				continue
 			}
@@ -365,7 +379,7 @@ func (s *Service) callFalQueue(ctx context.Context, falKey, endpoint string, pay
 				}
 				resReq.Header.Set("Authorization", "Key "+falKey)
 
-				resResp, err := s.client.Do(resReq)
+				resResp, err := client.Do(resReq)
 				if err != nil {
 					return nil, err
 				}
@@ -392,7 +406,8 @@ func (s *Service) saveRemoteMedia(ctx context.Context, remoteURL, ext, contentTy
 	if err != nil {
 		return "", err
 	}
-	resp, err := s.client.Do(req)
+	client := s.getClient()
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
