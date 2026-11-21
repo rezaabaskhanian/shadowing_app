@@ -49,6 +49,7 @@ import { HelpFaqScreen } from '../screens/HelpFaq/HelpFaqScreen';
 import { CurriculumMapScreen } from '../screens/CurriculumMap/CurriculumMapScreen';
 import { QuizScreen } from '../screens/Quiz/QuizScreen';
 import { ActiveRecallScreen } from '../screens/ActiveRecall/ActiveRecallScreen';
+import { CustomSceneScreen } from '../screens/CustomScene/CustomSceneScreen';
 import { PaywallScreen } from '../screens/Paywall/PaywallScreen';
 import { TokenTopupScreen } from '../screens/TokenTopup/TokenTopupScreen';
 import { AIConversationScreen } from '../screens/AIConversation';
@@ -122,9 +123,11 @@ const FreshPodcastMyVersion = freshPerOpen(PodcastMyVersionScreen);
 const FreshPodcastDictation = freshPerOpen(PodcastDictationScreen);
 const FreshGoalMap = freshPerOpen(GoalMapScreen);
 const FreshActiveRecall = freshPerOpen(ActiveRecallScreen);
+const FreshCustomScene = freshPerOpen(CustomSceneScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
+  'CustomScene',
   'ActiveRecall',
   'Shadowing',
   'SubmitScene',
@@ -473,6 +476,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="ActiveRecall"
         component={FreshActiveRecall}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="CustomScene"
+        component={FreshCustomScene}
         options={{
           tabBarButton: () => null,
         }}

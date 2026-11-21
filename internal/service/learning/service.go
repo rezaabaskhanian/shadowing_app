@@ -39,6 +39,8 @@ type Repository interface {
 	// GetDialogueByID یک دیالوگ را مستقیم می‌خواند — برای نمره‌دهیِ سمت
 	// سرورِ کوئیز درک شنیداری (مقایسه‌ی پاسخ کاربر با متن واقعی).
 	GetDialogueByID(ctx context.Context, id uuid.UUID) (domain.Dialogue, error)
+	GetUserCustomScenes(ctx context.Context, userID string) ([]domain.Scene, error)
+	DeleteUserCustomScene(ctx context.Context, userID, sceneID string) error
 }
 
 type Service struct {

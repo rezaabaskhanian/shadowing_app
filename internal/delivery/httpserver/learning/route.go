@@ -42,4 +42,9 @@ func (h Handler) SetLearningRoutes(e *echo.Echo) {
 	// خریدِ مصرفیِ توکن (وقتی کاربر به سقفِ رایگانِ روزانه رسیده و نمی‌خواهد صبر کند)
 	learningGroup.GET("/token-topup-plans", h.TokenTopupPlans, middlware.Auth(h.authSvc, h.authConfig))
 	learningGroup.POST("/token-topup/verify-purchase", h.VerifyTokenTopupPurchase, middlware.Auth(h.authSvc, h.authConfig))
+
+	// صحنه‌های اختصاصی تولیدشده توسط کاربر با هوش مصنوعی
+	learningGroup.POST("/custom-scenes/generate", h.GenerateCustomScene, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.GET("/custom-scenes", h.ListCustomScenes, middlware.Auth(h.authSvc, h.authConfig))
+	learningGroup.DELETE("/custom-scenes/:sceneID", h.DeleteCustomScene, middlware.Auth(h.authSvc, h.authConfig))
 }

@@ -5,6 +5,7 @@ import (
 	aiaccessservice "shadowing-backend/internal/service/aiaccess"
 	authservice "shadowing-backend/internal/service/auth"
 	billingservice "shadowing-backend/internal/service/billing"
+	"shadowing-backend/internal/service/customscene"
 	feedbackservice "shadowing-backend/internal/service/feedback"
 	learningservice "shadowing-backend/internal/service/learning"
 	progressservice "shadowing-backend/internal/service/progress"
@@ -33,6 +34,13 @@ type Handler struct {
 
 	// store برای آپلود تصویر پیشنهاد صحنه توسط کاربر عادی
 	store filestore.Store
+
+	customSceneSvc customscene.Service
+}
+
+func (h Handler) WithCustomScene(svc customscene.Service) Handler {
+	h.customSceneSvc = svc
+	return h
 }
 
 func New(

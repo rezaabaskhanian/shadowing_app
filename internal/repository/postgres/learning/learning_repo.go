@@ -28,8 +28,9 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 	query := `INSERT INTO scenes (
 		id, title, description, background_image_url,
 		difficulty, status, "order", is_locked, category,
-		grammar_topic, grammar_explanation, grammar_examples, grammar_audio_url, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())`
+		grammar_topic, grammar_explanation, grammar_examples, grammar_audio_url,
+		created_by_user_id, is_custom, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())`
 
 	_, err = tx.Exec(ctx, query,
 		s.ID,
@@ -45,6 +46,8 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		nullableText(s.GrammarExplanation),
 		grammarExamplesJSON(s.GrammarExamples),
 		nullableText(s.GrammarAudioURL),
+		s.CreatedByUserID,
+		s.IsCustom,
 	)
 	if err != nil {
 		return richerror.New(op).
@@ -193,7 +196,7 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 		id, title, description, background_image_url,
 		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at,
 		COALESCE(grammar_topic, '')
-	FROM scenes ORDER BY "order", created_at DESC`
+	FROM scenes WHERE is_custom = false OR is_custom IS NULL ORDER BY "order", created_at DESC`
 
 	rows, err := r.conn.Query(ctx, query)
 	if err != nil {
@@ -218,6 +221,54 @@ func (r DB) GetAll(ctx context.Context) ([]scene.Scene, error) {
 	}
 
 	return scenes, nil
+}
+
+// GetUserCustomScenes صحنه‌های اختصاصی تولیدشده توسط یک کاربر خاص را برمی‌گرداند.
+func (r DB) GetUserCustomScenes(ctx context.Context, userID string) ([]scene.Scene, error) {
+	const op = "postgres.GetUserCustomScenes"
+
+	query := `SELECT
+		id, title, description, background_image_url,
+		difficulty, status, "order", is_locked, COALESCE(category, ''), created_at, updated_at,
+		COALESCE(grammar_topic, '')
+	FROM scenes WHERE created_by_user_id = $1 AND is_custom = true ORDER BY created_at DESC`
+
+	rows, err := r.conn.Query(ctx, query, userID)
+	if err != nil {
+		return nil, richerror.New(op).WithErr(err)
+	}
+	defer rows.Close()
+
+	var scenes []scene.Scene
+	for rows.Next() {
+		var s scene.Scene
+		err := rows.Scan(
+			&s.ID, &s.Title, &s.Description, &s.BackgroundImageURL,
+			&s.Difficulty, &s.Status, &s.Order, &s.IsLocked, &s.Category, &s.CreatedAt, &s.UpdatedAt,
+			&s.GrammarTopic,
+		)
+		if err != nil {
+			return nil, richerror.New(op).WithErr(err)
+		}
+		s.Hotspots = []scene.Hotspot{}
+		scenes = append(scenes, s)
+	}
+
+	return scenes, nil
+}
+
+// DeleteUserCustomScene صحنه اختصاصی کاربر را حذف می‌کند.
+func (r DB) DeleteUserCustomScene(ctx context.Context, userID, sceneID string) error {
+	const op = "postgres.DeleteUserCustomScene"
+	query := `DELETE FROM scenes WHERE id = $1 AND created_by_user_id = $2 AND is_custom = true`
+	res, err := r.conn.Exec(ctx, query, sceneID, userID)
+	if err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	if res.RowsAffected() == 0 {
+		return richerror.New(op).WithMessage("scene not found or unauthorized").WithKind(richerror.KindNotFound)
+	}
+	return nil
 }
 
 // GetByID implements [learningservice.Repository].

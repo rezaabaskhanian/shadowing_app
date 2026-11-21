@@ -43,6 +43,7 @@ import {
   Drama,
   Map as MapIcon,
   Zap,
+  Sparkles,
 } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -285,6 +286,17 @@ export const AppDrawer = ({
               <Zap color="#D97706" size={18} />
             </View>
             <Text style={[styles.rowText, ta]}>{t('activeRecallTitle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.row, rtl && styles.rowReverse]}
+            activeOpacity={0.7}
+            onPress={() => go('CustomScene')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: '#EDE9FE' }]}>
+              <Sparkles color="#7C3AED" size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>{t('customSceneDrawer')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

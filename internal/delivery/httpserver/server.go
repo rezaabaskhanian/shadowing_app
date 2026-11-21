@@ -62,8 +62,10 @@ import (
 	specialtyservice "shadowing-backend/internal/service/specialty"
 	submissionservice "shadowing-backend/internal/service/submission"
 	subscriptionservice "shadowing-backend/internal/service/subscription"
-	"shadowing-backend/internal/service/instagrampost"
 	"shadowing-backend/internal/service/cinematicreel"
+	"shadowing-backend/internal/service/customscene"
+	"shadowing-backend/internal/service/instagrampost"
+	"shadowing-backend/internal/service/speecheval"
 	"shadowing-backend/internal/service/telegramchannel"
 	tokentopupservice "shadowing-backend/internal/service/tokentopup"
 	topicspeakingservice "shadowing-backend/internal/service/topicspeaking"
@@ -185,11 +187,23 @@ func New(cfg config.Config, userSvc userservice.Service,
 	instagramPostSvc := instagrampost.New()
 	cinematicReelSvc := cinematicreel.New(settingsSvc, store)
 
+	var customTranscriber speecheval.LongTranscriber
+	if whisperURL := os.Getenv("WHISPER_URL"); whisperURL != "" {
+		customTranscriber = speecheval.NewWhisperEvaluator(whisperURL)
+	}
+	customSceneSvc := customscene.New(
+		learningSvc,
+		aiservice.New(settingsSvc),
+		ttsservice.New(settingsSvc),
+		store,
+		customTranscriber,
+	)
+
 	return Service{cfg: cfg,
 		userHandler: userhandler.New(userSvc, authSvc, notificationSvc, otpSvc, authConfig, cfg.Auth.SignKey),
 		learningHandler: learninghandler.New(
 			learningSvc, submissionSvc, subscriptionSvc, topicSuggestionSvc, feedbackSvc, billingSvc, &progressSvc, authSvc, authConfig, store, aiAccessSvc, tokenTopupSvc, assessmentSvc, pathSvc,
-		),
+		).WithCustomScene(customSceneSvc),
 
 		shadowingHandler: shadowinghandler.New(shadowingSvc, authSvc, authConfig, uploadDir),
 

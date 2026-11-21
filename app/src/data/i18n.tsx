@@ -1827,6 +1827,7 @@ export const translations: Translations = {
   activeRecallDoneSub: { en: 'Sentences are now moving to your active recall memory.', fa: 'جملات به حافظه فعال شما منتقل شدند. تمرین پیمزلر تسلط زبانی‌ات را سریع‌تر می‌کند.' },
   activeRecallRestart: { en: 'Practice Again', fa: 'تمرین دوباره' },
   activeRecallBackHome: { en: 'Back to Home', fa: 'بازگشت به خانه' },
+  customSceneDrawer: { en: 'My Custom Shadowing ✨', fa: 'شادوئینگ اختصاصی من ✨' },
   roleplayTitle: { en: 'Real-life roleplay', fa: 'نقش‌آفرینی' },
   roleplaySubtitle: { en: 'Talk with AI in real situations — doctor, bank, mechanic, shop…', fa: 'در موقعیت‌های واقعی با هوش مصنوعی حرف بزن؛ دکتر، بانک، تعمیرکار، فروشگاه و…' },
   roleplayAll: { en: 'All', fa: 'همه' },

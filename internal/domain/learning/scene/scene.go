@@ -34,6 +34,8 @@ type Scene struct {
 	// GrammarAudioURL صدای تولیدشده (ElevenLabs، عیناً هم‌الگوی صدای دیالوگ‌ها)
 	// برای GrammarExplanation است — برای کاربری که حوصله‌ی خواندن ندارد.
 	GrammarAudioURL string
+	CreatedByUserID *string
+	IsCustom        bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
