@@ -1,0 +1,914 @@
+-- +migrate Up
+-- دوره رسمی ۴۰۰۰ واژه ضروری - کتاب 3 (4000 Essential Words — Book 3)
+-- سطح: intermediate | ۳۰ درس کامل شامل شادوئینگ و پادکست متصل.
+
+INSERT INTO podcast_series (id, title, description_fa, level, cover_url, category, position, is_active)
+VALUES ('40000000-0003-0000-0000-000000000003', '4000 Essential Words — Book 3', '۴۰۰۰ واژه پرکاربرد (کتاب سوم): واژگان کاربردی در محیط‌های کاری، روابط اجتماعی و توصیف تجربیات', 'intermediate', '', 'essential_words', 3, TRUE)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description_fa = EXCLUDED.description_fa;
+
+-- کتاب 3 - درس 1: Business Negotiation
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000100000001', 'Business Negotiation (Book 3 - Unit 1)', 'تمرین شادوئینگ یونیت 1 کتاب 3 (مذاکره تجاری و قرارداد): distinguish, efficient, facilitate, generate, highlight, implement...', '', 'intermediate', 'published', 301, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000100000002', '40003000-0000-0000-0000-000100000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000100000001', '40003000-0000-0000-0000-000100000002', 1, 'customer', 'Exploring business negotiation offers a great opportunity to master essential vocabulary.', 'بررسی موضوع مذاکره تجاری و قرارداد فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000100000002', '40003000-0000-0000-0000-000100000002', 2, 'clerk', 'Native speakers naturally use target words like distinguish and efficient in conversation.', 'گویندگان نیتیو کلماتی چون distinguish (تمایز قائل شدن) و efficient (کارآمد و موثر) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000100000003', '40003000-0000-0000-0000-000100000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000100000004', '40003000-0000-0000-0000-000100000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000100000005', '40003000-0000-0000-0000-000100000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000100000003', 'Business Negotiation (Book 3 - Unit 1)', 'روایت داستانی و آموزش واژگان یونیت 1 (مذاکره تجاری و قرارداد) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 1, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 302, 1, '[{"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}]'::jsonb, '40003000-0000-0000-0000-000100000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000100000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 1: Business Negotiation.', 'به درس 1 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: مذاکره تجاری و قرارداد.', 0, 6000),
+('40003000-0000-0000-0000-000100000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000100000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000100000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 2: International Logistics
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000200000001', 'International Logistics (Book 3 - Unit 2)', 'تمرین شادوئینگ یونیت 2 کتاب 3 (حمل و نقل بین‌المللی): generate, highlight, implement, justify, maintain, negotiate...', '', 'intermediate', 'published', 302, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000200000002', '40003000-0000-0000-0000-000200000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000200000001', '40003000-0000-0000-0000-000200000002', 1, 'customer', 'Exploring international logistics offers a great opportunity to master essential vocabulary.', 'بررسی موضوع حمل و نقل بین‌المللی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000200000002', '40003000-0000-0000-0000-000200000002', 2, 'clerk', 'Native speakers naturally use target words like generate and highlight in conversation.', 'گویندگان نیتیو کلماتی چون generate (تولید و خلق کردن) و highlight (برجسته ساختن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000200000003', '40003000-0000-0000-0000-000200000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000200000004', '40003000-0000-0000-0000-000200000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000200000005', '40003000-0000-0000-0000-000200000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000200000003', 'International Logistics (Book 3 - Unit 2)', 'روایت داستانی و آموزش واژگان یونیت 2 (حمل و نقل بین‌المللی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 2, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 304, 2, '[{"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}]'::jsonb, '40003000-0000-0000-0000-000200000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000200000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 2: International Logistics.', 'به درس 2 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: حمل و نقل بین‌المللی.', 0, 6000),
+('40003000-0000-0000-0000-000200000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000200000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000200000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 3: Digital Marketing Campaign
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000300000001', 'Digital Marketing Campaign (Book 3 - Unit 3)', 'تمرین شادوئینگ یونیت 3 کتاب 3 (کمپین بازاریابی دیجیتال): justify, maintain, negotiate, optimize, participate, reinforce...', '', 'intermediate', 'published', 303, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000300000002', '40003000-0000-0000-0000-000300000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000300000001', '40003000-0000-0000-0000-000300000002', 1, 'customer', 'Exploring digital marketing campaign offers a great opportunity to master essential vocabulary.', 'بررسی موضوع کمپین بازاریابی دیجیتال فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000300000002', '40003000-0000-0000-0000-000300000002', 2, 'clerk', 'Native speakers naturally use target words like justify and maintain in conversation.', 'گویندگان نیتیو کلماتی چون justify (توجیه منطقی داشتن) و maintain (حفظ و نگهداری) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000300000003', '40003000-0000-0000-0000-000300000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000300000004', '40003000-0000-0000-0000-000300000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000300000005', '40003000-0000-0000-0000-000300000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000300000003', 'Digital Marketing Campaign (Book 3 - Unit 3)', 'روایت داستانی و آموزش واژگان یونیت 3 (کمپین بازاریابی دیجیتال) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 3, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 306, 3, '[{"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}]'::jsonb, '40003000-0000-0000-0000-000300000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000300000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 3: Digital Marketing Campaign.', 'به درس 3 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: کمپین بازاریابی دیجیتال.', 0, 6000),
+('40003000-0000-0000-0000-000300000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000300000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000300000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 4: Agile Project Management
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000400000001', 'Agile Project Management (Book 3 - Unit 4)', 'تمرین شادوئینگ یونیت 4 کتاب 3 (مدیریت پروژه چابک): optimize, participate, reinforce, streamline, transform, utilize...', '', 'intermediate', 'published', 304, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000400000002', '40003000-0000-0000-0000-000400000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000400000001', '40003000-0000-0000-0000-000400000002', 1, 'customer', 'Exploring agile project management offers a great opportunity to master essential vocabulary.', 'بررسی موضوع مدیریت پروژه چابک فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000400000002', '40003000-0000-0000-0000-000400000002', 2, 'clerk', 'Native speakers naturally use target words like optimize and participate in conversation.', 'گویندگان نیتیو کلماتی چون optimize (بهینه‌سازی) و participate (مشارکت فعال) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000400000003', '40003000-0000-0000-0000-000400000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000400000004', '40003000-0000-0000-0000-000400000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000400000005', '40003000-0000-0000-0000-000400000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000400000003', 'Agile Project Management (Book 3 - Unit 4)', 'روایت داستانی و آموزش واژگان یونیت 4 (مدیریت پروژه چابک) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 4, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 308, 4, '[{"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}]'::jsonb, '40003000-0000-0000-0000-000400000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000400000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 4: Agile Project Management.', 'به درس 4 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: مدیریت پروژه چابک.', 0, 6000),
+('40003000-0000-0000-0000-000400000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000400000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000400000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 5: Environmental Protection
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000500000001', 'Environmental Protection (Book 3 - Unit 5)', 'تمرین شادوئینگ یونیت 5 کتاب 3 (حفاظت از محیط زیست): streamline, transform, utilize, validate, withstand, accurate...', '', 'intermediate', 'published', 305, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000500000002', '40003000-0000-0000-0000-000500000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000500000001', '40003000-0000-0000-0000-000500000002', 1, 'customer', 'Exploring environmental protection offers a great opportunity to master essential vocabulary.', 'بررسی موضوع حفاظت از محیط زیست فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000500000002', '40003000-0000-0000-0000-000500000002', 2, 'clerk', 'Native speakers naturally use target words like streamline and transform in conversation.', 'گویندگان نیتیو کلماتی چون streamline (ساده‌سازی فرایند) و transform (تحول بنیادین) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000500000003', '40003000-0000-0000-0000-000500000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000500000004', '40003000-0000-0000-0000-000500000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000500000005', '40003000-0000-0000-0000-000500000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000500000003', 'Environmental Protection (Book 3 - Unit 5)', 'روایت داستانی و آموزش واژگان یونیت 5 (حفاظت از محیط زیست) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 5, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 310, 5, '[{"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}]'::jsonb, '40003000-0000-0000-0000-000500000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000500000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 5: Environmental Protection.', 'به درس 5 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: حفاظت از محیط زیست.', 0, 6000),
+('40003000-0000-0000-0000-000500000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000500000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000500000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 6: Renewable Solar Energy
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000600000001', 'Renewable Solar Energy (Book 3 - Unit 6)', 'تمرین شادوئینگ یونیت 6 کتاب 3 (انرژی پاک و خورشیدی): validate, withstand, accurate, broaden, collaborate, distinguish...', '', 'intermediate', 'published', 306, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000600000002', '40003000-0000-0000-0000-000600000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000600000001', '40003000-0000-0000-0000-000600000002', 1, 'customer', 'Exploring renewable solar energy offers a great opportunity to master essential vocabulary.', 'بررسی موضوع انرژی پاک و خورشیدی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000600000002', '40003000-0000-0000-0000-000600000002', 2, 'clerk', 'Native speakers naturally use target words like validate and withstand in conversation.', 'گویندگان نیتیو کلماتی چون validate (اعتبارسنجی) و withstand (تاب آوردن در برابر) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000600000003', '40003000-0000-0000-0000-000600000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000600000004', '40003000-0000-0000-0000-000600000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000600000005', '40003000-0000-0000-0000-000600000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000600000003', 'Renewable Solar Energy (Book 3 - Unit 6)', 'روایت داستانی و آموزش واژگان یونیت 6 (انرژی پاک و خورشیدی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 6, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 312, 6, '[{"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}]'::jsonb, '40003000-0000-0000-0000-000600000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000600000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 6: Renewable Solar Energy.', 'به درس 6 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: انرژی پاک و خورشیدی.', 0, 6000),
+('40003000-0000-0000-0000-000600000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000600000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000600000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 7: Smart Urban Planning
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000700000001', 'Smart Urban Planning (Book 3 - Unit 7)', 'تمرین شادوئینگ یونیت 7 کتاب 3 (شهرسازی هوشمند مدرن): broaden, collaborate, distinguish, efficient, facilitate, generate...', '', 'intermediate', 'published', 307, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000700000002', '40003000-0000-0000-0000-000700000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000700000001', '40003000-0000-0000-0000-000700000002', 1, 'customer', 'Exploring smart urban planning offers a great opportunity to master essential vocabulary.', 'بررسی موضوع شهرسازی هوشمند مدرن فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000700000002', '40003000-0000-0000-0000-000700000002', 2, 'clerk', 'Native speakers naturally use target words like broaden and collaborate in conversation.', 'گویندگان نیتیو کلماتی چون broaden (گسترش دادن) و collaborate (همکاری سازنده) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000700000003', '40003000-0000-0000-0000-000700000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000700000004', '40003000-0000-0000-0000-000700000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000700000005', '40003000-0000-0000-0000-000700000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000700000003', 'Smart Urban Planning (Book 3 - Unit 7)', 'روایت داستانی و آموزش واژگان یونیت 7 (شهرسازی هوشمند مدرن) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 7, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 314, 7, '[{"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}]'::jsonb, '40003000-0000-0000-0000-000700000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000700000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 7: Smart Urban Planning.', 'به درس 7 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: شهرسازی هوشمند مدرن.', 0, 6000),
+('40003000-0000-0000-0000-000700000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000700000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000700000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 8: Public Presentation
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000800000001', 'Public Presentation (Book 3 - Unit 8)', 'تمرین شادوئینگ یونیت 8 کتاب 3 (ارائه عمومی و سخنرانی): efficient, facilitate, generate, highlight, implement, justify...', '', 'intermediate', 'published', 308, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000800000002', '40003000-0000-0000-0000-000800000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000800000001', '40003000-0000-0000-0000-000800000002', 1, 'customer', 'Exploring public presentation offers a great opportunity to master essential vocabulary.', 'بررسی موضوع ارائه عمومی و سخنرانی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000800000002', '40003000-0000-0000-0000-000800000002', 2, 'clerk', 'Native speakers naturally use target words like efficient and facilitate in conversation.', 'گویندگان نیتیو کلماتی چون efficient (کارآمد و موثر) و facilitate (تسهیل نمودن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000800000003', '40003000-0000-0000-0000-000800000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000800000004', '40003000-0000-0000-0000-000800000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000800000005', '40003000-0000-0000-0000-000800000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000800000003', 'Public Presentation (Book 3 - Unit 8)', 'روایت داستانی و آموزش واژگان یونیت 8 (ارائه عمومی و سخنرانی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 8, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 316, 8, '[{"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}]'::jsonb, '40003000-0000-0000-0000-000800000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000800000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 8: Public Presentation.', 'به درس 8 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: ارائه عمومی و سخنرانی.', 0, 6000),
+('40003000-0000-0000-0000-000800000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000800000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000800000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 9: Customer Support Strategy
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-000900000001', 'Customer Support Strategy (Book 3 - Unit 9)', 'تمرین شادوئینگ یونیت 9 کتاب 3 (پشتیبانی و رضایت مشتری): highlight, implement, justify, maintain, negotiate, optimize...', '', 'intermediate', 'published', 309, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-000900000002', '40003000-0000-0000-0000-000900000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-000900000001', '40003000-0000-0000-0000-000900000002', 1, 'customer', 'Exploring customer support strategy offers a great opportunity to master essential vocabulary.', 'بررسی موضوع پشتیبانی و رضایت مشتری فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000900000002', '40003000-0000-0000-0000-000900000002', 2, 'clerk', 'Native speakers naturally use target words like highlight and implement in conversation.', 'گویندگان نیتیو کلماتی چون highlight (برجسته ساختن) و implement (پیاده‌سازی کردن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000900000003', '40003000-0000-0000-0000-000900000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000900000004', '40003000-0000-0000-0000-000900000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-000900000005', '40003000-0000-0000-0000-000900000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-000900000003', 'Customer Support Strategy (Book 3 - Unit 9)', 'روایت داستانی و آموزش واژگان یونیت 9 (پشتیبانی و رضایت مشتری) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 9, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 318, 9, '[{"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}]'::jsonb, '40003000-0000-0000-0000-000900000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-000900000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 9: Customer Support Strategy.', 'به درس 9 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: پشتیبانی و رضایت مشتری.', 0, 6000),
+('40003000-0000-0000-0000-000900000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-000900000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-000900000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 10: Personal Finance Planning
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001000000001', 'Personal Finance Planning (Book 3 - Unit 10)', 'تمرین شادوئینگ یونیت 10 کتاب 3 (سرمایه‌گذاری مالی شخصی): maintain, negotiate, optimize, participate, reinforce, streamline...', '', 'intermediate', 'published', 310, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001000000002', '40003000-0000-0000-0000-001000000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001000000001', '40003000-0000-0000-0000-001000000002', 1, 'customer', 'Exploring personal finance planning offers a great opportunity to master essential vocabulary.', 'بررسی موضوع سرمایه‌گذاری مالی شخصی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001000000002', '40003000-0000-0000-0000-001000000002', 2, 'clerk', 'Native speakers naturally use target words like maintain and negotiate in conversation.', 'گویندگان نیتیو کلماتی چون maintain (حفظ و نگهداری) و negotiate (مذاکره کردن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001000000003', '40003000-0000-0000-0000-001000000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001000000004', '40003000-0000-0000-0000-001000000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001000000005', '40003000-0000-0000-0000-001000000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001000000003', 'Personal Finance Planning (Book 3 - Unit 10)', 'روایت داستانی و آموزش واژگان یونیت 10 (سرمایه‌گذاری مالی شخصی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 10, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 320, 10, '[{"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}]'::jsonb, '40003000-0000-0000-0000-001000000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001000000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 10: Personal Finance Planning.', 'به درس 10 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: سرمایه‌گذاری مالی شخصی.', 0, 6000),
+('40003000-0000-0000-0000-001000000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001000000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001000000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 11: Media Ethics and News
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001100000001', 'Media Ethics and News (Book 3 - Unit 11)', 'تمرین شادوئینگ یونیت 11 کتاب 3 (اخلاق رسانه‌ای و اخبار): participate, reinforce, streamline, transform, utilize, validate...', '', 'intermediate', 'published', 311, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001100000002', '40003000-0000-0000-0000-001100000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001100000001', '40003000-0000-0000-0000-001100000002', 1, 'customer', 'Exploring media ethics and news offers a great opportunity to master essential vocabulary.', 'بررسی موضوع اخلاق رسانه‌ای و اخبار فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001100000002', '40003000-0000-0000-0000-001100000002', 2, 'clerk', 'Native speakers naturally use target words like participate and reinforce in conversation.', 'گویندگان نیتیو کلماتی چون participate (مشارکت فعال) و reinforce (تقویت و استحکام) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001100000003', '40003000-0000-0000-0000-001100000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001100000004', '40003000-0000-0000-0000-001100000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001100000005', '40003000-0000-0000-0000-001100000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001100000003', 'Media Ethics and News (Book 3 - Unit 11)', 'روایت داستانی و آموزش واژگان یونیت 11 (اخلاق رسانه‌ای و اخبار) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 11, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 322, 11, '[{"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}]'::jsonb, '40003000-0000-0000-0000-001100000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001100000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 11: Media Ethics and News.', 'به درس 11 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: اخلاق رسانه‌ای و اخبار.', 0, 6000),
+('40003000-0000-0000-0000-001100000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001100000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001100000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 12: Healthcare Innovations
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001200000001', 'Healthcare Innovations (Book 3 - Unit 12)', 'تمرین شادوئینگ یونیت 12 کتاب 3 (نوآوری‌های بهداشت و سلامت): transform, utilize, validate, withstand, accurate, broaden...', '', 'intermediate', 'published', 312, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001200000002', '40003000-0000-0000-0000-001200000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001200000001', '40003000-0000-0000-0000-001200000002', 1, 'customer', 'Exploring healthcare innovations offers a great opportunity to master essential vocabulary.', 'بررسی موضوع نوآوری‌های بهداشت و سلامت فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001200000002', '40003000-0000-0000-0000-001200000002', 2, 'clerk', 'Native speakers naturally use target words like transform and utilize in conversation.', 'گویندگان نیتیو کلماتی چون transform (تحول بنیادین) و utilize (بهره‌گیری مناسب) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001200000003', '40003000-0000-0000-0000-001200000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001200000004', '40003000-0000-0000-0000-001200000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001200000005', '40003000-0000-0000-0000-001200000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001200000003', 'Healthcare Innovations (Book 3 - Unit 12)', 'روایت داستانی و آموزش واژگان یونیت 12 (نوآوری‌های بهداشت و سلامت) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 12, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 324, 12, '[{"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}]'::jsonb, '40003000-0000-0000-0000-001200000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001200000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 12: Healthcare Innovations.', 'به درس 12 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: نوآوری‌های بهداشت و سلامت.', 0, 6000),
+('40003000-0000-0000-0000-001200000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001200000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001200000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 13: Machine Learning Models
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001300000001', 'Machine Learning Models (Book 3 - Unit 13)', 'تمرین شادوئینگ یونیت 13 کتاب 3 (کاربردهای یادگیری ماشین): withstand, accurate, broaden, collaborate, distinguish, efficient...', '', 'intermediate', 'published', 313, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001300000002', '40003000-0000-0000-0000-001300000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001300000001', '40003000-0000-0000-0000-001300000002', 1, 'customer', 'Exploring machine learning models offers a great opportunity to master essential vocabulary.', 'بررسی موضوع کاربردهای یادگیری ماشین فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001300000002', '40003000-0000-0000-0000-001300000002', 2, 'clerk', 'Native speakers naturally use target words like withstand and accurate in conversation.', 'گویندگان نیتیو کلماتی چون withstand (تاب آوردن در برابر) و accurate (دقیق و بی‌نقص) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001300000003', '40003000-0000-0000-0000-001300000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001300000004', '40003000-0000-0000-0000-001300000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001300000005', '40003000-0000-0000-0000-001300000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001300000003', 'Machine Learning Models (Book 3 - Unit 13)', 'روایت داستانی و آموزش واژگان یونیت 13 (کاربردهای یادگیری ماشین) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 13, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 326, 13, '[{"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}]'::jsonb, '40003000-0000-0000-0000-001300000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001300000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 13: Machine Learning Models.', 'به درس 13 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: کاربردهای یادگیری ماشین.', 0, 6000),
+('40003000-0000-0000-0000-001300000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001300000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001300000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 14: Network Cybersecurity
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001400000001', 'Network Cybersecurity (Book 3 - Unit 14)', 'تمرین شادوئینگ یونیت 14 کتاب 3 (امنیت سایبری شبکه‌ها): collaborate, distinguish, efficient, facilitate, generate, highlight...', '', 'intermediate', 'published', 314, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001400000002', '40003000-0000-0000-0000-001400000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001400000001', '40003000-0000-0000-0000-001400000002', 1, 'customer', 'Exploring network cybersecurity offers a great opportunity to master essential vocabulary.', 'بررسی موضوع امنیت سایبری شبکه‌ها فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001400000002', '40003000-0000-0000-0000-001400000002', 2, 'clerk', 'Native speakers naturally use target words like collaborate and distinguish in conversation.', 'گویندگان نیتیو کلماتی چون collaborate (همکاری سازنده) و distinguish (تمایز قائل شدن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001400000003', '40003000-0000-0000-0000-001400000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001400000004', '40003000-0000-0000-0000-001400000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001400000005', '40003000-0000-0000-0000-001400000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001400000003', 'Network Cybersecurity (Book 3 - Unit 14)', 'روایت داستانی و آموزش واژگان یونیت 14 (امنیت سایبری شبکه‌ها) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 14, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 328, 14, '[{"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}]'::jsonb, '40003000-0000-0000-0000-001400000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001400000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 14: Network Cybersecurity.', 'به درس 14 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: امنیت سایبری شبکه‌ها.', 0, 6000),
+('40003000-0000-0000-0000-001400000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001400000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001400000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 15: Academic Research Methods
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001500000001', 'Academic Research Methods (Book 3 - Unit 15)', 'تمرین شادوئینگ یونیت 15 کتاب 3 (روش‌های پژوهش علمی): facilitate, generate, highlight, implement, justify, maintain...', '', 'intermediate', 'published', 315, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001500000002', '40003000-0000-0000-0000-001500000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001500000001', '40003000-0000-0000-0000-001500000002', 1, 'customer', 'Exploring academic research methods offers a great opportunity to master essential vocabulary.', 'بررسی موضوع روش‌های پژوهش علمی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001500000002', '40003000-0000-0000-0000-001500000002', 2, 'clerk', 'Native speakers naturally use target words like facilitate and generate in conversation.', 'گویندگان نیتیو کلماتی چون facilitate (تسهیل نمودن) و generate (تولید و خلق کردن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001500000003', '40003000-0000-0000-0000-001500000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001500000004', '40003000-0000-0000-0000-001500000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001500000005', '40003000-0000-0000-0000-001500000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001500000003', 'Academic Research Methods (Book 3 - Unit 15)', 'روایت داستانی و آموزش واژگان یونیت 15 (روش‌های پژوهش علمی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 15, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 330, 15, '[{"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}]'::jsonb, '40003000-0000-0000-0000-001500000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001500000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 15: Academic Research Methods.', 'به درس 15 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: روش‌های پژوهش علمی.', 0, 6000),
+('40003000-0000-0000-0000-001500000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001500000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001500000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 16: Investigative Journalism
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001600000001', 'Investigative Journalism (Book 3 - Unit 16)', 'تمرین شادوئینگ یونیت 16 کتاب 3 (روزنامه‌نگاری تحقیقی): implement, justify, maintain, negotiate, optimize, participate...', '', 'intermediate', 'published', 316, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001600000002', '40003000-0000-0000-0000-001600000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001600000001', '40003000-0000-0000-0000-001600000002', 1, 'customer', 'Exploring investigative journalism offers a great opportunity to master essential vocabulary.', 'بررسی موضوع روزنامه‌نگاری تحقیقی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001600000002', '40003000-0000-0000-0000-001600000002', 2, 'clerk', 'Native speakers naturally use target words like implement and justify in conversation.', 'گویندگان نیتیو کلماتی چون implement (پیاده‌سازی کردن) و justify (توجیه منطقی داشتن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001600000003', '40003000-0000-0000-0000-001600000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001600000004', '40003000-0000-0000-0000-001600000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001600000005', '40003000-0000-0000-0000-001600000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001600000003', 'Investigative Journalism (Book 3 - Unit 16)', 'روایت داستانی و آموزش واژگان یونیت 16 (روزنامه‌نگاری تحقیقی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 16, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 332, 16, '[{"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}]'::jsonb, '40003000-0000-0000-0000-001600000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001600000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 16: Investigative Journalism.', 'به درس 16 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: روزنامه‌نگاری تحقیقی.', 0, 6000),
+('40003000-0000-0000-0000-001600000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001600000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001600000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 17: E-Commerce Fulfillment
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001700000001', 'E-Commerce Fulfillment (Book 3 - Unit 17)', 'تمرین شادوئینگ یونیت 17 کتاب 3 (لجستیک فروشگاه آنلاین): negotiate, optimize, participate, reinforce, streamline, transform...', '', 'intermediate', 'published', 317, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001700000002', '40003000-0000-0000-0000-001700000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001700000001', '40003000-0000-0000-0000-001700000002', 1, 'customer', 'Exploring e-commerce fulfillment offers a great opportunity to master essential vocabulary.', 'بررسی موضوع لجستیک فروشگاه آنلاین فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001700000002', '40003000-0000-0000-0000-001700000002', 2, 'clerk', 'Native speakers naturally use target words like negotiate and optimize in conversation.', 'گویندگان نیتیو کلماتی چون negotiate (مذاکره کردن) و optimize (بهینه‌سازی) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001700000003', '40003000-0000-0000-0000-001700000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001700000004', '40003000-0000-0000-0000-001700000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001700000005', '40003000-0000-0000-0000-001700000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001700000003', 'E-Commerce Fulfillment (Book 3 - Unit 17)', 'روایت داستانی و آموزش واژگان یونیت 17 (لجستیک فروشگاه آنلاین) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 17, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 334, 17, '[{"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}]'::jsonb, '40003000-0000-0000-0000-001700000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001700000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 17: E-Commerce Fulfillment.', 'به درس 17 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: لجستیک فروشگاه آنلاین.', 0, 6000),
+('40003000-0000-0000-0000-001700000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001700000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001700000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 18: Cross-Cultural Dialogue
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001800000001', 'Cross-Cultural Dialogue (Book 3 - Unit 18)', 'تمرین شادوئینگ یونیت 18 کتاب 3 (گفتگوی میان‌فرهنگی): reinforce, streamline, transform, utilize, validate, withstand...', '', 'intermediate', 'published', 318, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001800000002', '40003000-0000-0000-0000-001800000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001800000001', '40003000-0000-0000-0000-001800000002', 1, 'customer', 'Exploring cross-cultural dialogue offers a great opportunity to master essential vocabulary.', 'بررسی موضوع گفتگوی میان‌فرهنگی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001800000002', '40003000-0000-0000-0000-001800000002', 2, 'clerk', 'Native speakers naturally use target words like reinforce and streamline in conversation.', 'گویندگان نیتیو کلماتی چون reinforce (تقویت و استحکام) و streamline (ساده‌سازی فرایند) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001800000003', '40003000-0000-0000-0000-001800000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001800000004', '40003000-0000-0000-0000-001800000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001800000005', '40003000-0000-0000-0000-001800000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001800000003', 'Cross-Cultural Dialogue (Book 3 - Unit 18)', 'روایت داستانی و آموزش واژگان یونیت 18 (گفتگوی میان‌فرهنگی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 18, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 336, 18, '[{"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}]'::jsonb, '40003000-0000-0000-0000-001800000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001800000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 18: Cross-Cultural Dialogue.', 'به درس 18 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: گفتگوی میان‌فرهنگی.', 0, 6000),
+('40003000-0000-0000-0000-001800000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001800000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001800000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 19: Modern Architecture Trends
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-001900000001', 'Modern Architecture Trends (Book 3 - Unit 19)', 'تمرین شادوئینگ یونیت 19 کتاب 3 (معماری سبز و پایدار): utilize, validate, withstand, accurate, broaden, collaborate...', '', 'intermediate', 'published', 319, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-001900000002', '40003000-0000-0000-0000-001900000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-001900000001', '40003000-0000-0000-0000-001900000002', 1, 'customer', 'Exploring modern architecture trends offers a great opportunity to master essential vocabulary.', 'بررسی موضوع معماری سبز و پایدار فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001900000002', '40003000-0000-0000-0000-001900000002', 2, 'clerk', 'Native speakers naturally use target words like utilize and validate in conversation.', 'گویندگان نیتیو کلماتی چون utilize (بهره‌گیری مناسب) و validate (اعتبارسنجی) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001900000003', '40003000-0000-0000-0000-001900000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001900000004', '40003000-0000-0000-0000-001900000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-001900000005', '40003000-0000-0000-0000-001900000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-001900000003', 'Modern Architecture Trends (Book 3 - Unit 19)', 'روایت داستانی و آموزش واژگان یونیت 19 (معماری سبز و پایدار) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 19, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 338, 19, '[{"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}]'::jsonb, '40003000-0000-0000-0000-001900000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-001900000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 19: Modern Architecture Trends.', 'به درس 19 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: معماری سبز و پایدار.', 0, 6000),
+('40003000-0000-0000-0000-001900000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-001900000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-001900000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 20: Deep Space Missions
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002000000001', 'Deep Space Missions (Book 3 - Unit 20)', 'تمرین شادوئینگ یونیت 20 کتاب 3 (کاوش‌های فضایی عمیق): accurate, broaden, collaborate, distinguish, efficient, facilitate...', '', 'intermediate', 'published', 320, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002000000002', '40003000-0000-0000-0000-002000000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002000000001', '40003000-0000-0000-0000-002000000002', 1, 'customer', 'Exploring deep space missions offers a great opportunity to master essential vocabulary.', 'بررسی موضوع کاوش‌های فضایی عمیق فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002000000002', '40003000-0000-0000-0000-002000000002', 2, 'clerk', 'Native speakers naturally use target words like accurate and broaden in conversation.', 'گویندگان نیتیو کلماتی چون accurate (دقیق و بی‌نقص) و broaden (گسترش دادن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002000000003', '40003000-0000-0000-0000-002000000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002000000004', '40003000-0000-0000-0000-002000000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002000000005', '40003000-0000-0000-0000-002000000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002000000003', 'Deep Space Missions (Book 3 - Unit 20)', 'روایت داستانی و آموزش واژگان یونیت 20 (کاوش‌های فضایی عمیق) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 20, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 340, 20, '[{"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}]'::jsonb, '40003000-0000-0000-0000-002000000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002000000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 20: Deep Space Missions.', 'به درس 20 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: کاوش‌های فضایی عمیق.', 0, 6000),
+('40003000-0000-0000-0000-002000000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002000000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002000000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 21: Creative Fiction Writing
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002100000001', 'Creative Fiction Writing (Book 3 - Unit 21)', 'تمرین شادوئینگ یونیت 21 کتاب 3 (نگارش داستان خلاقانه): distinguish, efficient, facilitate, generate, highlight, implement...', '', 'intermediate', 'published', 321, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002100000002', '40003000-0000-0000-0000-002100000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002100000001', '40003000-0000-0000-0000-002100000002', 1, 'customer', 'Exploring creative fiction writing offers a great opportunity to master essential vocabulary.', 'بررسی موضوع نگارش داستان خلاقانه فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002100000002', '40003000-0000-0000-0000-002100000002', 2, 'clerk', 'Native speakers naturally use target words like distinguish and efficient in conversation.', 'گویندگان نیتیو کلماتی چون distinguish (تمایز قائل شدن) و efficient (کارآمد و موثر) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002100000003', '40003000-0000-0000-0000-002100000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002100000004', '40003000-0000-0000-0000-002100000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002100000005', '40003000-0000-0000-0000-002100000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002100000003', 'Creative Fiction Writing (Book 3 - Unit 21)', 'روایت داستانی و آموزش واژگان یونیت 21 (نگارش داستان خلاقانه) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 21, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 342, 21, '[{"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}]'::jsonb, '40003000-0000-0000-0000-002100000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002100000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 21: Creative Fiction Writing.', 'به درس 21 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: نگارش داستان خلاقانه.', 0, 6000),
+('40003000-0000-0000-0000-002100000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002100000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002100000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 22: Sustainable Farming
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002200000001', 'Sustainable Farming (Book 3 - Unit 22)', 'تمرین شادوئینگ یونیت 22 کتاب 3 (کشاورزی مدرن و ارگانیک): generate, highlight, implement, justify, maintain, negotiate...', '', 'intermediate', 'published', 322, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002200000002', '40003000-0000-0000-0000-002200000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002200000001', '40003000-0000-0000-0000-002200000002', 1, 'customer', 'Exploring sustainable farming offers a great opportunity to master essential vocabulary.', 'بررسی موضوع کشاورزی مدرن و ارگانیک فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002200000002', '40003000-0000-0000-0000-002200000002', 2, 'clerk', 'Native speakers naturally use target words like generate and highlight in conversation.', 'گویندگان نیتیو کلماتی چون generate (تولید و خلق کردن) و highlight (برجسته ساختن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002200000003', '40003000-0000-0000-0000-002200000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002200000004', '40003000-0000-0000-0000-002200000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002200000005', '40003000-0000-0000-0000-002200000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002200000003', 'Sustainable Farming (Book 3 - Unit 22)', 'روایت داستانی و آموزش واژگان یونیت 22 (کشاورزی مدرن و ارگانیک) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 22, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 344, 22, '[{"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}]'::jsonb, '40003000-0000-0000-0000-002200000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002200000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 22: Sustainable Farming.', 'به درس 22 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: کشاورزی مدرن و ارگانیک.', 0, 6000),
+('40003000-0000-0000-0000-002200000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002200000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002200000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 23: Civic Engagement
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002300000001', 'Civic Engagement (Book 3 - Unit 23)', 'تمرین شادوئینگ یونیت 23 کتاب 3 (مشارکت شهروندی فعال): justify, maintain, negotiate, optimize, participate, reinforce...', '', 'intermediate', 'published', 323, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002300000002', '40003000-0000-0000-0000-002300000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002300000001', '40003000-0000-0000-0000-002300000002', 1, 'customer', 'Exploring civic engagement offers a great opportunity to master essential vocabulary.', 'بررسی موضوع مشارکت شهروندی فعال فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002300000002', '40003000-0000-0000-0000-002300000002', 2, 'clerk', 'Native speakers naturally use target words like justify and maintain in conversation.', 'گویندگان نیتیو کلماتی چون justify (توجیه منطقی داشتن) و maintain (حفظ و نگهداری) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002300000003', '40003000-0000-0000-0000-002300000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002300000004', '40003000-0000-0000-0000-002300000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002300000005', '40003000-0000-0000-0000-002300000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002300000003', 'Civic Engagement (Book 3 - Unit 23)', 'روایت داستانی و آموزش واژگان یونیت 23 (مشارکت شهروندی فعال) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 23, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 346, 23, '[{"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}]'::jsonb, '40003000-0000-0000-0000-002300000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002300000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 23: Civic Engagement.', 'به درس 23 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: مشارکت شهروندی فعال.', 0, 6000),
+('40003000-0000-0000-0000-002300000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002300000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002300000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 24: Eco-Tourism Destinations
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002400000001', 'Eco-Tourism Destinations (Book 3 - Unit 24)', 'تمرین شادوئینگ یونیت 24 کتاب 3 (اکوتوریسم و طبیعت‌گردی): optimize, participate, reinforce, streamline, transform, utilize...', '', 'intermediate', 'published', 324, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002400000002', '40003000-0000-0000-0000-002400000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002400000001', '40003000-0000-0000-0000-002400000002', 1, 'customer', 'Exploring eco-tourism destinations offers a great opportunity to master essential vocabulary.', 'بررسی موضوع اکوتوریسم و طبیعت‌گردی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002400000002', '40003000-0000-0000-0000-002400000002', 2, 'clerk', 'Native speakers naturally use target words like optimize and participate in conversation.', 'گویندگان نیتیو کلماتی چون optimize (بهینه‌سازی) و participate (مشارکت فعال) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002400000003', '40003000-0000-0000-0000-002400000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002400000004', '40003000-0000-0000-0000-002400000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002400000005', '40003000-0000-0000-0000-002400000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002400000003', 'Eco-Tourism Destinations (Book 3 - Unit 24)', 'روایت داستانی و آموزش واژگان یونیت 24 (اکوتوریسم و طبیعت‌گردی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 24, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 348, 24, '[{"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}]'::jsonb, '40003000-0000-0000-0000-002400000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002400000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 24: Eco-Tourism Destinations.', 'به درس 24 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: اکوتوریسم و طبیعت‌گردی.', 0, 6000),
+('40003000-0000-0000-0000-002400000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002400000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002400000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 25: Independent Film Production
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002500000001', 'Independent Film Production (Book 3 - Unit 25)', 'تمرین شادوئینگ یونیت 25 کتاب 3 (تولید فیلم مستقل): streamline, transform, utilize, validate, withstand, accurate...', '', 'intermediate', 'published', 325, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002500000002', '40003000-0000-0000-0000-002500000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002500000001', '40003000-0000-0000-0000-002500000002', 1, 'customer', 'Exploring independent film production offers a great opportunity to master essential vocabulary.', 'بررسی موضوع تولید فیلم مستقل فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002500000002', '40003000-0000-0000-0000-002500000002', 2, 'clerk', 'Native speakers naturally use target words like streamline and transform in conversation.', 'گویندگان نیتیو کلماتی چون streamline (ساده‌سازی فرایند) و transform (تحول بنیادین) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002500000003', '40003000-0000-0000-0000-002500000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002500000004', '40003000-0000-0000-0000-002500000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002500000005', '40003000-0000-0000-0000-002500000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002500000003', 'Independent Film Production (Book 3 - Unit 25)', 'روایت داستانی و آموزش واژگان یونیت 25 (تولید فیلم مستقل) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 25, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 350, 25, '[{"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}]'::jsonb, '40003000-0000-0000-0000-002500000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002500000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 25: Independent Film Production.', 'به درس 25 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: تولید فیلم مستقل.', 0, 6000),
+('40003000-0000-0000-0000-002500000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002500000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002500000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 26: Commercial Contract Law
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002600000001', 'Commercial Contract Law (Book 3 - Unit 26)', 'تمرین شادوئینگ یونیت 26 کتاب 3 (حقوق قراردادهای تجاری): validate, withstand, accurate, broaden, collaborate, distinguish...', '', 'intermediate', 'published', 326, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002600000002', '40003000-0000-0000-0000-002600000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002600000001', '40003000-0000-0000-0000-002600000002', 1, 'customer', 'Exploring commercial contract law offers a great opportunity to master essential vocabulary.', 'بررسی موضوع حقوق قراردادهای تجاری فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002600000002', '40003000-0000-0000-0000-002600000002', 2, 'clerk', 'Native speakers naturally use target words like validate and withstand in conversation.', 'گویندگان نیتیو کلماتی چون validate (اعتبارسنجی) و withstand (تاب آوردن در برابر) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002600000003', '40003000-0000-0000-0000-002600000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002600000004', '40003000-0000-0000-0000-002600000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002600000005', '40003000-0000-0000-0000-002600000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002600000003', 'Commercial Contract Law (Book 3 - Unit 26)', 'روایت داستانی و آموزش واژگان یونیت 26 (حقوق قراردادهای تجاری) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 26, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 352, 26, '[{"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}]'::jsonb, '40003000-0000-0000-0000-002600000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002600000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 26: Commercial Contract Law.', 'به درس 26 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: حقوق قراردادهای تجاری.', 0, 6000),
+('40003000-0000-0000-0000-002600000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002600000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002600000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 27: Online Education Systems
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002700000001', 'Online Education Systems (Book 3 - Unit 27)', 'تمرین شادوئینگ یونیت 27 کتاب 3 (سامانه‌های آموزش مجازی): broaden, collaborate, distinguish, efficient, facilitate, generate...', '', 'intermediate', 'published', 327, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002700000002', '40003000-0000-0000-0000-002700000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002700000001', '40003000-0000-0000-0000-002700000002', 1, 'customer', 'Exploring online education systems offers a great opportunity to master essential vocabulary.', 'بررسی موضوع سامانه‌های آموزش مجازی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002700000002', '40003000-0000-0000-0000-002700000002', 2, 'clerk', 'Native speakers naturally use target words like broaden and collaborate in conversation.', 'گویندگان نیتیو کلماتی چون broaden (گسترش دادن) و collaborate (همکاری سازنده) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002700000003', '40003000-0000-0000-0000-002700000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002700000004', '40003000-0000-0000-0000-002700000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002700000005', '40003000-0000-0000-0000-002700000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002700000003', 'Online Education Systems (Book 3 - Unit 27)', 'روایت داستانی و آموزش واژگان یونیت 27 (سامانه‌های آموزش مجازی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 27, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 354, 27, '[{"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}]'::jsonb, '40003000-0000-0000-0000-002700000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002700000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 27: Online Education Systems.', 'به درس 27 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: سامانه‌های آموزش مجازی.', 0, 6000),
+('40003000-0000-0000-0000-002700000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002700000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002700000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 28: Cognitive Behavioral Habits
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002800000001', 'Cognitive Behavioral Habits (Book 3 - Unit 28)', 'تمرین شادوئینگ یونیت 28 کتاب 3 (شکل‌گیری عادت‌های رفتاری): efficient, facilitate, generate, highlight, implement, justify...', '', 'intermediate', 'published', 328, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002800000002', '40003000-0000-0000-0000-002800000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002800000001', '40003000-0000-0000-0000-002800000002', 1, 'customer', 'Exploring cognitive behavioral habits offers a great opportunity to master essential vocabulary.', 'بررسی موضوع شکل‌گیری عادت‌های رفتاری فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002800000002', '40003000-0000-0000-0000-002800000002', 2, 'clerk', 'Native speakers naturally use target words like efficient and facilitate in conversation.', 'گویندگان نیتیو کلماتی چون efficient (کارآمد و موثر) و facilitate (تسهیل نمودن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002800000003', '40003000-0000-0000-0000-002800000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002800000004', '40003000-0000-0000-0000-002800000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002800000005', '40003000-0000-0000-0000-002800000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002800000003', 'Cognitive Behavioral Habits (Book 3 - Unit 28)', 'روایت داستانی و آموزش واژگان یونیت 28 (شکل‌گیری عادت‌های رفتاری) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 28, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 356, 28, '[{"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}]'::jsonb, '40003000-0000-0000-0000-002800000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002800000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 28: Cognitive Behavioral Habits.', 'به درس 28 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: شکل‌گیری عادت‌های رفتاری.', 0, 6000),
+('40003000-0000-0000-0000-002800000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002800000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002800000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 29: Global Supply Chains
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-002900000001', 'Global Supply Chains (Book 3 - Unit 29)', 'تمرین شادوئینگ یونیت 29 کتاب 3 (زنجیره تامین جهانی): highlight, implement, justify, maintain, negotiate, optimize...', '', 'intermediate', 'published', 329, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-002900000002', '40003000-0000-0000-0000-002900000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-002900000001', '40003000-0000-0000-0000-002900000002', 1, 'customer', 'Exploring global supply chains offers a great opportunity to master essential vocabulary.', 'بررسی موضوع زنجیره تامین جهانی فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002900000002', '40003000-0000-0000-0000-002900000002', 2, 'clerk', 'Native speakers naturally use target words like highlight and implement in conversation.', 'گویندگان نیتیو کلماتی چون highlight (برجسته ساختن) و implement (پیاده‌سازی کردن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002900000003', '40003000-0000-0000-0000-002900000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002900000004', '40003000-0000-0000-0000-002900000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-002900000005', '40003000-0000-0000-0000-002900000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-002900000003', 'Global Supply Chains (Book 3 - Unit 29)', 'روایت داستانی و آموزش واژگان یونیت 29 (زنجیره تامین جهانی) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 29, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 358, 29, '[{"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}, {"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}]'::jsonb, '40003000-0000-0000-0000-002900000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-002900000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 29: Global Supply Chains.', 'به درس 29 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: زنجیره تامین جهانی.', 0, 6000),
+('40003000-0000-0000-0000-002900000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-002900000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-002900000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- کتاب 3 - درس 30: Ethical Leadership
+INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
+VALUES ('40003000-0000-0000-0000-003000000001', 'Ethical Leadership (Book 3 - Unit 30)', 'تمرین شادوئینگ یونیت 30 کتاب 3 (اصول رهبری اخلاق‌مدار): maintain, negotiate, optimize, participate, reinforce, streamline...', '', 'intermediate', 'published', 330, 'education', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
+VALUES ('40003000-0000-0000-0000-003000000002', '40003000-0000-0000-0000-003000000001', 'Dialogue', 50.0, 50.0, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+VALUES
+('40003000-0000-0000-0001-003000000001', '40003000-0000-0000-0000-003000000002', 1, 'customer', 'Exploring ethical leadership offers a great opportunity to master essential vocabulary.', 'بررسی موضوع اصول رهبری اخلاق‌مدار فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-003000000002', '40003000-0000-0000-0000-003000000002', 2, 'clerk', 'Native speakers naturally use target words like maintain and negotiate in conversation.', 'گویندگان نیتیو کلماتی چون maintain (حفظ و نگهداری) و negotiate (مذاکره کردن) را به صورت طبیعی در مکالمه به کار می‌برند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-003000000003', '40003000-0000-0000-0000-003000000002', 3, 'customer', 'Practicing sentence by sentence with clear pronunciation builds real conversational fluency.', 'تمرین جمله‌به‌جمله با تلفظ شفاف، تسلط و روانی واقعی در گفتار ایجاد می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-003000000004', '40003000-0000-0000-0000-003000000002', 4, 'clerk', 'Staying calm and consistent turns difficult phrases into everyday speech habits.', 'آرامش و استمرار در تمرین، عبارات دشوار را به عادت‌های گفتاری روزمره بدل می‌سازد.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full'),
+('40003000-0000-0000-0001-003000000005', '40003000-0000-0000-0000-003000000002', 5, 'customer', 'Completing this unit brings us closer to full mastery of English vocabulary.', 'تکمیل این درس ما را به تسلط کامل بر دایره واژگان انگلیسی نزدیک‌تر می‌کند.', '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'full')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
+VALUES ('40003000-0000-0000-0000-003000000003', 'Ethical Leadership (Book 3 - Unit 30)', 'روایت داستانی و آموزش واژگان یونیت 30 (اصول رهبری اخلاق‌مدار) از کتاب 3 دوره ۴۰۰۰ واژه', 'intermediate', 'lesson', '40000000-0003-0000-0000-000000000003', 30, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, 360, 30, '[{"word": "maintain", "meaning_fa": "حفظ و نگهداری"}, {"word": "negotiate", "meaning_fa": "مذاکره کردن"}, {"word": "optimize", "meaning_fa": "بهینه‌سازی"}, {"word": "participate", "meaning_fa": "مشارکت فعال"}, {"word": "reinforce", "meaning_fa": "تقویت و استحکام"}, {"word": "streamline", "meaning_fa": "ساده‌سازی فرایند"}, {"word": "transform", "meaning_fa": "تحول بنیادین"}, {"word": "utilize", "meaning_fa": "بهره‌گیری مناسب"}, {"word": "validate", "meaning_fa": "اعتبارسنجی"}, {"word": "withstand", "meaning_fa": "تاب آوردن در برابر"}, {"word": "accurate", "meaning_fa": "دقیق و بی‌نقص"}, {"word": "broaden", "meaning_fa": "گسترش دادن"}, {"word": "collaborate", "meaning_fa": "همکاری سازنده"}, {"word": "distinguish", "meaning_fa": "تمایز قائل شدن"}, {"word": "efficient", "meaning_fa": "کارآمد و موثر"}, {"word": "facilitate", "meaning_fa": "تسهیل نمودن"}, {"word": "generate", "meaning_fa": "تولید و خلق کردن"}, {"word": "highlight", "meaning_fa": "برجسته ساختن"}, {"word": "implement", "meaning_fa": "پیاده‌سازی کردن"}, {"word": "justify", "meaning_fa": "توجیه منطقی داشتن"}]'::jsonb, '40003000-0000-0000-0000-003000000001')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;
+
+INSERT INTO podcast_lines (podcast_id, position, speaker, text, translation_fa, start_ms, end_ms)
+VALUES
+('40003000-0000-0000-0000-003000000003', 0, 'Alex', 'Welcome to 4000 Essential English Words, Book 3, Unit 30: Ethical Leadership.', 'به درس 30 از کتاب 3 دوره ۴۰۰۰ واژه خوش آمدید: اصول رهبری اخلاق‌مدار.', 0, 6000),
+('40003000-0000-0000-0000-003000000003', 1, 'Sarah', 'Today we focus on 20 high-frequency vocabulary words used in real-life contexts.', 'امروز بر روی 20 واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.', 6300, 13500),
+('40003000-0000-0000-0000-003000000003', 2, 'Alex', 'Listen closely to the natural rhythm and pronunciation of each target phrase.', 'به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.', 13800, 21000),
+('40003000-0000-0000-0000-003000000003', 3, 'Sarah', 'Now head over to the shadowing section to record these sentences in your own voice!', 'حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!', 21400, 29000)
+ON CONFLICT DO NOTHING;
+
+-- +migrate Down
+DELETE FROM podcast_lines WHERE podcast_id LIKE '40003000-0000-0000-0000-%';
+DELETE FROM podcasts WHERE id LIKE '40003000-0000-0000-0000-%';
+DELETE FROM dialogues WHERE hotspot_id LIKE '40003000-0000-0000-0000-%';
+DELETE FROM hotspots WHERE id LIKE '40003000-0000-0000-0000-%';
+DELETE FROM scenes WHERE id LIKE '40003000-0000-0000-0000-%';
