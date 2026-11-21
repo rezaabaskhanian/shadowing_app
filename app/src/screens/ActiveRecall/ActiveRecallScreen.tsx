@@ -4,24 +4,30 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   ArrowRight,
   Award,
+  BookOpen,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Compass,
   Eye,
   Flame,
   HelpCircle,
+  MessageSquare,
   Play,
   RotateCcw,
   Sparkles,
@@ -38,6 +44,55 @@ import { AudioPlayer } from '../../components/AudioPlayer';
 import { expandScenarioToDialogueItems, type DialogueItem, type Scenario } from '../../data/scenarios';
 
 const COUNTDOWN_SECONDS = 5;
+const INTRO_STORAGE_KEY = '@active_learning_intro_seen_v1';
+
+/**
+ * تولید هوشمند سوالات هدفمند به زبان انگلیسی پیرامون موضوع سناریو
+ */
+function getEnglishQuestionPrompt(
+  item: DialogueItem | undefined,
+  index: number,
+  topicTitle?: string,
+): { enQuestion: string; contextFa: string } {
+  if (!item) return { enQuestion: '', contextFa: '' };
+  const text = item.dialogue?.trim() || '';
+  const isQuestion = text.endsWith('?');
+  const cleanTopic = topicTitle || 'the conversation';
+
+  let enQuestion = '';
+  if (isQuestion) {
+    if (/^how/i.test(text)) {
+      enQuestion = `Regarding "${cleanTopic}", how do you ask about the method or status in English?`;
+    } else if (/^where/i.test(text)) {
+      enQuestion = `In this situation, what English question do you ask to find the location?`;
+    } else if (/^what/i.test(text)) {
+      enQuestion = `What question would you ask in English to find out more details?`;
+    } else if (/^(can|could|would|may)/i.test(text)) {
+      enQuestion = `How would you make this polite request to the other person in English?`;
+    } else if (/^(do|does|did|is|are|was|were)/i.test(text)) {
+      enQuestion = `How do you ask in English to confirm this information?`;
+    } else {
+      enQuestion = `What question would you ask in English in this situation?`;
+    }
+  } else {
+    if (index === 0) {
+      enQuestion = `To start the conversation about "${cleanTopic}", how do you say in English:`;
+    } else if (index === 1) {
+      enQuestion = `In response to the speaker, what natural English sentence do you say?`;
+    } else if (index === 2) {
+      enQuestion = `Continuing the conversation on "${cleanTopic}", how do you explain:`;
+    } else if (index === 3) {
+      enQuestion = `How do you express this specific point fluently in English?`;
+    } else {
+      enQuestion = `To conclude this conversation naturally, what do you say in English:`;
+    }
+  }
+
+  return {
+    enQuestion,
+    contextFa: item.translation || '',
+  };
+}
 
 export const ActiveRecallScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -60,6 +115,23 @@ export const ActiveRecallScreen: React.FC = () => {
   const [knownCount, setKnownCount] = useState(0);
   const [retryQueue, setRetryQueue] = useState<DialogueItem[]>([]);
   const [loadingScene, setLoadingScene] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+
+  // بررسی اولین بار ورود کاربر جهت نمایش خودکار مودال راهنما
+  useEffect(() => {
+    AsyncStorage.getItem(INTRO_STORAGE_KEY)
+      .then((seen) => {
+        if (!seen) {
+          setShowGuideModal(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleDismissGuide = useCallback(async () => {
+    setShowGuideModal(false);
+    await AsyncStorage.setItem(INTRO_STORAGE_KEY, 'true').catch(() => {});
+  }, []);
 
   // کنترل صوتی
   const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -232,6 +304,116 @@ export const ActiveRecallScreen: React.FC = () => {
 
   const currentDialogue = dialogueList[currentIndex];
   const progressPercent = dialogueList.length > 0 ? ((currentIndex + 1) / dialogueList.length) * 100 : 0;
+  const questionData = getEnglishQuestionPrompt(currentDialogue, currentIndex, selectedScenario?.title);
+
+  // مودال جامع راهنما و متدولوژی یادگیری فعال (Active Recall)
+  const renderGuideModal = () => (
+    <Modal
+      visible={showGuideModal}
+      transparent
+      animationType="fade"
+      onRequestClose={handleDismissGuide}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          {/* هدر مودال */}
+          <View style={[styles.modalHeader, row]}>
+            <View style={styles.modalIconWrap}>
+              <Zap size={22} color="#D97706" />
+            </View>
+            <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+              <Text style={[styles.modalTitle, tr]}>
+                {rtl ? 'متد اکتیو لرنینگ (Active Recall) 🧠' : 'Active Recall Guide 🧠'}
+              </Text>
+              <Text style={[styles.modalSub, tr]}>
+                {rtl ? 'تکنیک علمی پیمزلر برای مکالمه ناخودآگاه' : 'Spontaneous speech methodology'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={handleDismissGuide}>
+              <X size={18} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {/* کارت ۱: سوالات انگلیسی پیرامون موضوع */}
+            <View style={[styles.guideStepCard, row]}>
+              <View style={styles.stepNumBadge}>
+                <Text style={styles.stepNumText}>۱</Text>
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.guideStepTitle, tr]}>
+                  {rtl ? 'طرح سوال به زبان انگلیسی پیرامون موضوع:' : 'Questions Asked in English:'}
+                </Text>
+                <Text style={[styles.guideStepDesc, tr]}>
+                  {rtl
+                    ? 'در هر مرحله یک سوال به زبان انگلیسی بر اساس موضوع سناریو پرسیده می‌شود تا ذهن شما فوراً در حالت زبان انگلیسی قرار گیرد.'
+                    : 'In each step, targeted questions are presented in English based on the topic so your brain actively thinks in English.'}
+                </Text>
+              </View>
+            </View>
+
+            {/* کارت ۲: ۵ ثانیه فرصت پاسخ به انگلیسی */}
+            <View style={[styles.guideStepCard, row]}>
+              <View style={styles.stepNumBadge}>
+                <Text style={styles.stepNumText}>۲</Text>
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.guideStepTitle, tr]}>
+                  {rtl ? '۵ ثانیه فرصت تفکر و گفتن به انگلیسی:' : '5 Seconds to Answer in English:'}
+                </Text>
+                <Text style={[styles.guideStepDesc, tr]}>
+                  {rtl
+                    ? 'طبق متد پیمزلر، قبل از شنیدن پاسخ نیتیو ۵ ثانیه فرصت دارید تا جواب را با صدای بلند به انگلیسی بگویید یا در ذهن بسازید.'
+                    : 'You have 5 seconds of thinking time to formulate and say the English answer out loud before seeing the response.'}
+                </Text>
+              </View>
+            </View>
+
+            {/* کارت ۳: تطبیق با صدای نیتیو */}
+            <View style={[styles.guideStepCard, row]}>
+              <View style={styles.stepNumBadge}>
+                <Text style={styles.stepNumText}>۳</Text>
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.guideStepTitle, tr]}>
+                  {rtl ? 'افشای پاسخ نیتیو و تطبیق گفتار:' : 'Native Reveal & Evaluation:'}
+                </Text>
+                <Text style={[styles.guideStepDesc, tr]}>
+                  {rtl
+                    ? 'دکمه «نمایش جواب» را بزنید؛ پاسخ دقیق انگلیسی به همراه تلفظ نیتیو پخش می‌شود تا درستی پاسخ خود را ارزیابی کنید.'
+                    : 'Tap reveal to see the native sentence and hear the exact pronunciation to check your accuracy.'}
+                </Text>
+              </View>
+            </View>
+
+            {/* کارت ۴: مرور هوشمند اشتباهات */}
+            <View style={[styles.guideStepCard, row]}>
+              <View style={styles.stepNumBadge}>
+                <Text style={styles.stepNumText}>۴</Text>
+              </View>
+              <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+                <Text style={[styles.guideStepTitle, tr]}>
+                  {rtl ? 'تکرار هوشمند تا تسلط کامل:' : 'Smart Repetition:'}
+                </Text>
+                <Text style={[styles.guideStepDesc, tr]}>
+                  {rtl
+                    ? 'جملاتی که بلد نبودید در پایان چالش دوباره تکرار می‌شوند تا مطمئن شوید ملکه ذهنتان شده‌اند.'
+                    : 'Any sentence you need to review will be repeated at the end until fully mastered.'}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* دکمه شروع */}
+          <TouchableOpacity style={styles.modalCtaBtn} onPress={handleDismissGuide} activeOpacity={0.85}>
+            <Text style={styles.modalCtaText}>
+              {rtl ? 'متوجه شدم، شروع تمرین 🚀' : 'Got it, Let\'s Start! 🚀'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   // -------------------------------------------------------------
   // نمای انتخاب صحنه یا چالش سریع (اگر بدون سناریو باز شده باشد)
@@ -247,6 +429,9 @@ export const ActiveRecallScreen: React.FC = () => {
             <Text style={[styles.headerTitle, tr]}>{t('activeRecallTitle') || 'اکتیو لرنینگ (Active Recall)'}</Text>
             <Text style={[styles.headerSub, tr]}>{t('activeRecallSubtitle') || 'روش پیمزلر: بگو قبل از شنیدن پاسخ نیتیو'}</Text>
           </View>
+          <TouchableOpacity style={styles.guideBtn} onPress={() => setShowGuideModal(true)} activeOpacity={0.8}>
+            <HelpCircle size={22} color="#D97706" />
+          </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -303,6 +488,7 @@ export const ActiveRecallScreen: React.FC = () => {
             ))
           )}
         </ScrollView>
+        {renderGuideModal()}
       </View>
     );
   }
@@ -345,6 +531,7 @@ export const ActiveRecallScreen: React.FC = () => {
         <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <Text style={styles.actionBtnSecondaryText}>{t('activeRecallBackHome') || 'بازگشت به خانه'}</Text>
         </TouchableOpacity>
+        {renderGuideModal()}
       </View>
     );
   }
@@ -361,7 +548,7 @@ export const ActiveRecallScreen: React.FC = () => {
         actionNonce={actionNonce}
       />
 
-      {/* هدر بالا: بستن + نوار پیشرفت */}
+      {/* هدر بالا: بستن + نوار پیشرفت + دکمه راهنما */}
       <View style={[styles.topBar, row]}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
@@ -372,32 +559,58 @@ export const ActiveRecallScreen: React.FC = () => {
         <Text style={styles.stepCounter}>
           {currentIndex + 1}/{dialogueList.length}
         </Text>
+        <TouchableOpacity style={styles.guideSmallBtn} onPress={() => setShowGuideModal(true)} activeOpacity={0.8}>
+          <HelpCircle size={20} color="#D97706" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.practiceContent} showsVerticalScrollIndicator={false}>
-        {/* ۱. کارت صورت سوال / چالش فارسی */}
+        {/* ۱. کارت صورت سوال انگلیسی پیرامون موضوع */}
         <View style={styles.challengeCard}>
           {/* نشانگر موضوع بحث و موقعیت */}
           <View style={[styles.topicBadgeRow, row]}>
             <Sparkles size={14} color="#D97706" />
             <Text style={styles.topicBadgeText} numberOfLines={1}>
               {selectedScenario
-                ? (rtl ? `موضوع بحث: ${selectedScenario.title}` : `Topic: ${selectedScenario.title}`)
-                : (rtl ? 'موضوع: جملات کاربردی مکالمه' : 'Topic: Practical Conversations')}
+                ? (rtl ? `موضوع: ${selectedScenario.title}` : `Topic: ${selectedScenario.title}`)
+                : (rtl ? 'موضوع: مکالمه موضوعی' : 'Topic: Everyday Conversation')}
+            </Text>
+            <View style={styles.questionIndexPill}>
+              <Text style={styles.questionIndexText}>
+                {rtl ? `سوال ${currentIndex + 1} از ${dialogueList.length}` : `Q ${currentIndex + 1}/${dialogueList.length}`}
+              </Text>
+            </View>
+          </View>
+
+          {/* سوال انگلیسی مطرح شده بر اساس موضوع سناریو */}
+          <View style={styles.enQuestionBox}>
+            <View style={[styles.enQuestionHeader, row]}>
+              <MessageSquare size={16} color="#2563EB" />
+              <Text style={styles.enQuestionTag}>
+                {rtl ? 'سوال به انگلیسی (Question in English):' : 'Question in English:'}
+              </Text>
+            </View>
+            <Text style={styles.enQuestionText}>
+              {questionData.enQuestion}
             </Text>
           </View>
 
-          <View style={[styles.promptBadgeRow, row]}>
-            <HelpCircle size={15} color="#B45309" />
-            <Text style={styles.promptBadgeText}>
-              {rtl
-                ? `سوال ${currentIndex + 1} از ${dialogueList.length} — چطور به انگلیسی می‌گی:`
-                : `Question ${currentIndex + 1} of ${dialogueList.length} — How do you say:`}
+          {/* مفهوم و پیامی که باید به انگلیسی گفته شود */}
+          <View style={styles.targetConceptBox}>
+            <Text style={styles.targetConceptLabel}>
+              {rtl ? '🎯 مفهوم و پاسخی که باید به انگلیسی بگویید:' : '🎯 Target English statement to produce:'}
+            </Text>
+            <Text style={[styles.persianPromptText, tr]}>
+              «{currentDialogue?.translation}»
             </Text>
           </View>
-          <Text style={[styles.persianPromptText, tr]}>
-            {currentDialogue?.translation}
-          </Text>
+
+          {/* راهنمای پاسخ به انگلیسی */}
+          <View style={[styles.speakHintRow, row]}>
+            <Text style={styles.speakHintText}>
+              {rtl ? '🗣️ جواب را با صدای بلند به انگلیسی بگو یا در ذهنت مرور کن...' : '🗣️ Say the answer in English out loud...'}
+            </Text>
+          </View>
         </View>
 
         {/* ۲. فاز تفکر ۵ ثانیه‌ای */}
@@ -415,8 +628,8 @@ export const ActiveRecallScreen: React.FC = () => {
 
             <Text style={[styles.thinkingHint, secondsLeft === 0 && styles.thinkingHintDone]}>
               {secondsLeft > 0
-                ? (t('activeRecallThinkingHint') || 'با صدای بلند یا در ذهنت بگو... 🗣️')
-                : (rtl ? '⏱️ ۵ ثانیه زمان تفکر تمام شد! آیا جمله را گفتی؟' : '⏱️ 5 seconds are up! Did you say it?')}
+                ? (t('activeRecallThinkingHint') || 'با صدای بلند یا در ذهنت به انگلیسی بگو... 🗣️')
+                : (rtl ? '⏱️ ۵ ثانیه زمان تفکر تمام شد! آیا جمله انگلیسی را گفتی؟' : '⏱️ 5 seconds are up! Did you say it in English?')}
             </Text>
 
             {secondsLeft === 0 && (
@@ -458,12 +671,14 @@ export const ActiveRecallScreen: React.FC = () => {
             <View style={styles.englishCard}>
               <View style={[styles.revealHeaderRow, row]}>
                 <View style={styles.speakerTag}>
-                  <Volume2 size={15} color="#10B981" />
-                  <Text style={styles.speakerTagText}>{currentDialogue?.speaker || 'Native Speaker'}</Text>
+                  <CheckCircle2 size={16} color="#059669" />
+                  <Text style={styles.speakerTagText}>
+                    {rtl ? 'پاسخ صحیح انگلیسی (Native English):' : 'Native English Response:'}
+                  </Text>
                 </View>
                 <TouchableOpacity style={styles.replaySmallBtn} onPress={replayAudio} activeOpacity={0.8}>
-                  <RotateCcw size={14} color={COLORS.primary} />
-                  <Text style={styles.replaySmallText}>پخش دوباره</Text>
+                  <Volume2 size={15} color="#047857" />
+                  <Text style={styles.replaySmallText}>{rtl ? 'پخش صدا 🎧' : 'Play Audio'}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -482,8 +697,10 @@ export const ActiveRecallScreen: React.FC = () => {
               )}
             </View>
 
-            {/* خودارزیابی کاربر: بلد بودم یا نیاز به مرور؟ */}
-            <Text style={styles.selfAssessPrompt}>چطور گفتی؟ تطبیق بده:</Text>
+            {/* خودارزیابی کاربر: آیا انگلیسی درست گفتی؟ */}
+            <Text style={styles.selfAssessPrompt}>
+              {rtl ? 'آیا توانستید پاسخ را به انگلیسی درست بگویید؟' : 'Did you answer correctly in English?'}
+            </Text>
             <View style={[styles.assessBtnRow, row]}>
               <TouchableOpacity
                 style={[styles.assessBtn, styles.assessKnownBtn]}
@@ -491,7 +708,7 @@ export const ActiveRecallScreen: React.FC = () => {
                 activeOpacity={0.85}
               >
                 <CheckCircle2 size={20} color="#10B981" />
-                <Text style={styles.assessKnownText}>{t('activeRecallIKnewIt') || 'بلد بودم ✅'}</Text>
+                <Text style={styles.assessKnownText}>{t('activeRecallIKnewIt') || '✅ درست به انگلیسی گفتم'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -500,12 +717,13 @@ export const ActiveRecallScreen: React.FC = () => {
                 activeOpacity={0.85}
               >
                 <RotateCcw size={18} color="#EF4444" />
-                <Text style={styles.assessRetryText}>{t('activeRecallRepeatLater') || 'نیاز به مرور 🔄'}</Text>
+                <Text style={styles.assessRetryText}>{t('activeRecallRepeatLater') || '🔄 اشتباه گفتم / نیاز به تکرار'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
       </ScrollView>
+      {renderGuideModal()}
     </View>
   );
 };
@@ -982,5 +1200,204 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY.medium,
     color: COLORS.muted,
+  },
+  guideBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideSmallBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  questionIndexPill: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginLeft: 6,
+  },
+  questionIndexText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#D97706',
+  },
+  enQuestionBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    marginBottom: 14,
+    gap: 6,
+  },
+  enQuestionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  enQuestionTag: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#1D4ED8',
+  },
+  enQuestionText: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#1E40AF',
+    lineHeight: 22,
+  },
+  targetConceptBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginBottom: 10,
+    gap: 6,
+  },
+  targetConceptLabel: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#B45309',
+  },
+  speakHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 4,
+  },
+  speakHintText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#D97706',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 18,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+    gap: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#0F172A',
+  },
+  modalSub: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    paddingVertical: 6,
+  },
+  guideStepCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 10,
+    gap: 12,
+  },
+  stepNumBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FF6422',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  stepNumText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#FFFFFF',
+  },
+  guideStepTitle: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#1E293B',
+    marginBottom: 3,
+  },
+  guideStepDesc: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  modalCtaBtn: {
+    backgroundColor: '#FF6422',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    shadowColor: '#FF6422',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  modalCtaText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#FFFFFF',
   },
 });
