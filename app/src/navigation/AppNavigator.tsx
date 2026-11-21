@@ -85,6 +85,7 @@ import { PodcastSeriesDetailScreen } from '../screens/Podcast/PodcastSeriesDetai
 import { PodcastMyVersionScreen } from '../screens/Podcast/PodcastMyVersionScreen';
 import { ToastDemoScreen } from '../screens/ToastDemoScreen';
 import { RealtimePoCScreen } from '../screens/RealtimePoC';
+import { FourThousandWordsScreen } from '../screens/FourThousandWords/FourThousandWordsScreen';
 import { useLanguage } from '../data/i18n';
 
 const Tab = createBottomTabNavigator();
@@ -124,9 +125,11 @@ const FreshPodcastDictation = freshPerOpen(PodcastDictationScreen);
 const FreshGoalMap = freshPerOpen(GoalMapScreen);
 const FreshActiveRecall = freshPerOpen(ActiveRecallScreen);
 const FreshCustomScene = freshPerOpen(CustomSceneScreen);
+const FreshFourThousandWords = freshPerOpen(FourThousandWordsScreen);
 
 // روت‌های جزئیات که تب‌بار پایین باید در آن‌ها مخفی شود
 const HIDDEN_TAB_BAR_ROUTES = [
+  'FourThousandWords',
   'CustomScene',
   'ActiveRecall',
   'Shadowing',
@@ -511,6 +514,13 @@ export const AppNavigator = () => {
       <Tab.Screen
         name="TokenTopup"
         component={TokenTopupScreen}
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="FourThousandWords"
+        component={FreshFourThousandWords}
         options={{
           tabBarButton: () => null,
         }}

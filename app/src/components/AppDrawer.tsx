@@ -280,6 +280,19 @@ export const AppDrawer = ({
           <TouchableOpacity
             style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
+            onPress={() => go('FourThousandWords')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <BookMarked color="#D97706" size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>
+              {rtl ? 'آموزش ۴۰۰۰ کلمه' : '4000 Essential Words'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.row, rtl && styles.rowReverse]}
+            activeOpacity={0.7}
             onPress={() => go('ActiveRecall')}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: '#FEF3C7' }]}>
