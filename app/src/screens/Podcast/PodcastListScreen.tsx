@@ -294,6 +294,13 @@ export const PodcastListScreen: React.FC = () => {
                 {t(level.labelKey as any)}
               </Text>
             </View>
+            {item.category === 'essential_words' && (
+              <View style={[styles.seriesEpisodesBadge, { left: 8, right: undefined, backgroundColor: '#7C3AED' }]}>
+                <Text style={[styles.seriesEpisodesText, { color: '#FFFFFF' }]}>
+                  {rtl ? '۴۰۰۰ واژه' : '4000 Words'}
+                </Text>
+              </View>
+            )}
             <View style={styles.seriesEpisodesBadge}>
               <Text style={styles.seriesEpisodesText}>
                 {rtl ? `${epsCount} قسمت` : `${epsCount} eps`}

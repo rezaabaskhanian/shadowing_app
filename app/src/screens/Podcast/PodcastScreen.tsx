@@ -20,6 +20,7 @@ import {
   EyeOff,
   FileText,
   Headphones,
+  Layers,
   ListMusic,
   MessageCircle,
   Mic,
@@ -759,6 +760,38 @@ export const PodcastScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* اتصال مستقیم به تمرین شادوئینگ صحنه در صورت وجود */}
+        {podcast.scene_id ? (
+          <TouchableOpacity
+            style={[styles.actionCard, { borderColor: COLORS.tertiary }]}
+            activeOpacity={0.88}
+            onPress={async () => {
+              await TrackPlayer.pause().catch(() => {});
+              navigation.navigate('Shadowing', {
+                scenarioId: podcast.scene_id,
+                returnTo: 'Podcast',
+              });
+            }}
+          >
+            <View style={[styles.actionCardInner, rr]}>
+              <View style={[styles.actionIconWrap, { backgroundColor: COLORS.tertiaryLight }]}>
+                <Layers size={20} color={COLORS.tertiary} />
+              </View>
+              <View style={[styles.actionCardText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text style={[styles.actionCardTitle, { color: COLORS.tertiary }]}>
+                  {rtl ? 'تمرین شادوئینگ این درس 🎧' : 'Shadowing Scene Practice'}
+                </Text>
+                <Text style={styles.actionCardSub}>
+                  {rtl
+                    ? 'تمرین خط‌به‌خط، شکل موج صدا، برجسته‌سازی کلمات و هات‌اسپات‌ها'
+                    : 'Practice line-by-line with waveform and vocabulary hotspots'}
+                </Text>
+              </View>
+              <ChevronIcon size={18} color={COLORS.tertiary} />
+            </View>
+          </TouchableOpacity>
+        ) : null}
 
         {/* اتصال به نقش‌آفرینی هوشمند */}
         {roleplay && (

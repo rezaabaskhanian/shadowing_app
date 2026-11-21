@@ -17,6 +17,7 @@ import {
   Clock,
   Headphones,
   Lock,
+  Mic,
   Play,
   RotateCcw,
   Sparkles,
@@ -247,6 +248,15 @@ export const PodcastSeriesDetailScreen: React.FC = () => {
                     : `${ep.lines?.length || ep.line_count || 12} lines`}
                 </Text>
               </View>
+
+              {ep.scene_id ? (
+                <View style={[styles.metaItem, rtl && styles.rowReverse]}>
+                  <Mic size={10} color={COLORS.tertiary} />
+                  <Text style={[styles.metaText, { color: COLORS.tertiary, fontFamily: FONT_FAMILY.bold }]}>
+                    {rtl ? 'شادوئینگ' : 'Shadowing'}
+                  </Text>
+                </View>
+              ) : null}
 
               {hasProgress && (
                 <View style={[styles.metaItem, rtl && styles.rowReverse]}>

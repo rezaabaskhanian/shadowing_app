@@ -21,3 +21,4 @@ func (s Service) GetUserCustomScenes(ctx context.Context, userID string) ([]doma
 func (s Service) DeleteUserCustomScene(ctx context.Context, userID, sceneID string) error {
 	return s.repo.DeleteUserCustomScene(ctx, userID, sceneID)
 }
+

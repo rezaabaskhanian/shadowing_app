@@ -14,3 +14,4 @@ DROP INDEX IF EXISTS idx_scenes_created_by_user_id;
 
 ALTER TABLE scenes DROP COLUMN IF EXISTS is_custom;
 ALTER TABLE scenes DROP COLUMN IF EXISTS created_by_user_id;
+

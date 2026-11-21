@@ -75,3 +75,4 @@ export async function deleteUserCustomScene(sceneId: string): Promise<boolean> {
   });
   return res.ok;
 }
+
