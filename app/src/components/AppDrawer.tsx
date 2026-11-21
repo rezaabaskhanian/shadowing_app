@@ -293,7 +293,7 @@ export const AppDrawer = ({
           <TouchableOpacity
             style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
-            onPress={() => go('ActiveRecall')}
+            onPress={() => go('ActiveRecall', { openedAt: Date.now() })}
           >
             <View style={[styles.rowIconWrap, { backgroundColor: '#FEF3C7' }]}>
               <Zap color="#D97706" size={18} />

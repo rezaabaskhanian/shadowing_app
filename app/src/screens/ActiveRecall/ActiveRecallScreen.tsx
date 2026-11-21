@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -277,6 +277,37 @@ export const ActiveRecallScreen: React.FC = () => {
     }
   };
 
+  // خروج از تمرین جاری و بازگشت به لیست صحنه‌ها
+  const handleExitPractice = useCallback(() => {
+    if (scenarioId) {
+      navigation.goBack();
+    } else {
+      setPhase('select_scene');
+      setSelectedScenario(null);
+      setDialogueList([]);
+      setCurrentIndex(0);
+      setKnownCount(0);
+      setRetryQueue([]);
+      setSecondsLeft(COUNTDOWN_SECONDS);
+      setActionCommand('none');
+    }
+  }, [scenarioId, navigation]);
+
+  // وقتی کاربر به صفحه برمی‌گردد، اگر سناریوی خاصی پاس داده نشده بود همیشه لیست آماده نمایش باشد
+  useFocusEffect(
+    useCallback(() => {
+      if (!scenarioId) {
+        setPhase('select_scene');
+        setSelectedScenario(null);
+        setDialogueList([]);
+        setCurrentIndex(0);
+        setKnownCount(0);
+        setRetryQueue([]);
+        setSecondsLeft(COUNTDOWN_SECONDS);
+      }
+    }, [scenarioId]),
+  );
+
   // ثبت خودارزیابی و رفتن به سوال بعدی
   const handleAnswerReview = (isKnown: boolean) => {
     const currentItem = dialogueList[currentIndex];
@@ -528,8 +559,10 @@ export const ActiveRecallScreen: React.FC = () => {
           <Text style={styles.actionBtnText}>{t('activeRecallRestart') || 'تمرین دوباره'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Text style={styles.actionBtnSecondaryText}>{t('activeRecallBackHome') || 'بازگشت به خانه'}</Text>
+        <TouchableOpacity style={styles.actionBtnSecondary} onPress={handleExitPractice} activeOpacity={0.8}>
+          <Text style={styles.actionBtnSecondaryText}>
+            {selectedScenario ? (rtl ? 'بازگشت به لیست صحنه‌ها' : 'Back to Scenes List') : (t('activeRecallBackHome') || 'بازگشت به لیست')}
+          </Text>
         </TouchableOpacity>
         {renderGuideModal()}
       </View>
@@ -550,7 +583,7 @@ export const ActiveRecallScreen: React.FC = () => {
 
       {/* هدر بالا: بستن + نوار پیشرفت + دکمه راهنما */}
       <View style={[styles.topBar, row]}>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.iconBtn} onPress={handleExitPractice} activeOpacity={0.8}>
           <X size={20} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>
