@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Crown,
   Headphones,
   Layers,
+  Lock,
   Mic,
   PenLine,
   Play,
@@ -33,6 +35,8 @@ import {
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
+import { useAuth } from '../../data/AuthContext';
+import { getSubscriptionStatus, type SubscriptionStatus } from '../../api/billing';
 import { absUrl } from '../../api/config';
 import { getPodcastSeriesDetail, type Podcast, type PodcastSeries } from '../../api/podcasts';
 import { addWordsBatch } from '../../api/leitner';
@@ -117,6 +121,7 @@ export const FourThousandWordsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const rtl = language === 'fa';
   const row = rtl && styles.rowReverse;
   const ta = rtl ? styles.textRight : styles.textLeft;
@@ -128,8 +133,19 @@ export const FourThousandWordsScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [seriesData, setSeriesData] = useState<PodcastSeries | null>(null);
   const [addingLeitnerId, setAddingLeitnerId] = useState<string | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const currentBook = BOOKS.find((b) => b.id === selectedBook) || BOOKS[0];
+
+  const checkSubscription = useCallback(() => {
+    if (user?.role === 'admin') {
+      setIsSubscribed(true);
+      return;
+    }
+    getSubscriptionStatus()
+      .then((s: SubscriptionStatus) => setIsSubscribed(!!s?.active))
+      .catch(() => setIsSubscribed(false));
+  }, [user?.role]);
 
   const loadBookData = useCallback(async (bookId: number) => {
     const book = BOOKS.find((b) => b.id === bookId);
@@ -148,8 +164,18 @@ export const FourThousandWordsScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      checkSubscription();
       loadBookData(selectedBook);
-    }, [selectedBook, loadBookData]),
+    }, [selectedBook, loadBookData, checkSubscription]),
+  );
+
+  // درس‌های ۱ و ۲ از کتاب اول نمونه رایگان هستند؛ سایر دروس و بقیه کتاب‌ها نیازمند اشتراک ویژه
+  const isUnitLocked = useCallback(
+    (index: number) => {
+      if (isSubscribed) return false;
+      return selectedBook > 1 || index >= 2;
+    },
+    [isSubscribed, selectedBook],
   );
 
   const episodes = seriesData?.episodes || [];
@@ -164,7 +190,11 @@ export const FourThousandWordsScreen: React.FC = () => {
     return titleMatch || vocabMatch;
   });
 
-  const handleAddAllToLeitner = async (ep: Podcast) => {
+  const handleAddAllToLeitner = async (ep: Podcast, isLocked: boolean) => {
+    if (isLocked) {
+      navigation.navigate('Paywall');
+      return;
+    }
     if (!ep.vocabulary || ep.vocabulary.length === 0) return;
     setAddingLeitnerId(ep.id);
     try {
@@ -189,9 +219,10 @@ export const FourThousandWordsScreen: React.FC = () => {
   const renderSceneItem = ({ item, index }: { item: Podcast; index: number }) => {
     const unitNo = item.episode_no || index + 1;
     const sceneId = item.scene_id || `4000${selectedBook}000-0000-0000-0000-000${unitNo < 10 ? '0' + unitNo : unitNo}00000001`;
+    const isLocked = isUnitLocked(index);
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isLocked && styles.cardLocked]}>
         <View style={[styles.cardHeader, row]}>
           <View style={[styles.unitNumberBadge, { backgroundColor: currentBook.bg, borderColor: currentBook.color }]}>
             <Text style={[styles.unitNumberText, { color: currentBook.color }]}>
@@ -206,15 +237,33 @@ export const FourThousandWordsScreen: React.FC = () => {
               {item.description_fa || 'تمرین شادوئینگ و تثبیت مکالمه نیتیو'}
             </Text>
           </View>
+          {isLocked ? (
+            <View style={[styles.vipBadge, row]}>
+              <Lock size={10} color="#B45309" />
+              <Text style={styles.vipBadgeText}>{rtl ? 'ویژه VIP' : 'VIP'}</Text>
+            </View>
+          ) : (
+            <View style={[styles.freeBadge, row]}>
+              <Sparkles size={10} color="#059669" />
+              <Text style={styles.freeBadgeText}>{rtl ? 'رایگان' : 'Free'}</Text>
+            </View>
+          )}
         </View>
 
         {/* پیش‌نمایش تصویر سناریو */}
         {item.cover_url ? (
-          <Image
-            source={{ uri: absUrl(item.cover_url) }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+          <View style={styles.cardImageWrap}>
+            <Image
+              source={{ uri: absUrl(item.cover_url) }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+            {isLocked && (
+              <View style={styles.imageLockOverlay}>
+                <Lock size={20} color="#FFFFFF" />
+              </View>
+            )}
+          </View>
         ) : null}
 
         {/* چیپ‌های واژگان کلیدی این درس */}
@@ -247,33 +296,61 @@ export const FourThousandWordsScreen: React.FC = () => {
         {/* دکمه‌های عملیات */}
         <View style={[styles.cardActionsRow, row]}>
           <TouchableOpacity
-            style={[styles.primaryActionBtn, styles.flex1, row]}
+            style={[
+              styles.primaryActionBtn,
+              styles.flex1,
+              row,
+              isLocked && styles.lockedActionBtn,
+            ]}
             activeOpacity={0.85}
             onPress={() => {
-              navigation.navigate('Shadowing', {
-                scenarioId: sceneId,
-                returnTo: 'FourThousandWords',
-              });
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('Shadowing', {
+                  scenarioId: sceneId,
+                  returnTo: 'FourThousandWords',
+                });
+              }
             }}
           >
-            <Layers size={16} color="#FFFFFF" />
-            <Text style={styles.primaryActionBtnText}>
-              {rtl ? 'تمرین شادوئینگ این درس 🎧' : 'Start Shadowing Scene'}
-            </Text>
+            {isLocked ? (
+              <>
+                <Lock size={15} color="#FFFFFF" />
+                <Text style={styles.primaryActionBtnText}>
+                  {rtl ? 'باز کردن با اشتراک ویژه 🔒' : 'Unlock with VIP 🔒'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Layers size={16} color="#FFFFFF" />
+                <Text style={styles.primaryActionBtnText}>
+                  {rtl ? 'تمرین شادوئینگ این درس 🎧' : 'Start Shadowing Scene'}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.secondaryActionBtn, row]}
+            style={[styles.secondaryActionBtn, row, isLocked && styles.lockedSecondaryBtn]}
             activeOpacity={0.8}
             onPress={() => {
-              navigation.navigate('PodcastDictation', {
-                podcastId: item.id,
-                openedAt: Date.now(),
-              });
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('PodcastDictation', {
+                  podcastId: item.id,
+                  openedAt: Date.now(),
+                });
+              }
             }}
           >
-            <PenLine size={15} color="#D97706" />
-            <Text style={styles.secondaryActionBtnText}>
+            {isLocked ? (
+              <Lock size={14} color="#64748B" />
+            ) : (
+              <PenLine size={15} color="#D97706" />
+            )}
+            <Text style={[styles.secondaryActionBtnText, isLocked && styles.lockedSecondaryBtnText]}>
               {rtl ? 'دیکته ✍️' : 'Dictation'}
             </Text>
           </TouchableOpacity>
@@ -285,15 +362,21 @@ export const FourThousandWordsScreen: React.FC = () => {
   const renderPodcastItem = ({ item, index }: { item: Podcast; index: number }) => {
     const unitNo = item.episode_no || index + 1;
     const isAdding = addingLeitnerId === item.id;
+    const isLocked = isUnitLocked(index);
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isLocked && styles.cardLocked]}>
         <View style={[styles.cardHeader, row]}>
           <View style={[styles.podcastCoverWrap, { backgroundColor: currentBook.bg }]}>
             {item.cover_url ? (
               <Image source={{ uri: absUrl(item.cover_url) }} style={styles.podcastCoverImg} />
             ) : (
               <Headphones size={24} color={currentBook.color} />
+            )}
+            {isLocked && (
+              <View style={styles.podcastLockOverlay}>
+                <Lock size={14} color="#FFFFFF" />
+              </View>
             )}
           </View>
 
@@ -308,6 +391,17 @@ export const FourThousandWordsScreen: React.FC = () => {
                 <Clock size={11} color="#8E95A5" />
                 <Text style={styles.durationText}>{formatDuration(item.duration_seconds || 300)}</Text>
               </View>
+              {isLocked ? (
+                <View style={[styles.vipBadge, row]}>
+                  <Lock size={10} color="#B45309" />
+                  <Text style={styles.vipBadgeText}>{rtl ? 'VIP' : 'VIP'}</Text>
+                </View>
+              ) : (
+                <View style={[styles.freeBadge, row]}>
+                  <Sparkles size={10} color="#059669" />
+                  <Text style={styles.freeBadgeText}>{rtl ? 'رایگان' : 'Free'}</Text>
+                </View>
+              )}
             </View>
 
             <Text style={[styles.cardTitle, ta]} numberOfLines={1}>
@@ -339,45 +433,77 @@ export const FourThousandWordsScreen: React.FC = () => {
         {/* دکمه‌های اقدام: گوش دادن + دیکته + لایتنر */}
         <View style={[styles.podcastActionsRow, row]}>
           <TouchableOpacity
-            style={[styles.primaryActionBtn, styles.flex1, row]}
+            style={[
+              styles.primaryActionBtn,
+              styles.flex1,
+              row,
+              isLocked && styles.lockedActionBtn,
+            ]}
             activeOpacity={0.85}
             onPress={() => {
-              navigation.navigate('Podcast', {
-                podcastId: item.id,
-                openedAt: Date.now(),
-              });
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('Podcast', {
+                  podcastId: item.id,
+                  openedAt: Date.now(),
+                });
+              }
             }}
           >
-            <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
-            <Text style={styles.primaryActionBtnText}>
-              {rtl ? 'شنیدن پادکست درس 🎧' : 'Listen Podcast'}
-            </Text>
+            {isLocked ? (
+              <>
+                <Lock size={15} color="#FFFFFF" />
+                <Text style={styles.primaryActionBtnText}>
+                  {rtl ? 'پخش با اشتراک ویژه 🔒' : 'Unlock with VIP 🔒'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+                <Text style={styles.primaryActionBtnText}>
+                  {rtl ? 'شنیدن پادکست درس 🎧' : 'Listen Podcast'}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.secondaryActionBtn, row]}
+            style={[styles.secondaryActionBtn, row, isLocked && styles.lockedSecondaryBtn]}
             activeOpacity={0.8}
             onPress={() => {
-              navigation.navigate('PodcastDictation', {
-                podcastId: item.id,
-                openedAt: Date.now(),
-              });
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('PodcastDictation', {
+                  podcastId: item.id,
+                  openedAt: Date.now(),
+                });
+              }
             }}
           >
-            <PenLine size={15} color="#D97706" />
-            <Text style={styles.secondaryActionBtnText}>
+            {isLocked ? (
+              <Lock size={14} color="#64748B" />
+            ) : (
+              <PenLine size={15} color="#D97706" />
+            )}
+            <Text style={[styles.secondaryActionBtnText, isLocked && styles.lockedSecondaryBtnText]}>
               {rtl ? 'دیکته ✍️' : 'Dictation'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.leitnerActionBtn, row]}
+            style={[styles.leitnerActionBtn, row, isLocked && styles.lockedSecondaryBtn]}
             activeOpacity={0.8}
             disabled={isAdding}
-            onPress={() => handleAddAllToLeitner(item)}
+            onPress={() => handleAddAllToLeitner(item, isLocked)}
           >
-            <BookmarkPlus size={15} color="#059669" />
-            <Text style={styles.leitnerActionBtnText}>
+            {isLocked ? (
+              <Lock size={13} color="#64748B" />
+            ) : (
+              <BookmarkPlus size={15} color="#059669" />
+            )}
+            <Text style={[styles.leitnerActionBtnText, isLocked && styles.lockedSecondaryBtnText]}>
               {isAdding ? '...' : rtl ? 'لایتنر' : 'Leitner'}
             </Text>
           </TouchableOpacity>
@@ -478,6 +604,32 @@ export const FourThousandWordsScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* بنر ارتقا به نسخه ویژه (برای کاربران غیراشتراکی) */}
+      {!isSubscribed && (
+        <TouchableOpacity
+          style={[styles.vipBanner, row]}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Paywall')}
+        >
+          <View style={styles.vipBannerIconWrap}>
+            <Crown size={20} color="#D97706" />
+          </View>
+          <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
+            <Text style={[styles.vipBannerTitle, ta]}>
+              {rtl ? 'دوره ویژه ۴۰۰۰ واژه ضروری 🎓' : '4000 Words VIP Access'}
+            </Text>
+            <Text style={[styles.vipBannerDesc, ta]}>
+              {rtl
+                ? 'درس‌های ۱ و ۲ رایگان هستند؛ برای دسترسی کامل به ۱۸۰ درس، شادوئینگ و پادکست‌ها اشتراک تهیه کنید.'
+                : 'Units 1 & 2 are free. Subscribe to unlock all 180 units, shadowing & audio.'}
+            </Text>
+          </View>
+          <View style={styles.vipBannerBtn}>
+            <Text style={styles.vipBannerBtnText}>{rtl ? 'خرید اشتراک' : 'Upgrade'}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* لیست آیتم‌ها */}
       {loading ? (
@@ -906,5 +1058,127 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.medium,
     fontSize: 13,
     color: '#94A3B8',
+  },
+  alignStart: {
+    alignItems: 'flex-start',
+  },
+  alignEnd: {
+    alignItems: 'flex-end',
+  },
+  cardLocked: {
+    borderColor: '#FDE68A',
+  },
+  cardImageWrap: {
+    position: 'relative',
+  },
+  imageLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  podcastLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vipBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  vipBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: '#B45309',
+  },
+  freeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  freeBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: '#059669',
+  },
+  lockedActionBtn: {
+    backgroundColor: '#D97706',
+  },
+  lockedSecondaryBtn: {
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
+  },
+  lockedSecondaryBtnText: {
+    color: '#64748B',
+  },
+  vipBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.5,
+    borderColor: '#FCD34D',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 8,
+    padding: 12,
+    gap: 10,
+  },
+  vipBannerIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  vipBannerTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: '#92400E',
+  },
+  vipBannerDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  vipBannerBtn: {
+    backgroundColor: '#D97706',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  vipBannerBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+    color: '#FFFFFF',
   },
 });
