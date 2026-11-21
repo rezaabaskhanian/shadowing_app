@@ -14,27 +14,39 @@ export interface GenerateCustomSceneParams {
 }
 
 export async function generateCustomScene(params: GenerateCustomSceneParams): Promise<any> {
-  const formData = new FormData();
-  if (params.topic) formData.append('topic', params.topic);
-  if (params.text) formData.append('text', params.text);
-  if (params.difficulty) formData.append('difficulty', params.difficulty);
+  let res: Response;
 
   if (params.file) {
+    const formData = new FormData();
+    if (params.topic) formData.append('topic', params.topic);
+    if (params.text) formData.append('text', params.text);
+    if (params.difficulty) formData.append('difficulty', params.difficulty);
+
     formData.append('file', {
       uri: params.file.uri,
       name: params.file.name,
       type: params.file.type,
     } as any);
-  }
 
-  const res = await authFetch('/v1/learning/custom-scenes/generate', {
-    method: 'POST',
-    body: formData,
-  });
+    res = await authFetch('/v1/learning/custom-scenes/generate', {
+      method: 'POST',
+      body: formData,
+    });
+  } else {
+    res = await authFetch('/v1/learning/custom-scenes/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: params.topic || '',
+        text: params.text || '',
+        difficulty: params.difficulty || 'Intermediate',
+      }),
+    });
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || 'خطا در ساخت صحنه اختصاصی');
+    throw new Error(data.message || data.error || 'خطا در ساخت صحنه اختصاصی');
   }
 
   return res.json();
