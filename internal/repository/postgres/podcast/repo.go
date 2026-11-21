@@ -20,8 +20,10 @@ func New(conn *pgxpool.Pool) DB {
 }
 
 type VocabItem struct {
-	Word      string `json:"word"`
-	MeaningFa string `json:"meaning_fa"`
+	Word        string `json:"word"`
+	MeaningFa   string `json:"meaning_fa"`
+	Collocation string `json:"collocation,omitempty"`
+	Example     string `json:"example,omitempty"`
 }
 
 // Image یکی از عکس‌های پادکست؛ FromLine شماره‌ی جمله (از ۱) که عکس از آن

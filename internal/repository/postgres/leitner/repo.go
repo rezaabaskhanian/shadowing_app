@@ -43,6 +43,33 @@ func (d DB) Create(ctx context.Context, w leitner.Word) error {
 	return nil
 }
 
+// CreateBatch کلمات متعدد را در قالب یک بچ به جعبه لایتنر کاربر اضافه می‌کند.
+func (d DB) CreateBatch(ctx context.Context, words []leitner.Word) error {
+	const op = "postgres.LeitnerRepository.CreateBatch"
+	if len(words) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	query := `INSERT INTO leitner_words (` + wordColumns + `, verb_meaning_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (user_id, word) DO NOTHING`
+
+	for _, w := range words {
+		batch.Queue(query, w.ID, w.UserID, w.Word, w.Meaning, w.Level, w.NextReview, w.CreatedAt, w.UpdatedAt, w.VerbMeaningID)
+	}
+
+	br := d.conn.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range words {
+		if _, err := br.Exec(); err != nil {
+			return richerror.New(op).WithErr(err).WithMessage("failed to execute batch insert for leitner words")
+		}
+	}
+	return nil
+}
+
 // GetByID یک کلمه را با شناسه‌اش برمی‌گرداند.
 func (d DB) GetByID(ctx context.Context, id uuid.UUID) (leitner.Word, error) {
 	const op = "postgres.LeitnerRepository.GetByID"

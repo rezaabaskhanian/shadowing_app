@@ -11,6 +11,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, w leitner.Word) error
+	CreateBatch(ctx context.Context, words []leitner.Word) error
 	GetByID(ctx context.Context, id uuid.UUID) (leitner.Word, error)
 	GetByUserAndWord(ctx context.Context, userID uuid.UUID, word string) (leitner.Word, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]leitner.Word, error)
@@ -54,6 +55,49 @@ func (s Service) AddWord(ctx context.Context, userID, word, meaning, verbMeaning
 	}
 
 	return s.repo.GetByUserAndWord(ctx, uid, word)
+}
+
+type BatchWordItem struct {
+	Word          string `json:"word"`
+	Meaning       string `json:"meaning"`
+	VerbMeaningID string `json:"verb_meaning_id,omitempty"`
+}
+
+// AddWordsBatch چندین کلمه را همزمان به جعبه لایتنر کاربر اضافه می‌کند.
+func (s Service) AddWordsBatch(ctx context.Context, userID string, items []BatchWordItem) (int, error) {
+	const op = "leitner.AddWordsBatch"
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return 0, richerror.New(op).WithErr(err).WithMessage("invalid user ID")
+	}
+
+	words := make([]leitner.Word, 0, len(items))
+	for _, item := range items {
+		if item.Word == "" {
+			continue
+		}
+		w, err := leitner.NewWord(uid, item.Word, item.Meaning)
+		if err != nil {
+			continue
+		}
+		if item.VerbMeaningID != "" {
+			if mid, err := uuid.Parse(item.VerbMeaningID); err == nil {
+				w.VerbMeaningID = &mid
+			}
+		}
+		words = append(words, w)
+	}
+
+	if len(words) == 0 {
+		return 0, nil
+	}
+
+	if err := s.repo.CreateBatch(ctx, words); err != nil {
+		return 0, richerror.New(op).WithErr(err)
+	}
+
+	return len(words), nil
 }
 
 // ListWords همه‌ی کلمه‌های جعبه‌ی یک کاربر را برمی‌گرداند.

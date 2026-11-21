@@ -256,43 +256,106 @@ BOOK_DATA = [
     }
 ]
 
-# Vocabulary generator by theme for realistic and engaging content
-SAMPLE_VOCABS_BY_TAG = {
+# Thematic cover images available in uploads
+THEMATIC_COVERS = [
+    "/uploads/clothes_shopping.png",
+    "/uploads/hotel_reception.png",
+    "/uploads/driving_lesson.png",
+    "/uploads/weight_loss.png",
+    "/uploads/001a7148-0f94-4cf5-8bb7-619144be75b7.jpeg",
+    "/uploads/6519525d-b5e4-47e9-b52a-f4fbb2da612f.jpeg",
+    "/uploads/7ac3cd84-031b-4e59-8fc2-b1e18ef5e221.jpeg",
+    "/uploads/dccdb46e-5874-4486-be42-b74fdf596700.jpeg"
+]
+
+SAMPLE_VOCABS_WITH_COLLOCATIONS = {
     "beginner": [
-        ("achieve", "دست یافتن به"), ("balance", "تعادل برقرار کردن"), ("certain", "مطمئن"),
-        ("develop", "توسعه دادن"), ("effort", "تلاش و کوشش"), ("focus", "تمرکز کردن"),
-        ("gain", "به دست آوردن"), ("helpful", "مفید و سودمند"), ("improve", "بهبود بخشیدن"),
-        ("journey", "سفر پرماجرا"), ("knowledge", "دانش و آگاهی"), ("learn", "یاد گرفتن"),
-        ("manage", "مدیریت کردن"), ("notice", "توجه کردن به"), ("organize", "ساماندهی کردن"),
-        ("practice", "تمرین مداوم"), ("quality", "کیفیت عالی"), ("result", "نتیجه مثبت"),
-        ("success", "موفقیت چشمگیر"), ("talent", "استعداد ذاتی")
+        ("achieve", "دست یافتن به", "achieve a goal"),
+        ("balance", "تعادل برقرار کردن", "strike a balance"),
+        ("certain", "مطمئن و قطعی", "feel certain"),
+        ("develop", "توسعه دادن", "develop skills"),
+        ("effort", "تلاش و کوشش", "make an effort"),
+        ("focus", "تمرکز کردن", "focus attention"),
+        ("gain", "به دست آوردن", "gain experience"),
+        ("helpful", "مفید و سودمند", "extremely helpful"),
+        ("improve", "بهبود بخشیدن", "improve quality"),
+        ("journey", "سفر پرماجرا", "safe journey"),
+        ("knowledge", "دانش و آگاهی", "acquire knowledge"),
+        ("learn", "یاد گرفتن", "eager to learn"),
+        ("manage", "مدیریت کردن", "manage time"),
+        ("notice", "توجه کردن به", "notice a difference"),
+        ("organize", "ساماندهی کردن", "organize an event"),
+        ("practice", "تمرین مداوم", "daily practice"),
+        ("quality", "کیفیت عالی", "high quality"),
+        ("result", "نتیجه مثبت", "positive result"),
+        ("success", "موفقیت چشمگیر", "great success"),
+        ("talent", "استعداد ذاتی", "natural talent")
     ],
     "intermediate": [
-        ("accurate", "دقیق و بی‌نقص"), ("broaden", "گسترش دادن"), ("collaborate", "همکاری سازنده"),
-        ("distinguish", "تمایز قائل شدن"), ("efficient", "کارآمد و موثر"), ("facilitate", "تسهیل نمودن"),
-        ("generate", "تولید و خلق کردن"), ("highlight", "برجسته ساختن"), ("implement", "پیاده‌سازی کردن"),
-        ("justify", "توجیه منطقی داشتن"), ("maintain", "حفظ و نگهداری"), ("negotiate", "مذاکره کردن"),
-        ("optimize", "بهینه‌سازی"), ("participate", "مشارکت فعال"), ("reinforce", "تقویت و استحکام"),
-        ("streamline", "ساده‌سازی فرایند"), ("transform", "تحول بنیادین"), ("utilize", "بهره‌گیری مناسب"),
-        ("validate", "اعتبارسنجی"), ("withstand", "تاب آوردن در برابر")
+        ("accurate", "دقیق و بی‌نقص", "accurate data"),
+        ("broaden", "گسترش دادن", "broaden horizons"),
+        ("collaborate", "همکاری سازنده", "collaborate closely"),
+        ("distinguish", "تمایز قائل شدن", "distinguish clearly"),
+        ("efficient", "کارآمد و موثر", "highly efficient"),
+        ("facilitate", "تسهیل نمودن", "facilitate growth"),
+        ("generate", "تولید و خلق کردن", "generate ideas"),
+        ("highlight", "برجسته ساختن", "highlight key points"),
+        ("implement", "پیاده‌سازی کردن", "implement a strategy"),
+        ("justify", "توجیه منطقی داشتن", "justify a decision"),
+        ("maintain", "حفظ و نگهداری", "maintain standards"),
+        ("negotiate", "مذاکره کردن", "negotiate terms"),
+        ("optimize", "بهینه‌سازی", "optimize performance"),
+        ("participate", "مشارکت فعال", "participate actively"),
+        ("reinforce", "تقویت و استحکام", "reinforce learning"),
+        ("streamline", "ساده‌سازی فرایند", "streamline processes"),
+        ("transform", "تحول بنیادین", "transform completely"),
+        ("utilize", "بهره‌گیری مناسب", "utilize resources"),
+        ("validate", "اعتبارسنجی", "validate findings"),
+        ("withstand", "تاب آوردن در برابر", "withstand pressure")
     ],
     "advanced": [
-        ("allocate", "تخصیص بهینه منابع"), ("benchmark", "معیار سنجش مرجع"), ("catalyze", "شتاب‌بخشی تحول"),
-        ("differentiate", "متمایزسازی رقابتی"), ("exemplify", "نمونه بارز بودن"), ("formulate", "تدوین منسجم"),
-        ("gauge", "سنجش و برآورد دقیق"), ("harmonize", "هماهنگ‌سازی چندبعدی"), ("innovate", "نوآوری ارزش‌آفرین"),
-        ("leverage", "اهرم قرار دادن مزیت"), ("mitigate", "کاهش اثرات ریسک"), ("navigate", "هدایت در شرایط عدم قطعیت"),
-        ("orchestrate", "هماهنگی دقیق فرایندها"), ("pioneer", "پیشگامی در عرصه"), ("quantify", "محاسبه کمی دقیق"),
-        ("reconcile", "وفاق دادن دیدگاه‌ها"), ("substantiate", "مستندسازی و اثبات"), ("synthesize", "ترکیب و تلفیق نظام‌مند"),
-        ("underpin", "تقویت شالوده فکری"), ("yield", "بازدهی و ثمردهی بالا")
+        ("allocate", "تخصیص بهینه منابع", "allocate budget"),
+        ("benchmark", "معیار سنجش مرجع", "set a benchmark"),
+        ("catalyze", "شتاب‌بخشی تحول", "catalyze change"),
+        ("differentiate", "متمایزسازی رقابتی", "differentiate sharply"),
+        ("exemplify", "نمونه بارز بودن", "exemplify excellence"),
+        ("formulate", "تدوین منسجم", "formulate policy"),
+        ("gauge", "سنجش و برآورد دقیق", "gauge sentiment"),
+        ("harmonize", "هماهنگ‌سازی چندبعدی", "harmonize relations"),
+        ("innovate", "نوآوری ارزش‌آفرین", "innovate continuously"),
+        ("leverage", "اهرم قرار دادن مزیت", "leverage advantage"),
+        ("mitigate", "کاهش اثرات ریسک", "mitigate risk"),
+        ("navigate", "هدایت در شرایط عدم قطعیت", "navigate complexity"),
+        ("orchestrate", "هماهنگی دقیق فرایندها", "orchestrate effort"),
+        ("pioneer", "پیشگامی در عرصه", "pioneer new methods"),
+        ("quantify", "محاسبه کمی دقیق", "quantify impact"),
+        ("reconcile", "وفاق دادن دیدگاه‌ها", "reconcile differences"),
+        ("substantiate", "مستندسازی و اثبات", "substantiate claims"),
+        ("synthesize", "ترکیب و تلفیق نظام‌مند", "synthesize information"),
+        ("underpin", "تقویت شالوده فکری", "underpin success"),
+        ("yield", "بازدهی و ثمردهی بالا", "yield positive returns")
     ],
     "proficient": [
-        ("amalgamate", "ادغام و یکپارچه‌سازی متعالی"), ("bolster", "تقویت بنیادین ارکان"), ("circumscribe", "تعیین دقیق حدود و ثغور"),
-        ("delineate", "تبیین موشکافانه ابعاد"), ("elucidate", "روشنگری عمیق مفهومی"), ("foster", "پرورش نظام‌مند استعدادها"),
-        ("galvanize", "برانگیختن انگیزه فراگیر"), ("herald", "بشارت‌دهنده افق‌های نوین"), ("instigate", "آغازگری تحولات ساختاری"),
-        ("juxtapose", "هم‌نشینی و مقایسه تطبیقی"), ("manifest", "تبلور عینی ارزش‌ها"), ("promulgate", "اشاعه و ترویج رسمی اندیشه"),
-        ("reverberate", "بازتاب گسترده در جامعه"), ("scrutinize", "بررسی موشکافانه و دقیق"), ("transcend", "فراتر رفتن از محدودیت‌ها"),
-        ("unravel", "گشودن گره‌های پیچیده"), ("venerate", "ارج نهادن و پاسداشت مقام"), ("warrant", "تضمین و توجیه شایسته"),
-        ("crystallize", "تبلور شفاف دیدگاه"), ("culminate", "به اوج تکامل رسیدن")
+        ("amalgamate", "ادغام و یکپارچه‌سازی متعالی", "amalgamate traditions"),
+        ("bolster", "تقویت بنیادین ارکان", "bolster confidence"),
+        ("circumscribe", "تعیین دقیق حدود و ثغور", "circumscribe authority"),
+        ("delineate", "تبیین موشکافانه ابعاد", "delineate clearly"),
+        ("elucidate", "روشنگری عمیق مفهومی", "elucidate concepts"),
+        ("foster", "پرورش نظام‌مند استعدادها", "foster innovation"),
+        ("galvanize", "برانگیختن انگیزه فراگیر", "galvanize support"),
+        ("herald", "بشارت‌دهنده افق‌های نوین", "herald a new era"),
+        ("instigate", "آغازگری تحولات ساختاری", "instigate reforms"),
+        ("juxtapose", "هم‌نشینی و مقایسه تطبیقی", "juxtapose elements"),
+        ("manifest", "تبلور عینی ارزش‌ها", "manifest clearly"),
+        ("promulgate", "اشاعه و ترویج رسمی اندیشه", "promulgate ideas"),
+        ("reverberate", "بازتاب گسترده در جامعه", "reverberate widely"),
+        ("scrutinize", "بررسی موشکافانه و دقیق", "scrutinize details"),
+        ("transcend", "فراتر رفتن از محدودیت‌ها", "transcend boundaries"),
+        ("unravel", "گشودن گره‌های پیچیده", "unravel mysteries"),
+        ("venerate", "ارج نهادن و پاسداشت مقام", "venerate legacy"),
+        ("warrant", "تضمین و توجیه شایسته", "warrant attention"),
+        ("crystallize", "تبلور شفاف دیدگاه", "crystallize opinion"),
+        ("culminate", "به اوج تکامل رسیدن", "culminate in triumph")
     ]
 }
 
@@ -302,48 +365,49 @@ def build_sql(cfg):
     series_id = f"40000000-000{b}-0000-0000-00000000000{b}"
     order_base = cfg["order_base"]
     
-    vocab_pool = SAMPLE_VOCABS_BY_TAG.get(level, SAMPLE_VOCABS_BY_TAG["intermediate"])
+    vocab_pool = SAMPLE_VOCABS_WITH_COLLOCATIONS.get(level, SAMPLE_VOCABS_WITH_COLLOCATIONS["intermediate"])
     
     parts = []
     parts.append("-- +migrate Up")
     parts.append(f"-- دوره رسمی ۴۰۰۰ واژه ضروری - کتاب {b} ({cfg['title']})")
-    parts.append(f"-- سطح: {level} | ۳۰ درس کامل شامل شادوئینگ و پادکست متصل.\n")
+    parts.append(f"-- سطح: {level} | ۳۰ درس کامل شامل شادوئینگ، پادکست، کالوکیشن‌ها و کاورهای تصویری.\n")
     
     title_c = cfg['title'].replace("'", "''")
     desc_c = cfg['desc_fa'].replace("'", "''")
+    series_cover = THEMATIC_COVERS[(b - 1) % len(THEMATIC_COVERS)]
     parts.append(f"""INSERT INTO podcast_series (id, title, description_fa, level, cover_url, category, position, is_active)
-VALUES ('{series_id}', '{title_c}', '{desc_c}', '{level}', '', '{cfg['category']}', {b}, TRUE)
-ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description_fa = EXCLUDED.description_fa;\n""")
+VALUES ('{series_id}', '{title_c}', '{desc_c}', '{level}', '{series_cover}', '{cfg['category']}', {b}, TRUE)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description_fa = EXCLUDED.description_fa, cover_url = EXCLUDED.cover_url;\n""")
 
     for idx, (theme_en, theme_fa) in enumerate(cfg["unit_names"], start=1):
         u_hex = f"{idx:04d}"
         scene_id = f"4000{b}000-0000-0000-0000-{u_hex}00000001"
         hotspot_id = f"4000{b}000-0000-0000-0000-{u_hex}00000002"
         podcast_id = f"4000{b}000-0000-0000-0000-{u_hex}00000003"
+        cover_img = THEMATIC_COVERS[(b * 3 + idx) % len(THEMATIC_COVERS)]
         
-        # Pick 20 distinct words by shifting index
         words = []
         for w_i in range(20):
             w_idx = (idx * 3 + w_i) % len(vocab_pool)
-            base_w, base_fa = vocab_pool[w_idx]
-            words.append((base_w, base_fa))
+            base_w, base_fa, colloc = vocab_pool[w_idx]
+            words.append((base_w, base_fa, colloc))
         
         words_preview = ", ".join([w[0] for w in words[:6]]) + "..."
         scene_title = f"{theme_en} (Book {b} - Unit {idx})"
         scene_desc = f"تمرین شادوئینگ یونیت {idx} کتاب {b} ({theme_fa}): {words_preview}"
         podcast_desc = f"روایت داستانی و آموزش واژگان یونیت {idx} ({theme_fa}) از کتاب {b} دوره ۴۰۰۰ واژه"
         
-        # Scene & Hotspot
+        # 1. Scene & Hotspot with Thematic Visual
         parts.append(f"""-- کتاب {b} - درس {idx}: {theme_en}
 INSERT INTO scenes (id, title, description, background_image_url, difficulty, status, "order", category, is_custom)
-VALUES ('{scene_id}', '{scene_title}', '{scene_desc}', '', '{level}', 'published', {order_base + idx}, 'education', false)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('{scene_id}', '{scene_title}', '{scene_desc}', '{cover_img}', '{level}', 'published', {order_base + idx}, 'education', false)
+ON CONFLICT (id) DO UPDATE SET background_image_url = EXCLUDED.background_image_url, title = EXCLUDED.title;
 
 INSERT INTO hotspots (id, scene_id, name, x_position, y_position, order_index)
 VALUES ('{hotspot_id}', '{scene_id}', 'Dialogue', 50.0, 50.0, 1)
 ON CONFLICT (id) DO NOTHING;
 """)
-        # Dialogues
+        # 2. Dialogues
         d_vals = []
         d_templates = [
             ("customer", f"Exploring {theme_en.lower()} offers a great opportunity to master essential vocabulary.", f"بررسی موضوع {theme_fa} فرصتی عالی برای تسلط بر واژگان ضروری به شمار می‌رود."),
@@ -360,19 +424,19 @@ ON CONFLICT (id) DO NOTHING;
         
         parts.append("INSERT INTO dialogues (id, hotspot_id, \"order\", speaker, original_text, translation, audio_url, display_type)\nVALUES\n" + ",\n".join(d_vals) + "\nON CONFLICT (id) DO NOTHING;\n")
         
-        # Podcast
-        vocab_json = json.dumps([{"word": w[0], "meaning_fa": w[1]} for w in words], ensure_ascii=False).replace("'", "''")
+        # 3. Podcast with Collocations & Cover Image
+        vocab_json = json.dumps([{"word": w[0], "meaning_fa": w[1], "collocation": w[2]} for w in words], ensure_ascii=False).replace("'", "''")
         duration = 300 + (idx * 2)
-        parts.append(f"""INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id)
-VALUES ('{podcast_id}', '{scene_title}', '{podcast_desc}', '{level}', 'lesson', '{series_id}', {idx}, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, {duration}, {idx}, '{vocab_json}'::jsonb, '{scene_id}')
-ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary;\n""")
+        parts.append(f"""INSERT INTO podcasts (id, title, description_fa, level, kind, series_id, episode_no, audio_url, audio_status, is_active, duration_seconds, position, vocabulary, scene_id, image_url)
+VALUES ('{podcast_id}', '{scene_title}', '{podcast_desc}', '{level}', 'lesson', '{series_id}', {idx}, '/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3', 'ready', TRUE, {duration}, {idx}, '{vocab_json}'::jsonb, '{scene_id}', '{cover_img}')
+ON CONFLICT (id) DO UPDATE SET scene_id = EXCLUDED.scene_id, vocabulary = EXCLUDED.vocabulary, image_url = EXCLUDED.image_url;\n""")
 
-        # Podcast Lines
+        # 4. Podcast Lines
         pl_vals = []
         p_lines = [
             ("Alex", f"Welcome to 4000 Essential English Words, Book {b}, Unit {idx}: {theme_en}.", f"به درس {idx} از کتاب {b} دوره ۴۰۰۰ واژه خوش آمدید: {theme_fa}.", 0, 6000),
             ("Sarah", f"Today we focus on {len(words)} high-frequency vocabulary words used in real-life contexts.", f"امروز بر روی {len(words)} واژه پرکاربرد در موقعیت‌های واقعی تمرکز می‌کنیم.", 6300, 13500),
-            ("Alex", f"Listen closely to the natural rhythm and pronunciation of each target phrase.", f"به ریتم طبیعی و تلفظ دقیق هر عبارت هدف خوب گوش فرا دهید.", 13800, 21000),
+            ("Alex", f"Listen closely to the natural rhythm, pronunciation, and collocations.", f"به ریتم طبیعی، تلفظ دقیق و همایندهای هر عبارت هدف خوب گوش فرا دهید.", 13800, 21000),
             ("Sarah", f"Now head over to the shadowing section to record these sentences in your own voice!", f"حالا به بخش شادوئینگ بروید تا این جملات را با صدای خودتان تمرین و ضبط کنید!", 21400, 29000)
         ]
         for pl_no, (spk, orig, trans, s_ms, e_ms) in enumerate(p_lines):
@@ -396,6 +460,6 @@ for cfg in BOOK_DATA:
     file_path = os.path.join(out_dir, cfg["file"])
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(sql_content)
-    print(f"Generated {cfg['file']} with {len(cfg['unit_names'])} units ({len(cfg['unit_names']) * 20} words)!")
+    print(f"Generated {cfg['file']} with collocations and visuals!")
 
-print("All 6 Books (180 Units, ~3600-4000 Words) successfully built!")
+print("All 6 Books updated with Collocations (Item 2) and Visuals (Item 6)!")

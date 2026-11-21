@@ -42,7 +42,7 @@ export interface Podcast {
   /** عکس‌های اسلایدشوی هنگام پخش؛ from_line = جمله‌ای (از ۱) که عکس از آن دیده می‌شود، ۰ = خودکار. */
   images?: { url: string; from_line: number }[];
   line_count: number;
-  vocabulary: { word: string; meaning_fa: string }[];
+  vocabulary: { word: string; meaning_fa: string; collocation?: string; example?: string }[];
   lines: PodcastLine[];
 }
 

@@ -321,3 +321,4 @@ with open(target_file, 'w', encoding='utf-8') as f:
     f.write(sql_b1)
 
 print(f"Book 1 migration generated with {len(BOOK_CONFIGS[0]['themes'])} units ({len(BOOK_CONFIGS[0]['themes']) * 20} words)!")
+

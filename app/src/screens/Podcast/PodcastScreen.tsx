@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import {
+  BookmarkPlus,
+  Check,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -26,6 +28,7 @@ import {
   Mic,
   Pause,
   Play,
+  Plus,
   Repeat1,
   RotateCcw,
   RotateCw,
@@ -36,6 +39,8 @@ import {
   X,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from '../../data/ToastContext';
+import { addWord, addWordsBatch } from '../../api/leitner';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
@@ -99,6 +104,41 @@ export const PodcastScreen: React.FC = () => {
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [roleplay, setRoleplay] = useState<Roleplay | null>(null);
+  const [addedWords, setAddedWords] = useState<Record<string, boolean>>({});
+  const [addingAll, setAddingAll] = useState(false);
+  const toast = useToast();
+
+  const handleAddAllToLeitner = async () => {
+    if (!podcast?.vocabulary || podcast.vocabulary.length === 0) return;
+    try {
+      setAddingAll(true);
+      const items = podcast.vocabulary.map((v) => ({
+        word: v.word,
+        meaning: v.meaning_fa,
+      }));
+      await addWordsBatch(items);
+      const newMap: Record<string, boolean> = {};
+      podcast.vocabulary.forEach((v) => {
+        newMap[v.word.toLowerCase()] = true;
+      });
+      setAddedWords((prev) => ({ ...prev, ...newMap }));
+      toast.success(rtl ? 'تمامی واژگان این درس به جعبه لایتنر اضافه شدند 🎉' : 'All words added to Leitner box!');
+    } catch {
+      toast.error(rtl ? 'خطا در افزودن واژگان به لایتنر' : 'Failed to add words to Leitner');
+    } finally {
+      setAddingAll(false);
+    }
+  };
+
+  const handleAddSingleWord = async (word: string, meaning: string) => {
+    try {
+      await addWord(word, meaning);
+      setAddedWords((prev) => ({ ...prev, [word.toLowerCase()]: true }));
+      toast.success(rtl ? `واژه «${word}» به لایتنر اضافه شد` : `Added "${word}" to Leitner`);
+    } catch {
+      toast.error(rtl ? 'خطا در افزودن واژه' : 'Failed to add word');
+    }
+  };
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
@@ -824,26 +864,71 @@ export const PodcastScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* کارت واژگان کلیدی پادکست */}
+        {/* کارت واژگان کلیدی پادکست و همایندها */}
         {podcast.vocabulary && podcast.vocabulary.length > 0 && (
           <View style={styles.vocabCard}>
-            <View style={[styles.vocabTitleRow, rr]}>
-              <Sparkles size={16} color={COLORS.primary} />
-              <Text style={styles.vocabTitle}>{t('podcastVocabulary')}</Text>
+            <View style={[styles.vocabTitleRow, rr, { justifyContent: 'space-between', alignItems: 'center' }]}>
+              <View style={[styles.vocabTitleInner, rr]}>
+                <Sparkles size={16} color={COLORS.primary} />
+                <Text style={styles.vocabTitle}>
+                  {rtl ? 'واژگان کلیدی و کالوکیشن‌ها' : t('podcastVocabulary')}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.addAllLeitnerBtn, rr]}
+                activeOpacity={0.8}
+                onPress={handleAddAllToLeitner}
+                disabled={addingAll}
+              >
+                <BookmarkPlus size={14} color="#FFFFFF" />
+                <Text style={styles.addAllLeitnerText}>
+                  {addingAll ? (rtl ? 'در حال ثبت...' : 'Adding...') : (rtl ? '📥 افزودن همه به لایتنر' : 'Add all to Leitner')}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.vocabChips}>
+
+            <View style={styles.vocabListContainer}>
               {podcast.vocabulary.map((v, i) => {
                 const c = VOCAB_COLORS[i % VOCAB_COLORS.length];
+                const isAdded = addedWords[v.word.toLowerCase()];
                 return (
                   <View
                     key={i}
                     style={[
-                      styles.vocabChip,
-                      { backgroundColor: hexToRgba(c, 0.08), borderColor: hexToRgba(c, 0.25) },
+                      styles.vocabRowCard,
+                      { backgroundColor: hexToRgba(c, 0.05), borderColor: hexToRgba(c, 0.2) },
                     ]}
                   >
-                    <Text style={[styles.vocabWord, { color: c }]}>{v.word}</Text>
-                    <Text style={styles.vocabMeaning}>{v.meaning_fa}</Text>
+                    <View style={[styles.vocabRowHeader, rr]}>
+                      <View style={[styles.vocabWordWrap, rr]}>
+                        <Text style={[styles.vocabWordBold, { color: c }]}>{v.word}</Text>
+                        <Text style={styles.vocabMeaningText}>: {v.meaning_fa}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.singleLeitnerBtn, isAdded && styles.singleLeitnerBtnAdded]}
+                        onPress={() => handleAddSingleWord(v.word, v.meaning_fa)}
+                        disabled={isAdded}
+                        activeOpacity={0.7}
+                      >
+                        {isAdded ? (
+                          <Check size={12} color={COLORS.tertiary} />
+                        ) : (
+                          <Plus size={12} color={COLORS.primary} />
+                        )}
+                        <Text style={[styles.singleLeitnerText, isAdded && { color: COLORS.tertiary }]}>
+                          {isAdded ? (rtl ? 'در لایتنر' : 'Added') : (rtl ? 'لایتنر' : 'Leitner')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {v.collocation ? (
+                      <View style={[styles.collocationWrap, rr]}>
+                        <Text style={styles.collocationLabel}>📌 {rtl ? 'همایند (Collocation):' : 'Collocation:'}</Text>
+                        <Text style={styles.collocationText}>{v.collocation}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -1327,10 +1412,97 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  vocabTitleInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   vocabTitle: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13.5,
     color: '#191C21',
+  },
+  addAllLeitnerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+  },
+  addAllLeitnerText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
+    color: '#FFFFFF',
+  },
+  vocabListContainer: {
+    gap: 8,
+  },
+  vocabRowCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    gap: 6,
+  },
+  vocabRowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  vocabWordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  vocabWordBold: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+  },
+  vocabMeaningText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 12.5,
+    color: '#4F5562',
+  },
+  singleLeitnerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3ED',
+    borderWidth: 1,
+    borderColor: '#FF6422',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  singleLeitnerBtnAdded: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  singleLeitnerText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+    color: '#FF6422',
+  },
+  collocationWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  collocationLabel: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#7C3AED',
+  },
+  collocationText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11.5,
+    color: '#1F2937',
   },
   vocabChips: {
     flexDirection: 'row',

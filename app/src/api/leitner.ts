@@ -25,6 +25,22 @@ export async function addWord(word: string, meaning: string, verbMeaningId?: str
   return (await jsonOrThrow(res)) as BackendLeitnerWord;
 }
 
+/** افزودن دسته‌جمعی واژگان به جعبه لایتنر کاربر */
+export async function addWordsBatch(items: { word: string; meaning: string; verbMeaningId?: string }[]): Promise<number> {
+  const payload = items.map((it) => ({
+    word: it.word,
+    meaning: it.meaning,
+    verb_meaning_id: it.verbMeaningId || '',
+  }));
+  const res = await authFetch('/v1/leitner/words/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: payload }),
+  });
+  const data = await jsonOrThrow(res);
+  return data.added_count ?? items.length;
+}
+
 export async function promoteWord(id: string): Promise<BackendLeitnerWord> {
   const res = await authFetch(`/v1/leitner/words/${id}/promote`, { method: 'POST' });
   return (await jsonOrThrow(res)) as BackendLeitnerWord;

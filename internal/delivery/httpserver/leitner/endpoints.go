@@ -7,6 +7,7 @@ import (
 	"shadowing-backend/internal/domain/leitner"
 	"shadowing-backend/internal/pkg/claims"
 	"shadowing-backend/internal/pkg/errorhandling"
+	leitnerservice "shadowing-backend/internal/service/leitner"
 
 	"github.com/labstack/echo/v4"
 )
@@ -78,6 +79,29 @@ func (h Handler) AddWord(c echo.Context) error {
 		return errorhandling.ErrorHandling(err, c)
 	}
 	return c.JSON(http.StatusCreated, toWordDTO(w))
+}
+
+type addWordsBatchRequest struct {
+	Items []leitnerservice.BatchWordItem `json:"items"`
+}
+
+// AddWordsBatch چندین کلمه را همزمان به جعبه لایتنر کاربر اضافه می‌کند.
+func (h Handler) AddWordsBatch(c echo.Context) error {
+	userClaims, err := claims.GetClaims(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "احراز هویت ناموفق"})
+	}
+
+	var req addWordsBatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"message": "درخواست نامعتبر است"})
+	}
+
+	count, err := h.leitnerSvc.AddWordsBatch(c.Request().Context(), userClaims.UserID, req.Items)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"added_count": count})
 }
 
 // PromoteWord کلمه را یک سطح بالا می‌برد («بلد بودم»).

@@ -11,6 +11,7 @@ func (h Handler) SetLeitnerRoutes(e *echo.Echo) {
 
 	g.GET("/words", h.ListWords)
 	g.POST("/words", h.AddWord)
+	g.POST("/words/batch", h.AddWordsBatch)
 	g.POST("/words/:id/promote", h.PromoteWord)
 	g.POST("/words/:id/demote", h.DemoteWord)
 	g.DELETE("/words/:id", h.DeleteWord)
