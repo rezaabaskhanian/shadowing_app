@@ -27,6 +27,7 @@ import {
   MessageCircle,
   Mic,
   Pause,
+  PenLine,
   Play,
   Plus,
   Repeat1,
@@ -860,6 +861,35 @@ export const PodcastScreen: React.FC = () => {
                 </Text>
               </View>
               <ChevronIcon size={18} color="#2563EB" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* اتصال به تمرین دیکته و املای صوتی */}
+        {lines.length > 0 && (
+          <TouchableOpacity
+            style={[styles.actionCard, { borderColor: '#D97706' }]}
+            activeOpacity={0.88}
+            onPress={async () => {
+              await TrackPlayer.pause().catch(() => {});
+              navigation.navigate('PodcastDictation', { podcastId: podcast.id, openedAt: Date.now() });
+            }}
+          >
+            <View style={[styles.actionCardInner, rr]}>
+              <View style={[styles.actionIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                <PenLine size={20} color="#D97706" />
+              </View>
+              <View style={[styles.actionCardText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text style={[styles.actionCardTitle, { color: '#D97706' }]}>
+                  {rtl ? 'تمرین دیکته و املای صوتی ✍️' : 'Audio Dictation Practice'}
+                </Text>
+                <Text style={styles.actionCardSub}>
+                  {rtl
+                    ? 'با شنیدن صوت، متن را تایپ کنید و املای واژگان را بسنجید'
+                    : 'Listen and type to test your spelling of key vocabulary'}
+                </Text>
+              </View>
+              <ChevronIcon size={18} color="#D97706" />
             </View>
           </TouchableOpacity>
         )}

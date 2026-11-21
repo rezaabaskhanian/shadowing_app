@@ -18,6 +18,7 @@ import {
   Headphones,
   Lock,
   Mic,
+  PenLine,
   Play,
   RotateCcw,
   Sparkles,
@@ -269,13 +270,28 @@ export const PodcastSeriesDetailScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* آیکون پخش */}
-          <View style={[styles.epPlayBtn, isLocked && styles.epPlayBtnLocked]}>
-            {isLocked ? (
-              <Lock size={14} color="#8E95A5" />
-            ) : (
-              <Play size={14} color={COLORS.primary} fill={COLORS.primary} style={{ marginLeft: 2 }} />
-            )}
+          {/* دکمه‌های عملیات: دیکته + پخش */}
+          <View style={[styles.epActionsRow, rtl && styles.rowReverse]}>
+            <TouchableOpacity
+              style={styles.epDictationBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                navigation.navigate('PodcastDictation', {
+                  podcastId: ep.id,
+                  openedAt: Date.now(),
+                });
+              }}
+            >
+              <PenLine size={13} color="#D97706" />
+            </TouchableOpacity>
+
+            <View style={[styles.epPlayBtn, isLocked && styles.epPlayBtnLocked]}>
+              {isLocked ? (
+                <Lock size={14} color="#8E95A5" />
+              ) : (
+                <Play size={14} color={COLORS.primary} fill={COLORS.primary} style={{ marginLeft: 2 }} />
+              )}
+            </View>
           </View>
         </View>
 
@@ -534,6 +550,21 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     color: '#8E95A5',
+  },
+  epActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  epDictationBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   epPlayBtn: {
     width: 34,

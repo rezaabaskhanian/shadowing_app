@@ -13,7 +13,19 @@ import {
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { Event, State } from 'react-native-track-player';
-import { Pause, Play, RotateCcw, Snail, X } from 'lucide-react-native';
+import {
+  BookmarkCheck,
+  BookmarkPlus,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Pause,
+  Play,
+  RotateCcw,
+  Snail,
+  Sparkles,
+  X,
+} from 'lucide-react-native';
 
 import { COLORS, SPACING, BORDER_RADIUS, hexToRgba } from '../../theme/colors';
 import { levelColor } from '../../components/ContentVisuals';
@@ -21,6 +33,7 @@ import { FONT_FAMILY, TEXT_STYLES } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { absUrl } from '../../api/config';
 import { getPodcast, type Podcast } from '../../api/podcasts';
+import { addWordsBatch } from '../../api/leitner';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { matchBoth, tokens } from '../../services/dictation';
 import { track } from '../../services/analytics';
@@ -82,6 +95,13 @@ export const PodcastDictationScreen: React.FC = () => {
   const heardRef = useRef(0);
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<{ answer: Word[]; target: Word[]; pct: number; missed: number } | null>(null);
+  const [vocabResult, setVocabResult] = useState<{
+    matched: NonNullable<Podcast['vocabulary']>;
+    missed: NonNullable<Podcast['vocabulary']>;
+  } | null>(null);
+  const [showVocabHint, setShowVocabHint] = useState(true);
+  const [addingToLeitner, setAddingToLeitner] = useState(false);
+  const [addedToLeitner, setAddedToLeitner] = useState(false);
 
   useEffect(() => {
     if (!podcastId) return;
@@ -169,7 +189,54 @@ export const PodcastDictationScreen: React.FC = () => {
       pct,
       missed: target.filter((w) => !w.ok).length,
     });
+
+    // ارزیابی واژگان کلیدی پادکست (مخصوصاً دوره ۴۰۰۰ واژه)
+    if (podcast.vocabulary && podcast.vocabulary.length > 0) {
+      const userTokensLower = an.toks.map((tk) => tk.toLowerCase());
+      const userTextLower = answer.toLowerCase();
+      const matched: NonNullable<Podcast['vocabulary']> = [];
+      const missed: NonNullable<Podcast['vocabulary']> = [];
+
+      podcast.vocabulary.forEach((v) => {
+        const vWord = v.word.trim().toLowerCase();
+        const vTokens = tokens(v.word);
+        const isMatched =
+          userTokensLower.includes(vWord) ||
+          userTextLower.includes(vWord) ||
+          (vTokens.length > 0 && vTokens.every((vt) => userTokensLower.includes(vt)));
+
+        if (isMatched) {
+          matched.push(v);
+        } else {
+          missed.push(v);
+        }
+      });
+
+      setVocabResult({ matched, missed });
+    } else {
+      setVocabResult(null);
+    }
+
+    setAddedToLeitner(false);
     track('podcast_dictation_done', podcast.id);
+  };
+
+  const handleAddMissedToLeitner = async () => {
+    if (!vocabResult || vocabResult.missed.length === 0 || addingToLeitner || addedToLeitner) return;
+    setAddingToLeitner(true);
+    try {
+      await addWordsBatch(
+        vocabResult.missed.map((v) => ({
+          word: v.word,
+          meaning: v.meaning_fa,
+        })),
+      );
+      setAddedToLeitner(true);
+    } catch {
+      // ignore
+    } finally {
+      setAddingToLeitner(false);
+    }
   };
 
   const duration = podcast?.duration_seconds ?? 0;
@@ -218,6 +285,38 @@ export const PodcastDictationScreen: React.FC = () => {
             {!result ? (
               <>
                 <Text style={[styles.instruction, ta]}>{t('podcastDictationHint')}</Text>
+
+                {podcast.vocabulary && podcast.vocabulary.length > 0 && (
+                  <View style={styles.targetVocabBox}>
+                    <TouchableOpacity
+                      style={[styles.targetVocabHeader, rtl && styles.rowReverse]}
+                      activeOpacity={0.8}
+                      onPress={() => setShowVocabHint((v) => !v)}
+                    >
+                      <View style={[styles.targetVocabTitleWrap, rtl && styles.rowReverse]}>
+                        <Sparkles size={14} color="#D97706" />
+                        <Text style={styles.targetVocabTitle}>
+                          {rtl
+                            ? `کلمات هدف این درس (${podcast.vocabulary.length} واژه کلیدی)`
+                            : `Target Vocabulary (${podcast.vocabulary.length} words)`}
+                        </Text>
+                      </View>
+                      {showVocabHint ? <ChevronUp size={16} color="#8E95A5" /> : <ChevronDown size={16} color="#8E95A5" />}
+                    </TouchableOpacity>
+
+                    {showVocabHint && (
+                      <View style={[styles.vocabPillsWrap, rtl && styles.rowReverse]}>
+                        {podcast.vocabulary.map((v, i) => (
+                          <View key={i} style={styles.vocabTargetPill}>
+                            <Text style={styles.vocabTargetPillWord}>{v.word}</Text>
+                            <Text style={styles.vocabTargetPillMeaning}>({v.meaning_fa})</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 <View style={styles.inputCard}>
                 <TextInput
                   style={styles.input}
@@ -243,6 +342,89 @@ export const PodcastDictationScreen: React.FC = () => {
                   <Text style={styles.score}>{result.pct}%</Text>
                   <Text style={styles.scoreSub}>{t('podcastDictationMissed').replace('{n}', String(result.missed))}</Text>
                 </View>
+
+                {/* بازخورد تفصیلی واژگان هدف */}
+                {vocabResult && (
+                  <View style={styles.vocabFeedbackCard}>
+                    <View style={[styles.vocabFeedbackHead, rtl && styles.rowReverse]}>
+                      <View style={[styles.targetVocabTitleWrap, rtl && styles.rowReverse]}>
+                        <Sparkles size={16} color={COLORS.primary} />
+                        <Text style={styles.vocabFeedbackTitle}>
+                          {rtl
+                            ? `تحلیل واژگان کلیدی درس (${vocabResult.matched.length} از ${podcast.vocabulary?.length || 0} کلمه درست)`
+                            : `Vocabulary Spelling Analysis (${vocabResult.matched.length}/${podcast.vocabulary?.length || 0})`}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* واژگان صحیح */}
+                    {vocabResult.matched.length > 0 && (
+                      <View style={{ marginTop: 8 }}>
+                        <Text style={[styles.vocabSubHeading, ta]}>
+                          {rtl ? '✓ واژگان با املای درست:' : 'Correctly Spelled:'}
+                        </Text>
+                        <View style={[styles.vocabPillsWrap, rtl && styles.rowReverse]}>
+                          {vocabResult.matched.map((v, i) => (
+                            <View key={i} style={styles.vocabMatchedPill}>
+                              <CheckCircle2 size={12} color="#059669" />
+                              <Text style={styles.vocabMatchedText}>{v.word}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* واژگان جاافتاده یا اشتباه */}
+                    {vocabResult.missed.length > 0 && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={[styles.vocabSubHeading, ta, { color: '#DC2626' }]}>
+                          {rtl ? '✕ واژگان جاافتاده یا با غلط املایی:' : 'Missed or Misspelled:'}
+                        </Text>
+                        <View style={[styles.vocabPillsWrap, rtl && styles.rowReverse]}>
+                          {vocabResult.missed.map((v, i) => (
+                            <View key={i} style={styles.vocabMissedPill}>
+                              <Text style={styles.vocabMissedWord}>{v.word}</Text>
+                              <Text style={styles.vocabMissedMeaning}>: {v.meaning_fa}</Text>
+                            </View>
+                          ))}
+                        </View>
+
+                        {/* دکمه افزودن واژگان اشتباه به جعبه لایتنر */}
+                        <TouchableOpacity
+                          style={[
+                            styles.leitnerBatchBtn,
+                            addedToLeitner && styles.leitnerBatchBtnDone,
+                            rtl && styles.rowReverse,
+                          ]}
+                          activeOpacity={0.85}
+                          onPress={handleAddMissedToLeitner}
+                          disabled={addingToLeitner || addedToLeitner}
+                        >
+                          {addedToLeitner ? (
+                            <>
+                              <BookmarkCheck size={16} color="#FFFFFF" />
+                              <Text style={styles.leitnerBatchBtnText}>
+                                {rtl ? 'واژگان به جعبه لایتنر اضافه شدند ✓' : 'Added to Leitner Box ✓'}
+                              </Text>
+                            </>
+                          ) : (
+                            <>
+                              <BookmarkPlus size={16} color="#FFFFFF" />
+                              <Text style={styles.leitnerBatchBtnText}>
+                                {addingToLeitner
+                                  ? (rtl ? 'در حال ثبت...' : 'Adding...')
+                                  : (rtl
+                                      ? `افزودن ${vocabResult.missed.length} واژه اشتباه به جعبه لایتنر 📥`
+                                      : `Add ${vocabResult.missed.length} missed words to Leitner`)}
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 <Text style={styles.sectionLabel}>{t('podcastDictationYours')}</Text>
                 <View style={styles.wordsBox}>
                   {result.answer.map((w, i) => (
@@ -412,4 +594,135 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderLight,
   },
   ghostText: { fontFamily: FONT_FAMILY.bold, fontSize: 13, color: COLORS.text },
+  targetVocabBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    padding: SPACING.s,
+    marginBottom: 4,
+  },
+  targetVocabHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  targetVocabTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  targetVocabTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#B45309',
+  },
+  vocabPillsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  vocabTargetPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  vocabTargetPillWord: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#92400E',
+  },
+  vocabTargetPillMeaning: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#78350F',
+  },
+  vocabFeedbackCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    borderColor: '#ECE8E0',
+    padding: SPACING.m,
+    marginTop: SPACING.s,
+  },
+  vocabFeedbackHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  vocabFeedbackTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  vocabSubHeading: {
+    fontFamily: FONT_FAMILY.semiBold,
+    fontSize: 12,
+    color: '#059669',
+    marginBottom: 4,
+  },
+  vocabMatchedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  vocabMatchedText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#065F46',
+  },
+  vocabMissedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  vocabMissedWord: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#991B1B',
+  },
+  vocabMissedMeaning: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#B91C1C',
+  },
+  leitnerBatchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FF6422',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  leitnerBatchBtnDone: {
+    backgroundColor: '#059669',
+  },
+  leitnerBatchBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
 });
