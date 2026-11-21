@@ -2,6 +2,7 @@ package aiservice
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	settingsservice "shadowing-backend/internal/service/settings"
@@ -71,7 +72,12 @@ func (s Service) GenerateScene(ctx context.Context, prompt, difficulty, grammarT
 	var result GeneratedScene
 	err := withLimit(ctx, func() error {
 		var err error
-		result, err = s.activeProvider().generateScene(ctx, prompt, difficulty)
+		primary := s.activeProvider()
+		result, err = primary.generateScene(ctx, prompt, difficulty)
+		if err != nil && s.anthropic.enabled() && primary != s.anthropic {
+			slog.Warn("ai: primary provider failed, falling back to anthropic", "err", err)
+			result, err = s.anthropic.generateScene(ctx, prompt, difficulty)
+		}
 		return err
 	})
 	if err != nil {

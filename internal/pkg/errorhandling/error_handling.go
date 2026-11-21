@@ -29,9 +29,13 @@ func ErrorHandling(err error, c echo.Context) error {
 				"message": e.Message(),
 			})
 		default:
+			msg := e.Message()
+			if msg == "" {
+				msg = "خطای داخلی سرور"
+			}
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error":   "internal_error",
-				"message": "خطای داخلی سرور",
+				"message": msg,
 			})
 		}
 	default:

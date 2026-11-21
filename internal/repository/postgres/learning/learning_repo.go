@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	domain "shadowing-backend/internal/domain/learning/scene"
 	scene "shadowing-backend/internal/domain/learning/scene"
 	"shadowing-backend/internal/pkg/richerror"
@@ -46,7 +47,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		nullableText(s.GrammarExplanation),
 		grammarExamplesJSON(s.GrammarExamples),
 		nullableText(s.GrammarAudioURL),
-		s.CreatedByUserID,
+		nullableUUID(s.CreatedByUserID),
 		s.IsCustom,
 	)
 	if err != nil {
@@ -698,6 +699,21 @@ func (r DB) GetDialogueByID(ctx context.Context, id uuid.UUID) (scene.Dialogue, 
 	}
 
 	return d, nil
+}
+
+// nullableUUID رشته UUID را اعتبارسنجی می‌کند یا nil بازمی‌گرداند تا از خطای ساختار UUID جلوگیری کند.
+func nullableUUID(u *string) any {
+	if u == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*u)
+	if trimmed == "" {
+		return nil
+	}
+	if _, err := uuid.Parse(trimmed); err != nil {
+		return nil
+	}
+	return trimmed
 }
 
 // nullableText رشته‌ی خالی را به NULL تبدیل می‌کند (ستون‌های اختیاریِ نکته‌ی گرامری).
