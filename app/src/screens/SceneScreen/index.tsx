@@ -1256,6 +1256,10 @@ export const SceneScreen = () => {
         />
         <LessonCompleteModal
           visible={lessonCompleteVisible}
+          onStartActiveRecall={() => {
+            setLessonCompleteVisible(false);
+            navigation.navigate('ActiveRecall', { scenarioId, openedAt: Date.now() });
+          }}
           onListenPodcast={
             scenePodcastId
               ? () => {

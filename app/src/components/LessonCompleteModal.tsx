@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronRight, Headphones, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw } from 'lucide-react-native';
+import { ChevronRight, Headphones, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw, Zap } from 'lucide-react-native';
 
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -8,6 +8,7 @@ import { useLanguage } from '../data/i18n';
 
 interface LessonCompleteModalProps {
   visible: boolean;
+  onStartActiveRecall?: () => void;
   onStartQuiz: () => void;
   onStartAiConversation: () => void;
   onStartFreeSpeech: () => void;
@@ -26,6 +27,7 @@ interface LessonCompleteModalProps {
  */
 export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
   visible,
+  onStartActiveRecall,
   onStartQuiz,
   onStartAiConversation,
   onStartFreeSpeech,
@@ -36,6 +38,9 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
   const { t } = useLanguage();
 
   const options: { key: string; Icon: typeof ListChecks; label: string; onPress: () => void }[] = [
+    ...(onStartActiveRecall
+      ? [{ key: 'recall', Icon: Zap, label: t('activeRecallTitle') || 'اکتیو لرنینگ (۵ ثانیه‌ای)', onPress: onStartActiveRecall }]
+      : []),
     ...(onListenPodcast
       ? [{ key: 'podcast', Icon: Headphones, label: t('listenScenePodcast'), onPress: onListenPodcast }]
       : []),

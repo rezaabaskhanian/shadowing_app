@@ -42,6 +42,7 @@ import {
   SpellCheck,
   Drama,
   Map as MapIcon,
+  Zap,
 } from 'lucide-react-native';
 import { COLORS, BORDER_RADIUS, SPACING } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -275,6 +276,17 @@ export const AppDrawer = ({
           {/* هر ردیف رنگ اختصاصی خودش را دارد — هم برای تشخیص سریع‌تر، هم تا
               وقتی از این ردیف وارد صفحه‌اش می‌شوی، همون رنگ آنجا هم ادامه پیدا
               کند (زبانه سبز → صفحه‌ی عادت زبانی هم لهجه‌ی سبز دارد، و…). */}
+          <TouchableOpacity
+            style={[styles.row, rtl && styles.rowReverse]}
+            activeOpacity={0.7}
+            onPress={() => go('ActiveRecall')}
+          >
+            <View style={[styles.rowIconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Zap color="#D97706" size={18} />
+            </View>
+            <Text style={[styles.rowText, ta]}>{t('activeRecallTitle')}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.row, rtl && styles.rowReverse]}
             activeOpacity={0.7}
