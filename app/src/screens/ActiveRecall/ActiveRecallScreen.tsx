@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Flame,
   HelpCircle,
   Play,
@@ -68,7 +69,7 @@ export const ActiveRecallScreen: React.FC = () => {
   // انیمیشن تایمر دایره‌ای یا نواری
   const timerAnim = useRef(new Animated.Value(1)).current;
 
-  // ۱. شروع با یک صحنه مشخص
+  // ۱. شروع با یک صحنه مشخص (طرح ۴ تا ۵ سوال هدفمند در مورد موضوع بحث)
   const startWithScenario = useCallback(async (sc: Scenario) => {
     setLoadingScene(true);
     try {
@@ -81,8 +82,26 @@ export const ActiveRecallScreen: React.FC = () => {
         (d) => d.dialogue && d.translation && d.audioUrl
       );
       if (items.length > 0) {
+        // انتخاب ۴ تا ۵ سوال پیرامون موضوع صحنه
+        let questions = items;
+        if (items.length > 5) {
+          questions = items.slice(0, 5);
+        } else if (items.length < 4) {
+          const sameLevel = scenes.filter((s) => s.id !== full.id && s.level === full.level);
+          for (const s of sameLevel) {
+            if (questions.length >= 5) break;
+            const sItems = expandScenarioToDialogueItems(s).filter(
+              (d) => d.dialogue && d.translation && d.audioUrl
+            );
+            for (const item of sItems) {
+              if (questions.length >= 5) break;
+              questions.push(item);
+            }
+          }
+        }
+
         setSelectedScenario(full);
-        setDialogueList(items);
+        setDialogueList(questions);
         setCurrentIndex(0);
         setKnownCount(0);
         setRetryQueue([]);
@@ -92,9 +111,9 @@ export const ActiveRecallScreen: React.FC = () => {
     } finally {
       setLoadingScene(false);
     }
-  }, [getScene]);
+  }, [scenes, getScene]);
 
-  // ۲. شروع با چالش میکس روزانه از کل صحنه‌های سطح کاربر
+  // ۲. شروع با چالش میکس روزانه از کل صحنه‌های سطح کاربر (۵ سوال کاربردی)
   const startQuickMix = useCallback(async () => {
     setLoadingScene(true);
     try {
@@ -113,7 +132,8 @@ export const ActiveRecallScreen: React.FC = () => {
         candidates.push(...items);
       }
 
-      const mixed = candidates.sort(() => 0.5 - Math.random()).slice(0, 6);
+      // دقیقا ۵ سوال هدفمند در چالش سریع
+      const mixed = candidates.sort(() => 0.5 - Math.random()).slice(0, 5);
       if (mixed.length > 0) {
         setSelectedScenario(null);
         setDialogueList(mixed);
@@ -139,6 +159,7 @@ export const ActiveRecallScreen: React.FC = () => {
   }, [scenarioId, scenes, startWithScenario]);
 
   // تایمر ۵ ثانیه‌ای تفکر (Thinking Window)
+  // طبق درخواست: بعد از ۵ ثانیه پاسخ خودکار نشان داده نمی‌شود، بلکه دکمه «نمایش جواب» باقی می‌ماند تا کاربر خودش پاسخ را باز کند
   useEffect(() => {
     if (phase !== 'thinking') return;
 
@@ -153,7 +174,7 @@ export const ActiveRecallScreen: React.FC = () => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          revealAnswer();
+          // زمان ۵ ثانیه تمام شد؛ جواب خودکار نشان داده نمی‌شود تا کاربر دکمه را بزند
           return 0;
         }
         return prev - 1;
@@ -356,10 +377,22 @@ export const ActiveRecallScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.practiceContent} showsVerticalScrollIndicator={false}>
         {/* ۱. کارت صورت سوال / چالش فارسی */}
         <View style={styles.challengeCard}>
+          {/* نشانگر موضوع بحث و موقعیت */}
+          <View style={[styles.topicBadgeRow, row]}>
+            <Sparkles size={14} color="#D97706" />
+            <Text style={styles.topicBadgeText} numberOfLines={1}>
+              {selectedScenario
+                ? (rtl ? `موضوع بحث: ${selectedScenario.title}` : `Topic: ${selectedScenario.title}`)
+                : (rtl ? 'موضوع: جملات کاربردی مکالمه' : 'Topic: Practical Conversations')}
+            </Text>
+          </View>
+
           <View style={[styles.promptBadgeRow, row]}>
-            <HelpCircle size={16} color="#D97706" />
+            <HelpCircle size={15} color="#B45309" />
             <Text style={styles.promptBadgeText}>
-              {t('activeRecallPromptLabel') || 'چطور به انگلیسی می‌گی:'}
+              {rtl
+                ? `سوال ${currentIndex + 1} از ${dialogueList.length} — چطور به انگلیسی می‌گی:`
+                : `Question ${currentIndex + 1} of ${dialogueList.length} — How do you say:`}
             </Text>
           </View>
           <Text style={[styles.persianPromptText, tr]}>
@@ -371,19 +404,50 @@ export const ActiveRecallScreen: React.FC = () => {
         {phase === 'thinking' && (
           <View style={styles.thinkingContainer}>
             {/* شمارشگر ۵ ثانیه با جلوه دایره‌ای */}
-            <View style={styles.timerCircleWrap}>
-              <Text style={styles.timerNumber}>{secondsLeft}</Text>
-              <Text style={styles.timerSecLabel}>ثانیه</Text>
+            <View style={[styles.timerCircleWrap, secondsLeft === 0 && styles.timerCircleDone]}>
+              <Text style={[styles.timerNumber, secondsLeft === 0 && styles.timerNumberDone]}>
+                {secondsLeft > 0 ? secondsLeft : '۰'}
+              </Text>
+              <Text style={[styles.timerSecLabel, secondsLeft === 0 && styles.timerSecLabelDone]}>
+                {secondsLeft > 0 ? (rtl ? 'ثانیه' : 'sec') : (rtl ? 'پایان زمان' : 'Time up')}
+              </Text>
             </View>
 
-            <Text style={styles.thinkingHint}>
-              {t('activeRecallThinkingHint') || 'با صدای بلند یا در ذهنت بگو... 🗣️'}
+            <Text style={[styles.thinkingHint, secondsLeft === 0 && styles.thinkingHintDone]}>
+              {secondsLeft > 0
+                ? (t('activeRecallThinkingHint') || 'با صدای بلند یا در ذهنت بگو... 🗣️')
+                : (rtl ? '⏱️ ۵ ثانیه زمان تفکر تمام شد! آیا جمله را گفتی؟' : '⏱️ 5 seconds are up! Did you say it?')}
             </Text>
 
-            {/* دکمه میانبر برای افرادی که سریع پاسخ را می‌دانند */}
-            <TouchableOpacity style={styles.revealNowBtn} onPress={revealAnswer} activeOpacity={0.85}>
-              <Zap size={18} color="#D97706" />
-              <Text style={styles.revealNowText}>{t('activeRecallRevealBtn') || 'پاسخ رو بشنو ⚡'}</Text>
+            {secondsLeft === 0 && (
+              <Text style={styles.thinkingSubHint}>
+                {rtl
+                  ? 'برای دیدن متن انگلیسی و شنیدن صدای نیتیو دکمه زیر را لمس کن:'
+                  : 'Tap below to reveal the native answer and audio:'}
+              </Text>
+            )}
+
+            {/* دکمه اختصاصی «نمایش جواب» */}
+            <TouchableOpacity
+              style={[
+                styles.revealNowBtn,
+                secondsLeft === 0 && styles.revealNowBtnHighlight,
+                row,
+              ]}
+              onPress={revealAnswer}
+              activeOpacity={0.85}
+            >
+              <Eye size={18} color={secondsLeft === 0 ? '#FFFFFF' : '#92400E'} />
+              <Text
+                style={[
+                  styles.revealNowText,
+                  secondsLeft === 0 && styles.revealNowTextHighlight,
+                ]}
+              >
+                {secondsLeft === 0
+                  ? (rtl ? 'نمایش جواب و شنیدن پاسخ نیتیو 👁️' : 'Reveal Answer & Audio 👁️')
+                  : (rtl ? 'نمایش جواب 👁️' : 'Reveal Answer 👁️')}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -617,6 +681,24 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
+  topicBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  topicBadgeText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#92400E',
+  },
   promptBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -648,11 +730,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFBEB',
   },
+  timerCircleDone: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
   timerNumber: {
     fontSize: 38,
     fontFamily: FONT_FAMILY.bold,
     color: '#D97706',
     lineHeight: 42,
+  },
+  timerNumberDone: {
+    color: '#059669',
   },
   timerSecLabel: {
     fontSize: 11,
@@ -660,28 +749,57 @@ const styles = StyleSheet.create({
     color: '#B45309',
     marginTop: -2,
   },
+  timerSecLabelDone: {
+    color: '#047857',
+  },
   thinkingHint: {
     fontSize: 15,
     fontFamily: FONT_FAMILY.medium,
     color: COLORS.textSecondary,
     marginTop: 20,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  thinkingHintDone: {
+    color: '#B45309',
+    fontFamily: FONT_FAMILY.bold,
+  },
+  thinkingSubHint: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.regular,
+    color: COLORS.textSecondary,
+    marginTop: 8,
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
   revealNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF3C7',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 24,
-    marginTop: 28,
+    marginTop: 24,
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FDE68A',
+  },
+  revealNowBtnHighlight: {
+    backgroundColor: '#FF6422',
+    borderColor: '#FF6422',
+    shadowColor: '#FF6422',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   revealNowText: {
     fontSize: 14,
     fontFamily: FONT_FAMILY.bold,
     color: '#92400E',
+  },
+  revealNowTextHighlight: {
+    color: '#FFFFFF',
   },
   revealContainer: {
     marginTop: 24,
