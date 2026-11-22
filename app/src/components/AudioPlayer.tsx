@@ -196,7 +196,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         // پخشی شروع نمی‌شود، هیچ‌وقت PlaybackQueueEnded («finished») هم
         // نمی‌آید و بدون این خبر، جریانِ خودکارِ «گوش دادن» روی همین جمله
         // برای همیشه می‌ماند و کاربر فکر می‌کند پخش خراب شده.
-        if (wantsRestart || actionCommand === 'resume') {
+        if (wantsRestart || actionCommand === 'resume' || wantsPlay) {
           onPlaybackStatusUpdateRef.current?.('no_audio');
         }
         return;

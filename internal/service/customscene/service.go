@@ -3,8 +3,11 @@ package customscene
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +28,7 @@ type Repository interface {
 	GetSceneDomain(ctx context.Context, id string) (domain.Scene, error)
 	GetUserCustomScenes(ctx context.Context, userID string) ([]domain.Scene, error)
 	DeleteUserCustomScene(ctx context.Context, userID, sceneID string) error
+	CountUserCustomScenesToday(ctx context.Context, userID string) (int, error)
 }
 
 type AIService interface {
@@ -110,9 +114,14 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 		diff = "intermediate"
 	}
 
-	// ۱. پردازش و تبدیل با هوش مصنوعی
+	// ۱. پردازش و تبدیل با هوش مصنوعی (محدود به ۱ هات‌اسپات و ۴ تا ۶ دیالوگ کوتاه)
 	promptForAI := fmt.Sprintf(
-		"Personalized user practice content:\n%s\nTransform this into a natural, engaging conversational shadowing scene.",
+		"Personalized custom shadowing scenario:\n%s\n\n"+
+			"Strict constraints for this custom shadowing session:\n"+
+			"- Generate exactly 1 hotspot named \"Main Conversation\".\n"+
+			"- Generate exactly 4 to 6 concise dialogue lines (alternating speakers).\n"+
+			"- Keep each sentence natural, spoken, and under 15 words (maximum 100 characters per line) for optimal shadowing.\n"+
+			"- Provide an accurate \"image_prompt\" describing a 16:9 3D animated Pixar-style background illustration that perfectly depicts this setting.",
 		contentPrompt,
 	)
 
@@ -122,10 +131,6 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 		generated = buildFallbackGeneratedScene(contentPrompt, diff)
 	}
 
-	// ۲. ساخت آبجکت domain.Scene
-	sceneID := domain.NewSenceID()
-	bgImage := defaultCustomCovers[rand.Intn(len(defaultCustomCovers))]
-
 	title := generated.Title
 	if title == "" {
 		title = "Custom Shadowing Session"
@@ -133,6 +138,10 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 	if len(title) > 240 {
 		title = title[:237] + "..."
 	}
+
+	// ۲. تولید هوشمند تصویر پس‌زمینه متناسب با موضوع سناریو (AI Image Generation + Thematic Fallback)
+	sceneID := domain.NewSenceID()
+	bgImage := s.generateRelevantCoverImage(ctx, title, generated.ImagePrompt, contentPrompt)
 	desc := generated.Description
 	if desc == "" {
 		desc = "Personalized practice based on your custom content."
@@ -192,9 +201,8 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 				}
 			}
 
-			if audioURL == "" {
-				audioURL = "/uploads/305c18f4-3b42-443e-8843-f4d575ca97b2.mp3"
-			}
+			// اگر صوت تولید نشد، خالی می‌ماند تا اپ کلاینت از تلفظ نیتیو داخلی گوشی (On-Device TTS) استفاده کند
+			// هرگز از آدرس ماک/جعلی استفاده نمی‌شود تا خطای ۴۰۴ رخ ندهد.
 
 			words := make([]domain.DialogueWord, 0, len(gd.Words))
 			for _, w := range gd.Words {
@@ -379,5 +387,69 @@ func buildFallbackGeneratedScene(contentPrompt, diff string) aiservice.Generated
 				Dialogues: dialogues,
 			},
 		},
+	}
+}
+
+// generateRelevantCoverImage تصویر مرتبط با پرامپت سناریو را از Pollinations AI دانلود و در استور ذخیره می‌کند
+// در صورت عدم دسترسی شبکه، از دسته‌بندی موضوعی هوشمند استفاده می‌کند.
+func (s Service) generateRelevantCoverImage(ctx context.Context, title, imagePrompt, contentPrompt string) string {
+	promptToUse := strings.TrimSpace(imagePrompt)
+	if promptToUse == "" {
+		promptToUse = fmt.Sprintf("A 3D animated Pixar style scene for English shadowing: %s, vibrant colors, warm lighting, 16:9 aspect ratio", title)
+	} else {
+		promptToUse = fmt.Sprintf("%s, 3D animated Pixar Disney style, vibrant warm colors, cinematic lighting, 16:9 aspect ratio", promptToUse)
+	}
+
+	pollinationsURL := fmt.Sprintf(
+		"https://image.pollinations.ai/prompt/%s?width=1280&height=720&nologo=true&seed=%d",
+		url.QueryEscape(promptToUse),
+		rand.Intn(100000),
+	)
+
+	client := &http.Client{Timeout: 7 * time.Second}
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, pollinationsURL, nil)
+	if reqErr == nil {
+		resp, getErr := client.Do(req)
+		if getErr == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			imgData, readErr := io.ReadAll(resp.Body)
+			if readErr == nil && len(imgData) > 5000 {
+				fname := fmt.Sprintf("custom_scene_%s.jpg", uuid.NewString()[:8])
+				if savedURL, saveErr := s.store.Save(ctx, fname, imgData, "image/jpeg"); saveErr == nil {
+					slog.Info("customscene: successfully generated AI scene cover", "url", savedURL)
+					return savedURL
+				}
+			}
+		} else if getErr != nil {
+			slog.Warn("customscene: pollinations image generation failed, using thematic fallback", "err", getErr)
+		}
+	}
+
+	return getThematicCoverFallback(contentPrompt + " " + title)
+}
+
+func getThematicCoverFallback(text string) string {
+	low := strings.ToLower(text)
+	switch {
+	case strings.Contains(low, "doctor") || strings.Contains(low, "hospital") || strings.Contains(low, "clinic") || strings.Contains(low, "dentist") || strings.Contains(low, "nurse") || strings.Contains(low, "پزشک") || strings.Contains(low, "بیمار"):
+		return "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "cafe") || strings.Contains(low, "coffee") || strings.Contains(low, "restaurant") || strings.Contains(low, "dinner") || strings.Contains(low, "food") || strings.Contains(low, "کافه") || strings.Contains(low, "رستوران"):
+		return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "airport") || strings.Contains(low, "flight") || strings.Contains(low, "plane") || strings.Contains(low, "travel") || strings.Contains(low, "فرودگاه") || strings.Contains(low, "سفر"):
+		return "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "hotel") || strings.Contains(low, "reception") || strings.Contains(low, "room") || strings.Contains(low, "هتل"):
+		return "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "interview") || strings.Contains(low, "job") || strings.Contains(low, "office") || strings.Contains(low, "business") || strings.Contains(low, "کار") || strings.Contains(low, "مصاحبه"):
+		return "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "car") || strings.Contains(low, "taxi") || strings.Contains(low, "drive") || strings.Contains(low, "mechanic") || strings.Contains(low, "خودرو") || strings.Contains(low, "ماشین"):
+		return "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "shop") || strings.Contains(low, "store") || strings.Contains(low, "supermarket") || strings.Contains(low, "mall") || strings.Contains(low, "خرید") || strings.Contains(low, "فروشگاه"):
+		return "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "university") || strings.Contains(low, "school") || strings.Contains(low, "class") || strings.Contains(low, "library") || strings.Contains(low, "دانشگاه") || strings.Contains(low, "کلاس"):
+		return "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1280&q=80"
+	case strings.Contains(low, "gym") || strings.Contains(low, "fitness") || strings.Contains(low, "sport") || strings.Contains(low, "ورزش") || strings.Contains(low, "باشگاه"):
+		return "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1280&q=80"
+	default:
+		return "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1280&q=80"
 	}
 }

@@ -21,11 +21,15 @@ import {
   FileText,
   Lightbulb,
   ChevronRight,
+  Crown,
+  Lock,
+  AlertCircle,
 } from 'lucide-react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
 import { useLanguage } from '../../data/i18n';
 import { useToast } from '../../data/ToastContext';
+import { getSubscriptionStatus } from '../../api/billing';
 import {
   generateCustomScene,
   fetchUserCustomScenes,
@@ -68,15 +72,32 @@ export const CustomSceneScreen: React.FC = () => {
   const [myScenes, setMyScenes] = useState<Scenario[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+  const [checkingSub, setCheckingSub] = useState<boolean>(true);
 
   // وضعیت تولید صحنه
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
 
+  const checkUserSubscription = useCallback(async () => {
+    try {
+      setCheckingSub(true);
+      const status = await getSubscriptionStatus();
+      setHasSubscription(Boolean(status?.active));
+    } catch {
+      setHasSubscription(false);
+    } finally {
+      setCheckingSub(false);
+    }
+  }, []);
+
   const loadScenes = useCallback(async () => {
     try {
       setLoadingList(true);
-      const scenes = await fetchUserCustomScenes();
+      const [scenes] = await Promise.all([
+        fetchUserCustomScenes(),
+        checkUserSubscription(),
+      ]);
       setMyScenes(scenes);
     } catch {
       // ignore
@@ -84,23 +105,52 @@ export const CustomSceneScreen: React.FC = () => {
       setLoadingList(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [checkUserSubscription]);
 
   useEffect(() => {
     loadScenes();
   }, [loadScenes]);
 
   const handleGenerate = async () => {
+    if (!hasSubscription) {
+      Alert.alert(
+        '💎 اشتراک طلایی (VIP) الزامی است',
+        'ساخت سناریوی شادوئینگ اختصاصی با هوش مصنوعی و صدای نیتیو فقط برای مشترکین ویژه در دسترس است.\n\nبا تهیه اشتراک می‌توانید روزانه تا ۵ سناریوی اختصاصی تولید کنید.',
+        [
+          { text: 'شاید بعداً', style: 'cancel' },
+          {
+            text: 'مشاهده پلن‌ها و خرید VIP 🚀',
+            style: 'default',
+            onPress: () => navigation.navigate('Paywall'),
+          },
+        ]
+      );
+      return;
+    }
+
     const trimmedTopic = topic.trim();
     const trimmedText = customText.trim();
 
-    if (inputMode === 'topic' && !trimmedTopic) {
-      toast.error('لطفاً موضوع یا ایده سناریو را وارد کنید');
-      return;
+    if (inputMode === 'topic') {
+      if (!trimmedTopic) {
+        toast.error('لطفاً موضوع یا ایده سناریو را وارد کنید');
+        return;
+      }
+      if (trimmedTopic.length > 300) {
+        toast.error('موضوع نباید بیش از ۳۰۰ کاراکتر باشد');
+        return;
+      }
     }
-    if (inputMode === 'text' && !trimmedText) {
-      toast.error('لطفاً متن دیالوگ یا پاراگراف خود را وارد کنید');
-      return;
+
+    if (inputMode === 'text') {
+      if (!trimmedText) {
+        toast.error('لطفاً متن دیالوگ یا پاراگراف خود را وارد کنید');
+        return;
+      }
+      if (trimmedText.length > 1000) {
+        toast.error('متن ورودی حداکثر ۱۰۰۰ کاراکتر مجاز است');
+        return;
+      }
     }
 
     try {
@@ -137,7 +187,24 @@ export const CustomSceneScreen: React.FC = () => {
       }
     } catch (err: any) {
       setIsGenerating(false);
-      toast.error(err.message || 'خطا در ساخت صحنه شادوئینگ');
+      const errMsg = String(err?.message || '');
+      if (errMsg.includes('SUBSCRIPTION_REQUIRED') || errMsg.includes('اشتراک ویژه')) {
+        Alert.alert(
+          'دسترسی ویژه',
+          'برای ساخت سناریو نیاز به فعال‌سازی اشتراک VIP دارید.',
+          [
+            { text: 'انصراف', style: 'cancel' },
+            { text: 'خرید اشتراک', onPress: () => navigation.navigate('Paywall') },
+          ]
+        );
+      } else if (errMsg.includes('DAILY_LIMIT_EXCEEDED') || errMsg.includes('سقف')) {
+        Alert.alert(
+          'سقف روزانه',
+          'شما به حداکثر مجاز ساخت سناریو در امروز (۵ سناریو) رسیده‌اید. فردا دوباره می‌توانید سناریوی جدید بسازید.'
+        );
+      } else {
+        toast.error(errMsg || 'خطا در ساخت صحنه شادوئینگ');
+      }
     }
   };
 
@@ -170,6 +237,36 @@ export const CustomSceneScreen: React.FC = () => {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      {/* بنر ویژه مشترکین VIP */}
+      {!hasSubscription && !checkingSub && (
+        <TouchableOpacity
+          style={styles.vipBanner}
+          activeOpacity={0.88}
+          onPress={() => navigation.navigate('Paywall')}
+        >
+          <View style={styles.vipBannerIconWrap}>
+            <Crown size={22} color="#F59E0B" />
+          </View>
+          <View style={styles.vipBannerTextWrap}>
+            <Text style={styles.vipBannerTitle}>قابلیت ویژه مشترکین طلایی (VIP) 👑</Text>
+            <Text style={styles.vipBannerSub}>
+              ساخت سناریوی هوشمند با هوش مصنوعی و صدای نیتیو منحصراً برای اعضای ویژه است.
+            </Text>
+          </View>
+          <View style={styles.vipBannerAction}>
+            <Text style={styles.vipBannerActionText}>ارتقا</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* کارت محدودیت و اطلاعات سهمیه روزانه */}
+      <View style={styles.quotaInfoCard}>
+        <AlertCircle size={16} color={COLORS.primary} />
+        <Text style={styles.quotaInfoText}>
+          سقف مجاز: ۵ سناریو در روز برای مشترکین VIP • حداکثر ۱۰۰۰ کاراکتر متن
+        </Text>
+      </View>
+
       {/* نوع ورودی: ایده/موضوع یا متن دیالوگ */}
       <View style={styles.inputModeRow}>
         <TouchableOpacity
@@ -227,6 +324,7 @@ export const CustomSceneScreen: React.FC = () => {
             placeholderTextColor={COLORS.muted}
             value={topic}
             onChangeText={setTopic}
+            maxLength={300}
             multiline
             numberOfLines={3}
             textAlign="right"
@@ -258,13 +356,17 @@ export const CustomSceneScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>متن، پاراگراف یا دیالوگ مورد نظرتان (۵ تا ۳۰ خط):</Text>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.charCountText}>{customText.length} / 1000</Text>
+            <Text style={styles.fieldLabel}>متن، پاراگراف یا دیالوگ مورد نظرتان:</Text>
+          </View>
           <TextInput
             style={styles.textInputArea}
-            placeholder="متن فارسی یا انگلیسی خود را اینجا وارد کنید. هوش مصنوعی آن را به جملات استاندارد شادوئینگ، واژگان کلیدی و صدای نیتیو تبدیل می‌کند..."
+            placeholder="متن فارسی یا انگلیسی خود را اینجا وارد کنید (حداکثر ۱۰۰۰ کاراکتر). هوش مصنوعی آن را به جملات استاندارد شادوئینگ، واژگان کلیدی و صدای نیتیو تبدیل می‌کند..."
             placeholderTextColor={COLORS.muted}
             value={customText}
             onChangeText={setCustomText}
+            maxLength={1000}
             multiline
             numberOfLines={8}
             textAlign="right"
@@ -305,15 +407,29 @@ export const CustomSceneScreen: React.FC = () => {
 
       {/* دکمه ساخت سناریو */}
       <TouchableOpacity
-        style={styles.generateButton}
+        style={[
+          styles.generateButton,
+          !hasSubscription && styles.generateButtonLocked,
+        ]}
         onPress={handleGenerate}
         activeOpacity={0.85}
         disabled={isGenerating}
       >
-        <Sparkles size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
-        <Text style={styles.generateButtonText}>
-          ساخت سناریوی شادوئینگ هوشمند 🚀
-        </Text>
+        {hasSubscription ? (
+          <>
+            <Sparkles size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+            <Text style={styles.generateButtonText}>
+              ساخت سناریوی شادوئینگ هوشمند 🚀
+            </Text>
+          </>
+        ) : (
+          <>
+            <Lock size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+            <Text style={styles.generateButtonText}>
+              ارتقا به VIP جهت ساخت سناریو 👑
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -730,10 +846,92 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.l,
     marginTop: 4,
   },
+  generateButtonLocked: {
+    backgroundColor: '#D97706',
+  },
   generateButtonText: {
     fontFamily: FONT_FAMILY.bold,
     fontSize: 15,
     color: '#FFFFFF',
+  },
+  vipBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.m,
+    marginBottom: SPACING.m,
+  },
+  vipBannerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  vipBannerTextWrap: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  vipBannerTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: '#D97706',
+    textAlign: 'right',
+  },
+  vipBannerSub: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.muted,
+    textAlign: 'right',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  vipBannerAction: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.m,
+    marginRight: 6,
+  },
+  vipBannerActionText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  quotaInfoCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.m,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: SPACING.m,
+    gap: 8,
+  },
+  quotaInfoText: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: COLORS.muted,
+    textAlign: 'right',
+  },
+  fieldLabelRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  charCountText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: COLORS.muted,
   },
   centerContainer: {
     paddingVertical: 40,

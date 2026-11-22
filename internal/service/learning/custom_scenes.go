@@ -22,3 +22,7 @@ func (s Service) DeleteUserCustomScene(ctx context.Context, userID, sceneID stri
 	return s.repo.DeleteUserCustomScene(ctx, userID, sceneID)
 }
 
+func (s Service) CountUserCustomScenesToday(ctx context.Context, userID string) (int, error) {
+	return s.repo.CountUserCustomScenesToday(ctx, userID)
+}
+

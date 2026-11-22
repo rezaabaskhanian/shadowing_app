@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { BackHandler, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions, NativeModules } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { SystemTts } = NativeModules;
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -484,6 +486,9 @@ export const SceneScreen = () => {
       if (maxRecordTimeoutRef.current) clearTimeout(maxRecordTimeoutRef.current);
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+      if (SystemTts && typeof SystemTts.stop === 'function') {
+        SystemTts.stop().catch(() => {});
+      }
     };
   }, []);
 
@@ -537,6 +542,11 @@ export const SceneScreen = () => {
    */
   const playDialogueAt = useCallback(
     (idx: number) => {
+      // در صورت پخش قبلی TTS، متوقف می‌شود
+      if (SystemTts && typeof SystemTts.stop === 'function') {
+        SystemTts.stop().catch(() => {});
+      }
+
       // در مرحله‌ی مقایسه، جمله‌ای که پشتِ اولین جمله‌ی ضبط‌نشده است قابل‌شنیدن
       // نیست — نه صدای مرجع، نه صدای خودت.
       if (activeStepIndex === 3 && idx >= firstUnrecordedLineIndex) {
@@ -1351,10 +1361,51 @@ export const SceneScreen = () => {
               }
             }
           }
-          // این جمله فایل صدا ندارد یا خطا داد: به کاربر می‌گوییم چرا ساکت است و در
-          // مرحله‌های خودکار می‌رویم جمله‌ی بعد، وگرنه روی یک جمله‌ی بی‌صدا
-          // گیر می‌کردیم و به‌نظر می‌رسید کل پخش خراب شده.
+          // این جمله فایل صدا ندارد یا خطا داد: اگر موتور TTS سیستم موجود باشد
+          // جمله را با صدای نیتیو دیوایس پخش می‌کنیم تا کاربر تجربه بدون نقصی داشته باشد.
           if (status === 'no_audio' || status === 'error') {
+            const lineText = (currentDialogue.dialogue || '').trim();
+            if (SystemTts && typeof SystemTts.speak === 'function' && lineText) {
+              SystemTts.speak(lineText)
+                .then((spoke: boolean) => {
+                  if (spoke) {
+                    dispatch({ type: 'AUDIO_FINISHED' });
+                    if (activeStepIndex === 0 && autoMode && actionCommand !== 'start_record') {
+                      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+                      autoTimeoutRef.current = setTimeout(() => {
+                        handleNextDialogue();
+                      }, 700);
+                      return;
+                    }
+                    if (flowMode === 'smart_flow' && activeStepIndex === 1 && actionCommand !== 'start_record') {
+                      if (hasConfirmedReady) {
+                        startCountdownAndRecord(2);
+                      } else {
+                        setShadowPromptState('waiting_ready');
+                      }
+                    }
+                  } else {
+                    dispatch({ type: 'AUDIO_MISSING' });
+                    if (autoMode && activeStepIndex === 0) {
+                      if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+                      autoTimeoutRef.current = setTimeout(() => {
+                        handleNextDialogue();
+                      }, 1200);
+                    }
+                  }
+                })
+                .catch(() => {
+                  dispatch({ type: 'AUDIO_MISSING' });
+                  if (autoMode && activeStepIndex === 0) {
+                    if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);
+                    autoTimeoutRef.current = setTimeout(() => {
+                      handleNextDialogue();
+                    }, 1200);
+                  }
+                });
+              return;
+            }
+
             dispatch({ type: 'AUDIO_MISSING' });
             if (autoMode && activeStepIndex === 0) {
               if (autoTimeoutRef.current) clearTimeout(autoTimeoutRef.current);

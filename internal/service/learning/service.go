@@ -41,6 +41,7 @@ type Repository interface {
 	GetDialogueByID(ctx context.Context, id uuid.UUID) (domain.Dialogue, error)
 	GetUserCustomScenes(ctx context.Context, userID string) ([]domain.Scene, error)
 	DeleteUserCustomScene(ctx context.Context, userID, sceneID string) error
+	CountUserCustomScenesToday(ctx context.Context, userID string) (int, error)
 }
 
 type Service struct {

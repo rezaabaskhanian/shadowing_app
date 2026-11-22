@@ -23,6 +23,24 @@ func (h Handler) GenerateCustomScene(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "احراز هویت نامعتبر است"})
 	}
 
+	// ۱. بررسی اشتراک فعال — کاربر رایگان اصلاً نباید بتواند سناریوی اختصاصی تولید کند
+	hasSub, err := h.subscriptionSvc.HasActiveSubscription(c.Request().Context(), userClaims.UserID)
+	if err != nil || !hasSub {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"message": "ساخت سناریوی اختصاصی شادوئینگ با هوش مصنوعی فقط مخصوص کاربران ویژه (VIP) است. لطفاً اشتراک خود را ارتقا دهید.",
+			"code":    "SUBSCRIPTION_REQUIRED",
+		})
+	}
+
+	// ۲. بررسی سقف مجاز روزانه برای کاربران VIP (حداکثر ۵ سناریو در روز برای کنترل مصرف)
+	todayCount, err := h.learningSvc.CountUserCustomScenesToday(c.Request().Context(), userClaims.UserID)
+	if err == nil && todayCount >= 5 {
+		return c.JSON(http.StatusTooManyRequests, echo.Map{
+			"message": "سقف مجاز روزانه شما برای ساخت سناریوی اختصاصی (۵ سناریو در روز) تکمیل شده است. لطفاً فردا دوباره امتحان کنید.",
+			"code":    "DAILY_LIMIT_EXCEEDED",
+		})
+	}
+
 	in := customscene.CreateCustomSceneInput{
 		UserID:     userClaims.UserID,
 		Topic:      c.FormValue("topic"),
@@ -53,6 +71,18 @@ func (h Handler) GenerateCustomScene(c echo.Context) error {
 				in.VoiceID = jsonReq.VoiceID
 			}
 		}
+	}
+
+	// اعتبارسنجی سقف کاراکتر برای جلوگیری از ارسال متون بی‌پایان
+	if len(in.Text) > 1200 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "متن سناریو بیش از حد مجاز است (حداکثر ۱۰۰۰ کاراکتر)",
+		})
+	}
+	if len(in.Topic) > 300 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "موضوع سناریو بیش از حد مجاز است (حداکثر ۳۰۰ کاراکتر)",
+		})
 	}
 
 	// بررسی فایل آپلودشده (صوت، متن، سند)

@@ -281,6 +281,18 @@ func (r DB) DeleteUserCustomScene(ctx context.Context, userID, sceneID string) e
 	return nil
 }
 
+// CountUserCustomScenesToday تعداد سناریوهای اختصاصی ساخته‌شده توسط کاربر در تاریخ امروز را بازمی‌گرداند.
+func (r DB) CountUserCustomScenesToday(ctx context.Context, userID string) (int, error) {
+	const op = "postgres.CountUserCustomScenesToday"
+	query := `SELECT COUNT(*) FROM scenes WHERE created_by_user_id = $1 AND is_custom = true AND created_at >= CURRENT_DATE`
+	var count int
+	err := r.conn.QueryRow(ctx, query, userID).Scan(&count)
+	if err != nil {
+		return 0, richerror.New(op).WithErr(err)
+	}
+	return count, nil
+}
+
 // GetByID implements [learningservice.Repository].
 func (r DB) GetByID(ctx context.Context, id string) (scene.Scene, error) {
 	const op = "postgres.GetSceneByID"
