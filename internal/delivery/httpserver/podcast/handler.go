@@ -46,6 +46,7 @@ func (h Handler) SetPodcastRoutes(e *echo.Echo) {
 	admin.PUT("/:id", h.AdminUpdate)
 	admin.DELETE("/:id", h.AdminDelete)
 	admin.POST("/:id/generate-audio", h.AdminGenerateAudio)
+	admin.POST("/:id/generate-story", h.AdminGenerateStory)
 }
 
 func respond(c echo.Context, data any, err error) error {
@@ -147,6 +148,11 @@ func (h Handler) AdminGenerateScript(c echo.Context) error {
 
 func (h Handler) AdminGenerateAudio(c echo.Context) error {
 	p, err := h.svc.AdminGenerateAudio(c.Request().Context(), c.Param("id"))
+	return respond(c, p, err)
+}
+
+func (h Handler) AdminGenerateStory(c echo.Context) error {
+	p, err := h.svc.AdminGenerateStory(c.Request().Context(), c.Param("id"))
 	return respond(c, p, err)
 }
 

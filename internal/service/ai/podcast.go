@@ -82,3 +82,52 @@ func (s Service) GeneratePodcastScript(ctx context.Context, in PodcastScriptInpu
 	_, err := s.completeJSON(ctx, "aiservice.GeneratePodcastScript", prompt, string(input), &out)
 	return out, err
 }
+
+// ---------- داستان کامل ۴۰۰۰ واژه (مدل اول: روایت داستانی کامل) ----------
+
+type StoryScriptInput struct {
+	Title      string
+	Level      string
+	Vocabulary []string
+}
+
+type storyScriptResult struct {
+	Lines []PodcastLineSuggestion `json:"lines"`
+}
+
+const storyScriptPrompt = `You write the complete, authentic reading passage / story narration for a unit of "4000 Essential English Words" by Paul Nation for Persian-speaking English learners.
+
+Goal:
+Write a captivating, complete story (between 14 to 20 sentences) for the unit titled "{TITLE}".
+The story MUST naturally weave in and highlight the given target vocabulary words.
+
+Requirements:
+- Target level: {LEVEL} (match sentence structure, idioms, and grammar complexity to this CEFR level: beginner=A2, intermediate=B1/B2, advanced=C1, proficient=C2).
+- Narrative Structure: A clear, engaging story arc (introduction, rising action/conflict, climax, and satisfying resolution/moral).
+- Target Words: Seamlessly incorporate as many of the provided target vocabulary words as possible (at least 15-20 of them) in a completely natural, idiomatic way.
+- Each sentence must be its own line in the lines array.
+- "speaker": use "Narrator" (or a character name if direct dialogue occurs in 1-2 lines, but predominantly "Narrator").
+- "text": the English sentence (clean, natural, expressive, no emojis, suitable for speech narration).
+- "translation_fa": an accurate, natural, and fluent Persian translation of that exact sentence.
+- Output ONLY a single valid JSON object. No markdown, no code fences.
+Schema:
+{"lines": [{"speaker": "Narrator", "text": string, "translation_fa": string}]}`
+
+// GenerateStoryScript متن داستان کامل یک درس از ۴۰۰۰ واژه را با پوشش واژگان هدف تولید می‌کند.
+func (s Service) GenerateStoryScript(ctx context.Context, in StoryScriptInput) ([]PodcastLineSuggestion, error) {
+	prompt := strings.NewReplacer("{TITLE}", strings.TrimSpace(in.Title), "{LEVEL}", strings.TrimSpace(in.Level)).Replace(storyScriptPrompt)
+	input, _ := json.Marshal(map[string]any{
+		"title":         strings.TrimSpace(in.Title),
+		"level":         in.Level,
+		"target_words":  in.Vocabulary,
+		"min_sentences": 14,
+		"max_sentences": 20,
+	})
+	var out storyScriptResult
+	_, err := s.completeJSON(ctx, "aiservice.GenerateStoryScript", prompt, string(input), &out)
+	if err != nil {
+		return nil, err
+	}
+	return out.Lines, nil
+}
+

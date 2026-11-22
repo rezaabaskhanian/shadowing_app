@@ -1045,6 +1045,11 @@ export async function generatePodcastAudio(id: string): Promise<Podcast> {
   return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}/generate-audio`, { method: "POST" }));
 }
 
+/** تولید و بازنویسی داستان کامل یونیت با هوش مصنوعی (مدل ۱: روایت داستانی کامل) */
+export async function generatePodcastStory(id: string): Promise<Podcast> {
+  return jsonOrThrow(await authFetch(`/v1/admin/podcasts/${id}/generate-story`, { method: "POST" }));
+}
+
 export async function listPodcastSeries(): Promise<PodcastSeries[]> {
   return (await jsonOrThrow(await authFetch("/v1/admin/podcasts/series", { method: "GET" }))) || [];
 }

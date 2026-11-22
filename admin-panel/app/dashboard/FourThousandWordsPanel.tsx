@@ -5,6 +5,7 @@ import {
   API_BASE,
   generateAudio,
   generatePodcastAudio,
+  generatePodcastStory,
   fillSceneAudio,
   getPodcast,
   getPodcastSeries,
@@ -197,6 +198,53 @@ export default function FourThousandWordsPanel({
     });
   }
 
+  // تولید داستان کامل با هوش مصنوعی (مدل اول: روایت داستانی کامل)
+  async function handleGenerateStory(podcastId: string) {
+    runAction("make_story", async () => {
+      const updated = await generatePodcastStory(podcastId);
+      if (selectedPodcast?.id === podcastId) {
+        setSelectedPodcast(updated);
+      }
+      if (updated.scene_id) {
+        try {
+          const sc = await getScene(updated.scene_id);
+          setSelectedScene(sc);
+        } catch {
+          // ignore
+        }
+      }
+      notify(`داستان کامل درس (${updated.lines?.length || 0} جمله) با موفقیت تولید و با شادوئینگ همگام شد! اکنون صدای آن را بسازید ✨`, "ok");
+      loadSeries(activeBook);
+    });
+  }
+
+  // بازنویسی دسته‌جمعی داستان‌های کوتاه این کتاب با هوش مصنوعی
+  async function handleBatchGenerateStories() {
+    const list = series?.episodes || [];
+    const shortStories = list.filter((p: Podcast) => (p.lines?.length || (p as any).line_count || 0) <= 5);
+    if (shortStories.length === 0) {
+      notify("تمام درس‌های این کتاب قبلاً به داستان کامل تبدیل شده‌اند ✨", "ok");
+      return;
+    }
+    if (!confirm(`آیا می‌خواهید داستان کامل ${shortStories.length} درس این کتاب را به صورت خودکار با AI تولید کنید؟`)) {
+      return;
+    }
+
+    runAction("batch_stories", async () => {
+      let count = 0;
+      for (const p of shortStories) {
+        try {
+          await generatePodcastStory(p.id);
+          count++;
+        } catch {
+          // ادامه به درس بعد
+        }
+      }
+      notify(`نگارش داستان برای ${count} درس با موفقیت انجام شد 🚀`, "ok");
+      loadSeries(activeBook);
+    });
+  }
+
   // ساخت صدای پادکست
   async function handleMakePodcastAudio(podcastId: string) {
     runAction("make_podcast_audio", async () => {
@@ -314,7 +362,15 @@ export default function FourThousandWordsPanel({
               مدیریت کتاب‌های ۱ تا ۶ دوره رسمی ۴۰۰۰ کلمه، استودیوی ساخت صدای پادکست و دیالوگ‌های شادوئینگ با هوش مصنوعی.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="btn btn-sm"
+              disabled={busy === "batch_stories" || loading}
+              onClick={handleBatchGenerateStories}
+              style={{ background: "#7C3AED", color: "#fff" }}
+            >
+              📖 بازتولید داستان‌های کوتاه با AI
+            </button>
             <button
               className="btn btn-sm"
               disabled={busy === "batch_audio" || loading}
@@ -451,9 +507,15 @@ export default function FourThousandWordsPanel({
                   </p>
 
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, color: "#4B5563", background: "#F9FAFB", padding: "2px 6px", borderRadius: 4 }}>
-                      📝 {p.lines?.length || 4} خط پادکست
-                    </span>
+                    {(p.lines?.length || 4) > 5 ? (
+                      <span style={{ fontSize: 11, color: "#059669", background: "#ECFDF5", padding: "2px 6px", borderRadius: 4, fontWeight: "bold" }}>
+                        📖 داستان کامل ({p.lines?.length} جمله)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#B45309", background: "#FEF3C7", padding: "2px 6px", borderRadius: 4 }}>
+                        ⚠️ داستان کوتاه (۴ جمله)
+                      </span>
+                    )}
                     <span style={{ fontSize: 11, color: "#4B5563", background: "#F9FAFB", padding: "2px 6px", borderRadius: 4 }}>
                       🎯 {p.vocabulary?.length || 20} واژه هدف
                     </span>
@@ -476,12 +538,22 @@ export default function FourThousandWordsPanel({
 
                   <button
                     className="btn btn-sm btn-ghost"
+                    title="تولید داستان کامل با هوش مصنوعی"
+                    disabled={busy === "make_story"}
+                    onClick={() => handleGenerateStory(p.id)}
+                    style={{ fontSize: 12, color: "#7C3AED" }}
+                  >
+                    ✨ داستان
+                  </button>
+
+                  <button
+                    className="btn btn-sm btn-ghost"
                     title="تولید صدای پادکست"
                     disabled={isGen || busy === "make_podcast_audio"}
                     onClick={() => handleMakePodcastAudio(p.id)}
                     style={{ fontSize: 12 }}
                   >
-                    ⚡ ساخت پادکست
+                    ⚡ ساخت صدا
                   </button>
 
                   {p.scene_id && (
@@ -595,20 +667,39 @@ export default function FourThousandWordsPanel({
                         </div>
                       )}
                     </div>
-                    <button
-                      className="btn btn-sm"
-                      disabled={selectedPodcast.audio_status === "generating" || busy === "make_podcast_audio"}
-                      onClick={() => handleMakePodcastAudio(selectedPodcast.id)}
-                      style={{ background: "#059669", color: "#FFFFFF" }}
-                    >
-                      {selectedPodcast.audio_status === "generating"
-                        ? "در حال تولید صوت..."
-                        : "🎙️ ساخت / تولید مجدد صدای پادکست با TTS"}
-                    </button>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        className="btn btn-sm"
+                        disabled={busy === "make_story"}
+                        onClick={() => handleGenerateStory(selectedPodcast.id)}
+                        style={{ background: "#7C3AED", color: "#FFFFFF" }}
+                      >
+                        {busy === "make_story"
+                          ? "در حال نگارش داستان با AI..."
+                          : "✨ تولید داستان کامل با هوش مصنوعی (۱۵-۲۰ جمله)"}
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        disabled={selectedPodcast.audio_status === "generating" || busy === "make_podcast_audio"}
+                        onClick={() => handleMakePodcastAudio(selectedPodcast.id)}
+                        style={{ background: "#059669", color: "#FFFFFF" }}
+                      >
+                        {selectedPodcast.audio_status === "generating"
+                          ? "در حال تولید صوت..."
+                          : "🎙️ ساخت / تولید مجدد صدای پادکست با TTS"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>متن گفتگو و جملات مجری‌ها:</h4>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 10px" }}>
+                  <h4 style={{ margin: 0, fontSize: 14 }}>
+                    متن و جملات داستان درس ({selectedPodcast.lines?.length || 0} جمله):
+                  </h4>
+                  <span style={{ fontSize: 12, color: "#6B7280" }}>
+                    {selectedPodcast.lines && selectedPodcast.lines.length > 5 ? "✅ داستان کامل" : "⚠️ داستان اولیه"}
+                  </span>
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {(selectedPodcast.lines || []).map((line: PodcastLine, idx: number) => (
                     <div

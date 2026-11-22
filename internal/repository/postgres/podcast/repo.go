@@ -437,3 +437,55 @@ func (r DB) DeleteSeries(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+// SyncSceneDialogues دیالوگ‌های هات‌اسپات صحنه متصل را با جملات کلیدی داستان به‌روز می‌کند.
+func (r DB) SyncSceneDialogues(ctx context.Context, sceneID string, lines []Line) error {
+	const op = "postgrespodcast.SyncSceneDialogues"
+	if sceneID == "" || len(lines) == 0 {
+		return nil
+	}
+	var hotspotID string
+	err := r.conn.QueryRow(ctx, `SELECT id::text FROM hotspots WHERE scene_id = $1::uuid ORDER BY order_index ASC LIMIT 1`, sceneID).Scan(&hotspotID)
+	if err != nil {
+		return nil // در صورت نبود هات‌اسپات، مشکلی ایجاد نشود
+	}
+
+	count := 5
+	if len(lines) < count {
+		count = len(lines)
+	}
+
+	// انتخاب ۵ جمله منتخب به صورت یکنواخت در طول روایت داستان
+	selected := make([]Line, 0, count)
+	step := float64(len(lines)) / float64(count)
+	for i := 0; i < count; i++ {
+		idx := int(float64(i) * step)
+		if idx >= len(lines) {
+			idx = len(lines) - 1
+		}
+		selected = append(selected, lines[idx])
+	}
+
+	tx, err := r.conn.Begin(ctx)
+	if err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM dialogues WHERE hotspot_id = $1::uuid`, hotspotID); err != nil {
+		return richerror.New(op).WithErr(err)
+	}
+
+	speakers := []string{"customer", "clerk"}
+	for i, l := range selected {
+		speaker := speakers[i%len(speakers)]
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO dialogues (id, hotspot_id, "order", speaker, original_text, translation, audio_url, display_type)
+			VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5, '', 'full')`,
+			hotspotID, i+1, speaker, l.Text, l.TranslationFa); err != nil {
+			return richerror.New(op).WithErr(err)
+		}
+	}
+	return tx.Commit(ctx)
+}
+

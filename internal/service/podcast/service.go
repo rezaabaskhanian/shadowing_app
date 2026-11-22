@@ -35,6 +35,7 @@ type repository interface {
 	GetSeries(ctx context.Context, id string, activeOnly bool) (postgrespodcast.PodcastSeries, error)
 	SaveSeries(ctx context.Context, s postgrespodcast.PodcastSeries) (string, error)
 	DeleteSeries(ctx context.Context, id string) error
+	SyncSceneDialogues(ctx context.Context, sceneID string, lines []postgrespodcast.Line) error
 }
 
 type Podcast = postgrespodcast.Podcast
@@ -399,6 +400,63 @@ func (s *Service) AdminGenerateScript(ctx context.Context, req ScriptRequest) (a
 		return res, richerror.New(op).WithErr(err).WithMessage("نوشتن متن پادکست ناموفق بود، دوباره امتحان کن")
 	}
 	return res, nil
+}
+
+// AdminGenerateStory داستان کامل یونیت ۴۰۰۰ واژه را با هوش مصنوعی بازنویسی می‌کند.
+func (s *Service) AdminGenerateStory(ctx context.Context, id string) (Podcast, error) {
+	const op = "podcast.AdminGenerateStory"
+	p, err := s.AdminGet(ctx, id)
+	if err != nil {
+		return Podcast{}, err
+	}
+	var words []string
+	for _, v := range p.Vocabulary {
+		if w := strings.TrimSpace(v.Word); w != "" {
+			words = append(words, w)
+		}
+	}
+	if len(words) == 0 {
+		return Podcast{}, richerror.New(op).WithMessage("واژگان هدف این درس خالی است").WithKind(richerror.KindInvalid)
+	}
+
+	lines, err := s.ai.GenerateStoryScript(ctx, aiservice.StoryScriptInput{
+		Title:      p.Title,
+		Level:      p.Level,
+		Vocabulary: words,
+	})
+	if err != nil {
+		return Podcast{}, richerror.New(op).WithErr(err).WithMessage("خطا در تولید داستان توسط هوش مصنوعی")
+	}
+	if len(lines) == 0 {
+		return Podcast{}, richerror.New(op).WithMessage("داستانی تولید نشد، لطفاً دوباره تلاش کنید")
+	}
+
+	podcastLines := make([]Line, 0, len(lines))
+	for _, l := range lines {
+		speaker := strings.TrimSpace(l.Speaker)
+		if speaker == "" {
+			speaker = "Narrator"
+		}
+		podcastLines = append(podcastLines, Line{
+			Speaker:       speaker,
+			Text:          strings.TrimSpace(l.Text),
+			TranslationFa: strings.TrimSpace(l.TranslationFa),
+		})
+	}
+
+	p.Lines = podcastLines
+	// ذخیره پادکست همراه با خطوط داستان جدید (صوت قبلی ریست می‌شود تا با متن جدید دوباره ساخته شود)
+	saved, err := s.AdminSave(ctx, id, p)
+	if err != nil {
+		return Podcast{}, err
+	}
+
+	// همگام‌سازی دیالوگ‌های صحنه شادوئینگ با جملات کلیدی داستان جدید
+	if p.SceneID != "" && len(podcastLines) >= 5 {
+		_ = s.repo.SyncSceneDialogues(ctx, p.SceneID, podcastLines)
+	}
+
+	return saved, nil
 }
 
 // AdminGenerateAudio ساخت صدای پادکست را در پس‌زمینه شروع می‌کند و همان لحظه
