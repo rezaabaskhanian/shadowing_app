@@ -12,6 +12,7 @@ const (
 	CategoryDaily     Category = "daily"
 	CategoryTravel    Category = "travel"
 	CategorySocial    Category = "social"
+	CategoryCustom    Category = "custom"
 )
 
 var categories = map[Category]bool{
@@ -21,6 +22,7 @@ var categories = map[Category]bool{
 	CategoryDaily:     true,
 	CategoryTravel:    true,
 	CategorySocial:    true,
+	CategoryCustom:    true,
 }
 
 func IsValidCategory(v string) bool {

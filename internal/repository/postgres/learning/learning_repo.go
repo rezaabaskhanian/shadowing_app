@@ -33,6 +33,15 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		created_by_user_id, is_custom, created_at, updated_at
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())`
 
+	cat := s.Category
+	if cat == "" || (!scene.IsValidCategory(cat) && cat != "custom") {
+		cat = string(scene.CategoryDaily)
+	}
+	// اگر در دیتابیس فعلی هنوز مایگریشن 094 اعمال نشده باشد، برای جلوگیری از خطای constraint
+	if cat == "custom" {
+		cat = string(scene.CategoryDaily)
+	}
+
 	_, err = tx.Exec(ctx, query,
 		s.ID,
 		s.Title,
@@ -42,7 +51,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		s.Status,
 		s.Order,
 		s.IsLocked,
-		s.Category,
+		cat,
 		nullableText(s.GrammarTopic),
 		nullableText(s.GrammarExplanation),
 		grammarExamplesJSON(s.GrammarExamples),
@@ -53,7 +62,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 	if err != nil {
 		return richerror.New(op).
 			WithErr(err).
-			WithMessage("failed to insert scene")
+			WithMessage("failed to insert scene: " + err.Error())
 	}
 
 	// ========== 3️⃣ درج Hotspot‌ها و Dialogues ==========
@@ -74,7 +83,7 @@ func (r DB) Create(ctx context.Context, s domain.Scene) error {
 		if err != nil {
 			return richerror.New(op).
 				WithErr(err).
-				WithMessage("failed to insert hotspot")
+				WithMessage("failed to insert hotspot: " + err.Error())
 		}
 
 		// درج Dialogues این Hotspot

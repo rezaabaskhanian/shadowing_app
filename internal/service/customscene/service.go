@@ -103,7 +103,10 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 	}
 
 	diff := strings.ToLower(strings.TrimSpace(in.Difficulty))
-	if diff == "" {
+	switch diff {
+	case "starter", "beginner", "intermediate", "advanced":
+		// valid
+	default:
 		diff = "intermediate"
 	}
 
@@ -127,6 +130,9 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 	if title == "" {
 		title = "Custom Shadowing Session"
 	}
+	if len(title) > 240 {
+		title = title[:237] + "..."
+	}
 	desc := generated.Description
 	if desc == "" {
 		desc = "Personalized practice based on your custom content."
@@ -140,6 +146,23 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 		hOrder := gh.Order
 		if hOrder <= 0 {
 			hOrder = hIdx + 1
+		}
+
+		hName := strings.TrimSpace(gh.Name)
+		if hName == "" {
+			hName = "Main Conversation"
+		}
+		if len(hName) > 95 {
+			hName = hName[:92] + "..."
+		}
+
+		xPos := gh.XPosition
+		if xPos < 0 || xPos > 100 {
+			xPos = 50.0
+		}
+		yPos := gh.YPosition
+		if yPos < 0 || yPos > 100 {
+			yPos = 50.0
 		}
 
 		dialogues := make([]domain.Dialogue, 0, len(gh.Dialogues))
@@ -184,8 +207,13 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 			}
 
 			waitDur := gd.WaitDuration
-			if waitDur < 3 || waitDur > 15 {
+			if waitDur < 1 || waitDur > 30 {
 				waitDur = 5
+			}
+
+			origText := strings.TrimSpace(gd.OriginalText)
+			if origText == "" {
+				origText = "Hello!"
 			}
 
 			dialogues = append(dialogues, domain.Dialogue{
@@ -193,7 +221,7 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 				HotspotID:    hid,
 				Order:        dOrder,
 				Speaker:      speaker,
-				OriginalText: gd.OriginalText,
+				OriginalText: origText,
 				Translation:  gd.Translation,
 				AudioURL:     audioURL,
 				DisplayType:  domain.DisplayFull,
@@ -206,9 +234,9 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 		hotspots = append(hotspots, domain.Hotspot{
 			ID:         hid,
 			SceneID:    sceneID,
-			Name:       gh.Name,
-			XPosition:  gh.XPosition,
-			YPosition:  gh.YPosition,
+			Name:       hName,
+			XPosition:  xPos,
+			YPosition:  yPos,
 			OrderIndex: hOrder,
 			Dialogues:  dialogues,
 			CreatedAt:  time.Now(),
@@ -227,7 +255,7 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 		Hotspots:           hotspots,
 		Order:              9999,
 		IsLocked:           false,
-		Category:           "custom",
+		Category:           string(domain.CategoryDaily),
 		CreatedByUserID:    &in.UserID,
 		IsCustom:           true,
 		CreatedAt:          now,
@@ -236,8 +264,8 @@ func (s Service) GenerateCustomScene(ctx context.Context, in CreateCustomSceneIn
 
 	// ۴. ذخیره در دیتابیس
 	if err := s.repo.CreateCustomScene(ctx, newScene); err != nil {
-		slog.Error("customscene: failed to save custom scene to db", "err", err)
-		return domain.Scene{}, richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره صحنه اختصاصی در پایگاه داده")
+		slog.Error("customscene: failed to save custom scene to db", "err", err, "sceneID", sceneID)
+		return domain.Scene{}, richerror.New(op).WithErr(err).WithMessage("خطا در ذخیره صحنه اختصاصی در پایگاه داده: " + err.Error())
 	}
 
 	slog.Info("customscene: successfully created custom scene", "sceneID", sceneID, "userID", in.UserID, "dialogues", len(hotspots))
