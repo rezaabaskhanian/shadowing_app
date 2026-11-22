@@ -276,6 +276,13 @@ export async function updateScene(id: string, payload: CreateScenePayload) {
   return jsonOrThrow(res);
 }
 
+export async function fillSceneAudio(sceneId: string): Promise<{ message: string; made: number; scene: SceneResp }> {
+  const res = await authFetch(`/v1/admin/scenes/${sceneId}/fill-audio`, {
+    method: "POST",
+  });
+  return jsonOrThrow(res);
+}
+
 export async function updateSceneOrder(id: string, order: number) {
   const res = await authFetch(`/v1/admin/scenes/${id}/order`, {
     method: "PATCH",

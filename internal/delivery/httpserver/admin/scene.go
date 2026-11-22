@@ -2,12 +2,15 @@ package adminhandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"shadowing-backend/internal/pkg/errorhandling"
 	learningservice "shadowing-backend/internal/service/learning"
 	"shadowing-backend/internal/service/learning/dto"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -150,5 +153,70 @@ func (h Handler) DeleteScene(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "صحنه با موفقیت حذف شد",
+	})
+}
+
+// FillSceneAudio برای تمام دیالوگ‌های یک صحنه که فایل صوتی ندارند یا صدای موقت دارند، با هوش مصنوعی صدا تولید و ذخیره می‌کند.
+func (h Handler) FillSceneAudio(c echo.Context) error {
+	if !h.ttsSvc.Enabled() {
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+			"message": h.ttsSvc.MissingKeyMessage(),
+		})
+	}
+	sceneID := c.Param("sceneID")
+	sc, err := h.learningSvc.GetScene(c.Request().Context(), sceneID)
+	if err != nil {
+		return errorhandling.ErrorHandling(err, c)
+	}
+
+	var made int
+	for hi, hotspot := range sc.Hotspots {
+		for di, dialogue := range hotspot.Dialogues {
+			text := strings.TrimSpace(dialogue.OriginalText)
+			audioURL := dialogue.AudioURL
+			isDummy := strings.Contains(audioURL, "305c18f4-3b42-443e-8843-f4d575ca97b2.mp3") || audioURL == ""
+			if text != "" && isDummy {
+				audio, err := h.ttsSvc.GenerateSpeech(c.Request().Context(), text, "", 0)
+				if err == nil && len(audio.Data) > 0 {
+					filename := uuid.NewString() + audio.Ext
+					url, saveErr := h.store.Save(c.Request().Context(), filename, audio.Data, audio.ContentType)
+					if saveErr == nil {
+						sc.Hotspots[hi].Dialogues[di].AudioURL = url
+						made++
+					}
+				}
+			}
+		}
+	}
+
+	if made > 0 {
+		updateReq := dto.CreateSceneRequest{
+			Title:              sc.Title,
+			Description:        sc.Description,
+			BackgroundImageURL: sc.BackgroundImageURL,
+			Difficulty:         sc.Difficulty,
+			Category:           sc.Category,
+			IsLocked:           sc.IsLocked,
+			IsPublished:        sc.Status == "published",
+			Hotspots:           sc.Hotspots,
+			GrammarTopic:       sc.GrammarTopic,
+			GrammarExplanation: sc.GrammarExplanation,
+			GrammarAudioURL:    sc.GrammarAudioURL,
+		}
+		updated, err := h.learningSvc.UpdateScene(c.Request().Context(), sceneID, updateReq)
+		if err != nil {
+			return errorhandling.ErrorHandling(err, c)
+		}
+		return c.JSON(http.StatusOK, echo.Map{
+			"message": fmt.Sprintf("صدای %d دیالوگ با موفقیت ساخته شد", made),
+			"made":    made,
+			"scene":   updated,
+		})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "تمام دیالوگ‌های این صحنه دارای فایل صوتی هستند",
+		"made":    0,
+		"scene":   sc,
 	})
 }

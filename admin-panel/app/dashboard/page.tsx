@@ -22,6 +22,7 @@ import VideoClipsPanel from "./VideoClipsPanel";
 import WritingPromptsPanel from "./WritingPromptsPanel";
 import CoursePanel from "./CoursePanel";
 import PodcastsPanel from "./PodcastsPanel";
+import FourThousandWordsPanel from "./FourThousandWordsPanel";
 import SongsPanel from "./SongsPanel";
 import ResourcesPanel from "./ResourcesPanel";
 import IdiomsPanel from "./IdiomsPanel";
@@ -53,6 +54,7 @@ type Tab =
   | "writing"
   | "course"
   | "podcasts"
+  | "fourThousandWords"
   | "songs"
   | "roleplays"
   | "idioms"
@@ -219,6 +221,12 @@ export default function DashboardPage() {
             🎧 پادکست
           </button>
           <button
+            className={`sidebar-link ${tab === "fourThousandWords" ? "active" : ""}`}
+            onClick={() => setTab("fourThousandWords")}
+          >
+            📚 ۴۰۰۰ واژه ضروری
+          </button>
+          <button
             className={`sidebar-link ${tab === "songs" ? "active" : ""}`}
             onClick={() => setTab("songs")}
           >
@@ -355,6 +363,7 @@ export default function DashboardPage() {
         {tab === "writing" && <WritingPromptsPanel notify={notify} />}
         {tab === "course" && <CoursePanel notify={notify} />}
         {tab === "podcasts" && <PodcastsPanel notify={notify} />}
+        {tab === "fourThousandWords" && <FourThousandWordsPanel notify={notify} />}
         {tab === "songs" && <SongsPanel notify={notify} />}
         {tab === "roleplays" && <RoleplaysPanel notify={notify} />}
         {tab === "idioms" && <IdiomsPanel notify={notify} />}
