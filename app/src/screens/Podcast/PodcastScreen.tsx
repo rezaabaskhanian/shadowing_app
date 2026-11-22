@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Image,
   ScrollView,
   StyleSheet,
@@ -66,6 +67,13 @@ const FREE_PODCASTS_COUNT = 4;
 const SPEAKER_COLORS = ['#2563EB', '#D97706', '#7C3AED', '#059669'];
 const VOCAB_COLORS = ['#FF6422', '#2563EB', '#7C3AED', '#059669', '#D97706'];
 const PODCAST_TRACK_ID = 'podcast';
+const getPodcastTrackId = (id: string) => `podcast_${id}`;
+const getPodcastIdFromTrack = (trackId?: string) => {
+  if (!trackId) return '';
+  if (trackId.startsWith('podcast_')) return trackId.replace('podcast_', '');
+  if (trackId === PODCAST_TRACK_ID) return '';
+  return trackId;
+};
 
 /**
  * صفحه پخش پیشرفته پادکست لینگوفلو با زبان بصری مدرن و گرم
@@ -176,6 +184,12 @@ export const PodcastScreen: React.FC = () => {
   const nextPodcastRef = useRef<Podcast | null>(null);
   nextPodcastRef.current = nextPodcast;
 
+  const isSubscribedRef = useRef(false);
+  isSubscribedRef.current = isSubscribed;
+
+  const playlistRef = useRef<Podcast[]>([]);
+  playlistRef.current = playlist;
+
   // موقعیت نرم رندر کلمه‌به‌کلمه روی UI thread
   const positionSV = useSharedValue(0);
   const playingSV = useSharedValue(false);
@@ -185,6 +199,78 @@ export const PodcastScreen: React.FC = () => {
       positionSV.value += frame.timeSincePreviousFrame * rateSV.value;
     }
   });
+
+  const buildQueueTracks = useCallback(
+    (
+      startPodcast: Podcast,
+      currentPlaylist: Podcast[],
+      isAutoPlay: boolean,
+      subscribed: boolean
+    ) => {
+      if (!startPodcast.audio_url) return [];
+      const currentTrack = {
+        id: getPodcastTrackId(startPodcast.id),
+        url: absUrl(startPodcast.audio_url),
+        title: startPodcast.title,
+        artist: startPodcast.series_title || 'LingoFlow',
+        artwork: startPodcast.cover_url ? absUrl(startPodcast.cover_url) : undefined,
+      };
+
+      if (!isAutoPlay) {
+        return [currentTrack];
+      }
+
+      const currentIdx = currentPlaylist.findIndex((item) => item.id === startPodcast.id);
+      const startIdx = currentIdx >= 0 ? currentIdx + 1 : 0;
+      const queue = [currentTrack];
+
+      for (let i = startIdx; i < currentPlaylist.length; i++) {
+        const ep = currentPlaylist[i];
+        if (!subscribed && i >= FREE_PODCASTS_COUNT) {
+          break; // قفل بودن اپیزودهای فراتر از سقف رایگان برای کاربران غیر VIP
+        }
+        if (ep.audio_url && ep.id !== startPodcast.id) {
+          queue.push({
+            id: getPodcastTrackId(ep.id),
+            url: absUrl(ep.audio_url),
+            title: ep.title,
+            artist: ep.series_title || 'LingoFlow',
+            artwork: ep.cover_url ? absUrl(ep.cover_url) : undefined,
+          });
+        }
+      }
+      return queue;
+    },
+    []
+  );
+
+  const handleActivePodcastChanged = useCallback(
+    async (newId: string) => {
+      if (!newId || newId === currentIdRef.current) return;
+      setCurrentId(newId);
+      currentIdRef.current = newId;
+      setPositionMs(0);
+      positionSV.value = 0;
+      lastActive.current = -1;
+      setResumeMs(null);
+      trackedRef.current = true;
+      track('podcast_played', newId);
+
+      try {
+        const p = await getPodcast(newId);
+        setPodcast(p);
+        podcastDurationRef.current = p.duration_seconds;
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+
+        getRoleplays()
+          .then((list) => setRoleplay(list.find((r) => r.podcast_id === newId) ?? null))
+          .catch(() => {});
+      } catch (err) {
+        console.error('handleActivePodcastChanged error:', err);
+      }
+    },
+    [positionSV]
+  );
 
   const loadAndPlayPodcast = useCallback(
     async (id: string, autoPlayImmediately = false) => {
@@ -205,35 +291,43 @@ export const PodcastScreen: React.FC = () => {
         setPodcast(p);
         podcastDurationRef.current = p.duration_seconds;
 
-        Promise.all([getPodcasts().catch(() => []), getMyLevel().catch(() => null)])
-          .then(([all, lvl]) => {
-            if (p.series_id) {
-              const seriesEps = all
-                .filter((item) => item.series_id === p.series_id)
-                .sort((a, b) => (a.episode_no || 0) - (b.episode_no || 0));
-              if (seriesEps.length > 0) {
-                setPlaylist(seriesEps);
-                return;
-              }
-            }
-            const scoped = atOrBelowLevel(all, lvl?.scene_level);
-            const filtered = (scoped.length > 0 ? scoped : all).filter((item) =>
-              p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story'
-            );
-            setPlaylist(filtered);
-          })
-          .catch(() => {});
+        // بارگذاری لیست کامل برای ساخت صف پخش نیتیو پس‌زمینه
+        const [all, lvl] = await Promise.all([
+          getPodcasts().catch(() => []),
+          getMyLevel().catch(() => null),
+        ]);
+
+        let resolvedPlaylist: Podcast[] = [];
+        if (p.series_id) {
+          const seriesEps = all
+            .filter((item) => item.series_id === p.series_id)
+            .sort((a, b) => (a.episode_no || 0) - (b.episode_no || 0));
+          if (seriesEps.length > 0) {
+            resolvedPlaylist = seriesEps;
+          }
+        }
+        if (resolvedPlaylist.length === 0) {
+          const scoped = atOrBelowLevel(all, lvl?.scene_level);
+          resolvedPlaylist = (scoped.length > 0 ? scoped : all).filter((item) =>
+            p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story'
+          );
+        }
+        setPlaylist(resolvedPlaylist);
+        playlistRef.current = resolvedPlaylist;
 
         await ensureTrackPlayerSetup();
         await TrackPlayer.reset();
-        if (p.audio_url) {
-          await TrackPlayer.add({
-            id: PODCAST_TRACK_ID,
-            url: absUrl(p.audio_url),
-            title: p.title,
-            artwork: p.cover_url ? absUrl(p.cover_url) : undefined,
-            artist: 'LingoFlow',
-          });
+
+        // صف نیتیو در ExoPlayer قرار می‌گیرد تا حتی با خاموش بودن صفحه، انتقال به اپیزود بعدی بدون نیاز به JS انجام شود
+        const tracks = buildQueueTracks(
+          p,
+          resolvedPlaylist,
+          autoplayRef.current,
+          isSubscribedRef.current
+        );
+
+        if (tracks.length > 0) {
+          await TrackPlayer.add(tracks);
           await TrackPlayer.setRate(rate).catch(() => {});
         }
 
@@ -263,7 +357,7 @@ export const PodcastScreen: React.FC = () => {
         setLoadError(true);
       }
     },
-    [positionSV, rate]
+    [buildQueueTracks, positionSV, rate]
   );
 
   const playNextEpisode = useCallback(async () => {
@@ -272,9 +366,21 @@ export const PodcastScreen: React.FC = () => {
     isTransitioningRef.current = true;
 
     try {
-      await TrackPlayer.pause().catch(() => {});
-      await announceNextPodcast(nextP.title);
-      await loadAndPlayPodcast(nextP.id, true);
+      const queue = await TrackPlayer.getQueue().catch(() => []);
+      const activeIdx = await TrackPlayer.getActiveTrackIndex().catch(() => -1);
+      const targetTrackId = getPodcastTrackId(nextP.id);
+
+      // اگر پادکست بعدی در صف نیتیو قرار دارد، با skipToNext پرش می‌کنیم
+      if (
+        typeof activeIdx === 'number' &&
+        activeIdx >= 0 &&
+        activeIdx + 1 < queue.length &&
+        queue[activeIdx + 1]?.id === targetTrackId
+      ) {
+        await TrackPlayer.skipToNext();
+      } else {
+        await loadAndPlayPodcast(nextP.id, true);
+      }
     } catch {
       await loadAndPlayPodcast(nextP.id, true).catch(() => {});
     } finally {
@@ -296,10 +402,50 @@ export const PodcastScreen: React.FC = () => {
     }
   }, [initialPodcastId, loadAndPlayPodcast]);
 
-  const toggleAutoplay = (val: boolean) => {
+  const toggleAutoplay = async (val: boolean) => {
     setAutoplay(val);
     autoplayRef.current = val;
     AsyncStorage.setItem('@podcast_autoplay_next', String(val)).catch(() => {});
+
+    try {
+      const queue = await TrackPlayer.getQueue();
+      const activeIdx = await TrackPlayer.getActiveTrackIndex();
+
+      if (val) {
+        // فعال‌سازی پخش خودکار: ترک‌های بعدی به صف نیتیو تزریق می‌شوند
+        const currId = currentIdRef.current;
+        const currentIdx = playlistRef.current.findIndex((p) => p.id === currId);
+        if (currentIdx >= 0) {
+          const upcoming: Podcast[] = [];
+          for (let i = currentIdx + 1; i < playlistRef.current.length; i++) {
+            if (!isSubscribedRef.current && i >= FREE_PODCASTS_COUNT) break;
+            const ep = playlistRef.current[i];
+            if (ep.audio_url) upcoming.push(ep);
+          }
+          if (upcoming.length > 0) {
+            const tracksToAdd = upcoming.map((ep) => ({
+              id: getPodcastTrackId(ep.id),
+              url: absUrl(ep.audio_url),
+              title: ep.title,
+              artist: ep.series_title || 'LingoFlow',
+              artwork: ep.cover_url ? absUrl(ep.cover_url) : undefined,
+            }));
+            await TrackPlayer.add(tracksToAdd);
+          }
+        }
+      } else {
+        // غیرفعال‌سازی: ترک‌های آینده از صف حذف می‌شوند تا پس از پایان پادکست فعلی قطع شود
+        if (typeof activeIdx === 'number' && activeIdx >= 0 && queue.length > activeIdx + 1) {
+          const indicesToRemove: number[] = [];
+          for (let i = activeIdx + 1; i < queue.length; i++) {
+            indicesToRemove.push(i);
+          }
+          await TrackPlayer.remove(indicesToRemove).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('toggleAutoplay queue sync error:', err);
+    }
   };
 
   const handleRestartPodcast = useCallback(async () => {
@@ -340,17 +486,18 @@ export const PodcastScreen: React.FC = () => {
           }
         }
       }
-
-      if (
-        podcastDurationRef.current > 0 &&
-        d.position >= podcastDurationRef.current - 0.4 &&
-        autoplayRef.current &&
-        nextPodcastRef.current &&
-        !isTransitioningRef.current
-      ) {
-        playNextEpisode();
-      }
     });
+
+    const activeTrackSub = TrackPlayer.addEventListener(
+      Event.PlaybackActiveTrackChanged,
+      (d) => {
+        const newTrackId = d.track?.id;
+        const rawPodcastId = getPodcastIdFromTrack(newTrackId);
+        if (rawPodcastId && rawPodcastId !== currentIdRef.current) {
+          handleActivePodcastChanged(rawPodcastId);
+        }
+      }
+    );
 
     const stateSub = TrackPlayer.addEventListener(Event.PlaybackState, (d) => {
       const isPl = d.state === State.Playing;
@@ -363,10 +510,6 @@ export const PodcastScreen: React.FC = () => {
           AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
         }
         setResumeMs(null);
-
-        if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
-          playNextEpisode();
-        }
       }
     });
 
@@ -378,25 +521,34 @@ export const PodcastScreen: React.FC = () => {
         AsyncStorage.removeItem(`@podcast_pos_${currId}`).catch(() => {});
       }
       setResumeMs(null);
-
-      if (autoplayRef.current && nextPodcastRef.current && !isTransitioningRef.current) {
-        playNextEpisode();
-      }
     });
 
     const nextRemoteSub = TrackPlayer.addEventListener(Event.RemoteNext, () => {
-      if (nextPodcastRef.current) {
-        playNextEpisode();
-      }
+      playNextEpisode();
     });
 
     return () => {
       progressSub.remove();
+      activeTrackSub.remove();
       stateSub.remove();
       endedSub.remove();
       nextRemoteSub.remove();
     };
-  }, [positionSV, playingSV, playNextEpisode]);
+  }, [positionSV, playingSV, playNextEpisode, handleActivePodcastChanged]);
+
+  // هماهنگ‌سازی ترک فعال هنگام روشن شدن مجدد صفحه و بازگشت به اپ
+  useEffect(() => {
+    const appStateSub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active') {
+        const active = await TrackPlayer.getActiveTrack().catch(() => null);
+        const rawId = getPodcastIdFromTrack(active?.id);
+        if (rawId && rawId !== currentIdRef.current) {
+          handleActivePodcastChanged(rawId);
+        }
+      }
+    });
+    return () => appStateSub.remove();
+  }, [handleActivePodcastChanged]);
 
   useFocusEffect(
     useCallback(
@@ -410,12 +562,14 @@ export const PodcastScreen: React.FC = () => {
   const ensurePodcastTrack = async () => {
     if (!podcast) return;
     const active = await TrackPlayer.getActiveTrack().catch(() => undefined);
-    if (active?.id === PODCAST_TRACK_ID) return;
+    const expectedId = getPodcastTrackId(podcast.id);
+    if (active?.id === expectedId || active?.id === PODCAST_TRACK_ID) return;
     await TrackPlayer.reset();
     await TrackPlayer.add({
-      id: PODCAST_TRACK_ID,
+      id: expectedId,
       url: absUrl(podcast.audio_url),
       title: podcast.title,
+      artist: podcast.series_title || 'LingoFlow',
       artwork: podcast.cover_url ? absUrl(podcast.cover_url) : undefined,
     });
     await TrackPlayer.setRate(rate).catch(() => {});

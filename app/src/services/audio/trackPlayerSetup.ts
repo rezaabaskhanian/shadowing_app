@@ -86,8 +86,11 @@ export async function stopAllAudio(): Promise<void> {
     const active = await TrackPlayer.getActiveTrack().catch(() => undefined);
     const isLongFormAudio =
       active?.id === 'podcast' ||
+      active?.id?.startsWith('podcast') ||
       active?.id === 'song' ||
-      active?.id === 'story';
+      active?.id?.startsWith('song') ||
+      active?.id === 'story' ||
+      active?.id?.startsWith('story');
 
     if (!isLongFormAudio) {
       await TrackPlayer.reset().catch(() => {});
