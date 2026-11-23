@@ -205,6 +205,8 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onNextStep={onNextStep}
         accentColor={accentColor}
         accentLightColor={accentLightColor}
+        isLastStep={flowMode === 'smart_flow' || activeStepIndex === 3}
+        flowMode={flowMode}
         rtl={rtl}
         t={t}
       />

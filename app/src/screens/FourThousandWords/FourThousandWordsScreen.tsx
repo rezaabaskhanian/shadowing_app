@@ -298,7 +298,7 @@ export const FourThousandWordsScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.primaryActionBtn,
-              styles.flex1,
+              { backgroundColor: '#7C3AED' },
               row,
               isLocked && styles.lockedActionBtn,
             ]}
@@ -315,20 +315,42 @@ export const FourThousandWordsScreen: React.FC = () => {
             }}
           >
             {isLocked ? (
-              <>
-                <Lock size={15} color="#FFFFFF" />
-                <Text style={styles.primaryActionBtnText}>
-                  {rtl ? 'باز کردن با اشتراک ویژه 🔒' : 'Unlock with VIP 🔒'}
-                </Text>
-              </>
+              <Lock size={15} color="#FFFFFF" />
             ) : (
-              <>
-                <Layers size={16} color="#FFFFFF" />
-                <Text style={styles.primaryActionBtnText}>
-                  {rtl ? 'تمرین شادوئینگ این درس 🎧' : 'Start Shadowing Scene'}
-                </Text>
-              </>
+              <Mic size={15} color="#FFFFFF" />
             )}
+            <Text style={styles.primaryActionBtnText}>
+              {rtl ? 'تمرین شادوئینگ 🎙️' : 'Shadowing 🎙️'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.primaryActionBtn,
+              styles.flex1,
+              row,
+              isLocked && styles.lockedActionBtn,
+            ]}
+            activeOpacity={0.85}
+            onPress={() => {
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('Podcast', {
+                  podcastId: item.id,
+                  openedAt: Date.now(),
+                });
+              }
+            }}
+          >
+            {isLocked ? (
+              <Lock size={15} color="#FFFFFF" />
+            ) : (
+              <Play size={15} color="#FFFFFF" fill="#FFFFFF" />
+            )}
+            <Text style={styles.primaryActionBtnText}>
+              {rtl ? 'پادکست 🎧' : 'Podcast 🎧'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -345,13 +367,9 @@ export const FourThousandWordsScreen: React.FC = () => {
               }
             }}
           >
-            {isLocked ? (
-              <Lock size={14} color="#64748B" />
-            ) : (
-              <PenLine size={15} color="#D97706" />
-            )}
+            <PenLine size={14} color="#D97706" />
             <Text style={[styles.secondaryActionBtnText, isLocked && styles.lockedSecondaryBtnText]}>
-              {rtl ? 'دیکته ✍️' : 'Dictation'}
+              {rtl ? 'دیکته' : 'Dictation'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -361,6 +379,7 @@ export const FourThousandWordsScreen: React.FC = () => {
 
   const renderPodcastItem = ({ item, index }: { item: Podcast; index: number }) => {
     const unitNo = item.episode_no || index + 1;
+    const sceneId = item.scene_id || `4000${selectedBook}000-0000-0000-000${unitNo < 10 ? '0' + unitNo : unitNo}00000001`;
     const isAdding = addingLeitnerId === item.id;
     const isLocked = isUnitLocked(index);
 
@@ -430,8 +449,37 @@ export const FourThousandWordsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* دکمه‌های اقدام: گوش دادن + دیکته + لایتنر */}
+        {/* دکمه‌های اقدام: شادوئینگ + پادکست + دیکته + لایتنر */}
         <View style={[styles.podcastActionsRow, row]}>
+          <TouchableOpacity
+            style={[
+              styles.primaryActionBtn,
+              { backgroundColor: '#7C3AED' },
+              row,
+              isLocked && styles.lockedActionBtn,
+            ]}
+            activeOpacity={0.85}
+            onPress={() => {
+              if (isLocked) {
+                navigation.navigate('Paywall');
+              } else {
+                navigation.navigate('Shadowing', {
+                  scenarioId: sceneId,
+                  returnTo: 'FourThousandWords',
+                });
+              }
+            }}
+          >
+            {isLocked ? (
+              <Lock size={15} color="#FFFFFF" />
+            ) : (
+              <Mic size={15} color="#FFFFFF" />
+            )}
+            <Text style={styles.primaryActionBtnText}>
+              {rtl ? 'تمرین شادوئینگ 🎙️' : 'Shadowing 🎙️'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.primaryActionBtn,
@@ -452,20 +500,13 @@ export const FourThousandWordsScreen: React.FC = () => {
             }}
           >
             {isLocked ? (
-              <>
-                <Lock size={15} color="#FFFFFF" />
-                <Text style={styles.primaryActionBtnText}>
-                  {rtl ? 'پخش با اشتراک ویژه 🔒' : 'Unlock with VIP 🔒'}
-                </Text>
-              </>
+              <Lock size={15} color="#FFFFFF" />
             ) : (
-              <>
-                <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
-                <Text style={styles.primaryActionBtnText}>
-                  {rtl ? 'شنیدن پادکست درس 🎧' : 'Listen Podcast'}
-                </Text>
-              </>
+              <Play size={15} color="#FFFFFF" fill="#FFFFFF" />
             )}
+            <Text style={styles.primaryActionBtnText}>
+              {rtl ? 'پادکست 🎧' : 'Podcast 🎧'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -482,13 +523,9 @@ export const FourThousandWordsScreen: React.FC = () => {
               }
             }}
           >
-            {isLocked ? (
-              <Lock size={14} color="#64748B" />
-            ) : (
-              <PenLine size={15} color="#D97706" />
-            )}
+            <PenLine size={14} color="#D97706" />
             <Text style={[styles.secondaryActionBtnText, isLocked && styles.lockedSecondaryBtnText]}>
-              {rtl ? 'دیکته ✍️' : 'Dictation'}
+              {rtl ? 'دیکته' : 'Dictation'}
             </Text>
           </TouchableOpacity>
 

@@ -4,14 +4,14 @@ import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
+import type { PracticeFlowMode } from '../../../data/PracticeSettingsContext';
 
 /**
  * ردیف پیشرفت مرحله: در مرحله‌های خودکار (Listen/Shadow) شمارنده‌ی دور را
  * نشان می‌دهد، در مرحله‌های دستی (Record/Compare) فقط یادآوری می‌کند که
  * کاربر با سرعت خودش پیش می‌رود.
  *
- * سمت راست همیشه دکمه‌ی «مرحله بعد» است — راه فرار: تکرارِ خودکار پیشنهاد
- * است نه اجبار و کاربر هر لحظه می‌تواند جلو برود.
+ * سمت راست دکمه‌ی «مرحله بعد» یا «پایان تمرین و کارنامه» است.
  */
 export const RepeatProgressRow: React.FC<{
   autoRepeat: boolean;
@@ -21,12 +21,26 @@ export const RepeatProgressRow: React.FC<{
   /** رنگ اختصاصیِ مرحله‌ی فعلی، برای نقطه‌های تکرار و دکمه‌ی مرحله‌ی بعد. */
   accentColor: string;
   accentLightColor: string;
+  isLastStep?: boolean;
+  flowMode?: PracticeFlowMode;
   rtl?: boolean;
   t: (key: string) => string;
-}> = ({ autoRepeat, repeatCount, totalRepeats, onNextStep, accentColor, accentLightColor, rtl = false, t }) => {
+}> = ({
+  autoRepeat,
+  repeatCount,
+  totalRepeats,
+  onNextStep,
+  accentColor,
+  accentLightColor,
+  isLastStep = false,
+  flowMode,
+  rtl = false,
+  t,
+}) => {
   const row = rtl && styles.rowReverse;
   // در حالت بی‌نهایت شمارنده‌ی نقطه‌ای معنی ندارد و فقط عدد دور را نشان می‌دهیم.
   const unlimited = totalRepeats === 0;
+  const isFinishAction = flowMode === 'smart_flow' || isLastStep;
 
   return (
     <View style={[styles.repeatRow, row]}>
@@ -55,12 +69,32 @@ export const RepeatProgressRow: React.FC<{
       )}
 
       <TouchableOpacity
-        style={[styles.nextStepBtn, row, { backgroundColor: accentLightColor }]}
+        style={[
+          styles.nextStepBtn,
+          row,
+          { backgroundColor: isFinishAction ? '#ECFDF5' : accentLightColor },
+          isFinishAction && styles.finishStepBtn,
+        ]}
         activeOpacity={0.8}
         onPress={onNextStep}
       >
-        <Text style={[styles.nextStepBtnText, { color: accentColor }]}>{t('nextStep')}</Text>
-        {rtl ? <ChevronLeft size={14} color={accentColor} /> : <ChevronRight size={14} color={accentColor} />}
+        <Text
+          style={[
+            styles.nextStepBtnText,
+            { color: isFinishAction ? '#059669' : accentColor },
+          ]}
+        >
+          {isFinishAction
+            ? rtl
+              ? 'پایان تمرین و کارنامه 🏁'
+              : 'Finish & Results 🏁'
+            : t('nextStep')}
+        </Text>
+        {rtl ? (
+          <ChevronLeft size={14} color={isFinishAction ? '#059669' : accentColor} />
+        ) : (
+          <ChevronRight size={14} color={isFinishAction ? '#059669' : accentColor} />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -111,6 +145,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 7,
+  },
+  finishStepBtn: {
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
   nextStepBtnText: {
     fontFamily: FONT_FAMILY.bold,

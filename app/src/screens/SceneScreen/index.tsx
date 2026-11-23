@@ -684,6 +684,12 @@ export const SceneScreen = () => {
       return;
     }
 
+    // در جریان هوشمند (smart_flow)، با اتمام تمام جملات صحنه، درس با موفقیت پایان یافته و کارنامه نمایش داده می‌شود
+    if (flowMode === 'smart_flow') {
+      goToNextStep(true);
+      return;
+    }
+
     // مرحله‌های دست‌کاربر (ضبط/مقایسه): نه دور خودکار، نه پرش خودکار — همین‌جا
     // می‌ایستیم تا خودش تصمیم بگیرد.
     if (!isAutoStep) {
@@ -709,6 +715,7 @@ export const SceneScreen = () => {
     targetRepeats,
     playDialogueAt,
     goToNextStep,
+    flowMode,
   ]);
 
   const handlePrevDialogue = useCallback(() => {

@@ -198,7 +198,7 @@ export default function FourThousandWordsPanel({
     });
   }
 
-  // تولید داستان کامل با هوش مصنوعی (مدل اول: روایت داستانی کامل)
+  // تولید داستان کامل با هوش مصنوعی (مدل اول: روایت داستانی کامل + صداگذاری خودکار)
   async function handleGenerateStory(podcastId: string) {
     runAction("make_story", async () => {
       const updated = await generatePodcastStory(podcastId);
@@ -207,18 +207,24 @@ export default function FourThousandWordsPanel({
       }
       if (updated.scene_id) {
         try {
+          await fillSceneAudio(updated.scene_id);
           const sc = await getScene(updated.scene_id);
           setSelectedScene(sc);
         } catch {
           // ignore
         }
       }
-      notify(`داستان کامل درس (${updated.lines?.length || 0} جمله) با موفقیت تولید و با شادوئینگ همگام شد! اکنون صدای آن را بسازید ✨`, "ok");
+      try {
+        await generatePodcastAudio(podcastId);
+      } catch {
+        // ignore
+      }
+      notify(`داستان کامل درس (${updated.lines?.length || 0} جمله) با موفقیت تولید و صداگذاری شادوئینگ و پادکست آغاز شد ✨`, "ok");
       loadSeries(activeBook);
     });
   }
 
-  // بازنویسی دسته‌جمعی داستان‌های کوتاه این کتاب با هوش مصنوعی
+  // بازنویسی دسته‌جمعی داستان‌های کوتاه این کتاب با هوش مصنوعی همراه با صداگذاری خودکار
   async function handleBatchGenerateStories() {
     const list = series?.episodes || [];
     const shortStories = list.filter((p: Podcast) => (p.lines?.length || (p as any).line_count || 0) <= 5);
@@ -226,7 +232,7 @@ export default function FourThousandWordsPanel({
       notify("تمام درس‌های این کتاب قبلاً به داستان کامل تبدیل شده‌اند ✨", "ok");
       return;
     }
-    if (!confirm(`آیا می‌خواهید داستان کامل ${shortStories.length} درس این کتاب را به صورت خودکار با AI تولید کنید؟`)) {
+    if (!confirm(`آیا می‌خواهید داستان کامل ${shortStories.length} درس این کتاب را به صورت خودکار با AI تولید و صداگذاری کنید؟`)) {
       return;
     }
 
@@ -234,13 +240,21 @@ export default function FourThousandWordsPanel({
       let count = 0;
       for (const p of shortStories) {
         try {
-          await generatePodcastStory(p.id);
+          const updated = await generatePodcastStory(p.id);
           count++;
+          if (updated.scene_id) {
+            try {
+              await fillSceneAudio(updated.scene_id);
+            } catch {}
+          }
+          try {
+            await generatePodcastAudio(p.id);
+          } catch {}
         } catch {
           // ادامه به درس بعد
         }
       }
-      notify(`نگارش داستان برای ${count} درس با موفقیت انجام شد 🚀`, "ok");
+      notify(`نگارش داستان و صف‌بندی صداگذاری برای ${count} درس با موفقیت انجام شد 🚀`, "ok");
       loadSeries(activeBook);
     });
   }
