@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth';
 import { getToken, clearToken, AuthExpiredError } from '../api/client';
 
@@ -43,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<authApi.UserInfo | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
 
@@ -67,34 +69,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (e instanceof AuthExpiredError) {
             await clearToken();
             await AsyncStorage.removeItem(PROFILE_KEY).catch(() => {});
+            queryClient.clear();
             setUser(null);
           }
         }
       }
       setIsRestoring(false);
     })();
-  }, []);
+  }, [queryClient]);
 
   const login = useCallback(async (phone: string, password: string) => {
     const profile = await authApi.login(phone, password);
+    queryClient.clear();
     setUser(profile);
     await cacheProfile(profile);
-  }, []);
+  }, [queryClient]);
 
   const register = useCallback(
     async (nickname: string, phone: string, password: string, otpToken: string) => {
       const profile = await authApi.register(nickname, phone, password, otpToken);
+      queryClient.clear();
       setUser(profile);
       await cacheProfile(profile);
     },
-    []
+    [queryClient]
   );
 
   const logout = useCallback(async () => {
     await authApi.logout();
     await AsyncStorage.removeItem(PROFILE_KEY).catch(() => {});
+    queryClient.clear();
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {
     const profile = await authApi.fetchProfile();

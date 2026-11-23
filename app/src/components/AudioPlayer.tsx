@@ -184,10 +184,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       // فقط زمانی از سر گرفته شود که دستور جدید صادر شده باشد، نه هر بار که رندر/وضعیت عوض می‌شود
       const wantsRestart = actionCommand === 'play_original' && isNewCommand;
       const wantsPlay = Boolean(
-        shouldPlay &&
-          (actionCommand === 'play_original' ||
-            actionCommand === 'resume' ||
-            actionCommand === 'none')
+        actionCommand === 'play_original' ||
+          actionCommand === 'resume' ||
+          (shouldPlay && actionCommand === 'none')
       );
 
       if (!uri) {

@@ -99,7 +99,7 @@ export const PodcastDictationScreen: React.FC = () => {
     matched: NonNullable<Podcast['vocabulary']>;
     missed: NonNullable<Podcast['vocabulary']>;
   } | null>(null);
-  const [showVocabHint, setShowVocabHint] = useState(true);
+  const [showVocabHint, setShowVocabHint] = useState(false);
   const [addingToLeitner, setAddingToLeitner] = useState(false);
   const [addedToLeitner, setAddedToLeitner] = useState(false);
 
@@ -245,7 +245,7 @@ export const PodcastDictationScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top + SPACING.s, paddingBottom: insets.bottom + SPACING.m }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.grabber} />
       <View style={[styles.topRow, rtl && styles.rowReverse]}>
@@ -271,7 +271,12 @@ export const PodcastDictationScreen: React.FC = () => {
 
       {podcast && (
         <>
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.scrollFlex}
+            contentContainerStyle={styles.body}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
             <View style={[styles.podcastHead, rtl && styles.rowReverse]}>
               <Text style={[styles.podcastTitle, ta]} numberOfLines={1}>
                 {podcast.title}
@@ -284,8 +289,6 @@ export const PodcastDictationScreen: React.FC = () => {
             </View>
             {!result ? (
               <>
-                <Text style={[styles.instruction, ta]}>{t('podcastDictationHint')}</Text>
-
                 {podcast.vocabulary && podcast.vocabulary.length > 0 && (
                   <View style={styles.targetVocabBox}>
                     <TouchableOpacity
@@ -294,14 +297,14 @@ export const PodcastDictationScreen: React.FC = () => {
                       onPress={() => setShowVocabHint((v) => !v)}
                     >
                       <View style={[styles.targetVocabTitleWrap, rtl && styles.rowReverse]}>
-                        <Sparkles size={14} color="#D97706" />
+                        <Sparkles size={13} color="#D97706" />
                         <Text style={styles.targetVocabTitle}>
                           {rtl
-                            ? `کلمات هدف این درس (${podcast.vocabulary.length} واژه کلیدی)`
-                            : `Target Vocabulary (${podcast.vocabulary.length} words)`}
+                            ? `کلمات کلیدی (${podcast.vocabulary.length} واژه) · راهنمای اختیاری`
+                            : `Key Target Words (${podcast.vocabulary.length}) · Optional`}
                         </Text>
                       </View>
-                      {showVocabHint ? <ChevronUp size={16} color="#8E95A5" /> : <ChevronDown size={16} color="#8E95A5" />}
+                      {showVocabHint ? <ChevronUp size={15} color="#8E95A5" /> : <ChevronDown size={15} color="#8E95A5" />}
                     </TouchableOpacity>
 
                     {showVocabHint && (
@@ -318,22 +321,28 @@ export const PodcastDictationScreen: React.FC = () => {
                 )}
 
                 <View style={styles.inputCard}>
-                <TextInput
-                  style={styles.input}
-                  value={answer}
-                  onChangeText={setAnswer}
-                  placeholder={t('pathDictationPlaceholder')}
-                  placeholderTextColor={COLORS.muted}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  multiline
-                />
-                <View style={[styles.inputFooter, rtl && styles.rowReverse]}>
-                  <Text style={styles.inputMeta}>
-                    {t('podcastDictationWords').replace('{n}', String(answer.trim() ? answer.trim().split(/\s+/).length : 0))}
-                  </Text>
-                  <Text style={styles.inputMeta}>{t('podcastDictationEnglish')}</Text>
-                </View>
+                  <TextInput
+                    style={styles.input}
+                    value={answer}
+                    onChangeText={setAnswer}
+                    placeholder={t('pathDictationPlaceholder')}
+                    placeholderTextColor={COLORS.muted}
+                    autoCapitalize="sentences"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    multiline
+                  />
+                  <View style={[styles.inputFooter, rtl && styles.rowReverse]}>
+                    <Text style={styles.inputMeta}>
+                      {t('podcastDictationWords').replace('{n}', String(answer.trim() ? answer.trim().split(/\s+/).length : 0))}
+                    </Text>
+                    {answer.trim().length > 0 && (
+                      <TouchableOpacity onPress={() => setAnswer('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={styles.clearText}>{rtl ? 'پاک کردن' : 'Clear'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <Text style={styles.inputMeta}>{t('podcastDictationEnglish')}</Text>
+                  </View>
                 </View>
               </>
             ) : (
@@ -523,15 +532,22 @@ const styles = StyleSheet.create({
   podcastHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   levelChip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   levelChipText: { fontFamily: FONT_FAMILY.bold, fontSize: 11 },
+  scrollFlex: { flex: 1 },
+  clearText: { fontFamily: FONT_FAMILY.medium, fontSize: 11, color: COLORS.error },
   inputCard: {
     marginTop: 4,
     padding: SPACING.m,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#ECE8E0',
     backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
-  inputFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  inputFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   inputMeta: { fontFamily: FONT_FAMILY.regular, fontSize: 11, color: COLORS.muted },
   progressThumb: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary, marginHorizontal: -6 },
   container: { flex: 1, backgroundColor: '#FDFBF7', paddingHorizontal: SPACING.l },
@@ -540,14 +556,14 @@ const styles = StyleSheet.create({
   title: { fontFamily: FONT_FAMILY.bold, fontSize: 17, lineHeight: 26, color: COLORS.text, textAlign: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   muted: { ...TEXT_STYLES.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
-  body: { paddingVertical: SPACING.m, gap: SPACING.s },
+  body: { paddingVertical: SPACING.m, gap: SPACING.s, flexGrow: 1, paddingBottom: 60 },
   podcastTitle: { flex: 1, fontFamily: FONT_FAMILY.bold, fontSize: 16, color: COLORS.text },
   instruction: { fontFamily: FONT_FAMILY.regular, fontSize: 12, lineHeight: 20, color: COLORS.textSecondary },
   input: {
-    minHeight: 240,
-    fontFamily: FONT_FAMILY.medium,
+    minHeight: 180,
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 26,
     color: COLORS.text,
     textAlign: 'left',
     textAlignVertical: 'top',

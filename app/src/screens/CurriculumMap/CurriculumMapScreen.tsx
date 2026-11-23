@@ -87,7 +87,7 @@ export const CurriculumMapScreen = () => {
   const { t, language } = useLanguage();
   const rtl = language === 'fa';
   const num = (v: number | string) => (rtl ? toFa(v) : String(v));
-  const { scenes } = useScenes();
+  const { scenes, reload } = useScenes();
   const { user } = useAuth();
   const [streak, setStreak] = useState<number | null>(null);
   const [xp, setXp] = useState<number | null>(null);
@@ -104,6 +104,7 @@ export const CurriculumMapScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      reload();
       AsyncStorage.getItem('@shadowing_28day_challenge_v1').then((raw) => {
         if (raw) {
           try {

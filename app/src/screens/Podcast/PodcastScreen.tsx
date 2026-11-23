@@ -67,12 +67,17 @@ const FREE_PODCASTS_COUNT = 4;
 const SPEAKER_COLORS = ['#2563EB', '#D97706', '#7C3AED', '#059669'];
 const VOCAB_COLORS = ['#FF6422', '#2563EB', '#7C3AED', '#059669', '#D97706'];
 const PODCAST_TRACK_ID = 'podcast';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const getPodcastTrackId = (id: string) => `podcast_${id}`;
 const getPodcastIdFromTrack = (trackId?: string) => {
   if (!trackId) return '';
-  if (trackId.startsWith('podcast_')) return trackId.replace('podcast_', '');
-  if (trackId === PODCAST_TRACK_ID) return '';
-  return trackId;
+  let candidate = trackId;
+  if (candidate.startsWith('podcast_')) {
+    candidate = candidate.replace('podcast_', '');
+  } else if (candidate === PODCAST_TRACK_ID) {
+    return '';
+  }
+  return UUID_REGEX.test(candidate) ? candidate : '';
 };
 
 /**
@@ -246,7 +251,7 @@ export const PodcastScreen: React.FC = () => {
 
   const handleActivePodcastChanged = useCallback(
     async (newId: string) => {
-      if (!newId || newId === currentIdRef.current) return;
+      if (!newId || !UUID_REGEX.test(newId) || newId === currentIdRef.current) return;
       setCurrentId(newId);
       currentIdRef.current = newId;
       setPositionMs(0);
@@ -396,11 +401,12 @@ export const PodcastScreen: React.FC = () => {
     });
 
     if (initialPodcastId) {
-      loadAndPlayPodcast(initialPodcastId, false);
+      const shouldAuto = route.params?.autoPlay ?? true;
+      loadAndPlayPodcast(initialPodcastId, shouldAuto);
     } else {
       setLoadError(true);
     }
-  }, [initialPodcastId, loadAndPlayPodcast]);
+  }, [initialPodcastId, loadAndPlayPodcast, route.params?.autoPlay]);
 
   const toggleAutoplay = async (val: boolean) => {
     setAutoplay(val);

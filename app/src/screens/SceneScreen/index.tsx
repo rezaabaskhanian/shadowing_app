@@ -97,7 +97,7 @@ export const SceneScreen = () => {
     mutationFn: recordDialogueProgress,
     onSuccess: (res) => {
       if (res?.is_completed) {
-        queryClient.invalidateQueries({ queryKey: sceneKeys.list });
+        queryClient.invalidateQueries({ queryKey: sceneKeys.all });
       }
     },
     onError: (err) => console.warn('[SceneScreen] failed to record scene progress:', err),
@@ -1055,7 +1055,7 @@ export const SceneScreen = () => {
     if (total > 0 && comparedCount === total) {
       // تیکِ صحنه از پیشرفتی می‌آید که با هر نمره ثبت شده؛ کش را بی‌اعتبار
       // می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
-      queryClient.invalidateQueries({ queryKey: sceneKeys.list });
+      queryClient.invalidateQueries({ queryKey: sceneKeys.all });
       track('scene_completed', scenarioId ? String(scenarioId) : undefined);
       // ثبت خودکار روز جاری در چالش ۲۸ روزه شادوئینگ (فعال‌سازی هوشمند تیک سبز)
       markTodayChallengeCompleted().catch(() => {});

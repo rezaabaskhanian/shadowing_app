@@ -338,6 +338,7 @@ export const FourThousandWordsScreen: React.FC = () => {
               } else {
                 navigation.navigate('Podcast', {
                   podcastId: item.id,
+                  autoPlay: true,
                   openedAt: Date.now(),
                 });
               }
@@ -494,6 +495,7 @@ export const FourThousandWordsScreen: React.FC = () => {
               } else {
                 navigation.navigate('Podcast', {
                   podcastId: item.id,
+                  autoPlay: true,
                   openedAt: Date.now(),
                 });
               }

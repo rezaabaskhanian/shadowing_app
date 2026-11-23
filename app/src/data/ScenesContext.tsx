@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchScene, fetchScenes, SceneLockedError, isSceneLockedError } from '../api/scenes';
 import { SCENARIOS, expandScenarioToDialogueItems, type Scenario } from './scenarios';
 import { useLanguage } from './i18n';
+import { useAuth } from './AuthContext';
 import { SplashScreen } from '../screens/SplashScreen';
 import { FONT_FAMILY } from '../theme/typography';
 
@@ -27,8 +28,9 @@ const ScenesContext = createContext<ScenesContextValue>({
 
 /** کلیدهای کش. یک‌جا تعریف می‌شوند تا بی‌اعتبارسازی از جای دیگر هم امن باشد. */
 export const sceneKeys = {
-  list: ['scenes'] as const,
-  detail: (id: string) => ['scene', id] as const,
+  all: ['scenes'] as const,
+  list: (userId?: string) => (userId ? (['scenes', userId] as const) : (['scenes'] as const)),
+  detail: (id: string, userId?: string) => (userId ? (['scene', id, userId] as const) : (['scene', id] as const)),
 };
 
 /**
@@ -40,10 +42,11 @@ export const sceneKeys = {
  */
 export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { t } = useLanguage();
   const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: sceneKeys.list,
+    queryKey: sceneKeys.list(user?.id),
     queryFn: fetchScenes,
   });
 
@@ -53,8 +56,8 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
   const scenes = useMemo(() => data ?? [], [data]);
 
   const reload = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: sceneKeys.list });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: sceneKeys.list(user?.id) });
+  }, [queryClient, user?.id]);
 
   const getScene = useCallback(
     async (id: string): Promise<Scenario | undefined> => {
@@ -62,7 +65,7 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
         // fetchQuery خودش کش را می‌خواند، درخواست‌های هم‌زمانِ یک صحنه را ادغام
         // می‌کند و نتیجه را برای دفعه‌ی بعد نگه می‌دارد.
         return await queryClient.fetchQuery({
-          queryKey: sceneKeys.detail(id),
+          queryKey: sceneKeys.detail(id, user?.id),
           queryFn: () => fetchScene(id),
         });
       } catch (e) {
@@ -77,7 +80,7 @@ export const ScenesProvider = ({ children }: { children: React.ReactNode }) => {
         throw e;
       }
     },
-    [queryClient, scenes]
+    [queryClient, scenes, user?.id]
   );
 
   const value = useMemo<ScenesContextValue>(

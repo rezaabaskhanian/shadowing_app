@@ -103,7 +103,7 @@ export const ScenesScreen = () => {
   // دیده نمی‌شد.
   useFocusEffect(
     React.useCallback(() => {
-      queryClient.refetchQueries({ queryKey: sceneKeys.list, stale: true });
+      queryClient.refetchQueries({ queryKey: sceneKeys.all, stale: true });
 
       const onBackPress = () => {
         if (searchQuery) {
