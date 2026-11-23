@@ -214,3 +214,118 @@ export function analyzeProsody(sentence: string): ProsodyAnalysis {
   };
 }
 
+export interface ProsodyEvaluation {
+  /** نمره مکث و پیوستگی گفتار (اتصال کلمات و درنگ‌های طبیعی) */
+  pauseAndLinkingScore: number;
+  pauseAndLinkingFeedback: string;
+  /** نمره تکیه و استرس روی کلمات کلیدی محتوایی */
+  stressScore: number;
+  stressFeedback: string;
+  /** نمره ریتم و لحن فراز و فرود جمله */
+  intonationScore: number;
+  intonationFeedback: string;
+}
+
+/**
+ * ارزیابی سه‌گانه شادوئینگ بر اساس اصول علمی:
+ * ۱. Pauses & Connected Speech: پیوستگی صامت‌ها و مصوت‌ها و عدم مکث‌های بی‌موقع
+ * ۲. Sentence Stress: ادای شفاف و قوی کلمات کلیدی (Content Words)
+ * ۳. Intonation: رعایت لحن بالا رونده (پرسشی) یا افتان (خبری) در انتهای جمله
+ */
+export function evaluateShadowingProsody(
+  targetText: string,
+  words?: Array<{ word: string; status: 'ok' | 'weak' | 'missing'; score: number }>,
+  fluencyScore: number = 75,
+  overallScore: number = 75
+): ProsodyEvaluation {
+  const analysis = analyzeProsody(targetText);
+  const wordTokens = analysis.tokens.filter((t) => t.isWord);
+
+  // ۱. ارزیابی تکیه و استرس (Sentence Stress)
+  const stressedTokens = wordTokens.filter((t) => t.isStressed);
+  let stressedOkCount = 0;
+  let stressedTotal = stressedTokens.length || 1;
+  const weakStressedWords: string[] = [];
+
+  if (words && words.length > 0) {
+    // تطبیق با کلمات ارزیابی شده
+    words.forEach((w, idx) => {
+      const token = wordTokens[idx];
+      if (token && token.isStressed) {
+        if (w.status === 'ok') {
+          stressedOkCount++;
+        } else {
+          weakStressedWords.push(token.cleanWord);
+        }
+      }
+    });
+  } else {
+    // اگر کلمات تفکیکی در دسترس نبود از نمره کلی تقریب می‌زنیم
+    stressedOkCount = Math.round((overallScore / 100) * stressedTotal);
+  }
+
+  const stressRatio = stressedOkCount / stressedTotal;
+  const stressScore = Math.min(100, Math.round(stressRatio * 70 + (overallScore || 70) * 0.3));
+
+  let stressFeedback = 'تکیه روی کلمات کلیدی عالی و رسا بود ✨';
+  if (stressScore < 60) {
+    stressFeedback = weakStressedWords.length > 0
+      ? `کلمات پرمعنی مثل «${weakStressedWords.slice(0, 2).join('، ')}» نیاز به تاکید و انرژی بیشتری دارند.`
+      : 'کلمات کلیدی جمله را با انرژی و کشش بیشتری نسبت به کلمات کمکی ادا کنید.';
+  } else if (stressScore < 80) {
+    stressFeedback = 'تکیه روی اغلب کلمات مهم خوب بود، روی کلمات انتهایی بیشتر تاکید کنید.';
+  }
+
+  // ۲. ارزیابی پیوستگی و مکث (Pauses & Connected Speech)
+  const linkingPairs = wordTokens.filter((t) => t.linksToNext);
+  let linkingOkCount = 0;
+  const linkingTotal = linkingPairs.length;
+
+  if (words && words.length > 0 && linkingTotal > 0) {
+    linkingPairs.forEach((t) => {
+      const idx = wordTokens.indexOf(t);
+      const currOk = words[idx]?.status === 'ok';
+      const nextOk = words[idx + 1]?.status === 'ok';
+      if (currOk && nextOk) linkingOkCount++;
+    });
+  } else {
+    linkingOkCount = Math.round((fluencyScore / 100) * (linkingTotal || 1));
+  }
+
+  const linkingRatio = linkingTotal > 0 ? linkingOkCount / linkingTotal : 0.9;
+  const pauseAndLinkingScore = Math.min(100, Math.round(linkingRatio * 50 + (fluencyScore || 70) * 0.5));
+
+  let pauseAndLinkingFeedback = 'پیوستگی صداها و اتصال صامت به مصوت بسیار پیوسته و روان بود 🌊';
+  if (pauseAndLinkingScore < 65) {
+    pauseAndLinkingFeedback = 'از مکث بین کلماتی که به هم وصل می‌شوند (علامت ‿) خودداری کرده و آن‌ها را یکپارچه بگویید.';
+  } else if (pauseAndLinkingScore < 85) {
+    pauseAndLinkingFeedback = 'جریان پیوستگی کلمات خوب بود؛ به نقاط مکث طبیعی (/) در جملات دقت کنید.';
+  }
+
+  // ۳. ارزیابی ریتم و لحن پایان جمله (Intonation)
+  const lastWords = words && words.length >= 2 ? words.slice(-2) : [];
+  const lastWordsOk = lastWords.length === 0 || lastWords.every((w) => w.status === 'ok');
+  const baseIntonation = lastWordsOk ? (overallScore * 0.6 + fluencyScore * 0.4) : (overallScore * 0.4 + fluencyScore * 0.3);
+  const intonationScore = Math.min(100, Math.max(30, Math.round(baseIntonation)));
+
+  let intonationFeedback = '';
+  if (analysis.intonation === 'rising') {
+    intonationFeedback = intonationScore >= 75
+      ? 'لحن خیزان (↑) در انتهای این پرسش به زیبایی اجرا شد 🎵'
+      : 'در سوالات بله/خیر یا لحن پرسشی، در کلمه آخر تُن صدا را بالا ببرید (↑).';
+  } else {
+    intonationFeedback = intonationScore >= 75
+      ? 'افت مطمئن لحن (↓) در انتهای جمله کاملاً شبیه به گوینده بومی بود 👏'
+      : 'در پایان جملات خبری یا امری اجازه دهید آهنگ صدا ملایم فرود بیاید (↓).';
+  }
+
+  return {
+    pauseAndLinkingScore,
+    pauseAndLinkingFeedback,
+    stressScore,
+    stressFeedback,
+    intonationScore,
+    intonationFeedback,
+  };
+}
+

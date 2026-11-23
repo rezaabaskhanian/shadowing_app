@@ -7,6 +7,7 @@ import { FONT_FAMILY } from '../../../theme/typography';
 import type { EvaluationResult } from '../../../api/shadowing';
 import { ScorePill } from './ScorePill';
 import { ScoredDialogueText } from './ScoredDialogueText';
+import { ProsodyFeedbackCard } from './ProsodyFeedbackCard';
 import { feedbackCardStyles } from './sharedStyles';
 
 /**
@@ -94,6 +95,14 @@ export const PronunciationFeedback: React.FC<{
           {t('weHeard')} «{evaluation.transcript}»
         </Text>
       )}
+
+      <ProsodyFeedbackCard
+        targetText={evaluation.target_text}
+        words={evaluation.words}
+        fluencyScore={evaluation.fluency_score}
+        overallScore={evaluation.overall_score}
+        rtl={rtl}
+      />
     </View>
   );
 };

@@ -10,6 +10,7 @@ import type { EvaluationResult } from '../../../api/shadowing';
 import type { PracticeFlowMode } from '../../../data/PracticeSettingsContext';
 import { WaveBars } from './WaveBars';
 import { CompareAudioSection } from './CompareAudioSection';
+import { ProsodyFeedbackCard } from './ProsodyFeedbackCard';
 
 const toLocaleDigits = (n: number | string, isRtl: boolean) =>
   isRtl ? String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(n);
@@ -303,6 +304,15 @@ export const PracticeWaveformCard: React.FC<{
             </Text>
           </View>
         </View>
+
+        {/* ارزیابی سه‌گانه شادوئینگ: مکث، تکیه و لحن */}
+        <ProsodyFeedbackCard
+          targetText={evaluation.target_text}
+          words={evaluation.words}
+          fluencyScore={evaluation.fluency_score}
+          overallScore={evaluation.overall_score}
+          rtl={rtl}
+        />
 
         <View style={[styles.smartActionRow, rtl && styles.rowReverse]}>
           <TouchableOpacity style={styles.smartRetryBtn} onPress={onPlayOriginal} activeOpacity={0.8}>
