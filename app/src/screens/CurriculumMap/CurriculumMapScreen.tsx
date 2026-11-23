@@ -6,6 +6,7 @@ import Svg, { Circle, Defs, Path, RadialGradient, Stop } from 'react-native-svg'
 
 import { COLORS, hexToRgba } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
+import { SHADOWS } from '../../theme/elevation';
 import { useLanguage } from '../../data/i18n';
 import { useScenes } from '../../data/ScenesContext';
 import { LEVEL_LABEL_KEY, LEVEL_BADGE_STYLE } from '../../components/SceneListCard';
@@ -16,6 +17,12 @@ import { getUserStreak, getUserSummary } from '../../api/progress';
 import { getSubscriptionStatus } from '../../api/billing';
 import { getMyLevel } from '../../api/assessment';
 import { difficultyToLevel } from '../../api/scenes';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  ShadowingChallengeModal,
+  CHALLENGE_WEEKS,
+  type ChallengeProgress,
+} from './ShadowingChallengeModal';
 
 const toFa = (v: number | string) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const PATH_COLOR = '#E2DBD0';
@@ -86,9 +93,24 @@ export const CurriculumMapScreen = () => {
   const [xp, setXp] = useState<number | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [userLevel, setUserLevel] = useState<string | null>(null);
+  const [challengeModalVisible, setChallengeModalVisible] = useState(false);
+  const [challengeProgress, setChallengeProgress] = useState<ChallengeProgress>({
+    startDate: new Date().toISOString(),
+    completedDays: [],
+    lastCompletedAt: null,
+    currentDay: 1,
+    isFinished: false,
+  });
 
   useFocusEffect(
     useCallback(() => {
+      AsyncStorage.getItem('@shadowing_28day_challenge_v1').then((raw) => {
+        if (raw) {
+          try {
+            setChallengeProgress(JSON.parse(raw));
+          } catch {}
+        }
+      });
       if (user?.role === 'admin') {
         setIsSubscribed(true);
       } else {
@@ -367,6 +389,39 @@ export const CurriculumMapScreen = () => {
         })}
       </View>
 
+      {/* بنر چالش ۲۸ روزه شادوئینگ علمی */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.challengeBar, rtl && styles.rowReverse]}
+        onPress={() => setChallengeModalVisible(true)}
+      >
+        <View style={styles.challengeIconCircle}>
+          <Trophy size={18} color="#D97706" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={[styles.challengeTitleRow, rtl && styles.rowReverse]}>
+            <Text style={[styles.challengeBarTitle, rtl && styles.textRight]}>
+              {rtl ? 'چالش ۲۸ روزه شادوئینگ علمی' : '28-Day Shadowing Challenge'}
+            </Text>
+            <View style={styles.challengeDayPill}>
+              <Text style={styles.challengeDayPillText}>
+                {rtl ? `روز ${challengeProgress.currentDay} از ۲۸ 🔥` : `Day ${challengeProgress.currentDay}/28 🔥`}
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.challengeBarSubtitle, rtl && styles.textRight]} numberOfLines={1}>
+            {rtl
+              ? `هفته ${Math.min(4, Math.floor((challengeProgress.currentDay - 1) / 7) + 1)}: ${CHALLENGE_WEEKS[Math.min(3, Math.floor((challengeProgress.currentDay - 1) / 7))].titleFa.split(':')[1] || CHALLENGE_WEEKS[Math.min(3, Math.floor((challengeProgress.currentDay - 1) / 7))].titleFa}`
+              : '4-week scientific fluency roadmap'}
+          </Text>
+        </View>
+        <ChevronLeft
+          size={16}
+          color="#9CA3AF"
+          style={rtl ? { transform: [{ rotate: '180deg' }] } : undefined}
+        />
+      </TouchableOpacity>
+
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
@@ -586,6 +641,17 @@ export const CurriculumMapScreen = () => {
           </TouchableOpacity>
         </View>
       )}
+
+      <ShadowingChallengeModal
+        visible={challengeModalVisible}
+        onClose={() => setChallengeModalVisible(false)}
+        onStartTodayPractice={(_weekNum, _dayNum) => {
+          if (currentScene) {
+            openScene(currentScene, false);
+          }
+        }}
+        rtl={rtl}
+      />
     </View>
   );
 };
@@ -640,11 +706,61 @@ const NodeBubble: React.FC<{ state: NodeState; onPress: () => void }> = ({ state
 const styles = StyleSheet.create({
   rowReverse: { flexDirection: 'row-reverse' },
   alignEnd: { alignItems: 'flex-end' },
+  textRight: { textAlign: 'right' },
   screen: {
     flex: 1,
     backgroundColor: '#FDFBF7',
     paddingTop: 48,
     paddingHorizontal: 20,
+  },
+  challengeBar: {
+    marginHorizontal: -4,
+    marginTop: 8,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 16,
+    padding: 12,
+    gap: 12,
+    ...SHADOWS.level1,
+  },
+  challengeIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  challengeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  challengeBarTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: '#92400E',
+  },
+  challengeDayPill: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  challengeDayPillText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 9.5,
+    color: '#FFFFFF',
+  },
+  challengeBarSubtitle: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#B45309',
   },
   top: {
     marginHorizontal: -20,
