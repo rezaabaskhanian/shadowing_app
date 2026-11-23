@@ -280,7 +280,8 @@ export const SceneScreen = () => {
   const heroImageHeight = topViewHeight;
   const heroImageWidth = Math.round(heroImageHeight * imageAspectRatio);
 
-  const [playbackRate, setPlaybackRate] = useState(1.0);
+  // نردبان سرعت: ladder (خودکار: 0.85x در دور اول/زمزمه، 1.0x در شادوئینگ کامل) یا سرعت ثابت دستی
+  const [speedMode, setSpeedMode] = useState<'ladder' | 1.0 | 0.85 | 0.75 | 1.25>('ladder');
   const autoMode = true;
   const [showResult, setShowResult] = useState(false);
   // موقعیتِ زنده‌ی پخش (ثانیه)، برای هایلایتِ کلمه‌به‌کلمه‌ی هم‌زمان با صدا؛
@@ -1194,10 +1195,25 @@ export const SceneScreen = () => {
   // نیست افکتی بعد از رندر از روی state حدس بزند مرحله عوض شده و جمله‌ی
   // درست کدام است.
 
+  // نردبان سرعت و سرعت پخش موثر
+  const effectivePlaybackRate = useMemo(() => {
+    if (speedMode !== 'ladder') return speedMode;
+    // در حالت نردبان سرعت علمی: دور اول یا گرم‌کردن زمزمه با سرعت آرام‌تر ۰.۸۵x برای گرفتن تلفظ دقیق،
+    // و در تکرارهای بعدی یا ضبط شادوئینگ سرعت به ۱.۰x استاندارد تغییر می‌کند.
+    if (
+      shadowPromptState === 'mumbling' ||
+      repeatCount <= 1 ||
+      (flowMode === 'smart_flow' && activeStepIndex === 0)
+    ) {
+      return 0.85;
+    }
+    return 1.0;
+  }, [speedMode, shadowPromptState, repeatCount, flowMode, activeStepIndex]);
+
   const toggleSpeed = () => {
-    const speeds = [1.0, 0.75, 1.25, 1.5];
-    const nextSpeedIdx = (speeds.indexOf(playbackRate) + 1) % speeds.length;
-    setPlaybackRate(speeds[nextSpeedIdx]);
+    const modes: Array<'ladder' | 1.0 | 0.85 | 0.75 | 1.25> = ['ladder', 1.0, 0.85, 0.75, 1.25];
+    const nextIdx = (modes.indexOf(speedMode) + 1) % modes.length;
+    setSpeedMode(modes[nextIdx]);
   };
 
   // مکث و ادامه دو نیتِ متفاوت‌اند و باید دو action جدا باشند: با یک دستورِ
@@ -1332,7 +1348,7 @@ export const SceneScreen = () => {
       <AudioPlayer
         uri={audioUri}
         shouldPlay={playing && !guideModalVisible}
-        playbackRate={playbackRate}
+        playbackRate={effectivePlaybackRate}
         actionCommand={actionCommand}
         actionNonce={audioNonce}
         loadedRecordingPath={playingRecordingUrl}
@@ -1580,7 +1596,8 @@ export const SceneScreen = () => {
               dispatch({ type: 'START_RECORD', withReference })
             }
             onStopRecord={() => dispatch({ type: 'STOP_RECORD' })}
-            playbackRate={playbackRate}
+            playbackRate={effectivePlaybackRate}
+            isSpeedLadder={speedMode === 'ladder'}
             toggleSpeed={toggleSpeed}
             togglePlay={togglePlay}
             onPrevDialogue={handlePrevDialogue}

@@ -36,6 +36,8 @@ export const PlayerControlsBar: React.FC<{
   onReplay: () => void;
   hasRecordingForCurrentLine: boolean;
   onPlayMyRecording: () => void;
+  /** آیا حالت نردبان سرعت هوشمند فعال است */
+  isSpeedLadder?: boolean;
   /** در فارسی ترتیب دکمه‌ها برعکس است: «قبلی» سمت راست. */
   rtl?: boolean;
   flowMode?: PracticeFlowMode;
@@ -54,6 +56,7 @@ export const PlayerControlsBar: React.FC<{
   onReplay,
   hasRecordingForCurrentLine,
   onPlayMyRecording,
+  isSpeedLadder,
   rtl = false,
   flowMode = 'smart_flow',
 }) => {
@@ -91,8 +94,13 @@ export const PlayerControlsBar: React.FC<{
         <ChevronLeft size={20} color={COLORS.text} />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.chevronBtn} onPress={toggleSpeed}>
-        <Text style={styles.speedPillText}>{playbackRate}x</Text>
+      <TouchableOpacity
+        style={[styles.chevronBtn, isSpeedLadder && styles.speedLadderBtn]}
+        onPress={toggleSpeed}
+      >
+        <Text style={[styles.speedPillText, isSpeedLadder && styles.speedLadderPillText]}>
+          {isSpeedLadder ? `🪜 ${playbackRate}x` : `${playbackRate}x`}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -211,6 +219,17 @@ const styles = StyleSheet.create({
     color: '#191C21',
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12.5,
+  },
+  speedLadderBtn: {
+    borderColor: '#C7D2FE',
+    backgroundColor: '#EEF2FF',
+    minWidth: 54,
+    paddingHorizontal: 4,
+  },
+  speedLadderPillText: {
+    color: '#4338CA',
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11,
   },
   centerMicBtn: {
     width: 70,
