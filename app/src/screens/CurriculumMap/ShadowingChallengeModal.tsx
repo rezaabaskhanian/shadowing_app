@@ -396,6 +396,16 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
               );
             })}
 
+            {/* راهنمای ثبت خودکار */}
+            <View style={[styles.autoSyncTipRow, row]}>
+              <Zap size={13} color="#D97706" />
+              <Text style={[styles.autoSyncTipText, ta]}>
+                {rtl
+                  ? '⚡ تیک سبز زمانی به صورت خودکار ثبت می‌شود که تمرین شادوئینگ آن روز را در اپلیکیشن به پایان برسانید.'
+                  : '⚡ Green checkmarks are earned automatically when you complete that day\'s shadowing lesson in the app.'}
+              </Text>
+            </View>
+
             {/* Reset Challenge Link */}
             <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
               <TouchableOpacity
@@ -412,18 +422,30 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
           {/* Bottom Action Bar */}
           <View style={[styles.bottomBar, row]}>
             <TouchableOpacity
-              style={[styles.startPracticeBtn, row, { backgroundColor: activeWeek.color }]}
+              style={[
+                styles.startPracticeBtn,
+                row,
+                { backgroundColor: progress.completedDays.includes(progress.currentDay) ? '#059669' : activeWeek.color },
+              ]}
               activeOpacity={0.88}
               onPress={() => {
                 onClose();
                 onStartTodayPractice(activeWeek.week, progress.currentDay);
               }}
             >
-              <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+              {progress.completedDays.includes(progress.currentDay) ? (
+                <Check size={16} color="#FFFFFF" />
+              ) : (
+                <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+              )}
               <Text style={styles.startPracticeBtnText}>
-                {rtl
-                  ? `تمرین امروز (روز ${progress.currentDay} • ${activeWeek.targetSpeed}) 🎙️`
-                  : `Start Day ${progress.currentDay} Practice 🎙️`}
+                {progress.completedDays.includes(progress.currentDay)
+                  ? (rtl
+                      ? `✅ تکلیف روز ${progress.currentDay} ثبت شده • تمرین دوباره 🎙️`
+                      : `✅ Day ${progress.currentDay} Done • Practice Again 🎙️`)
+                  : (rtl
+                      ? `تمرین امروز (روز ${progress.currentDay} • ${activeWeek.targetSpeed}) 🎙️`
+                      : `Start Day ${progress.currentDay} Practice 🎙️`)}
               </Text>
             </TouchableOpacity>
           </View>
@@ -748,6 +770,26 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 11,
+    color: '#92400E',
+    lineHeight: 16,
+  },
+  autoSyncTipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  autoSyncTipText: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 10.5,
     color: '#92400E',
     lineHeight: 16,
   },
