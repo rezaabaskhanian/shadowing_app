@@ -27,6 +27,8 @@ import {
   Eye,
   Flame,
   HelpCircle,
+  Languages,
+  Lightbulb,
   MessageSquare,
   Play,
   RotateCcw,
@@ -45,51 +47,130 @@ import { expandScenarioToDialogueItems, type DialogueItem, type Scenario } from 
 
 const COUNTDOWN_SECONDS = 5;
 const INTRO_STORAGE_KEY = '@active_learning_intro_seen_v1';
+const RECALL_MODE_STORAGE_KEY = '@active_recall_mode_v2';
+
+export type RecallMode = 'en_to_en' | 'fa_to_en';
+
+export interface EnToEnQuestionData {
+  englishQuestion: string;
+  contextHeader: string;
+  partnerTextEn?: string;
+  partnerSpeaker?: string;
+  partnerAudioUrl?: string;
+  persianHint: string;
+}
 
 /**
- * تولید هوشمند سوالات هدفمند به زبان انگلیسی پیرامون موضوع سناریو
+ * ۱. تولید هوشمند سوالات تعاملی به زبان انگلیسی بر اساس موضوع درس (English Q&A Mode)
  */
-function getEnglishQuestionPrompt(
+export function getEnglishToEnglishQuestion(
+  item: DialogueItem | undefined,
+  prevItem: DialogueItem | undefined,
+  index: number,
+  topicTitle?: string,
+): EnToEnQuestionData {
+  if (!item) {
+    return {
+      englishQuestion: '',
+      contextHeader: '',
+      persianHint: '',
+    };
+  }
+
+  const cleanTopic = topicTitle || 'Everyday English';
+  const text = item.dialogue?.trim() || '';
+  const isQuestion = text.endsWith('?');
+  const partnerDialogue = prevItem?.dialogue?.trim() || '';
+
+  // اگر دیالوگ قبلی سوال یا صحبتی از طرف مقابل بوده است (تعامل دوطرفه طبیعی)
+  if (partnerDialogue && (partnerDialogue.endsWith('?') || (prevItem?.speaker && prevItem.speaker !== item.speaker))) {
+    const partnerName = prevItem?.speaker ? prevItem.speaker : 'Partner';
+    let questionText = `How do you respond to ${partnerName} in English?`;
+    if (isQuestion) {
+      questionText = `In response to ${partnerName}, what clarifying question do you ask in English?`;
+    } else if (/^(thank|thanks)/i.test(text)) {
+      questionText = `How do you naturally thank ${partnerName} in English?`;
+    } else if (/^(i'd like|i would like|i want|can i|could i)/i.test(text)) {
+      questionText = `How do you express your request or preference to ${partnerName} in English?`;
+    }
+
+    return {
+      contextHeader: `${partnerName} in "${cleanTopic}"`,
+      partnerSpeaker: partnerName,
+      partnerTextEn: partnerDialogue,
+      partnerAudioUrl: prevItem?.audioUrl,
+      englishQuestion: questionText,
+      persianHint: item.translation || '',
+    };
+  }
+
+  // اگر جمله هدف یک سوال باشد که کاربر باید در این سناریو مطرح کند
+  if (isQuestion) {
+    let qPrompt = `In this conversation about "${cleanTopic}", what question do you ask in English?`;
+    if (/^where/i.test(text)) {
+      qPrompt = `You need directions or location information. What question do you ask in English?`;
+    } else if (/^(how much|how many|what is the price|what's the cost)/i.test(text)) {
+      qPrompt = `You want to inquire about the cost or price in English. What do you ask?`;
+    } else if (/^(can|could|would|may)/i.test(text)) {
+      qPrompt = `How would you make this polite request to the other person in English?`;
+    } else if (/^what/i.test(text)) {
+      qPrompt = `You want to ask for specific information about "${cleanTopic}". What question do you ask in English?`;
+    } else if (/^(when|what time)/i.test(text)) {
+      qPrompt = `You need to check the time or schedule. What English question do you ask?`;
+    } else if (/^how/i.test(text)) {
+      qPrompt = `Regarding "${cleanTopic}", how do you ask about the method or status in English?`;
+    } else if (/^(do|does|did|is|are|was|were)/i.test(text)) {
+      qPrompt = `How do you ask in English to confirm this information?`;
+    }
+
+    return {
+      contextHeader: `Topic: ${cleanTopic}`,
+      englishQuestion: qPrompt,
+      persianHint: item.translation || '',
+    };
+  }
+
+  // جملات بیانی، سلام و شروع مکالمه یا اعلام نظر
+  let statementPrompt = `How do you express this fluently in English?`;
+  if (index === 0) {
+    if (/^(hello|hi|good morning|good afternoon|good evening|excuse me)/i.test(text)) {
+      statementPrompt = `You are starting a conversation about "${cleanTopic}". How do you greet and open in English?`;
+    } else {
+      statementPrompt = `To initiate the conversation about "${cleanTopic}", what do you say first in English?`;
+    }
+  } else if (/^(thank|thanks)/i.test(text)) {
+    statementPrompt = `How do you express your gratitude politely in English?`;
+  } else if (/^(i'd like|i would like|i want|i need)/i.test(text)) {
+    statementPrompt = `How do you state your preference or request clearly in English?`;
+  } else if (/^(yes|sure|absolutely|certainly|of course|no problem|ok|okay)/i.test(text)) {
+    statementPrompt = `How do you naturally agree or confirm in English?`;
+  } else if (/^(sorry|excuse me|pardon)/i.test(text)) {
+    statementPrompt = `How do you apologize or excuse yourself politely in English?`;
+  } else if (/^(i think|in my opinion|i believe)/i.test(text)) {
+    statementPrompt = `How do you express your opinion about "${cleanTopic}" in English?`;
+  } else {
+    statementPrompt = `In this situation ("${cleanTopic}"), what English sentence do you say?`;
+  }
+
+  return {
+    contextHeader: `Topic: ${cleanTopic}`,
+    englishQuestion: statementPrompt,
+    persianHint: item.translation || '',
+  };
+}
+
+/**
+ * ۲. یادآوری و برگردان سریع از فارسی به انگلیسی (Pimsleur Recall Mode)
+ */
+function getPersianRecallPrompt(
   item: DialogueItem | undefined,
   index: number,
   topicTitle?: string,
 ): { enQuestion: string; contextFa: string } {
   if (!item) return { enQuestion: '', contextFa: '' };
-  const text = item.dialogue?.trim() || '';
-  const isQuestion = text.endsWith('?');
-  const cleanTopic = topicTitle || 'the conversation';
-
-  let enQuestion = '';
-  if (isQuestion) {
-    if (/^how/i.test(text)) {
-      enQuestion = `Regarding "${cleanTopic}", how do you ask about the method or status in English?`;
-    } else if (/^where/i.test(text)) {
-      enQuestion = `In this situation, what English question do you ask to find the location?`;
-    } else if (/^what/i.test(text)) {
-      enQuestion = `What question would you ask in English to find out more details?`;
-    } else if (/^(can|could|would|may)/i.test(text)) {
-      enQuestion = `How would you make this polite request to the other person in English?`;
-    } else if (/^(do|does|did|is|are|was|were)/i.test(text)) {
-      enQuestion = `How do you ask in English to confirm this information?`;
-    } else {
-      enQuestion = `What question would you ask in English in this situation?`;
-    }
-  } else {
-    if (index === 0) {
-      enQuestion = `To start the conversation about "${cleanTopic}", how do you say in English:`;
-    } else if (index === 1) {
-      enQuestion = `In response to the speaker, what natural English sentence do you say?`;
-    } else if (index === 2) {
-      enQuestion = `Continuing the conversation on "${cleanTopic}", how do you explain:`;
-    } else if (index === 3) {
-      enQuestion = `How do you express this specific point fluently in English?`;
-    } else {
-      enQuestion = `To conclude this conversation naturally, what do you say in English:`;
-    }
-  }
-
+  const cleanTopic = topicTitle || 'Everyday English';
   return {
-    enQuestion,
+    enQuestion: `To express this in "${cleanTopic}", how do you say in English:`,
     contextFa: item.translation || '',
   };
 }
@@ -133,10 +214,44 @@ export const ActiveRecallScreen: React.FC = () => {
     await AsyncStorage.setItem(INTRO_STORAGE_KEY, 'true').catch(() => {});
   }, []);
 
+  // حالت تمرین: 'en_to_en' (سوال و جواب انگلیسی بر اساس موضوع درس) | 'fa_to_en' (یادآوری فارسی به انگلیسی)
+  const [mode, setMode] = useState<RecallMode>('en_to_en');
+  const [showHint, setShowHint] = useState(false);
+
+  // بازیابی حالت پیش‌فرض ذخیره‌شده کاربر
+  useEffect(() => {
+    AsyncStorage.getItem(RECALL_MODE_STORAGE_KEY)
+      .then((saved) => {
+        if (saved === 'fa_to_en' || saved === 'en_to_en') {
+          setMode(saved as RecallMode);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSwitchMode = useCallback((newMode: RecallMode) => {
+    setMode(newMode);
+    AsyncStorage.setItem(RECALL_MODE_STORAGE_KEY, newMode).catch(() => {});
+  }, []);
+
+  // ریست راهنمای فارسی با تغییر مرحله یا سوال
+  useEffect(() => {
+    setShowHint(false);
+  }, [currentIndex, phase]);
+
   // کنترل صوتی
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [actionCommand, setActionCommand] = useState<'none' | 'play_original'>('none');
   const [actionNonce, setActionNonce] = useState(0);
+
+  // پخش صدای طرف مقابل مکالمه (در صورت وجود صدای دیالوگ قبلی)
+  const playPartnerAudio = useCallback((partnerAudioUrl?: string) => {
+    if (partnerAudioUrl) {
+      setAudioUri(partnerAudioUrl);
+      setActionCommand('play_original');
+      setActionNonce((n) => n + 1);
+    }
+  }, []);
 
   // انیمیشن تایمر دایره‌ای یا نواری
   const timerAnim = useRef(new Animated.Value(1)).current;
@@ -334,8 +449,10 @@ export const ActiveRecallScreen: React.FC = () => {
   };
 
   const currentDialogue = dialogueList[currentIndex];
+  const prevDialogue = currentIndex > 0 ? dialogueList[currentIndex - 1] : undefined;
   const progressPercent = dialogueList.length > 0 ? ((currentIndex + 1) / dialogueList.length) * 100 : 0;
-  const questionData = getEnglishQuestionPrompt(currentDialogue, currentIndex, selectedScenario?.title);
+  const enToEnData = getEnglishToEnglishQuestion(currentDialogue, prevDialogue, currentIndex, selectedScenario?.title);
+  const faToEnData = getPersianRecallPrompt(currentDialogue, currentIndex, selectedScenario?.title);
 
   // مودال جامع راهنما و متدولوژی یادگیری فعال (Active Recall)
   const renderGuideModal = () => (
@@ -366,31 +483,31 @@ export const ActiveRecallScreen: React.FC = () => {
           </View>
 
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            {/* کارت ۱: سوالات انگلیسی پیرامون موضوع */}
+            {/* کارت ۱: دو حالت تمرین فعال */}
             <View style={[styles.guideStepCard, row]}>
               <View style={styles.stepNumBadge}>
                 <Text style={styles.stepNumText}>۱</Text>
               </View>
               <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
                 <Text style={[styles.guideStepTitle, tr]}>
-                  {rtl ? 'طرح سوال به زبان انگلیسی پیرامون موضوع:' : 'Questions Asked in English:'}
+                  {rtl ? 'انتخاب حالت تمرین (۲ حالت هوشمند):' : 'Two Smart Practice Modes:'}
                 </Text>
                 <Text style={[styles.guideStepDesc, tr]}>
                   {rtl
-                    ? 'در هر مرحله یک سوال به زبان انگلیسی بر اساس موضوع سناریو پرسیده می‌شود تا ذهن شما فوراً در حالت زبان انگلیسی قرار گیرد.'
-                    : 'In each step, targeted questions are presented in English based on the topic so your brain actively thinks in English.'}
+                    ? '• حالت سوال و پاسخ انگلیسی: سوالات پیرامون موضوع درس به انگلیسی مطرح می‌شوند و شما باید به انگلیسی جواب بدهید.\n• حالت یادآوری فارسی به انگلیسی: مفهوم فارسی را می‌بینید و جمله انگلیسی را به خاطر می‌آورید.'
+                    : '• English Q&A: Real conversational questions in English based on the lesson topic, answer in English.\n• Persian Recall: See the Persian concept and recall the English sentence.'}
                 </Text>
               </View>
             </View>
 
-            {/* کارت ۲: ۵ ثانیه فرصت پاسخ به انگلیسی */}
+            {/* کارت ۲: ۵ ثانیه فرصت تفکر و گفتن به انگلیسی */}
             <View style={[styles.guideStepCard, row]}>
               <View style={styles.stepNumBadge}>
                 <Text style={styles.stepNumText}>۲</Text>
               </View>
               <View style={[styles.flex1, rtl ? styles.alignEnd : styles.alignStart]}>
                 <Text style={[styles.guideStepTitle, tr]}>
-                  {rtl ? '۵ ثانیه فرصت تفکر و گفتن به انگلیسی:' : '5 Seconds to Answer in English:'}
+                  {rtl ? '۵ ثانیه فرصت تفکر و پاسخ به انگلیسی:' : '5 Seconds to Answer in English:'}
                 </Text>
                 <Text style={[styles.guideStepDesc, tr]}>
                   {rtl
@@ -466,6 +583,52 @@ export const ActiveRecallScreen: React.FC = () => {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* انتخاب حالت تمرین اکتیو لرنینگ */}
+          <View style={styles.modePickerContainer}>
+            <Text style={[styles.modePickerHeader, tr]}>
+              {rtl ? '🎯 انتخاب حالت تمرین و سوالات:' : '🎯 Select Practice Mode:'}
+            </Text>
+            <View style={[styles.modePickerRow, row]}>
+              <TouchableOpacity
+                style={[
+                  styles.modePickerOption,
+                  mode === 'en_to_en' && styles.modePickerOptionActive,
+                ]}
+                onPress={() => handleSwitchMode('en_to_en')}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.modePickerIconWrap, mode === 'en_to_en' && styles.modePickerIconActive]}>
+                  <MessageSquare size={16} color={mode === 'en_to_en' ? '#FFF' : '#2563EB'} />
+                </View>
+                <Text style={[styles.modePickerTitle, mode === 'en_to_en' && styles.modePickerTitleActive, tr]}>
+                  {rtl ? 'سوال و جواب انگلیسی 🇬🇧' : 'English Q&A 🇬🇧'}
+                </Text>
+                <Text style={[styles.modePickerSubtitle, tr]}>
+                  {rtl ? 'طرح سوالات پیرامون موضوع درس و پاسخ به انگلیسی' : 'Topic questions in English, answer in English'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modePickerOption,
+                  mode === 'fa_to_en' && styles.modePickerOptionActive,
+                ]}
+                onPress={() => handleSwitchMode('fa_to_en')}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.modePickerIconWrap, mode === 'fa_to_en' && styles.modePickerIconActive]}>
+                  <Languages size={16} color={mode === 'fa_to_en' ? '#FFF' : '#D97706'} />
+                </View>
+                <Text style={[styles.modePickerTitle, mode === 'fa_to_en' && styles.modePickerTitleActive, tr]}>
+                  {rtl ? 'یادآوری فارسی 🇮🇷' : 'Persian Recall 🇮🇷'}
+                </Text>
+                <Text style={[styles.modePickerSubtitle, tr]}>
+                  {rtl ? 'مشاهده مفهوم فارسی و ساخت سریع معادل انگلیسی' : 'See Persian concept, recall English in 5s'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* بنر چالش سریع */}
           <TouchableOpacity style={styles.quickMixCard} onPress={startQuickMix} activeOpacity={0.85} disabled={loadingScene}>
             <View style={styles.quickMixBadge}>
@@ -598,7 +761,32 @@ export const ActiveRecallScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.practiceContent} showsVerticalScrollIndicator={false}>
-        {/* ۱. کارت صورت سوال انگلیسی پیرامون موضوع */}
+        {/* نوار تغییر حالت تمرین: سوال و جواب انگلیسی در برابر یادآوری فارسی */}
+        <View style={[styles.modeToggleBar, row]}>
+          <TouchableOpacity
+            style={[styles.modeToggleTab, mode === 'en_to_en' && styles.modeToggleTabActive]}
+            onPress={() => handleSwitchMode('en_to_en')}
+            activeOpacity={0.8}
+          >
+            <MessageSquare size={13} color={mode === 'en_to_en' ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.modeToggleText, mode === 'en_to_en' && styles.modeToggleTextActive]}>
+              {rtl ? 'سوال و جواب انگلیسی 🇬🇧' : 'English Q&A 🇬🇧'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modeToggleTab, mode === 'fa_to_en' && styles.modeToggleTabActive]}
+            onPress={() => handleSwitchMode('fa_to_en')}
+            activeOpacity={0.8}
+          >
+            <Languages size={13} color={mode === 'fa_to_en' ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.modeToggleText, mode === 'fa_to_en' && styles.modeToggleTextActive]}>
+              {rtl ? 'یادآوری فارسی 🇮🇷' : 'Persian Recall 🇮🇷'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ۱. کارت صورت سوال و تعامل فعال */}
         <View style={styles.challengeCard}>
           {/* نشانگر موضوع بحث و موقعیت */}
           <View style={[styles.topicBadgeRow, row]}>
@@ -606,7 +794,7 @@ export const ActiveRecallScreen: React.FC = () => {
             <Text style={styles.topicBadgeText} numberOfLines={1}>
               {selectedScenario
                 ? (rtl ? `موضوع: ${selectedScenario.title}` : `Topic: ${selectedScenario.title}`)
-                : (rtl ? 'موضوع: مکالمه موضوعی' : 'Topic: Everyday Conversation')}
+                : (rtl ? 'موضوع: مکالمه کاربردی' : 'Topic: Everyday Conversation')}
             </Text>
             <View style={styles.questionIndexPill}>
               <Text style={styles.questionIndexText}>
@@ -615,35 +803,99 @@ export const ActiveRecallScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* سوال انگلیسی مطرح شده بر اساس موضوع سناریو */}
-          <View style={styles.enQuestionBox}>
-            <View style={[styles.enQuestionHeader, row]}>
-              <MessageSquare size={16} color="#2563EB" />
-              <Text style={styles.enQuestionTag}>
-                {rtl ? 'سوال به انگلیسی (Question in English):' : 'Question in English:'}
-              </Text>
-            </View>
-            <Text style={styles.enQuestionText}>
-              {questionData.enQuestion}
-            </Text>
-          </View>
+          {mode === 'en_to_en' ? (
+            <>
+              {/* حالت انگلیسی: اگر صحبت یا سوال طرف مقابل وجود دارد */}
+              {enToEnData.partnerTextEn ? (
+                <View style={styles.partnerBubbleBox}>
+                  <View style={[styles.partnerBubbleHeader, row]}>
+                    <Text style={styles.partnerSpeakerLabel}>
+                      🗣️ {enToEnData.partnerSpeaker || (rtl ? 'طرف مقابل در مکالمه:' : 'Conversation Partner:')}
+                    </Text>
+                    {enToEnData.partnerAudioUrl ? (
+                      <TouchableOpacity
+                        style={[styles.partnerPlayBtn, row]}
+                        onPress={() => playPartnerAudio(enToEnData.partnerAudioUrl)}
+                        activeOpacity={0.8}
+                      >
+                        <Volume2 size={13} color="#1D4ED8" />
+                        <Text style={styles.partnerPlayText}>
+                          {rtl ? 'شنیدن صدا 🎧' : 'Listen 🎧'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                  <Text style={styles.partnerBubbleText}>
+                    "{enToEnData.partnerTextEn}"
+                  </Text>
+                </View>
+              ) : null}
 
-          {/* مفهوم و پیامی که باید به انگلیسی گفته شود */}
-          <View style={styles.targetConceptBox}>
-            <Text style={styles.targetConceptLabel}>
-              {rtl ? '🎯 مفهوم و پاسخی که باید به انگلیسی بگویید:' : '🎯 Target English statement to produce:'}
-            </Text>
-            <Text style={[styles.persianPromptText, tr]}>
-              «{currentDialogue?.translation}»
-            </Text>
-          </View>
+              {/* سوال انگلیسی مطرح شده بر اساس موضوع سناریو */}
+              <View style={styles.enQuestionBox}>
+                <View style={[styles.enQuestionHeader, row]}>
+                  <MessageSquare size={16} color="#2563EB" />
+                  <Text style={styles.enQuestionTag}>
+                    {rtl ? 'سوال انگلیسی بر اساس موضوع درس:' : 'English Question Based on Topic:'}
+                  </Text>
+                </View>
+                <Text style={styles.enQuestionText}>
+                  {enToEnData.englishQuestion}
+                </Text>
+              </View>
 
-          {/* راهنمای پاسخ به انگلیسی */}
-          <View style={[styles.speakHintRow, row]}>
-            <Text style={styles.speakHintText}>
-              {rtl ? '🗣️ جواب را با صدای بلند به انگلیسی بگو یا در ذهنت مرور کن...' : '🗣️ Say the answer in English out loud...'}
-            </Text>
-          </View>
+              {/* دکمه راهنمای فارسی (اختیاری) */}
+              <TouchableOpacity
+                style={[styles.hintToggleBtn, row]}
+                onPress={() => setShowHint((h) => !h)}
+                activeOpacity={0.8}
+              >
+                <Lightbulb size={14} color="#D97706" />
+                <Text style={styles.hintToggleText}>
+                  {showHint
+                    ? (rtl ? 'بستن راهنما 🔼' : 'Hide Hint 🔼')
+                    : (rtl ? '💡 نیاز به راهنمایی داری؟ (نمایش معنی فارسی)' : '💡 Need a hint? (Show Persian meaning)')}
+                </Text>
+              </TouchableOpacity>
+
+              {showHint && (
+                <View style={styles.hintContainer}>
+                  <Text style={styles.hintLabel}>
+                    {rtl ? '🎯 مفهوم و پاسخ مد نظر:' : '🎯 Target Clue:'}
+                  </Text>
+                  <Text style={[styles.hintFaText, tr]}>
+                    «{enToEnData.persianHint}»
+                  </Text>
+                </View>
+              )}
+
+              {/* راهنمای پاسخ به انگلیسی */}
+              <View style={[styles.speakHintRow, row]}>
+                <Text style={styles.speakHintText}>
+                  {rtl ? '🗣️ جواب را با صدای بلند به انگلیسی بگو یا در ذهنت مرور کن...' : '🗣️ Say your answer in English out loud...'}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* حالت فارسی به انگلیسی: مفهوم و پیامی که باید به انگلیسی بازتولید شود */}
+              <View style={styles.targetConceptBox}>
+                <Text style={styles.targetConceptLabel}>
+                  {rtl ? '🎯 مفهوم و پاسخی که باید به انگلیسی بگویید:' : '🎯 Target English statement to produce:'}
+                </Text>
+                <Text style={[styles.persianPromptText, tr]}>
+                  «{currentDialogue?.translation}»
+                </Text>
+              </View>
+
+              {/* راهنمای پاسخ به انگلیسی */}
+              <View style={[styles.speakHintRow, row]}>
+                <Text style={styles.speakHintText}>
+                  {rtl ? '🗣️ معادل انگلیسی این مفهوم را در ۵ ثانیه بگو...' : '🗣️ Say the English sentence in 5 seconds...'}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* ۲. فاز تفکر ۵ ثانیه‌ای */}
@@ -711,11 +963,18 @@ export const ActiveRecallScreen: React.FC = () => {
                 </View>
                 <TouchableOpacity style={styles.replaySmallBtn} onPress={replayAudio} activeOpacity={0.8}>
                   <Volume2 size={15} color="#047857" />
-                  <Text style={styles.replaySmallText}>{rtl ? 'پخش صدا 🎧' : 'Play Audio'}</Text>
+                  <Text style={styles.replaySmallText}>{rtl ? 'پخش مجدد 🎧' : 'Play Audio'}</Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.englishText}>{currentDialogue?.dialogue}</Text>
+
+              {/* ترجمه فارسی پاسخ جهت اطمینان و مقایسه */}
+              <View style={styles.revealTranslationBox}>
+                <Text style={[styles.revealTranslationText, tr]}>
+                  {currentDialogue?.translation}
+                </Text>
+              </View>
 
               {/* لغات کلیدی اگر موجود باشد */}
               {currentDialogue?.words && currentDialogue.words.length > 0 && (
@@ -732,7 +991,9 @@ export const ActiveRecallScreen: React.FC = () => {
 
             {/* خودارزیابی کاربر: آیا انگلیسی درست گفتی؟ */}
             <Text style={styles.selfAssessPrompt}>
-              {rtl ? 'آیا توانستید پاسخ را به انگلیسی درست بگویید؟' : 'Did you answer correctly in English?'}
+              {mode === 'en_to_en'
+                ? (rtl ? 'آیا توانستید به زبان انگلیسی پاسخ درستی بدهید؟' : 'Did you answer correctly in English?')
+                : (rtl ? 'آیا توانستید معادل انگلیسی را درست بگویید؟' : 'Did you recall the English sentence correctly?')}
             </Text>
             <View style={[styles.assessBtnRow, row]}>
               <TouchableOpacity
@@ -1432,5 +1693,187 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY.bold,
     color: '#FFFFFF',
+  },
+  modePickerContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 10,
+  },
+  modePickerHeader: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.text,
+  },
+  modePickerRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modePickerOption: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    gap: 6,
+  },
+  modePickerOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  modePickerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modePickerIconActive: {
+    backgroundColor: '#2563EB',
+  },
+  modePickerTitle: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  modePickerTitleActive: {
+    color: '#1D4ED8',
+  },
+  modePickerSubtitle: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.regular,
+    color: COLORS.muted,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  modeToggleBar: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
+  },
+  modeToggleTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 6,
+  },
+  modeToggleTabActive: {
+    backgroundColor: '#2563EB',
+  },
+  modeToggleText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: COLORS.muted,
+  },
+  modeToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  partnerBubbleBox: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginBottom: 12,
+    gap: 6,
+  },
+  partnerBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  partnerSpeakerLabel: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#166534',
+  },
+  partnerPlayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  partnerPlayText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#15803D',
+  },
+  partnerBubbleText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#14532D',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  hintToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+    alignSelf: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  hintToggleText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#92400E',
+  },
+  hintContainer: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginBottom: 10,
+    gap: 4,
+  },
+  hintLabel: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#B45309',
+  },
+  hintFaText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#78350F',
+    lineHeight: 22,
+  },
+  revealTranslationBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#A7F3D0',
+  },
+  revealTranslationText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#065F46',
+    lineHeight: 22,
   },
 });
