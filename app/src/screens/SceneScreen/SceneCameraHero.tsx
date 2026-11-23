@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Flame, Mic, Sparkles, X } from 'lucide-react-native';
+import { Flame, Mic, RotateCcw, Sparkles, Volume2, X } from 'lucide-react-native';
 
 import { COLORS } from '../../theme/colors';
 import { FONT_FAMILY } from '../../theme/typography';
@@ -122,9 +122,10 @@ interface SceneCameraHeroProps {
   /** فقط وقتی true است حباب نمایش داده می‌شود (با پایان صدای هر خط، بسته می‌شود). */
   bubbleVisible: boolean;
   /** وضعیت نمایش پیام آماده‌باش یا شمارش معکوس روی تصویر صحنه */
-  shadowOverlayState?: 'idle' | 'waiting_ready' | 'countdown';
+  shadowOverlayState?: 'idle' | 'waiting_ready' | 'mumbling' | 'countdown';
   countdownNum?: number;
   onConfirmReady?: () => void;
+  onStartMumbling?: () => void;
   language?: string;
   rtl?: boolean;
 }
@@ -158,6 +159,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
   shadowOverlayState = 'idle',
   countdownNum = 3,
   onConfirmReady,
+  onStartMumbling,
   language = 'fa',
   rtl = true,
 }) => {
@@ -422,19 +424,75 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
             </Text>
             <Text style={styles.sceneReadySub}>
               {rtl
-                ? 'گوش دادید؛ هر زمان آماده بودید برای شروع سایه‌زنی لمس کنید'
-                : 'Tap the button below when you are ready to shadow'}
+                ? 'گوش دادید؛ آماده‌اید شروع کنید یا ابتدا با زمزمه گرم کنید؟'
+                : 'Ready to shadow or warm up mouth muscles with mumbling?'}
             </Text>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={styles.sceneReadyBtn}
-              onPress={onConfirmReady}
-            >
-              <Sparkles size={16} color="#FFF" />
-              <Text style={styles.sceneReadyBtnText}>
-                {rtl ? 'آماده‌ام! شروع تمرین 🚀' : "I'm Ready! Let's Go 🚀"}
-              </Text>
-            </TouchableOpacity>
+            <View style={[styles.heroActionsRow, rtl && styles.rowReverse]}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.sceneReadyBtn}
+                onPress={onConfirmReady}
+              >
+                <Sparkles size={15} color="#FFF" />
+                <Text style={styles.sceneReadyBtnText}>
+                  {rtl ? 'آماده‌ام! شروع شادوئینگ 🚀' : "I'm Ready! Let's Go 🚀"}
+                </Text>
+              </TouchableOpacity>
+              {onStartMumbling && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={styles.sceneMumbleBtn}
+                  onPress={onStartMumbling}
+                >
+                  <Volume2 size={14} color="#7C3AED" />
+                  <Text style={styles.sceneMumbleBtnText}>
+                    {rtl ? '🗣️ گرم‌کردن با زمزمه' : '🗣️ Mumble Warm-up'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {shadowOverlayState === 'mumbling' && (
+        <View style={styles.sceneOverlayCenterWrap} pointerEvents="box-none">
+          <View style={[styles.sceneReadyCard, styles.sceneMumblingCard]}>
+            <View style={[styles.sceneReadyIconWrap, styles.sceneMumblingIconWrap]}>
+              <Volume2 size={24} color="#FFF" />
+            </View>
+            <Text style={[styles.sceneReadyTitle, { color: '#5B21B6' }]}>
+              {rtl ? '🗣️ در حال زمزمه و گرم‌کردن...' : '🗣️ Mumbling Warm-up...'}
+            </Text>
+            <Text style={[styles.sceneReadySub, { color: '#6D28D9' }]}>
+              {rtl
+                ? 'بدون استرس، همراه با گوینده زیر لب زمزمه کنید تا ریتم در دهان بنشیند'
+                : 'Murmur quietly along with the speaker to warm up mouth muscles'}
+            </Text>
+            <View style={[styles.heroActionsRow, rtl && styles.rowReverse]}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={[styles.sceneReadyBtn, { backgroundColor: '#7C3AED' }]}
+                onPress={onConfirmReady}
+              >
+                <Sparkles size={15} color="#FFF" />
+                <Text style={styles.sceneReadyBtnText}>
+                  {rtl ? 'حالا آماده ضبط هستم! 🚀' : 'Ready to Record! 🚀'}
+                </Text>
+              </TouchableOpacity>
+              {onStartMumbling && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.sceneMumbleBtn, { backgroundColor: '#EDE9FE' }]}
+                  onPress={onStartMumbling}
+                >
+                  <RotateCcw size={14} color="#7C3AED" />
+                  <Text style={styles.sceneMumbleBtnText}>
+                    {rtl ? 'تکرار زمزمه' : 'Re-mumble'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       )}
@@ -561,6 +619,9 @@ const styles = StyleSheet.create({
   hiddenOverlay: {
     opacity: 0,
   },
+  rowReverse: {
+    flexDirection: 'row-reverse',
+  },
   sceneOverlayCenterWrap: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
@@ -606,22 +667,54 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 4,
   },
+  heroActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    marginTop: 4,
+  },
   sceneReadyBtn: {
+    flex: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: COLORS.primary,
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    width: '100%',
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     ...SHADOWS.level1,
   },
   sceneReadyBtnText: {
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 14,
+    fontSize: 13,
     color: '#FFF',
+  },
+  sceneMumbleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 8,
+  },
+  sceneMumbleBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#FFF',
+  },
+  sceneMumblingCard: {
+    borderColor: '#7C3AED',
+    backgroundColor: 'rgba(30, 27, 75, 0.92)',
+  },
+  sceneMumblingIconWrap: {
+    backgroundColor: '#7C3AED',
   },
   sceneCountdownCard: {
     alignItems: 'center',

@@ -41,9 +41,10 @@ export const PracticeWaveformCard: React.FC<{
   rtl?: boolean;
   t: (key: string) => string;
   /** وضعیت جریان سایه‌زنی تعاملی */
-  shadowPromptState?: 'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback';
+  shadowPromptState?: 'idle' | 'waiting_ready' | 'mumbling' | 'countdown' | 'recording' | 'feedback';
   countdownNum?: number;
   onConfirmReady?: () => void;
+  onStartMumbling?: () => void;
   onStopRecord?: () => void;
   onReplayCurrent?: () => void;
   flowMode?: PracticeFlowMode;
@@ -66,6 +67,7 @@ export const PracticeWaveformCard: React.FC<{
   shadowPromptState = 'idle',
   countdownNum = 3,
   onConfirmReady,
+  onStartMumbling,
   onStopRecord,
   onReplayCurrent,
   flowMode = 'smart_flow',
@@ -109,18 +111,87 @@ export const PracticeWaveformCard: React.FC<{
           <View style={styles.readyCard}>
             <View style={[styles.readyHeader, rtl && styles.rowReverse]}>
               <View style={styles.readyMicBadge}>
-                <Sparkles size={20} color="#FFF" />
+                <Sparkles size={18} color="#FFF" />
               </View>
-              <View style={styles.readyTexts}>
+              <View style={[styles.readyTexts, rtl && { alignItems: 'flex-end' }]}>
                 <Text style={styles.readyTitle}>
                   {rtl ? '✨ نوبت شماست!' : '✨ Your Turn!'}
                 </Text>
-                <Text style={styles.readySubtitle}>
+                <Text style={[styles.readySubtitle, rtl && { textAlign: 'right' }]}>
                   {rtl
-                    ? 'دکمه «آماده‌ام» روی تصویر صحنه بالا را لمس کنید تا شمارش معکوس آغاز شود'
-                    : 'Tap "I\'m Ready" on the scene image above to start countdown'}
+                    ? 'می‌توانید مستقیم وارد ضبط شوید یا ابتدا با زمزمه آرام گرم کنید'
+                    : 'Start full shadowing now or do a quick mumbling warm-up'}
                 </Text>
               </View>
+            </View>
+            <View style={[styles.readyActionsRow, rtl && styles.rowReverse]}>
+              <TouchableOpacity
+                style={styles.readyPrimaryBtn}
+                onPress={onConfirmReady}
+                activeOpacity={0.85}
+              >
+                <Sparkles size={14} color="#FFF" />
+                <Text style={styles.readyPrimaryBtnText}>
+                  {rtl ? 'آماده‌ام! شروع شادوئینگ 🚀' : "I'm Ready! Let's Go 🚀"}
+                </Text>
+              </TouchableOpacity>
+              {onStartMumbling && (
+                <TouchableOpacity
+                  style={styles.readyMumbleBtn}
+                  onPress={onStartMumbling}
+                  activeOpacity={0.85}
+                >
+                  <Volume2 size={13} color="#7C3AED" />
+                  <Text style={styles.readyMumbleBtnText}>
+                    {rtl ? '🗣️ گرم‌کردن با زمزمه' : '🗣️ Mumble Warm-up'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ) : shadowPromptState === 'mumbling' ? (
+          <View style={styles.mumblingCard}>
+            <View style={[styles.mumblingHeader, rtl && styles.rowReverse]}>
+              <View style={styles.mumblingBadge}>
+                <Volume2 size={18} color="#7C3AED" />
+              </View>
+              <View style={[styles.mumblingTexts, rtl && { alignItems: 'flex-end' }]}>
+                <Text style={styles.mumblingTitle}>
+                  {rtl ? '🗣️ حالت زمزمه و گرم‌کردن (Mumbling)' : '🗣️ Mumbling & Warm-up Mode'}
+                </Text>
+                <Text style={[styles.mumblingDesc, rtl && { textAlign: 'right' }]}>
+                  {rtl
+                    ? 'بدون استرس ضبط، زیر لب همراه با گوینده زمزمه کنید تا ریتم در دهان بنشیند.'
+                    : 'Murmur along with the speaker, matching rhythm without worrying about perfect articulation.'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.mumblingWaveWrap}>
+              <WaveBars active={playing} color="#7C3AED" />
+            </View>
+            <View style={[styles.mumblingActionsRow, rtl && styles.rowReverse]}>
+              <TouchableOpacity
+                style={styles.mumblingReadyBtn}
+                onPress={onConfirmReady}
+                activeOpacity={0.85}
+              >
+                <Sparkles size={14} color="#FFF" />
+                <Text style={styles.mumblingReadyBtnText}>
+                  {rtl ? 'حالا آماده شادوئینگ کامل هستم! 🚀' : 'Ready for Full Shadowing 🚀'}
+                </Text>
+              </TouchableOpacity>
+              {onStartMumbling && (
+                <TouchableOpacity
+                  style={styles.mumblingReplayBtn}
+                  onPress={onStartMumbling}
+                  activeOpacity={0.8}
+                >
+                  <RotateCcw size={13} color="#7C3AED" />
+                  <Text style={styles.mumblingReplayBtnText}>
+                    {rtl ? 'تکرار زمزمه' : 'Re-mumble'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         ) : shadowPromptState === 'countdown' ? (
@@ -605,6 +676,125 @@ const styles = StyleSheet.create({
     color: '#7C2D12',
     marginTop: 2,
     lineHeight: 16,
+  },
+  readyActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  readyPrimaryBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    ...SHADOWS.level1,
+  },
+  readyPrimaryBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
+    color: '#FFF',
+  },
+  readyMumbleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  readyMumbleBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#7C3AED',
+  },
+  // استایل‌های حالت زمزمه (Mumbling Mode)
+  mumblingCard: {
+    width: '100%',
+    gap: 10,
+    backgroundColor: '#F5F3FF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    padding: 14,
+  },
+  mumblingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mumblingBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mumblingTexts: {
+    flex: 1,
+  },
+  mumblingTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 14,
+    color: '#5B21B6',
+  },
+  mumblingDesc: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    color: '#6D28D9',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  mumblingWaveWrap: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  mumblingActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  mumblingReadyBtn: {
+    flex: 1.3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#7C3AED',
+    borderRadius: 12,
+    paddingVertical: 10,
+    ...SHADOWS.level1,
+  },
+  mumblingReadyBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
+    color: '#FFF',
+  },
+  mumblingReplayBtn: {
+    flex: 0.9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#EDE9FE',
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  mumblingReplayBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12,
+    color: '#6D28D9',
   },
   readyBtn: {
     flexDirection: 'row',

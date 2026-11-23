@@ -76,12 +76,12 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
       icon: Volume2,
       color: '#F97316',
       bgColor: 'rgba(249, 115, 22, 0.1)',
-      titleFa: '۲. پخش جمله و اعلام آمادگی',
-      titleEn: '2. Sentence & Get Ready',
+      titleFa: '۲. پخش جمله و آماده‌سازی (با زمزمه)',
+      titleEn: '2. Sentence & Warm-up (Mumbling)',
       descFa:
-        'هر جمله جداگانه پخش می‌شود. پس از پایان، دکمه «آماده‌ام! 🚀» ظاهر شده و با ۳ ثانیه شمارش معکوس به شما زمان آماده‌شدن می‌دهد.',
+        'هر جمله جداگانه پخش می‌شود. می‌توانید با دکمه «🗣️ گرم‌کردن با زمزمه» ابتدا بدون استرس زیر لب ریتم جمله را زمزمه کنید، یا مستقیماً «آماده‌ام! 🚀» را لمس کنید.',
       descEn:
-        'Each sentence plays separately. Tap "I\'m Ready! 🚀" to trigger a 3-second countdown before speaking.',
+        'Each sentence plays separately. Tap "Mumbling Warm-up" to quietly murmur along first, or tap "I\'m Ready! 🚀" to start countdown.',
     },
     {
       num: 3,

@@ -473,7 +473,7 @@ export const SceneScreen = () => {
 
   // وضعیت جریان سایه‌زنی تعاملی هوشمند در مرحله ۱
   const [shadowPromptState, setShadowPromptState] = useState<
-    'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback'
+    'idle' | 'waiting_ready' | 'mumbling' | 'countdown' | 'recording' | 'feedback'
   >('idle');
   const [hasConfirmedReady, setHasConfirmedReady] = useState<boolean>(false);
   const [countdownNum, setCountdownNum] = useState<number>(3);
@@ -741,6 +741,14 @@ export const SceneScreen = () => {
     if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     setShadowPromptState('idle');
+    playDialogueAt(activeIndex);
+  }, [activeIndex, playDialogueAt]);
+
+  const handleStartMumbling = useCallback(() => {
+    if (SystemTts && typeof SystemTts.stop === 'function') {
+      SystemTts.stop().catch(() => {});
+    }
+    setShadowPromptState('mumbling');
     playDialogueAt(activeIndex);
   }, [activeIndex, playDialogueAt]);
 
@@ -1352,7 +1360,9 @@ export const SceneScreen = () => {
 
             // مرحله ۱ (سایه‌زنی تعاملی هوشمند): پخش صدای این جمله تمام شد
             if (flowMode === 'smart_flow' && activeStepIndex === 1 && actionCommand !== 'start_record') {
-              if (hasConfirmedReady) {
+              if (shadowPromptState === 'mumbling') {
+                // زمزمه تمام شد؛ کاربر اکنون دکمه «آماده شادوئینگ کامل هستم» یا «تکرار زمزمه» را در اختیار دارد
+              } else if (hasConfirmedReady) {
                 // از دفعات بعد: شمارش معکوس روی تصویر صحنه آغاز و سپس ضبط خودکار انجام می‌شود
                 startCountdownAndRecord(2);
               } else {
@@ -1458,12 +1468,13 @@ export const SceneScreen = () => {
           shadowOverlayState={
             flowMode === 'smart_flow' &&
             activeStepIndex === 1 &&
-            (shadowPromptState === 'waiting_ready' || shadowPromptState === 'countdown')
+            (shadowPromptState === 'waiting_ready' || shadowPromptState === 'mumbling' || shadowPromptState === 'countdown')
               ? shadowPromptState
               : 'idle'
           }
           countdownNum={countdownNum}
           onConfirmReady={handleConfirmReady}
+          onStartMumbling={handleStartMumbling}
           language={language}
           rtl={language === 'fa'}
         />
@@ -1542,6 +1553,7 @@ export const SceneScreen = () => {
               shadowPromptState={shadowPromptState}
               countdownNum={countdownNum}
               onConfirmReady={handleConfirmReady}
+              onStartMumbling={handleStartMumbling}
               onStopRecord={handleStopRecord}
               onReplayCurrent={handleReplayCurrent}
               onOpenGuide={handleOpenGuide}

@@ -92,9 +92,10 @@ interface ShadowingPracticePanelProps {
   flowMode?: PracticeFlowMode;
   onChangeFlowMode?: (mode: PracticeFlowMode) => void;
   smartPhase?: 'listen' | 'shadow' | 'score';
-  shadowPromptState?: 'idle' | 'waiting_ready' | 'countdown' | 'recording' | 'feedback';
+  shadowPromptState?: 'idle' | 'waiting_ready' | 'mumbling' | 'countdown' | 'recording' | 'feedback';
   countdownNum?: number;
   onConfirmReady?: () => void;
+  onStartMumbling?: () => void;
   onStopRecord?: () => void;
   onReplayCurrent?: () => void;
   onOpenGuide?: () => void;
@@ -164,6 +165,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   shadowPromptState,
   countdownNum,
   onConfirmReady,
+  onStartMumbling,
   onStopRecord,
   onReplayCurrent,
   onOpenGuide,
@@ -243,6 +245,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         shadowPromptState={shadowPromptState}
         countdownNum={countdownNum}
         onConfirmReady={onConfirmReady}
+        onStartMumbling={onStartMumbling}
         onStopRecord={onStopRecord}
         onReplayCurrent={onReplayCurrent}
         flowMode={flowMode}
