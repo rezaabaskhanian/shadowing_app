@@ -54,6 +54,7 @@ import { getRoleplays, type Roleplay } from '../../api/conversation';
 import { getMyLevel } from '../../api/assessment';
 import { getSubscriptionStatus } from '../../api/billing';
 import { useAuth } from '../../data/AuthContext';
+import { is4000WordsItem } from '../../api/scenes';
 import { ensureTrackPlayerSetup } from '../../services/audio/trackPlayerSetup';
 import { announceNextPodcast, playPodcastCueSound } from '../../services/audio/podcastCue';
 import { track } from '../../services/analytics';
@@ -312,10 +313,13 @@ export const PodcastScreen: React.FC = () => {
           }
         }
         if (resolvedPlaylist.length === 0) {
+          const is4000 = is4000WordsItem(p);
           const scoped = atOrBelowLevel(all, lvl?.scene_level);
-          resolvedPlaylist = (scoped.length > 0 ? scoped : all).filter((item) =>
-            p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story'
-          );
+          resolvedPlaylist = (scoped.length > 0 ? scoped : all).filter((item) => {
+            if (is4000) return is4000WordsItem(item);
+            if (is4000WordsItem(item)) return false;
+            return p.kind === 'featured' ? item.kind === 'featured' : item.kind !== 'featured' && item.kind !== 'story';
+          });
         }
         setPlaylist(resolvedPlaylist);
         playlistRef.current = resolvedPlaylist;

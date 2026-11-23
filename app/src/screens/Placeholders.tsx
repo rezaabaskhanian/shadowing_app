@@ -25,6 +25,7 @@ import { XpInfoModal } from '../components/XpInfoModal';
 import { sceneKeys, useScenes } from '../data/ScenesContext';
 import { useVocab, isDue } from '../data/VocabContext';
 import { SCENE_CATEGORY_LABEL_KEY, type ScenarioCategory } from '../data/scenarios';
+import { is4000WordsItem } from '../api/scenes';
 import { COLORS, hexToRgba } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
@@ -137,11 +138,15 @@ export const ScenesScreen = () => {
     }
   }, [paramCategory, navigation]);
 
+  const regularScenes = React.useMemo(() => {
+    return scenes.filter((s) => !is4000WordsItem(s));
+  }, [scenes]);
+
   // فقط دسته‌هایی که واقعاً صحنه دارند چیپ می‌گیرند، به ترتیب ثابت لیست
   // دسته‌بندی‌ها؛ دسته‌ی قدیمیِ خارج از لیست (تا ادمین اصلاحش کند) آخر می‌آید.
   // موضوع‌ها فقط از صحنه‌های سطحِ انتخاب‌شده ساخته می‌شوند تا چیپی که نتیجه‌ای ندارد دیده نشود.
   const categories: { id: CategoryFilter; label: string }[] = React.useMemo(() => {
-    const pool = activeLevel === 'all' ? scenes : scenes.filter((s) => s.level === activeLevel);
+    const pool = activeLevel === 'all' ? regularScenes : regularScenes.filter((s) => s.level === activeLevel);
     const present = new Set(pool.map((s) => categoryKey(s.category)).filter(Boolean));
     const known = Object.keys(SCENE_CATEGORY_LABEL_KEY).filter((c) => present.has(c));
     const legacy = Array.from(present).filter((c) => !SCENE_CATEGORY_LABEL_KEY[c]);
@@ -150,7 +155,7 @@ export const ScenesScreen = () => {
       ...known.map((id) => ({ id, label: t(SCENE_CATEGORY_LABEL_KEY[id]) })),
       ...legacy.map((id) => ({ id, label: id })),
     ];
-  }, [scenes, t, activeLevel]);
+  }, [regularScenes, t, activeLevel]);
 
   // اگر موضوعِ انتخاب‌شده در سطح جدید صحنه‌ای ندارد، فیلتر موضوع برمی‌گردد به «همه».
   React.useEffect(() => {
@@ -160,15 +165,15 @@ export const ScenesScreen = () => {
   // سطح‌ها هم مثل دسته‌بندی از روی داده‌ی واقعی صحنه‌ها ساخته می‌شوند، ولی
   // ترتیبشان ثابت (مبتدی→متوسط→پیشرفته) است، نه ترتیب برخورد در لیست.
   const levels: { id: LevelFilter; label: string }[] = React.useMemo(() => {
-    const present = new Set(scenes.map((s) => s.level).filter(Boolean));
+    const present = new Set(regularScenes.map((s) => s.level).filter(Boolean));
     const ordered = Object.keys(LEVEL_LABEL_KEY).filter((lvl) => present.has(lvl));
     return [
       { id: 'all', label: t('all') },
       ...ordered.map((lvl) => ({ id: lvl, label: t(LEVEL_LABEL_KEY[lvl]) })),
     ];
-  }, [scenes, t]);
+  }, [regularScenes, t]);
 
-  const filteredScenes = scenes.filter((scenario) => {
+  const filteredScenes = regularScenes.filter((scenario) => {
     if (activeCategory !== 'all' && categoryKey(scenario.category) !== activeCategory) return false;
     if (activeLevel !== 'all' && scenario.level !== activeLevel) return false;
     const q = searchQuery.trim().toLowerCase();

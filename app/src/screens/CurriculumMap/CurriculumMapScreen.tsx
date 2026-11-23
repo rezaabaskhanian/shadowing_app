@@ -16,7 +16,7 @@ import { useAuth } from '../../data/AuthContext';
 import { getUserStreak, getUserSummary } from '../../api/progress';
 import { getSubscriptionStatus } from '../../api/billing';
 import { getMyLevel } from '../../api/assessment';
-import { difficultyToLevel } from '../../api/scenes';
+import { difficultyToLevel, is4000WordsItem } from '../../api/scenes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ShadowingChallengeModal,
@@ -150,9 +150,14 @@ export const CurriculumMapScreen = () => {
     [isSubscribed]
   );
 
+  // فقط سناریوهای اختصاصی نقشه شادوئینگ؛ سناریوهای دوره ۴۰۰۰ کلمه حذف می‌شوند تا رودمپ اصلی خلوت بماند
+  const curriculumScenes = useMemo(() => {
+    return scenes.filter((s) => !is4000WordsItem(s));
+  }, [scenes]);
+
   // نقشه همیشه از آسان به سخت مرتب می‌شود (نه بر اساس "order" خام ادمین)؛
   // داخل هر سطح هم بر اساس order همان‌جا مرتب می‌مانند.
-  const ordered = [...scenes].sort((a, b) => {
+  const ordered = [...curriculumScenes].sort((a, b) => {
     const ra = LEVEL_RANK[a.level] ?? 99;
     const rb = LEVEL_RANK[b.level] ?? 99;
     if (ra !== rb) return ra - rb;

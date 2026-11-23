@@ -207,3 +207,26 @@ export async function fetchScene(id: string): Promise<Scenario> {
   const data = (await res.json()) as BackendScene;
   return mapScene(data);
 }
+
+/** تشخیص می‌دهد آیا این آیتم (صحنه، پادکست، یا مجموعه) متعلق به دوره اختصاصی ۴۰۰۰ کلمه ضروری است یا خیر */
+export function is4000WordsItem(item?: {
+  id?: string;
+  series_id?: string | null;
+  category?: string | null;
+  title?: string;
+} | null): boolean {
+  if (!item) return false;
+  if (item.id && item.id.startsWith('4000')) return true;
+  if (item.series_id && item.series_id.startsWith('4000')) return true;
+  if (item.category === 'essential_words') return true;
+  if (
+    item.title &&
+    (item.title.includes('4000 Essential') ||
+      item.title.includes('۴۰۰۰ واژه') ||
+      item.title.includes('۴۰۰۰ کلمه') ||
+      /\(Book \d+ - Unit \d+\)/i.test(item.title))
+  ) {
+    return true;
+  }
+  return false;
+}

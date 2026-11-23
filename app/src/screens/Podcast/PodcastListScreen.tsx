@@ -32,6 +32,7 @@ import { getPodcasts, getPodcastSeriesList, atOrBelowLevel, type Podcast, type P
 import { getMyLevel } from '../../api/assessment';
 import { getSubscriptionStatus } from '../../api/billing';
 import { useAuth } from '../../data/AuthContext';
+import { is4000WordsItem } from '../../api/scenes';
 
 const LEVEL_META: Record<string, { labelKey: string; color: string; bg: string }> = {
   starter: { labelKey: 'levelStarter', color: '#059669', bg: '#ECFDF5' },
@@ -72,11 +73,17 @@ export const PodcastListScreen: React.FC = () => {
     if (route.params?.kind) setKind(route.params.kind);
   }, [route.params?.kind]);
 
-  const hasFeatured = !!allPodcasts?.some((p) => p.kind === 'featured');
+  // فقط پادکست‌های آموزشی عمومی؛ دوره‌ی ۴۰۰۰ کلمه اختصاصی است و جداگانه ارائه می‌شود
+  const regularPodcasts = React.useMemo(
+    () => (allPodcasts ? allPodcasts.filter((p) => !is4000WordsItem(p)) : null),
+    [allPodcasts]
+  );
+
+  const hasFeatured = !!regularPodcasts?.some((p) => p.kind === 'featured');
 
   // فقط سطح کاربر و پایین‌تر
   const [myLevel, setMyLevel] = useState<string | null>(null);
-  const scoped = allPodcasts ? atOrBelowLevel(allPodcasts, myLevel) : allPodcasts;
+  const scoped = regularPodcasts ? atOrBelowLevel(regularPodcasts, myLevel) : regularPodcasts;
 
   // ترتیب‌بندی: هم‌سطح کاربر اول، بعد سطوح پایین‌تر
   const levelRank = (l: string) =>
@@ -337,8 +344,13 @@ export const PodcastListScreen: React.FC = () => {
     [rtl, t, navigation, ChevronIcon]
   );
 
+  const regularSeriesList = React.useMemo(
+    () => (seriesList ? seriesList.filter((s) => !is4000WordsItem(s)) : null),
+    [seriesList]
+  );
+
   const renderHeaderComponent = useCallback(() => {
-    if (!seriesList || seriesList.length === 0) return null;
+    if (!regularSeriesList || regularSeriesList.length === 0) return null;
     return (
       <View style={styles.seriesShelfSection}>
         <View style={[styles.shelfHeaderRow, rtl && styles.rowReverse]}>
@@ -350,7 +362,7 @@ export const PodcastListScreen: React.FC = () => {
         <FlatList
           horizontal
           inverted={rtl}
-          data={seriesList}
+          data={regularSeriesList}
           renderItem={({ item }) => renderSeriesCard(item)}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
@@ -361,7 +373,7 @@ export const PodcastListScreen: React.FC = () => {
         </View>
       </View>
     );
-  }, [seriesList, renderSeriesCard, rtl, t]);
+  }, [regularSeriesList, renderSeriesCard, rtl, t]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.s }]}>
