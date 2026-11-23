@@ -929,12 +929,13 @@ export const HomeScreen = () => {
           />
         )}
 
-        {/* 4. Quick Access Row: چهار کارت پاستلی دسترسی سریع */}
+        {/* 4. Quick Access Row: کارت‌های دسترسی سریع (۴۰۰۰ واژه، لایتنر، نقشه، عادت و آمار) */}
         <HomeQuickAccess
           onOpenShadowing={() => navigation.navigate('CurriculumMap')}
           onOpenVocabulary={() => navigation.navigate('Leitner')}
           onOpenPractice={() => navigation.navigate('LanguageHabit')}
           onOpenProgress={() => setXpInfoVisible(true)}
+          onOpenFourThousandWords={() => navigation.navigate('FourThousandWords')}
           rtl={rtl}
         />
 

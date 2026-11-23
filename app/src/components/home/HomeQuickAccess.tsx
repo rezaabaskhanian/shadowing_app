@@ -20,25 +20,65 @@ interface HomeQuickAccessProps {
   onOpenVocabulary: () => void;
   onOpenPractice: () => void;
   onOpenProgress: () => void;
+  onOpenFourThousandWords?: () => void;
   rtl: boolean;
 }
 
 /**
  * بخش میانبر واژگان و دسترسی‌های کاربردی
- * ارتقایافته: کارت متمرکز لایتنر همراه با توضیح شفاف کاربرد و اکشن مشخص، به همراه چیپ‌های دسترسی تمیز
+ * شامل: کارت پرچمدار ۴۰۰۰ واژه ضروری، کارت لایتنر هوشمند و دکمه‌های نقشه، عادت و آمار
  */
 export const HomeQuickAccess: React.FC<HomeQuickAccessProps> = ({
   onOpenShadowing,
   onOpenVocabulary,
   onOpenPractice,
   onOpenProgress,
+  onOpenFourThousandWords,
   rtl,
 }) => {
   const ChevronIcon = rtl ? ChevronLeft : ChevronRight;
 
   return (
     <View style={styles.container}>
-      {/* 1. Main Clear Vocabulary / Leitner Entry Card */}
+      {/* 1. Flagship 4000 Essential Words Course Card */}
+      {!!onOpenFourThousandWords && (
+        <TouchableOpacity
+          style={styles.wordsHeroCard}
+          onPress={onOpenFourThousandWords}
+          activeOpacity={0.88}
+        >
+          <View style={[styles.vocabRow, rtl && styles.rowReverse]}>
+            <View style={styles.wordsIconCircle}>
+              <BookOpen size={19} color="#D97706" strokeWidth={2.2} />
+            </View>
+
+            <View style={[styles.vocabTextCol, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+              <View style={[styles.vocabTitleRow, rtl && styles.rowReverse]}>
+                <Text style={styles.wordsTitle}>
+                  {rtl ? '۴۰۰۰ واژه ضروری انگلیسی' : '4000 Essential Words'}
+                </Text>
+                <View style={styles.hotBadge}>
+                  <Text style={styles.hotBadgeText}>
+                    {rtl ? '۶ کتاب • ۱۸۰ درس 🔥' : '6 Books • 180 Units 🔥'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[styles.vocabSubtext, { textAlign: rtl ? 'right' : 'left' }]}>
+                {rtl
+                  ? 'داستان‌های شنیداری و تمرین شادوئینگ ۵ دیالوگ برای تسلط بر واژگان'
+                  : 'Story narrations and shadowing practice for high-frequency vocabulary'}
+              </Text>
+            </View>
+
+            <View style={styles.wordsArrowWrap}>
+              <ChevronIcon size={15} color="#D97706" strokeWidth={2.4} />
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* 2. Main Clear Vocabulary / Leitner Entry Card */}
       <TouchableOpacity
         style={styles.vocabHeroCard}
         onPress={onOpenVocabulary}
@@ -118,6 +158,53 @@ const styles = StyleSheet.create({
   },
   rowReverse: {
     flexDirection: 'row-reverse',
+  },
+  wordsHeroCard: {
+    backgroundColor: '#FFFDF9',
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#FDE68A',
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+    ...SHADOWS.level1,
+    shadowColor: '#D97706',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  wordsIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wordsTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13.5,
+    color: '#92400E',
+  },
+  hotBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: '#FDE68A',
+  },
+  hotBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10,
+    color: '#B45309',
+  },
+  wordsArrowWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   vocabHeroCard: {
     backgroundColor: '#FFFFFF',
