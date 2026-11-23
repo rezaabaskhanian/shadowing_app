@@ -19,6 +19,7 @@ import {
   X,
   Activity,
   Award,
+  Flame,
 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
@@ -32,6 +33,7 @@ interface ShadowingGuideModalProps {
   language: string;
   initialMode?: PracticeFlowMode;
   onSelectMode?: (mode: PracticeFlowMode) => void;
+  onOpenWarmUp?: () => void;
 }
 
 interface GuideStep {
@@ -51,6 +53,7 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
   language,
   initialMode = 'smart_flow',
   onSelectMode,
+  onOpenWarmUp,
 }) => {
   const isRtl = language === 'fa';
   const [activeTab, setActiveTab] = useState<PracticeFlowMode | 'routine_challenge'>(initialMode);
@@ -378,6 +381,23 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
             )}
           </ScrollView>
 
+          {/* Quick Warm-up Button */}
+          {onOpenWarmUp && (
+            <TouchableOpacity
+              style={[styles.warmUpGuideBtn, isRtl && styles.rowReverse]}
+              activeOpacity={0.85}
+              onPress={() => {
+                onClose();
+                onOpenWarmUp();
+              }}
+            >
+              <Flame size={16} color="#EA580C" />
+              <Text style={styles.warmUpGuideBtnText}>
+                {isRtl ? '🔥 گرم کردن ۳۰ ثانیه‌ای فک و دهان' : '🔥 30s Vocal & Jaw Warm-up'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Action button */}
           <TouchableOpacity
             style={styles.confirmBtn}
@@ -577,6 +597,23 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#4B5563',
     lineHeight: 17,
+  },
+  warmUpGuideBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: 14,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  warmUpGuideBtnText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 12.5,
+    color: '#EA580C',
   },
   confirmBtn: {
     flexDirection: 'row',

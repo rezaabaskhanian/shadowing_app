@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, HelpCircle, Lightbulb, Lock, MapPin, MessageCircle, Pause, Play, Share2, Sparkles, Volume2, X } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, HelpCircle, Lightbulb, Lock, MapPin, MessageCircle, Pause, Play, Share2, Sparkles, Volume2, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../theme/colors';
@@ -32,6 +32,7 @@ interface SceneIntroScreenProps {
   onClose: () => void;
   onEnterScene: () => void;
   onOpenGuide?: () => void;
+  onOpenWarmUp?: () => void;
   /** وضعیت دانلود صدای جمله‌ها؛ تا finished نشده دکمه‌ی ورود منتظر می‌ماند. */
   audioPrep: { done: number; total: number; failed: number; finished: boolean };
   onRetryAudio: () => void;
@@ -71,6 +72,7 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
   onClose,
   onEnterScene,
   onOpenGuide,
+  onOpenWarmUp,
   audioPrep,
   onRetryAudio,
   loadFailed,
@@ -403,6 +405,37 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
               </View>
             </>
           )}
+        </TouchableOpacity>
+
+        {/* Vocal & Jaw Warm-up Banner */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={[styles.warmUpBanner, row]}
+          onPress={onOpenWarmUp}
+        >
+          <View style={styles.warmUpIconCircle}>
+            <Flame size={18} color="#EA580C" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={[styles.warmUpTitleRow, row]}>
+              <Text style={[styles.warmUpTitle, tr]}>
+                {rtl ? 'گرم کردن فک و دهان (۳۰ ثانیه)' : 'Vocal & Jaw Warm-up'}
+              </Text>
+              <View style={styles.warmUpBadge}>
+                <Text style={styles.warmUpBadgeText}>{rtl ? 'پیشنهادی 🔥' : 'Recommended'}</Text>
+              </View>
+            </View>
+            <Text style={[styles.warmUpText, tr]}>
+              {rtl
+                ? 'روتین کوتاه کشش فک و چرخش زبان برای تلفظ روان و بدون گرفتگی کلمات.'
+                : '30-second quick articulatory exercises for effortless, fluent speech.'}
+            </Text>
+          </View>
+          <ChevronLeft
+            size={16}
+            color="#9CA3AF"
+            style={rtl ? { transform: [{ rotate: '180deg' }] } : undefined}
+          />
         </TouchableOpacity>
 
         {/* Dialogue Preview */}
@@ -873,6 +906,53 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     flex: 1,
+  },
+  warmUpBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: 18,
+    padding: 14,
+    gap: 12,
+    marginBottom: 20,
+  },
+  warmUpIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFEDD5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warmUpTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  warmUpTitle: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+    color: '#9A3412',
+  },
+  warmUpBadge: {
+    backgroundColor: '#EA580C',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  warmUpBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 9,
+    color: '#FFFFFF',
+  },
+  warmUpText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11,
+    color: '#C2410C',
+    lineHeight: 17,
   },
   ctaBar: {
     paddingHorizontal: 20,

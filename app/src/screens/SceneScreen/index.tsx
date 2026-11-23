@@ -27,7 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
-import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine } from './shadowing';
+import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine, VocalWarmUpModal } from './shadowing';
 import { ShadowingGuideModal } from './shadowing/ShadowingGuideModal';
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
@@ -461,6 +461,7 @@ export const SceneScreen = () => {
   const maxRecordTimeoutRef = useRef<any>(null);
 
   const [guideModalVisible, setGuideModalVisible] = useState(false);
+  const [warmUpVisible, setWarmUpVisible] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('has_seen_shadowing_guide_v2')
@@ -1260,6 +1261,7 @@ export const SceneScreen = () => {
           onClose={resetToHome}
           onEnterScene={handleEnterScene}
           onOpenGuide={handleOpenGuide}
+          onOpenWarmUp={() => setWarmUpVisible(true)}
           audioPrep={audioPrep}
           onRetryAudio={() => setAudioPrepRun((n) => n + 1)}
           loadFailed={loadFailed}
@@ -1277,6 +1279,12 @@ export const SceneScreen = () => {
           language={language}
           initialMode={flowMode}
           onSelectMode={(mode) => setFlowMode(mode)}
+          onOpenWarmUp={() => setWarmUpVisible(true)}
+        />
+        <VocalWarmUpModal
+          visible={warmUpVisible}
+          onClose={() => setWarmUpVisible(false)}
+          rtl={language === 'fa'}
         />
       </View>
     );
@@ -1641,6 +1649,13 @@ export const SceneScreen = () => {
         language={language}
         initialMode={flowMode}
         onSelectMode={(mode) => setFlowMode(mode)}
+        onOpenWarmUp={() => setWarmUpVisible(true)}
+      />
+
+      <VocalWarmUpModal
+        visible={warmUpVisible}
+        onClose={() => setWarmUpVisible(false)}
+        rtl={language === 'fa'}
       />
     </View>
   );
