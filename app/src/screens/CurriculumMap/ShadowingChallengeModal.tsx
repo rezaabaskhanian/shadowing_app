@@ -40,7 +40,51 @@ export interface ChallengeProgress {
   isFinished: boolean;
 }
 
-const STORAGE_KEY = '@shadowing_28day_challenge_v1';
+export const STORAGE_KEY = '@shadowing_28day_challenge_v1';
+export const CHALLENGE_STORAGE_KEY = STORAGE_KEY;
+
+/**
+ * ثبت خودکار روز جاری چالش ۲۸ روزه به عنوان انجام‌شده (هنگام اتمام موفقیت‌آمیز درس شادوئینگ)
+ * این تابع فقط توسط خود اپلیکیشن پس از اتمام ارزیابی و مقایسه تمام جملات درس فراخوانی می‌شود.
+ */
+export const markTodayChallengeCompleted = async (): Promise<{
+  updated: ChallengeProgress;
+  dayCompleted: number;
+  isFirstTimeToday: boolean;
+} | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const progress: ChallengeProgress = raw
+      ? JSON.parse(raw)
+      : {
+          startDate: new Date().toISOString(),
+          completedDays: [],
+          lastCompletedAt: null,
+          currentDay: 1,
+          isFinished: false,
+        };
+
+    const targetDay = progress.currentDay;
+    const isFirstTimeToday = !progress.completedDays.includes(targetDay);
+    if (isFirstTimeToday) {
+      const nextCompleted = [...progress.completedDays, targetDay].sort((a, b) => a - b);
+      const nextCurrent = Math.min(28, targetDay + 1);
+      const nextFinished = nextCompleted.length >= 28;
+      const updated: ChallengeProgress = {
+        ...progress,
+        completedDays: nextCompleted,
+        lastCompletedAt: new Date().toISOString(),
+        currentDay: nextFinished ? 28 : nextCurrent,
+        isFinished: nextFinished,
+      };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return { updated, dayCompleted: targetDay, isFirstTimeToday: true };
+    }
+    return { updated: progress, dayCompleted: targetDay, isFirstTimeToday: false };
+  } catch {
+    return null;
+  }
+};
 
 export const CHALLENGE_WEEKS = [
   {
@@ -133,26 +177,48 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
     }
   }, [visible]);
 
-  // ثبت روز جاری به عنوان تکمیل شده
-  const toggleCompleteDay = async (day: number) => {
-    const isCompleted = progress.completedDays.includes(day);
-    let nextCompleted = isCompleted
-      ? progress.completedDays.filter((d) => d !== day)
-      : [...progress.completedDays, day].sort((a, b) => a - b);
+  // اطلاعات روز انتخاب شده برای نمایش بازخورد (بدون تیک دستی)
+  const [selectedDayInfo, setSelectedDayInfo] = useState<{
+    day: number;
+    status: 'done' | 'current' | 'locked';
+    message: string;
+  } | null>(null);
 
-    const nextCurrent = Math.min(28, Math.max(1, (nextCompleted[nextCompleted.length - 1] || 0) + 1));
-    const nextFinished = nextCompleted.length >= 28;
+  // پاک کردن پیام وضعیت بعد از ۳.۵ ثانیه
+  useEffect(() => {
+    if (selectedDayInfo) {
+      const timer = setTimeout(() => setSelectedDayInfo(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDayInfo]);
 
-    const updated: ChallengeProgress = {
-      ...progress,
-      completedDays: nextCompleted,
-      lastCompletedAt: isCompleted ? progress.lastCompletedAt : new Date().toISOString(),
-      currentDay: nextFinished ? 28 : nextCurrent,
-      isFinished: nextFinished,
-    };
-
-    setProgress(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
+  // کلیک روی روزها: بدون امکان تیک زدن دستی؛ فقط نمایش وضعیت ماموریت بر اساس عملکرد واقعی کاربر در اپ
+  const handleDayPress = (dayNum: number, isDone: boolean, isCurrent: boolean, isLocked: boolean) => {
+    if (isDone) {
+      setSelectedDayInfo({
+        day: dayNum,
+        status: 'done',
+        message: rtl
+          ? `روز ${dayNum} با پایان موفقیت‌آمیز تمرین شادوئینگ در اپ تیک خورده است ✅`
+          : `Day ${dayNum} completed via shadowing practice in the app ✅`,
+      });
+    } else if (isCurrent) {
+      setSelectedDayInfo({
+        day: dayNum,
+        status: 'current',
+        message: rtl
+          ? `ماموریت فعال امروز (روز ${dayNum}): با تکمیل یک درس شادوئینگ در اپ، تیک سبز خودکار فعال می‌شود 🎙️`
+          : `Today's mission (Day ${dayNum}): Complete a shadowing lesson in the app to earn the green checkmark 🎙️`,
+      });
+    } else if (isLocked) {
+      setSelectedDayInfo({
+        day: dayNum,
+        status: 'locked',
+        message: rtl
+          ? `روز ${dayNum} قفل است 🔒 برای رسیدن به این روز، ابتدا باید ماموریت‌های قبلی را انجام دهید.`
+          : `Day ${dayNum} is locked 🔒 Finish prior missions to unlock.`,
+      });
+    }
   };
 
   // ریست چالش
@@ -165,7 +231,7 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
       isFinished: false,
     };
     setProgress(fresh);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(fresh)).catch(() => {});
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(fresh)).catch(() => { });
   };
 
   // هفته فعال فعلی
@@ -232,6 +298,16 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
 
           {/* Weeks List & Days Grid */}
           <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
+            {/* پیام وضعیت روز لمس‌شده */}
+            {selectedDayInfo && (
+              <View style={[styles.dayStatusToast, row]}>
+                <Sparkles size={14} color="#D97706" />
+                <Text style={[styles.dayStatusToastText, ta]}>
+                  {selectedDayInfo.message}
+                </Text>
+              </View>
+            )}
+
             {CHALLENGE_WEEKS.map((w, wIdx) => {
               const isCurrentWeek = wIdx === activeWeekIdx;
               const weekCompletedCount = w.days.filter((d) => progress.completedDays.includes(d)).length;
@@ -286,7 +362,7 @@ export const ShadowingChallengeModal: React.FC<ShadowingChallengeModalProps> = (
                         <TouchableOpacity
                           key={dayNum}
                           activeOpacity={0.8}
-                          onPress={() => toggleCompleteDay(dayNum)}
+                          onPress={() => handleDayPress(dayNum, isDone, isCurrent, isLocked)}
                           style={[
                             styles.dayCircle,
                             isDone && styles.dayCircleDone,
@@ -655,5 +731,24 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 13,
     color: '#FFFFFF',
+  },
+  dayStatusToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  dayStatusToastText: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11,
+    color: '#92400E',
+    lineHeight: 16,
   },
 });

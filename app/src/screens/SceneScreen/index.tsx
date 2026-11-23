@@ -35,6 +35,7 @@ import { playbackReducer, initialPlaybackState, isAutoStep as stepIsAuto } from 
 import { track } from '../../services/analytics';
 import { getPodcasts } from '../../api/podcasts';
 import { prefetchAudio, type PrefetchProgress } from '../../services/audio/audioCache';
+import { markTodayChallengeCompleted } from '../CurriculumMap/ShadowingChallengeModal';
 
 // امتیازهای پایان جلسه وقتی کاربر هیچ ضبطی نکرده باشد. اگر ضبطی ارزیابی شده
 // باشد، میانگین نمره‌های واقعی جایشان می‌نشیند.
@@ -1056,6 +1057,8 @@ export const SceneScreen = () => {
       // می‌کنیم تا کاربر همان لحظه ببیندش، نه دفعه‌ی بعد.
       queryClient.invalidateQueries({ queryKey: sceneKeys.list });
       track('scene_completed', scenarioId ? String(scenarioId) : undefined);
+      // ثبت خودکار روز جاری در چالش ۲۸ روزه شادوئینگ (فعال‌سازی هوشمند تیک سبز)
+      markTodayChallengeCompleted().catch(() => {});
       setLessonCompleteVisible(true);
       return;
     }

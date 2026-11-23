@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronRight, Headphones, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw, Zap } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ChevronRight, Flame, Headphones, House, ListChecks, MessageCircle, Mic, PartyPopper, RotateCcw, Zap } from 'lucide-react-native';
 
 import { COLORS } from '../theme/colors';
 import { FONT_FAMILY } from '../theme/typography';
@@ -36,6 +37,23 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
   onListenPodcast,
 }) => {
   const { t } = useLanguage();
+  const [challengeDay, setChallengeDay] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      AsyncStorage.getItem('@shadowing_28day_challenge_v1')
+        .then((raw) => {
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.completedDays && parsed.completedDays.length > 0) {
+              const last = parsed.completedDays[parsed.completedDays.length - 1];
+              setChallengeDay(last);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [visible]);
 
   const options: { key: string; Icon: typeof ListChecks; label: string; onPress: () => void }[] = [
     ...(onStartActiveRecall
@@ -59,6 +77,15 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
           </View>
           <Text style={styles.title}>{t('lessonCompleteTitle')}</Text>
           <Text style={styles.message}>{t('lessonCompleteMessage')}</Text>
+
+          {challengeDay ? (
+            <View style={styles.challengeBadge}>
+              <Flame size={14} color="#EA580C" />
+              <Text style={styles.challengeBadgeText}>
+                {`تیک سبز چالش ۲۸ روزه شادوئینگ (روز ${challengeDay}) ثبت شد ✅`}
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.optionsList}>
             {options.map(({ key, Icon, label, onPress }) => (
@@ -163,5 +190,23 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONT_FAMILY.medium,
     fontSize: 13,
+  },
+  challengeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  challengeBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 11.5,
+    color: '#92400E',
   },
 });
