@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import {
+  Calendar,
   Check,
   Headphones,
   HelpCircle,
@@ -16,6 +17,8 @@ import {
   Sparkles,
   Volume2,
   X,
+  Activity,
+  Award,
 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
@@ -50,13 +53,60 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
   onSelectMode,
 }) => {
   const isRtl = language === 'fa';
-  const [activeTab, setActiveTab] = useState<PracticeFlowMode>(initialMode);
+  const [activeTab, setActiveTab] = useState<PracticeFlowMode | 'routine_challenge'>(initialMode);
 
   useEffect(() => {
     if (visible) {
       setActiveTab(initialMode || 'smart_flow');
     }
   }, [visible, initialMode]);
+
+  const challengeWeeks = [
+    {
+      week: 1,
+      titleFa: 'هفته ۱: پی‌ریزی و درک صداها (Mumbling)',
+      titleEn: 'Week 1: Sound Catching & Mumbling',
+      speedBadge: '🪜 0.85x',
+      focusFa: 'تمرین با سرعت ۰.۸۵x و زمزمه آرام برای کشف ریتم طبیعی، بدون وسواس روی تک‌تک کلمات.',
+      descFa: 'روزانه ۱۰ دقیقه به سناریو گوش دهید و بلافاصله با گوینده زیر لب زمزمه کنید. هدف این هفته تنظیم گوش با سرعت گفتار پیوسته است.',
+      icon: Activity,
+      color: '#6366F1',
+      bgColor: 'rgba(99, 102, 241, 0.1)',
+    },
+    {
+      week: 2,
+      titleFa: 'هفته ۲: هم‌خوانی با متن و استرس (Shadow Reading)',
+      titleEn: 'Week 2: Shadow Reading & Stress',
+      speedBadge: '🪜 0.85x ➔ 1.0x',
+      focusFa: 'دنبال کردن متن با راهنمای ریتم (🎵)، تکیه روی کلمات کلیدی و اتصال صامت به مصوت (‿).',
+      descFa: 'با فعال‌سازی دکمه «ریتم و لحن»، کلمات برجسته (بولد) را پرانرژی بگویید و اتصال کلمات را بدون مکث ادا کنید.',
+      icon: Volume2,
+      color: '#0EA5E9',
+      bgColor: 'rgba(14, 165, 233, 0.1)',
+    },
+    {
+      week: 3,
+      titleFa: 'هفته ۳: شادوئینگ بدون متن (Blind Shadowing)',
+      titleEn: 'Week 3: Blind Shadowing by Ear',
+      speedBadge: '1.0x',
+      focusFa: 'پنهان کردن متن با دکمه (👁️) و اتکای صددرصد به گوش برای تشخیص واج‌ها در لحظه.',
+      descFa: 'متن را بپوشانید تا چشم نتواند به مغز کمک کند. فقط به گوش اعتماد کنید؛ در صورت خطا، با دکمه تکرار یک‌بار دیگر گوش دهید.',
+      icon: Headphones,
+      color: '#F59E0B',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+    },
+    {
+      week: 4,
+      titleFa: 'هفته ۴: تسلط، روانی و سرعت طبیعی (Fluency)',
+      titleEn: 'Week 4: Full Fluency & Mastery',
+      speedBadge: '1.0x 🚀',
+      focusFa: 'سایه‌زنی هم‌زمان با ۱ ثانیه تاخیر، ضبط مستقل و دریافت نمره کامل مکث، استرس و لحن.',
+      descFa: 'با سرعت طبیعی ۱.۰x صحبت کنید و بازخورد هوش مصنوعی در کارت مکث، تکیه و ملودی را بررسی کنید تا نمره‌تان بالای ۸۵٪ تثبیت شود.',
+      icon: Award,
+      color: '#10B981',
+      bgColor: 'rgba(16, 185, 129, 0.1)',
+    },
+  ];
 
   const smartSteps: GuideStep[] = [
     {
@@ -162,9 +212,11 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
 
   const currentSteps = activeTab === 'smart_flow' ? smartSteps : classicSteps;
 
-  const handleTabChange = (mode: PracticeFlowMode) => {
+  const handleTabChange = (mode: PracticeFlowMode | 'routine_challenge') => {
     setActiveTab(mode);
-    onSelectMode?.(mode);
+    if (mode !== 'routine_challenge') {
+      onSelectMode?.(mode);
+    }
   };
 
   return (
@@ -236,35 +288,94 @@ export const ShadowingGuideModal: React.FC<ShadowingGuideModalProps> = ({
                 {isRtl ? 'روش ۴ مرحله‌ای' : '4-Step Classic'}
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.tabBtn,
+                activeTab === 'routine_challenge' && styles.tabBtnActiveChallenge,
+              ]}
+              onPress={() => handleTabChange('routine_challenge')}
+            >
+              <Calendar
+                size={14}
+                color={activeTab === 'routine_challenge' ? '#6366F1' : '#6B7280'}
+              />
+              <Text
+                style={[
+                  styles.tabBtnText,
+                  activeTab === 'routine_challenge' && styles.tabBtnTextActiveChallenge,
+                ]}
+                numberOfLines={1}
+              >
+                {isRtl ? 'برنامه ۴ هفته‌ای' : '4-Week Plan'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Steps List */}
+          {/* Steps / Routine List */}
           <ScrollView
             style={styles.scrollList}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {currentSteps.map((item) => {
-              const IconComp = item.icon;
-              return (
-                <View
-                  key={item.num}
-                  style={[styles.stepItem, isRtl && styles.rowReverse]}
-                >
-                  <View style={[styles.stepIconWrap, { backgroundColor: item.bgColor }]}>
-                    <IconComp size={20} color={item.color} />
-                  </View>
-                  <View style={[styles.stepTexts, isRtl && { alignItems: 'flex-end' }]}>
-                    <Text style={[styles.stepTitle, { color: item.color }]}>
-                      {isRtl ? item.titleFa : item.titleEn}
-                    </Text>
-                    <Text style={[styles.stepDesc, isRtl && { textAlign: 'right' }]}>
-                      {isRtl ? item.descFa : item.descEn}
-                    </Text>
-                  </View>
+            {activeTab === 'routine_challenge' ? (
+              <View style={styles.challengeContainer}>
+                <View style={[styles.challengeHeaderTip, isRtl && styles.rowReverse]}>
+                  <Text style={[styles.challengeTipText, isRtl && { textAlign: 'right' }]}>
+                    🔬 طبق پژوهش‌های علمی شادوئینگ: رعایت توالی ۴ هفته‌ای، تشخیص آوایی و تسلط عضلانی گفتار را تا ۳ برابر سریع‌تر تثبیت می‌کند.
+                  </Text>
                 </View>
-              );
-            })}
+                {challengeWeeks.map((w) => {
+                  const IconComp = w.icon;
+                  return (
+                    <View key={w.week} style={[styles.stepItem, isRtl && styles.rowReverse]}>
+                      <View style={[styles.stepIconWrap, { backgroundColor: w.bgColor }]}>
+                        <IconComp size={20} color={w.color} />
+                      </View>
+                      <View style={[styles.stepTexts, isRtl && { alignItems: 'flex-end' }]}>
+                        <View style={[styles.weekTitleRow, isRtl && styles.rowReverse]}>
+                          <Text style={[styles.stepTitle, { color: w.color }]}>
+                            {isRtl ? w.titleFa : w.titleEn}
+                          </Text>
+                          <View style={styles.speedBadgePill}>
+                            <Text style={styles.speedBadgeText}>{w.speedBadge}</Text>
+                          </View>
+                        </View>
+                        <Text style={[styles.weekFocusText, isRtl && { textAlign: 'right' }]}>
+                          🎯 {w.focusFa}
+                        </Text>
+                        <Text style={[styles.stepDesc, isRtl && { textAlign: 'right' }]}>
+                          {w.descFa}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              currentSteps.map((item) => {
+                const IconComp = item.icon;
+                return (
+                  <View
+                    key={item.num}
+                    style={[styles.stepItem, isRtl && styles.rowReverse]}
+                  >
+                    <View style={[styles.stepIconWrap, { backgroundColor: item.bgColor }]}>
+                      <IconComp size={20} color={item.color} />
+                    </View>
+                    <View style={[styles.stepTexts, isRtl && { alignItems: 'flex-end' }]}>
+                      <Text style={[styles.stepTitle, { color: item.color }]}>
+                        {isRtl ? item.titleFa : item.titleEn}
+                      </Text>
+                      <Text style={[styles.stepDesc, isRtl && { textAlign: 'right' }]}>
+                        {isRtl ? item.descFa : item.descEn}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </ScrollView>
 
           {/* Action button */}
@@ -364,9 +475,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(37, 99, 235, 0.25)',
     ...SHADOWS.level1,
   },
+  tabBtnActiveChallenge: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
+    ...SHADOWS.level1,
+  },
   tabBtnText: {
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 12.5,
+    fontSize: 11.5,
     color: '#6B7280',
   },
   tabBtnTextActiveSmart: {
@@ -374,6 +491,53 @@ const styles = StyleSheet.create({
   },
   tabBtnTextActiveClassic: {
     color: '#2563EB',
+  },
+  tabBtnTextActiveChallenge: {
+    color: '#4F46E5',
+  },
+  challengeContainer: {
+    gap: 10,
+  },
+  challengeHeaderTip: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    padding: 10,
+    marginBottom: 4,
+  },
+  challengeTipText: {
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 11.5,
+    lineHeight: 18,
+    color: '#5B21B6',
+  },
+  weekTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 3,
+  },
+  speedBadgePill: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  speedBadgeText: {
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 10.5,
+    color: '#4338CA',
+  },
+  weekFocusText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 11.5,
+    color: '#1E293B',
+    marginBottom: 3,
+    lineHeight: 16,
   },
   scrollList: {
     maxHeight: 340,
