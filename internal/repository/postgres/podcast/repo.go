@@ -283,7 +283,7 @@ func (r DB) SetAudioReady(ctx context.Context, id, url string, durationSeconds i
 	}
 	defer tx.Rollback(ctx)
 	if _, err := tx.Exec(ctx, `
-		UPDATE podcasts SET audio_url = $2, audio_status = 'ready', audio_error = '', duration_seconds = $3
+		UPDATE podcasts SET audio_url = $2, audio_status = 'ready', audio_error = '', duration_seconds = $3, is_active = TRUE
 		WHERE id = $1::uuid`, id, url, durationSeconds); err != nil {
 		return richerror.New(op).WithErr(err)
 	}

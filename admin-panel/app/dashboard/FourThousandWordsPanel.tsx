@@ -319,7 +319,7 @@ export default function FourThousandWordsPanel({
   // به‌روزرسانی تصویر کاور پادکست
   async function handleUpdatePodcastCover(url: string) {
     if (!selectedPodcast) return;
-    const updated: Podcast = { ...selectedPodcast, image_url: url };
+    const updated: Podcast = { ...selectedPodcast, image_url: url, is_active: true };
     setSelectedPodcast(updated);
     try {
       const saved = await savePodcast(updated);
@@ -334,7 +334,7 @@ export default function FourThousandWordsPanel({
   // به‌روزرسانی تصاویر اسلایدشوی پادکست
   async function handleUpdatePodcastSlideshow(images: SlideImage[]) {
     if (!selectedPodcast) return;
-    const updated: Podcast = { ...selectedPodcast, images };
+    const updated: Podcast = { ...selectedPodcast, images, is_active: true };
     setSelectedPodcast(updated);
     try {
       const saved = await savePodcast(updated);

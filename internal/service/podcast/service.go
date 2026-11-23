@@ -445,6 +445,7 @@ func (s *Service) AdminGenerateStory(ctx context.Context, id string) (Podcast, e
 	}
 
 	p.Lines = podcastLines
+	p.IsActive = true
 	// ذخیره پادکست همراه با خطوط داستان جدید (صوت قبلی ریست می‌شود تا با متن جدید دوباره ساخته شود)
 	saved, err := s.AdminSave(ctx, id, p)
 	if err != nil {
