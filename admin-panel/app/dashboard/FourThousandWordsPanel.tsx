@@ -11,7 +11,10 @@ import {
   getPodcastSeries,
   getScene,
   savePodcast,
+  updateScene,
 } from "@/lib/api";
+import ImageField from "./ImageField";
+import SlideshowImagesField, { type SlideImage } from "./SlideshowImagesField";
 import type {
   Podcast,
   PodcastLine,
@@ -309,6 +312,77 @@ export default function FourThousandWordsPanel({
       notify(err.message, "err");
     } finally {
       setGeneratingVocabWord(null);
+    }
+  }
+
+  // به‌روزرسانی تصویر کاور پادکست
+  async function handleUpdatePodcastCover(url: string) {
+    if (!selectedPodcast) return;
+    const updated: Podcast = { ...selectedPodcast, image_url: url };
+    setSelectedPodcast(updated);
+    try {
+      const saved = await savePodcast(updated);
+      setSelectedPodcast(saved);
+      notify("تصویر کاور پادکست با موفقیت ذخیره شد ✅", "ok");
+      loadSeries(activeBook);
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
+
+  // به‌روزرسانی تصاویر اسلایدشوی پادکست
+  async function handleUpdatePodcastSlideshow(images: SlideImage[]) {
+    if (!selectedPodcast) return;
+    const updated: Podcast = { ...selectedPodcast, images };
+    setSelectedPodcast(updated);
+    try {
+      const saved = await savePodcast(updated);
+      setSelectedPodcast(saved);
+      notify("عکس‌های اسلایدشوی پادکست ذخیره شدند ✅", "ok");
+    } catch (err: any) {
+      notify(err.message, "err");
+    }
+  }
+
+  // به‌روزرسانی تصویر پس‌زمینه سناریو و کارت درس در اپ
+  async function handleUpdateSceneBackground(url: string) {
+    if (!selectedScene) return;
+    try {
+      await updateScene(selectedScene.id, {
+        title: selectedScene.title,
+        description: selectedScene.description || "",
+        background_image_url: url,
+        difficulty: selectedScene.difficulty as any,
+        category: selectedScene.category || "education",
+        is_locked: false,
+        is_published: true,
+        hotspots: (selectedScene.hotspots || []).map((h, hIdx) => ({
+          name: h.name,
+          x_position: h.x_position,
+          y_position: h.y_position,
+          order: h.order || hIdx + 1,
+          dialogues: h.dialogues.map((d, dIdx) => ({
+            order: d.order || dIdx + 1,
+            speaker: d.speaker as any,
+            original_text: d.original_text,
+            translation: d.translation,
+            audio_url: d.audio_url || "",
+            display_type: (d.display_type as any) || "full",
+            partial_hint: "",
+            wait_duration: 3,
+            words: [],
+            phrases: [],
+          })),
+        })),
+        grammar_topic: "",
+        grammar_explanation: "",
+        grammar_examples: [],
+        grammar_audio_url: "",
+      });
+      setSelectedScene({ ...selectedScene, backgroundImageURL: url });
+      notify("تصویر پس‌زمینه سناریو و کارت درس با موفقیت ذخیره شد ✅", "ok");
+    } catch (err: any) {
+      notify(err.message, "err");
     }
   }
 
@@ -706,6 +780,25 @@ export default function FourThousandWordsPanel({
                   </div>
                 </div>
 
+                {/* تصاویر و اسلایدشوی پادکست */}
+                <div className="card" style={{ background: "#F9FAFB", marginBottom: 16, padding: 14 }}>
+                  <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>🖼️ تصاویر و جلوه‌های بصری پادکست:</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+                    <ImageField
+                      label="تصویر پوستر / کاور پادکست (نمایش در کارت درس و پلیر):"
+                      value={selectedPodcast.image_url || ""}
+                      onChange={handleUpdatePodcastCover}
+                      notify={notify}
+                    />
+                    <SlideshowImagesField
+                      value={(selectedPodcast.images || []) as SlideImage[]}
+                      onChange={handleUpdatePodcastSlideshow}
+                      lineCount={selectedPodcast.lines?.length || 15}
+                      notify={notify}
+                    />
+                  </div>
+                </div>
+
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 10px" }}>
                   <h4 style={{ margin: 0, fontSize: 14 }}>
                     متن و جملات داستان درس ({selectedPodcast.lines?.length || 0} جمله):
@@ -767,6 +860,16 @@ export default function FourThousandWordsPanel({
                           🎧 تولید خودکار صدای تمام دیالوگ‌های شادوئینگ
                         </button>
                       </div>
+                    </div>
+
+                    {/* تصویر پس‌زمینه سناریو و کارت درس */}
+                    <div className="card" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", marginBottom: 16, padding: 14 }}>
+                      <ImageField
+                        label="تصویر پس‌زمینه سناریو و کارت درس در اپلیکیشن (Background & Card Image):"
+                        value={selectedScene.backgroundImageURL || ""}
+                        onChange={handleUpdateSceneBackground}
+                        notify={notify}
+                      />
                     </div>
 
                     <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>دیالوگ‌های هات‌اسپات شادوئینگ:</h4>

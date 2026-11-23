@@ -582,13 +582,38 @@ export const PodcastScreen: React.FC = () => {
       await TrackPlayer.pause();
       return;
     }
+    if (!podcast?.audio_url || podcast.audio_status === 'none') {
+      toast.info(
+        rtl
+          ? 'فایل صوتی این پادکست هنوز ساخته نشده است. می‌توانید متن آن را مرور کنید یا از پنل ادمین صداگذاری نمایید.'
+          : 'Audio for this episode is not generated yet.',
+      );
+      return;
+    }
+    if (podcast.audio_status === 'generating') {
+      toast.info(
+        rtl
+          ? 'صداگذاری این پادکست توسط هوش مصنوعی در حال انجام است. لطفاً کمی صبر کنید...'
+          : 'Audio is currently being generated. Please check back shortly.',
+      );
+      return;
+    }
     if (!trackedRef.current && podcast) {
       trackedRef.current = true;
       track('podcast_played', podcast.id);
     }
-    await ensurePodcastTrack();
-    if (podcast && positionMs >= podcast.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
-    await TrackPlayer.play();
+    try {
+      await ensurePodcastTrack();
+      if (podcast && positionMs >= podcast.duration_seconds * 1000 - 300) await TrackPlayer.seekTo(0);
+      await TrackPlayer.play();
+    } catch (err) {
+      console.warn('Playback error:', err);
+      toast.error(
+        rtl
+          ? 'خطا در پخش فایل صوتی. لطفاً ارتباط اینترنت را بررسی کنید.'
+          : 'Failed to play audio. Please check connection.',
+      );
+    }
   };
 
   const seekBy = async (deltaSeconds: number) => {

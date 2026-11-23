@@ -36,6 +36,7 @@ export interface Podcast {
   series_id?: string;
   episode_no?: number;
   audio_url: string;
+  audio_status?: 'none' | 'generating' | 'ready' | 'failed';
   duration_seconds: number;
   /** تصویرِ پادکست، وگرنه تصویرِ صحنه‌ی مرتبط؛ خالی = بدون عکس. */
   cover_url?: string;
