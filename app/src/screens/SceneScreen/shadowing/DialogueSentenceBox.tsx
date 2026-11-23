@@ -1,13 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AlignLeft, Eye, EyeOff, MessageCircle, Sparkles, User } from 'lucide-react-native';
+import { AlignLeft, Eye, EyeOff, MessageCircle, Music, Sparkles, User } from 'lucide-react-native';
 
 import { COLORS, BORDER_RADIUS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { SHADOWS } from '../../../theme/elevation';
 import type { DialogueItem } from '../../../data/scenarios';
 import type { EvaluationResult } from '../../../api/shadowing';
-import type { TextDisplayMode } from '../../../data/PracticeSettingsContext';
+import { usePracticeSettings, type TextDisplayMode } from '../../../data/PracticeSettingsContext';
 import { DialogueSentenceContent } from './DialogueSentenceContent';
 import { DialogueVocabChips } from './DialogueVocabChips';
 import { DialoguePhrases } from './DialoguePhrases';
@@ -48,11 +48,12 @@ export const DialogueSentenceBox: React.FC<{
   rtl = false,
   t,
 }) => {
+  const { showProsodyGuide, setShowProsodyGuide } = usePracticeSettings();
   const speakerName = currentDialogue.speaker || '';
 
   return (
     <View style={styles.cardContainer}>
-      {/* سربرگ کارت: نام گوینده + سوئیچ حالت حباب/کارت */}
+      {/* سربرگ کارت: نام گوینده + سوئیچ راهنمای ریتم و حالت حباب/کارت */}
       <View style={[styles.headerRow, rtl && styles.rowReverse]}>
         {speakerName ? (
           <View style={[styles.speakerBadge, rtl && styles.rowReverse]}>
@@ -63,34 +64,47 @@ export const DialogueSentenceBox: React.FC<{
           <View style={{ width: 1 }} />
         )}
 
-        <View style={[styles.displayModeRow, rtl && styles.rowReverse]}>
+        <View style={[styles.rightControlsGroup, rtl && styles.rowReverse]}>
           <TouchableOpacity
-            style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnOn]}
-            onPress={() => onChangeTextDisplayMode('bubble')}
+            style={[styles.prosodyBtn, showProsodyGuide && styles.prosodyBtnOn]}
+            onPress={() => setShowProsodyGuide(!showProsodyGuide)}
             activeOpacity={0.8}
           >
-            <MessageCircle
-              size={12}
-              color={textDisplayMode === 'bubble' ? accentColor : '#8E95A5'}
-            />
-            <Text
-              style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && { color: accentColor }]}
-            >
-              {t('textInBubble')}
+            <Music size={11} color={showProsodyGuide ? '#7C3AED' : '#8E95A5'} />
+            <Text style={[styles.prosodyBtnText, showProsodyGuide && styles.prosodyBtnTextOn]}>
+              {rtl ? 'ریتم و لحن' : 'Prosody'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnOn]}
-            onPress={() => onChangeTextDisplayMode('card')}
-            activeOpacity={0.8}
-          >
-            <AlignLeft size={12} color={textDisplayMode === 'card' ? accentColor : '#8E95A5'} />
-            <Text
-              style={[styles.displayModeBtnText, textDisplayMode === 'card' && { color: accentColor }]}
+
+          <View style={[styles.displayModeRow, rtl && styles.rowReverse]}>
+            <TouchableOpacity
+              style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnOn]}
+              onPress={() => onChangeTextDisplayMode('bubble')}
+              activeOpacity={0.8}
             >
-              {t('textInCard')}
-            </Text>
-          </TouchableOpacity>
+              <MessageCircle
+                size={12}
+                color={textDisplayMode === 'bubble' ? accentColor : '#8E95A5'}
+              />
+              <Text
+                style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && { color: accentColor }]}
+              >
+                {t('textInBubble')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnOn]}
+              onPress={() => onChangeTextDisplayMode('card')}
+              activeOpacity={0.8}
+            >
+              <AlignLeft size={12} color={textDisplayMode === 'card' ? accentColor : '#8E95A5'} />
+              <Text
+                style={[styles.displayModeBtnText, textDisplayMode === 'card' && { color: accentColor }]}
+              >
+                {t('textInCard')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -237,6 +251,35 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.bold,
     fontSize: 12,
     color: '#191C21',
+  },
+  rightControlsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  prosodyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3EFE6',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  prosodyBtnOn: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#DDD6FE',
+  },
+  prosodyBtnText: {
+    fontFamily: FONT_FAMILY.medium,
+    fontSize: 10.5,
+    color: '#8E95A5',
+  },
+  prosodyBtnTextOn: {
+    color: '#7C3AED',
+    fontFamily: FONT_FAMILY.bold,
   },
   displayModeRow: {
     flexDirection: 'row',

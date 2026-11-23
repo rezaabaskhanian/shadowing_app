@@ -42,6 +42,7 @@ const STORAGE_KEY = 'practice_repeats_per_step';
 const TEXT_DISPLAY_MODE_KEY = 'practice_text_display_mode';
 const HIGHLIGHT_COLOR_KEY = 'practice_highlight_color';
 const FLOW_MODE_KEY = 'practice_flow_mode';
+const PROSODY_GUIDE_KEY = 'practice_show_prosody_guide';
 
 interface PracticeSettingsContextType {
   repeatsPerStep: RepeatsPerStep;
@@ -52,6 +53,8 @@ interface PracticeSettingsContextType {
   setHighlightColor: (value: string) => void;
   flowMode: PracticeFlowMode;
   setFlowMode: (value: PracticeFlowMode) => void;
+  showProsodyGuide: boolean;
+  setShowProsodyGuide: (value: boolean) => void;
 }
 
 const PracticeSettingsContext = createContext<PracticeSettingsContextType>({
@@ -63,6 +66,8 @@ const PracticeSettingsContext = createContext<PracticeSettingsContextType>({
   setHighlightColor: () => {},
   flowMode: DEFAULT_FLOW_MODE,
   setFlowMode: () => {},
+  showProsodyGuide: true,
+  setShowProsodyGuide: () => {},
 });
 
 export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +75,7 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
   const [textDisplayMode, setTextDisplayModeState] = useState<TextDisplayMode>(DEFAULT_TEXT_DISPLAY_MODE);
   const [highlightColor, setHighlightColorState] = useState<string>(DEFAULT_HIGHLIGHT_COLOR);
   const [flowMode, setFlowModeState] = useState<PracticeFlowMode>(DEFAULT_FLOW_MODE);
+  const [showProsodyGuide, setShowProsodyGuideState] = useState<boolean>(true);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -89,6 +95,14 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
     AsyncStorage.getItem(HIGHLIGHT_COLOR_KEY)
       .then((raw) => {
         if (raw && HIGHLIGHT_COLOR_OPTIONS.includes(raw)) setHighlightColorState(raw);
+      })
+      .catch(() => {});
+
+    AsyncStorage.getItem(PROSODY_GUIDE_KEY)
+      .then((raw) => {
+        if (raw !== null) {
+          setShowProsodyGuideState(raw === 'true');
+        }
       })
       .catch(() => {});
 
@@ -128,6 +142,11 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
     AsyncStorage.setItem(FLOW_MODE_KEY, value).catch(() => {});
   }, []);
 
+  const setShowProsodyGuide = useCallback((value: boolean) => {
+    setShowProsodyGuideState(value);
+    AsyncStorage.setItem(PROSODY_GUIDE_KEY, String(value)).catch(() => {});
+  }, []);
+
   const value = useMemo<PracticeSettingsContextType>(
     () => ({
       repeatsPerStep,
@@ -138,6 +157,8 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       setHighlightColor,
       flowMode,
       setFlowMode,
+      showProsodyGuide,
+      setShowProsodyGuide,
     }),
     [
       repeatsPerStep,
@@ -148,6 +169,8 @@ export const PracticeSettingsProvider: React.FC<{ children: React.ReactNode }> =
       setHighlightColor,
       flowMode,
       setFlowMode,
+      showProsodyGuide,
+      setShowProsodyGuide,
     ]
   );
 

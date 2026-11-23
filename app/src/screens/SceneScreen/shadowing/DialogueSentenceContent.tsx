@@ -2,14 +2,17 @@ import React from 'react';
 
 import type { DialogueItem } from '../../../data/scenarios';
 import type { EvaluationResult } from '../../../api/shadowing';
+import { usePracticeSettings } from '../../../data/PracticeSettingsContext';
 import { HighlightedDialogueText } from './HighlightedDialogueText';
 import { MaskedDialogueText } from './MaskedDialogueText';
 import { ScoredDialogueText } from './ScoredDialogueText';
+import { ProsodyAnnotatedText } from './ProsodyAnnotatedText';
 
 /**
  * رندرِ خودِ جمله:
  *  - اگر ارزیابی هوش مصنوعی آماده باشد: با کلمات رنگی نمره‌دهی‌شده (سبز/زرد/قرمز)
  *  - اگر در مرحله ضبط و متن مخفی باشد: ماسک‌شده
+ *  - اگر راهنمای ریتم و عروض (Prosody Guide) فعال باشد: نمایش استرس، اتصال و افت‌وخیز لحن
  *  - در غیر این صورت: هایلایت زنده کلمه‌به‌کلمه همگام با صوت
  */
 export const DialogueSentenceContent: React.FC<{
@@ -30,6 +33,8 @@ export const DialogueSentenceContent: React.FC<{
   recordingPositionSeconds,
   compact,
 }) => {
+  const { showProsodyGuide } = usePracticeSettings();
+
   // اگر نمره‌دهی انجام شده باشد، فیدبک هوشمند روی کلمات نمایش می‌یابد
   if (evaluation?.words && evaluation.words.length > 0) {
     return (
@@ -49,6 +54,17 @@ export const DialogueSentenceContent: React.FC<{
     );
   }
 
+  if (showProsodyGuide) {
+    return (
+      <ProsodyAnnotatedText
+        text={currentDialogue.dialogue || 'Great. Can I pay by card?'}
+        wordTimings={currentDialogue.wordTimings}
+        currentTimeSeconds={masterPositionSeconds}
+        compact={compact}
+      />
+    );
+  }
+
   return (
     <HighlightedDialogueText
       text={currentDialogue.dialogue || 'Great. Can I pay by card?'}
@@ -58,3 +74,4 @@ export const DialogueSentenceContent: React.FC<{
     />
   );
 };
+
