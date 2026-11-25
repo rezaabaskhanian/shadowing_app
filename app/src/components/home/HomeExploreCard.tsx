@@ -25,6 +25,7 @@ interface HomeExploreCardProps {
   onOpenStories: () => void;
   onOpenVideos: () => void;
   onOpenSongs: () => void;
+  onOpenFourThousandWords?: () => void;
   onOpenAll: () => void;
   rtl: boolean;
 }
@@ -40,6 +41,7 @@ export const HomeExploreCard: React.FC<HomeExploreCardProps> = ({
   onOpenStories,
   onOpenVideos,
   onOpenSongs,
+  onOpenFourThousandWords,
   onOpenAll,
   rtl,
 }) => {
@@ -98,8 +100,19 @@ export const HomeExploreCard: React.FC<HomeExploreCardProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Quick Category Chips Row: Preserving all direct navigation entry points */}
+      {/* Quick Category Chips Row: کتابخانه و تمرین بیشتر */}
       <View style={[styles.chipsRow, rtl && styles.rowReverse]}>
+        {!!onOpenFourThousandWords && (
+          <TouchableOpacity
+            style={[styles.chip, rtl && styles.rowReverse]}
+            onPress={onOpenFourThousandWords}
+            activeOpacity={0.8}
+          >
+            <BookOpen size={13} color="#D97706" strokeWidth={2.2} />
+            <Text style={styles.chipText}>{rtl ? '۴۰۰۰ واژه' : '4000 Words'}</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[styles.chip, rtl && styles.rowReverse]}
           onPress={onOpenPodcasts}

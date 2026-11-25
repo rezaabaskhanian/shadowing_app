@@ -238,7 +238,9 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
           </View>
           <Text style={styles.introDesc}>
             {scenario?.description ||
-              'Maya has ten dollars and a hungry roommate. Walk the aisles, ask for prices, and get to the checkout before it closes.'}
+              (rtl
+                ? 'در این سناریو مکالمه‌های کاربردی روزمره را در موقعیت واقعی تمرین می‌کنید.'
+                : 'Practice real-life everyday conversations step by step in this interactive scenario.')}
           </Text>
         </View>
 
@@ -395,12 +397,12 @@ export const SceneIntroScreen: React.FC<SceneIntroScreenProps> = ({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.tipTitle, tr, { color: '#059669' }]}>
-                  {rtl ? 'سایه‌زنی هوشمند با هوش مصنوعی ✨' : 'Smart Shadowing with AI ✨'}
+                  {rtl ? 'تکرار همزمان با هوش مصنوعی ✨' : 'Smart Speaking Practice with AI ✨'}
                 </Text>
                 <Text style={[styles.tipText, tr]}>
                   {rtl
-                    ? 'شنیدن داستان، سایه‌زنی هم‌زمان با صدای گوینده، و دریافت کارنامه و نمره آنی کلمات.'
-                    : 'Listen to native dialogues, shadow aloud with rhythm, and receive instant AI feedback.'}
+                    ? 'شنیدن داستان، تکرار همزمان با صدای گوینده، و دریافت کارنامه و نمره آنی کلمات.'
+                    : 'Listen to native dialogues, repeat aloud with rhythm, and receive instant AI feedback.'}
                 </Text>
               </View>
             </>

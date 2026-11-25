@@ -900,7 +900,7 @@ export const HomeScreen = () => {
           levelName={levelName}
         />
 
-        {/* 2. Hero Section: بنر اختصاصی تحریریه‌ای Learn English by Living It */}
+        {/* 2. Hero Section: یک مسیر اصلی واضح در بالای صفحه */}
         <HomeHeroBanner
           onContinue={() => {
             if (homePath?.started) {
@@ -911,31 +911,38 @@ export const HomeScreen = () => {
               navigation.navigate('CurriculumMap');
             }
           }}
-          ctaText={rtl ? 'ادامه‌ی جلسه' : 'Continue Session'}
+          ctaText={
+            totalXP === 0 && todaySessions === 0
+              ? (rtl ? 'شروع اولین تمرین (زیر ۱ دقیقه) 🎙️' : 'Start First Practice (<1 min) 🎙️')
+              : (rtl ? 'ادامه تمرین روزانه' : 'Continue Daily Practice')
+          }
           heroImageUri={featuredScenario?.imageUri}
           rtl={rtl}
         />
 
-        {/* 3. Continue Learning Card: کارت در حال یادگیری با حلقه درصد پیشرفت */}
+        {/* 3. Continue Learning Card: کارت صحنه بعدی / در حال یادگیری */}
         {featuredScenario && (
           <HomeContinueCard
             title={featuredScenario.title}
-            progressPercent={featuredScenario.progress || 35}
-            remainingMinutes={todaysMission?.estimated_minutes || 12}
+            progressPercent={featuredScenario.progress || 0}
+            remainingMinutes={todaysMission?.estimated_minutes || 5}
             imageUri={featuredScenario.imageUri}
             onPress={() => openScene(featuredScenario)}
-            statusLabel={rtl ? 'در حال یادگیری' : 'Learning in progress'}
+            statusLabel={
+              totalXP === 0 && todaySessions === 0
+                ? (rtl ? 'پیشنهاد اول برای شروع سریع' : 'Quick Start Scenario')
+                : (rtl ? 'صحنه بعدی شما' : 'Up Next')
+            }
             rtl={rtl}
           />
         )}
 
-        {/* 4. Quick Access Row: کارت‌های دسترسی سریع (۴۰۰۰ واژه، لایتنر، نقشه، عادت و آمار) */}
+        {/* 4. Quick Access Row: دسترسی سریع فقط به ابزارهای اصلی مسیر */}
         <HomeQuickAccess
           onOpenShadowing={() => navigation.navigate('CurriculumMap')}
           onOpenVocabulary={() => navigation.navigate('Leitner')}
           onOpenPractice={() => navigation.navigate('LanguageHabit')}
           onOpenProgress={() => setXpInfoVisible(true)}
-          onOpenFourThousandWords={() => navigation.navigate('FourThousandWords')}
           rtl={rtl}
         />
 
@@ -956,22 +963,7 @@ export const HomeScreen = () => {
           />
         )}
 
-        {/* 6. Daily Plan / Habit Banner: بنر برنامه روزانه ۱۵ دقیقه‌ای */}
-        <HomeDailyPlanBanner
-          goalMinutes={15}
-          completedMinutes={6}
-          onPress={() => navigation.navigate('GoalPlan')}
-          onContinue={() => {
-            if (featuredScenario) {
-              openScene(featuredScenario);
-            } else {
-              navigation.navigate('GoalPlan');
-            }
-          }}
-          rtl={rtl}
-        />
-
-        {/* کارت‌های تعاملی پایش پیشرفت و چالش افعال چندمعنایی */}
+        {/* کارت پایش پیشرفت (فقط در صورت سررسید) */}
         {retestDue && (
           <HomeRetestNoticeCard
             onPress={() => {
@@ -982,21 +974,13 @@ export const HomeScreen = () => {
           />
         )}
 
-        {pendingVerb && (
-          <HomeVerbNoticeCard
-            verb={pendingVerb}
-            onPress={() => navigation.navigate('VerbQuiz', { verbId: pendingVerb.verb_id })}
-            rtl={rtl}
-          />
-        )}
-
-        {/* 7. Dedicated Content Library & Explore Gateway:
-            به‌جای نمایش کاتالوگ طولانی و شلوغ در خانه، کتابخانه مستقل با ۴ دسترسی سریع و لینک به دراور فراهم شده است */}
+        {/* 6. کتابخانه و تمرین بیشتر (۴۰۰۰ واژه، پادکست، داستان، ویدیو، آهنگ، آزمون فعل) */}
         <HomeExploreCard
           onOpenPodcasts={() => navigation.navigate('PodcastList')}
           onOpenStories={() => navigation.navigate('StoryList')}
           onOpenVideos={() => navigation.navigate('VideoClipList')}
           onOpenSongs={() => navigation.navigate('SongList')}
+          onOpenFourThousandWords={() => navigation.navigate('FourThousandWords')}
           onOpenAll={() => setDrawerVisible(true)}
           rtl={rtl}
         />

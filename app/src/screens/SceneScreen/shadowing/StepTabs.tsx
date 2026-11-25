@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Check, HelpCircle, Mic, Sparkles, Volume2 } from 'lucide-react-native';
+import { Check, Mic, Settings, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -42,15 +42,14 @@ interface SmartTabItem {
 }
 
 const SMART_TABS: SmartTabItem[] = [
-  { id: 'listen', stepIdx: 0, label: '۱. شنیدن کل داستان', icon: Volume2, color: '#2563EB' },
-  { id: 'shadow', stepIdx: 1, label: '۲. سایه‌زنی هوشمند', icon: Mic, color: COLORS.primary },
+  { id: 'listen', stepIdx: 0, label: '۱. گوش دادن و ضبط', icon: Volume2, color: '#2563EB' },
+  { id: 'shadow', stepIdx: 1, label: '۲. تکرار همزمان', icon: Mic, color: COLORS.primary },
 ];
 
 /**
  * نوار بالای تمرین:
- *  - سوئیچ بین «سایه‌زنی هوشمند» (جریان پیوسته ۳ فازی) و «۴ مرحله‌ای سنتی»
- *  - در حالت هوشمند: تب‌های لمسی ۳ مرحله (شنیدن ➔ سایه و ضبط ➔ نمره AI)
- *  - در حالت سنتی: تب‌های ۴گانه Listen / Shadow / Record / Compare
+ *  - حالت پیش‌فرض خلوت: تب‌های ساده + دکمه‌ی «تنظیمات تمرین» (چرخ‌دنده)
+ *  - گزینه‌های پیشرفته (۴ مرحله‌ای، حباب/کارت، ریتم و راهنما) داخل مودال تنظیمات تمرین هستند.
  */
 export const StepTabs: React.FC<{
   language: string;
@@ -61,6 +60,7 @@ export const StepTabs: React.FC<{
   onChangeFlowMode?: (mode: PracticeFlowMode) => void;
   smartPhase?: 'listen' | 'shadow' | 'score';
   onOpenGuide?: () => void;
+  onOpenSettings?: () => void;
   t: (key: string) => string;
 }> = ({
   language,
@@ -68,9 +68,8 @@ export const StepTabs: React.FC<{
   completedSteps,
   onChangeStep,
   flowMode = 'smart_flow',
-  onChangeFlowMode,
   smartPhase = 'listen',
-  onOpenGuide,
+  onOpenSettings,
   t,
 }) => {
   const isRtl = language === 'fa';
@@ -79,145 +78,104 @@ export const StepTabs: React.FC<{
 
   return (
     <View style={styles.wrapper}>
-      {/* سوییچر سبک تمرین (هوشمند vs ۴ مرحله‌ای) + دکمه راهنما */}
       <View style={[styles.modeToggleHeader, isRtl && styles.rowReverse]}>
-        <View style={styles.modeToggleGroup}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.modePill,
-              flowMode === 'smart_flow' && styles.modePillActiveSmart,
-            ]}
-            onPress={() => onChangeFlowMode?.('smart_flow')}
-          >
-            <Sparkles
-              size={12}
-              color={flowMode === 'smart_flow' ? '#059669' : '#8E95A5'}
-            />
-            <Text
-              style={[
-                styles.modePillText,
-                flowMode === 'smart_flow' && styles.modePillTextActiveSmart,
-              ]}
-            >
-              سایه‌زنی هوشمند
-            </Text>
-          </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          {flowMode === 'smart_flow' ? (
+            <View style={styles.smartFlowContainer}>
+              {orderedSmartTabs.map((tab) => {
+                const active =
+                  (tab.id === 'listen' && (activeStepIndex === 0 || smartPhase === 'listen') && activeStepIndex !== 1 && activeStepIndex !== 2 && activeStepIndex !== 3) ||
+                  (tab.id === 'shadow' && (activeStepIndex === 1 || activeStepIndex === 2 || smartPhase === 'shadow') && activeStepIndex !== 3) ||
+                  (tab.id === 'score' && (activeStepIndex === 3 || smartPhase === 'score'));
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.modePill,
-              flowMode === 'classic_steps' && styles.modePillActiveClassic,
-            ]}
-            onPress={() => onChangeFlowMode?.('classic_steps')}
-          >
-            <Text
-              style={[
-                styles.modePillText,
-                flowMode === 'classic_steps' && styles.modePillTextActiveClassic,
-              ]}
-            >
-              ۴ مرحله‌ای
-            </Text>
-          </TouchableOpacity>
+                const Icon = tab.icon;
+
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    activeOpacity={0.8}
+                    onPress={() => onChangeStep(tab.stepIdx)}
+                    style={[
+                      styles.smartPhasePill,
+                      active &&
+                        (tab.id === 'listen'
+                          ? styles.smartPhasePillActiveListen
+                          : tab.id === 'shadow'
+                          ? styles.smartPhasePillActiveShadow
+                          : styles.smartPhasePillActiveScore),
+                    ]}
+                  >
+                    <Icon size={13} color={active ? tab.color : '#9CA3AF'} />
+                    <Text
+                      style={[
+                        styles.smartPhaseText,
+                        active &&
+                          (tab.id === 'listen'
+                            ? styles.smartPhaseTextActiveListen
+                            : tab.id === 'shadow'
+                            ? styles.smartPhaseTextActiveShadow
+                            : styles.smartPhaseTextActiveScore),
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.segmentedContainer}>
+              {orderedStepTabs.map((st) => {
+                const stepIdx = st.num - 1;
+                const active = activeStepIndex === stepIdx;
+                const done = completedSteps.includes(stepIdx);
+                const accentColor = STEP_ACCENT_COLOR[stepIdx] ?? COLORS.primary;
+
+                return (
+                  <TouchableOpacity
+                    key={st.num}
+                    activeOpacity={0.8}
+                    style={[styles.segmentedTab, active && styles.segmentedTabActive]}
+                    onPress={() => onChangeStep(stepIdx)}
+                  >
+                    {done ? (
+                      <Check size={13} color="#059669" strokeWidth={2.5} />
+                    ) : (
+                      <View
+                        style={[
+                          styles.stepDot,
+                          { backgroundColor: active ? accentColor : '#C5BEB3' },
+                        ]}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.segmentedTabText,
+                        active && [styles.segmentedTabTextActive, { color: accentColor }],
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t(st.key)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
-        {onOpenGuide && (
+        {onOpenSettings && (
           <TouchableOpacity
             activeOpacity={0.75}
-            style={[styles.guideHelpBtn, isRtl && styles.rowReverse]}
-            onPress={onOpenGuide}
+            style={[styles.guideHelpBtn, isRtl && styles.rowReverse, { marginStart: 8 }]}
+            onPress={onOpenSettings}
+            hitSlop={8}
           >
-            <HelpCircle size={14} color="#6B7280" />
-            <Text style={styles.guideHelpText}>{isRtl ? 'راهنما' : 'Guide'}</Text>
+            <Settings size={15} color="#4B5563" />
+            <Text style={styles.guideHelpText}>{isRtl ? 'تنظیمات' : 'Settings'}</Text>
           </TouchableOpacity>
         )}
       </View>
-
-      {/* محتوای تب‌ها بر اساس حالت انتخاب‌شده */}
-      {flowMode === 'smart_flow' ? (
-        <View style={styles.smartFlowContainer}>
-          {orderedSmartTabs.map((tab) => {
-            const active =
-              (tab.id === 'listen' && (activeStepIndex === 0 || smartPhase === 'listen') && activeStepIndex !== 1 && activeStepIndex !== 2 && activeStepIndex !== 3) ||
-              (tab.id === 'shadow' && (activeStepIndex === 1 || activeStepIndex === 2 || smartPhase === 'shadow') && activeStepIndex !== 3) ||
-              (tab.id === 'score' && (activeStepIndex === 3 || smartPhase === 'score'));
-
-            const Icon = tab.icon;
-
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                activeOpacity={0.8}
-                onPress={() => onChangeStep(tab.stepIdx)}
-                style={[
-                  styles.smartPhasePill,
-                  active &&
-                    (tab.id === 'listen'
-                      ? styles.smartPhasePillActiveListen
-                      : tab.id === 'shadow'
-                      ? styles.smartPhasePillActiveShadow
-                      : styles.smartPhasePillActiveScore),
-                ]}
-              >
-                <Icon size={13} color={active ? tab.color : '#9CA3AF'} />
-                <Text
-                  style={[
-                    styles.smartPhaseText,
-                    active &&
-                      (tab.id === 'listen'
-                        ? styles.smartPhaseTextActiveListen
-                        : tab.id === 'shadow'
-                        ? styles.smartPhaseTextActiveShadow
-                        : styles.smartPhaseTextActiveScore),
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : (
-        <View style={styles.segmentedContainer}>
-          {orderedStepTabs.map((st) => {
-            const stepIdx = st.num - 1;
-            const active = activeStepIndex === stepIdx;
-            const done = completedSteps.includes(stepIdx);
-            const accentColor = STEP_ACCENT_COLOR[stepIdx] ?? COLORS.primary;
-
-            return (
-              <TouchableOpacity
-                key={st.num}
-                activeOpacity={0.8}
-                style={[styles.segmentedTab, active && styles.segmentedTabActive]}
-                onPress={() => onChangeStep(stepIdx)}
-              >
-                {done ? (
-                  <Check size={13} color="#059669" strokeWidth={2.5} />
-                ) : (
-                  <View
-                    style={[
-                      styles.stepDot,
-                      { backgroundColor: active ? accentColor : '#C5BEB3' },
-                    ]}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.segmentedTabText,
-                    active && [styles.segmentedTabTextActive, { color: accentColor }],
-                  ]}
-                  numberOfLines={1}
-                >
-                  {t(st.key)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
     </View>
   );
 };

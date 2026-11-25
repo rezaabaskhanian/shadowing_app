@@ -66,8 +66,8 @@ export const HomeQuickAccess: React.FC<HomeQuickAccessProps> = ({
 
               <Text style={[styles.vocabSubtext, { textAlign: rtl ? 'right' : 'left' }]}>
                 {rtl
-                  ? 'داستان‌های شنیداری و تمرین شادوئینگ ۵ دیالوگ برای تسلط بر واژگان'
-                  : 'Story narrations and shadowing practice for high-frequency vocabulary'}
+                  ? 'داستان‌های شنیداری و تمرین مکالمه برای تسلط بر واژگان ضروری'
+                  : 'Story narrations and speaking practice for high-frequency vocabulary'}
               </Text>
             </View>
 

@@ -96,9 +96,11 @@ interface ShadowingPracticePanelProps {
   countdownNum?: number;
   onConfirmReady?: () => void;
   onStartMumbling?: () => void;
+  onStartRecord?: () => void;
   onStopRecord?: () => void;
   onReplayCurrent?: () => void;
   onOpenGuide?: () => void;
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -166,9 +168,11 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
   countdownNum,
   onConfirmReady,
   onStartMumbling,
+  onStartRecord,
   onStopRecord,
   onReplayCurrent,
   onOpenGuide,
+  onOpenSettings,
 }) => {
   const rtl = language === 'fa';
   return (
@@ -182,6 +186,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         onChangeFlowMode={onChangeFlowMode}
         smartPhase={smartPhase}
         onOpenGuide={onOpenGuide}
+        onOpenSettings={onOpenSettings}
         t={t}
       />
 
@@ -248,6 +253,7 @@ export const ShadowingPracticePanel: React.FC<ShadowingPracticePanelProps> = ({
         countdownNum={countdownNum}
         onConfirmReady={onConfirmReady}
         onStartMumbling={onStartMumbling}
+        onStartRecord={onStartRecord}
         onStopRecord={onStopRecord}
         onReplayCurrent={onReplayCurrent}
         flowMode={flowMode}

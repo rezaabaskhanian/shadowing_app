@@ -53,60 +53,15 @@ export const DialogueSentenceBox: React.FC<{
 
   return (
     <View style={styles.cardContainer}>
-      {/* سربرگ کارت: نام گوینده + سوئیچ راهنمای ریتم و حالت حباب/کارت */}
-      <View style={[styles.headerRow, rtl && styles.rowReverse]}>
-        {speakerName ? (
+      {/* سربرگ کارت: فقط نام گوینده (گزینه‌های پیشرفته به تنظیمات تمرین منتقل شدند) */}
+      {speakerName ? (
+        <View style={[styles.headerRow, rtl && styles.rowReverse]}>
           <View style={[styles.speakerBadge, rtl && styles.rowReverse]}>
             <View style={[styles.speakerDot, { backgroundColor: accentColor }]} />
             <Text style={styles.speakerText}>{speakerName}</Text>
           </View>
-        ) : (
-          <View style={{ width: 1 }} />
-        )}
-
-        <View style={[styles.rightControlsGroup, rtl && styles.rowReverse]}>
-          <TouchableOpacity
-            style={[styles.prosodyBtn, showProsodyGuide && styles.prosodyBtnOn]}
-            onPress={() => setShowProsodyGuide(!showProsodyGuide)}
-            activeOpacity={0.8}
-          >
-            <Music size={11} color={showProsodyGuide ? '#7C3AED' : '#8E95A5'} />
-            <Text style={[styles.prosodyBtnText, showProsodyGuide && styles.prosodyBtnTextOn]}>
-              {rtl ? 'ریتم و لحن' : 'Prosody'}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={[styles.displayModeRow, rtl && styles.rowReverse]}>
-            <TouchableOpacity
-              style={[styles.displayModeBtn, textDisplayMode === 'bubble' && styles.displayModeBtnOn]}
-              onPress={() => onChangeTextDisplayMode('bubble')}
-              activeOpacity={0.8}
-            >
-              <MessageCircle
-                size={12}
-                color={textDisplayMode === 'bubble' ? accentColor : '#8E95A5'}
-              />
-              <Text
-                style={[styles.displayModeBtnText, textDisplayMode === 'bubble' && { color: accentColor }]}
-              >
-                {t('textInBubble')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.displayModeBtn, textDisplayMode === 'card' && styles.displayModeBtnOn]}
-              onPress={() => onChangeTextDisplayMode('card')}
-              activeOpacity={0.8}
-            >
-              <AlignLeft size={12} color={textDisplayMode === 'card' ? accentColor : '#8E95A5'} />
-              <Text
-                style={[styles.displayModeBtnText, textDisplayMode === 'card' && { color: accentColor }]}
-              >
-                {t('textInCard')}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
-      </View>
+      ) : null}
 
       {/* محتوای جمله انگلیسی */}
       {textDisplayMode === 'card' && (
@@ -190,7 +145,7 @@ export const DialogueSentenceBox: React.FC<{
         />
       )}
 
-      {/* بنر راهنمای شدویینگ هم‌زمان در مرحله ۲ */}
+      {/* بنر راهنمای تکرار همزمان در مرحله ۲ */}
       {activeStepIndex === 1 && (
         <View style={[styles.shadowBannerPill, { backgroundColor: accentLightColor }]}>
           <Sparkles size={14} color={accentColor} />

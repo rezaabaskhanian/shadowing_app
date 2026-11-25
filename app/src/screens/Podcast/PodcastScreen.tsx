@@ -1010,7 +1010,7 @@ export const PodcastScreen: React.FC = () => {
               </View>
               <View style={[styles.actionCardText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
                 <Text style={[styles.actionCardTitle, { color: COLORS.tertiary }]}>
-                  {rtl ? 'تمرین شادوئینگ این درس 🎧' : 'Shadowing Scene Practice'}
+                  {rtl ? 'تمرین مکالمه این درس 🎧' : 'Scene Speaking Practice'}
                 </Text>
                 <Text style={styles.actionCardSub}>
                   {rtl

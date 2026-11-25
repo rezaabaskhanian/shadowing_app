@@ -407,7 +407,7 @@ export const CurriculumMapScreen = () => {
         <View style={{ flex: 1 }}>
           <View style={[styles.challengeTitleRow, rtl && styles.rowReverse]}>
             <Text style={[styles.challengeBarTitle, rtl && styles.textRight]}>
-              {rtl ? 'چالش ۲۸ روزه شادوئینگ علمی' : '28-Day Shadowing Challenge'}
+              {rtl ? 'چالش ۲۸ روزه تمرین مکالمه' : '28-Day Speaking Challenge'}
             </Text>
             <View style={styles.challengeDayPill}>
               <Text style={styles.challengeDayPillText}>

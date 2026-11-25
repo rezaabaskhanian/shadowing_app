@@ -197,7 +197,7 @@ func (d DB) Screens(ctx context.Context, days int) ([]ScreenRow, error) {
 	rows, err := d.conn.Query(ctx, `
 		SELECT screen, COUNT(*), COUNT(DISTINCT device_id)
 		FROM app_events
-		WHERE event = 'screen_view' AND screen IS NOT NULL AND created_at >= `+sinceDays+`
+		WHERE event = 'screen_view' AND screen IS NOT NULL AND screen NOT IN ('ToastDemo', 'RealtimePoC') AND created_at >= `+sinceDays+`
 		GROUP BY screen
 		ORDER BY 2 DESC`, days)
 	if err != nil {

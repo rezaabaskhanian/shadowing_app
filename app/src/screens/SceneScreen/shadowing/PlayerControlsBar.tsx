@@ -60,12 +60,10 @@ export const PlayerControlsBar: React.FC<{
   rtl = false,
   flowMode = 'smart_flow',
 }) => {
-  // مجوز میکروفن را زودتر (وقتی وارد مرحله‌ی ضبط می‌شویم) می‌گیریم تا لحظه‌ی
-  // زدنِ دکمه، ensureMicPermission دیگر async/کند نباشد و ضبط بدون تأخیر
-  // شروع شود.
+  // مجوز میکروفن را از همان لحظه ورود به تمرین می‌گیریم تا ضبط در صفحه اول بدون تأخیر شروع شود.
   const micGrantedRef = React.useRef(false);
   React.useEffect(() => {
-    if (activeStepIndex === 1 || activeStepIndex === 2) {
+    if (activeStepIndex === 0 || activeStepIndex === 1 || activeStepIndex === 2) {
       ensureMicPermission().then((granted) => {
         micGrantedRef.current = granted;
       });
@@ -115,37 +113,31 @@ export const PlayerControlsBar: React.FC<{
             : null,
         ]}
         onPress={() => {
-          if (activeStepIndex === 2) {
+          if (recording) {
+            onStopRecord();
+          } else if (activeStepIndex === 2) {
             // روش ۴ مرحله‌ای سنتی: دکمه میکروفون پایین برای شروع و پایان ضبط دستی است
-            if (recording) {
-              onStopRecord();
-            } else if (!playing) {
+            if (!playing) {
               startRecord(false);
             }
           } else if (flowMode === 'smart_flow' && activeStepIndex === 1) {
-            // جریان هوشمند: شروع ضبط خودکار از طریق دکمه وسط صحنه و شمارش معکوس است؛
-            // دکمه پایین در صورت نیاز برای توقف دستی حین ضبط فعال است.
-            if (recording) {
-              onStopRecord();
-            }
+            // جریان هوشمند: شروع ضبط خودکار از طریق دکمه وسط صحنه و شمارش معکوس است
           } else {
-            // در مرحله گوش دادن، سایه‌زنی ۴ مرحله‌ای و مقایسه، دکمه پخش و مکث است
+            // در مرحله گوش دادن (صفحه اول) و مقایسه، دکمه پخش و مکث است
             togglePlay();
           }
         }}
       >
-        {activeStepIndex === 2 ? (
-          recording ? (
-            <Square size={22} color={COLORS.white} fill={COLORS.white} />
-          ) : playing ? (
+        {recording ? (
+          <Square size={22} color={COLORS.white} fill={COLORS.white} />
+        ) : activeStepIndex === 2 ? (
+          playing ? (
             <Volume2 size={24} color={COLORS.white} />
           ) : (
             <Mic size={24} color={COLORS.white} />
           )
         ) : flowMode === 'smart_flow' && activeStepIndex === 1 ? (
-          recording ? (
-            <Square size={22} color={COLORS.white} fill={COLORS.white} />
-          ) : playing ? (
+          playing ? (
             <Volume2 size={24} color={COLORS.white} />
           ) : (
             <Sparkles size={22} color={COLORS.white} />
@@ -158,16 +150,17 @@ export const PlayerControlsBar: React.FC<{
       </TouchableOpacity>
 
       <TouchableOpacity
-        // در مرحله‌ی ضبط این دکمه «صدای خودم را بشنو» است و تا وقتی ضبطی
-        // برای این جمله نباشد کاری ندارد؛ خاموش نشانش می‌دهیم تا کاربر
-        // دنبال صدایی که وجود ندارد نگردد.
+        // در صفحه اول (گام ۰)، دکمه کناری مستقیماً ضبط صدا (میکروفون) را فعال می‌کند تا بدون رد کردن مرحله ضبط شود.
         style={[
           styles.smallPlayBtn,
+          activeStepIndex === 0 && !recording ? { backgroundColor: '#FFF5F0', borderColor: COLORS.primary } : null,
           activeStepIndex === 2 && !hasRecordingForCurrentLine ? styles.smallPlayBtnDisabled : null,
         ]}
         disabled={activeStepIndex === 2 && !hasRecordingForCurrentLine}
         onPress={
-          activeStepIndex === 1
+          activeStepIndex === 0
+            ? () => (recording ? onStopRecord() : startRecord(false))
+            : activeStepIndex === 1
             ? (playing ? togglePlay : onReplay)
             : activeStepIndex === 2
             ? onPlayMyRecording
@@ -176,7 +169,13 @@ export const PlayerControlsBar: React.FC<{
               : onReplay
         }
       >
-        {activeStepIndex === 1 ? (
+        {activeStepIndex === 0 ? (
+          recording ? (
+            <Square size={16} color="#DC2626" fill="#DC2626" />
+          ) : (
+            <Mic size={18} color={COLORS.primary} />
+          )
+        ) : activeStepIndex === 1 ? (
           playing ? (
             <Pause size={16} color={accentColor} />
           ) : (

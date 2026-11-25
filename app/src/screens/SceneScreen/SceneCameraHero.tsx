@@ -435,7 +435,7 @@ export const SceneCameraHero: React.FC<SceneCameraHeroProps> = ({
               >
                 <Sparkles size={15} color="#FFF" />
                 <Text style={styles.sceneReadyBtnText}>
-                  {rtl ? 'آماده‌ام! شروع شادوئینگ 🚀' : "I'm Ready! Let's Go 🚀"}
+                  {rtl ? 'آماده‌ام! شروع تکرار 🚀' : "I'm Ready! Let's Go 🚀"}
                 </Text>
               </TouchableOpacity>
               {onStartMumbling && (

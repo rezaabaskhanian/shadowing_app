@@ -46,6 +46,7 @@ export const PracticeWaveformCard: React.FC<{
   countdownNum?: number;
   onConfirmReady?: () => void;
   onStartMumbling?: () => void;
+  onStartRecord?: () => void;
   onStopRecord?: () => void;
   onReplayCurrent?: () => void;
   flowMode?: PracticeFlowMode;
@@ -69,6 +70,7 @@ export const PracticeWaveformCard: React.FC<{
   countdownNum = 3,
   onConfirmReady,
   onStartMumbling,
+  onStartRecord,
   onStopRecord,
   onReplayCurrent,
   flowMode = 'smart_flow',
@@ -90,7 +92,7 @@ export const PracticeWaveformCard: React.FC<{
               </View>
               <View style={[styles.classicShadowTexts, rtl && { alignItems: 'flex-end' }]}>
                 <Text style={styles.classicShadowTitle}>
-                  {rtl ? 'هم‌خوانی هم‌زمان (سایه‌زنی)' : 'Simultaneous Shadowing'}
+                  {rtl ? 'تکرار هم‌زمان با گوینده' : 'Simultaneous Practice'}
                 </Text>
                 <Text style={[styles.classicShadowDesc, rtl && { textAlign: 'right' }]}>
                   {rtl
@@ -133,7 +135,7 @@ export const PracticeWaveformCard: React.FC<{
               >
                 <Sparkles size={14} color="#FFF" />
                 <Text style={styles.readyPrimaryBtnText}>
-                  {rtl ? 'آماده‌ام! شروع شادوئینگ 🚀' : "I'm Ready! Let's Go 🚀"}
+                  {rtl ? 'آماده‌ام! شروع تکرار 🚀' : "I'm Ready! Let's Go 🚀"}
                 </Text>
               </TouchableOpacity>
               {onStartMumbling && (
@@ -342,23 +344,58 @@ export const PracticeWaveformCard: React.FC<{
         t={t}
       />
     ) : (
-      <View style={styles.waveformRow}>
-        {Array.from({ length: 24 }).map((_, idx) => (
-          <View
-            key={idx}
+      <View style={{ width: '100%', alignItems: 'center', gap: 12 }}>
+        <View style={styles.waveformRow}>
+          {Array.from({ length: 24 }).map((_, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.waveBar,
+                {
+                  height:
+                    (activeStepIndex === 0 && playing) ||
+                    actionCommand === 'start_record'
+                      ? 8 + ((idx * 7) % 20)
+                      : 6 + ((idx * 11) % 16),
+                  backgroundColor: actionCommand === 'start_record' ? '#DC2626' : accentColor,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        {activeStepIndex === 0 && (onStartRecord || onStopRecord) && (
+          <TouchableOpacity
+            activeOpacity={0.85}
             style={[
-              styles.waveBar,
-              {
-                height:
-                  (activeStepIndex === 0 && playing) ||
-                  (activeStepIndex === 2 && actionCommand === 'start_record')
-                    ? 8 + ((idx * 7) % 20)
-                    : 6 + ((idx * 11) % 16),
-                backgroundColor: accentColor,
-              },
+              styles.readyPrimaryBtn,
+              { width: '100%', paddingVertical: 12 },
+              actionCommand === 'start_record' && { backgroundColor: '#DC2626' },
             ]}
-          />
-        ))}
+            onPress={() => {
+              if (actionCommand === 'start_record') {
+                onStopRecord?.();
+              } else {
+                onStartRecord?.();
+              }
+            }}
+          >
+            {actionCommand === 'start_record' ? (
+              <>
+                <Square size={15} color="#FFF" fill="#FFF" />
+                <Text style={styles.readyPrimaryBtnText}>
+                  {rtl ? 'توقف ضبط و بررسی تلفظ' : 'Stop & Check Pronunciation'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Mic size={16} color="#FFF" />
+                <Text style={styles.readyPrimaryBtnText}>
+                  {rtl ? 'ضبط صدای من (بگو و نمره بگیر)' : 'Record My Voice'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     )}
   </View>

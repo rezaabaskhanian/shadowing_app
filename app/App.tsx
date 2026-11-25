@@ -121,7 +121,7 @@ function AppContent({ showSplash }: { showSplash: boolean }) {
   );
 }
 
-const SPLASH_MIN_MS = 3000;
+const SPLASH_MIN_MS = 1200;
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);

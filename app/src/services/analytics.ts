@@ -90,6 +90,7 @@ function getDeviceId(): Promise<string> {
 }
 
 async function send(event: string, extra: { screen?: string; target?: string } = {}): Promise<void> {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) return;
   try {
     const [deviceId, token] = await Promise.all([getDeviceId(), getToken().catch(() => null)]);
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };

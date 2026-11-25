@@ -254,7 +254,7 @@ export const PodcastSeriesDetailScreen: React.FC = () => {
                 <View style={[styles.metaItem, rtl && styles.rowReverse]}>
                   <Mic size={10} color={COLORS.tertiary} />
                   <Text style={[styles.metaText, { color: COLORS.tertiary, fontFamily: FONT_FAMILY.bold }]}>
-                    {rtl ? 'شادوئینگ' : 'Shadowing'}
+                    {rtl ? 'تمرین مکالمه' : 'Speaking'}
                   </Text>
                 </View>
               ) : null}

@@ -574,7 +574,7 @@ export const ActiveRecallScreen: React.FC = () => {
             {rtl ? <ChevronRight size={22} color={COLORS.text} /> : <ChevronLeft size={22} color={COLORS.text} />}
           </TouchableOpacity>
           <View style={styles.flex1}>
-            <Text style={[styles.headerTitle, tr]}>{t('activeRecallTitle') || 'اکتیو لرنینگ (Active Recall)'}</Text>
+            <Text style={[styles.headerTitle, tr]}>{t('activeRecallTitle') || 'مرور فعال (Active Recall)'}</Text>
             <Text style={[styles.headerSub, tr]}>{t('activeRecallSubtitle') || 'روش پیمزلر: بگو قبل از شنیدن پاسخ نیتیو'}</Text>
           </View>
           <TouchableOpacity style={styles.guideBtn} onPress={() => setShowGuideModal(true)} activeOpacity={0.8}>

@@ -27,7 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SceneIntroScreen } from './SceneIntroScreen';
 import { SceneCameraHero } from './SceneCameraHero';
 import { SceneExploreMode } from './SceneExploreMode';
-import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine, VocalWarmUpModal } from './shadowing';
+import { ShadowingPracticePanel, PlayerControlsBar, PinnedCurrentLine, VocalWarmUpModal, PracticeSettingsModal } from './shadowing';
 import { ShadowingGuideModal } from './shadowing/ShadowingGuideModal';
 import { DialogueSentenceContent } from './shadowing/DialogueSentenceContent';
 import { STEP_ACCENT_COLOR, STEP_ACCENT_LIGHT_COLOR } from './shadowing/StepTabs';
@@ -110,7 +110,10 @@ export const SceneScreen = () => {
     setTextDisplayMode,
     flowMode,
     setFlowMode,
+    showProsodyGuide,
+    setShowProsodyGuide,
   } = usePracticeSettings();
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // هر بار که کاربر یک صحنه را باز می‌کند، حالت پیش‌فرض همیشه روی «سایه‌زنی هوشمند» قرار می‌گیرد
   useEffect(() => {
@@ -590,9 +593,9 @@ export const SceneScreen = () => {
     if (!audioPrep.finished) return;
     track('scene_opened', scenarioId ? String(scenarioId) : undefined);
     setInScene(true);
-    // اگر مودال راهنما باز است، صدا و حرکت تا بسته‌شدن مودال متوقف می‌ماند
+    // ورود مستقیم به تمرین ساده تا کاربر بلافاصله دکمه پخش و ضبط را ببیند
     if (!guideModalVisible) {
-      playDialogueAt(0);
+      dispatch({ type: 'START_SHADOWING', items: dialogueItems });
     }
   };
 
@@ -1588,9 +1591,11 @@ export const SceneScreen = () => {
               countdownNum={countdownNum}
               onConfirmReady={handleConfirmReady}
               onStartMumbling={handleStartMumbling}
+              onStartRecord={() => dispatch({ type: 'START_RECORD', withReference: false })}
               onStopRecord={handleStopRecord}
               onReplayCurrent={handleReplayCurrent}
               onOpenGuide={handleOpenGuide}
+              onOpenSettings={() => setSettingsModalVisible(true)}
             />
           )}
         </View>
@@ -1659,6 +1664,20 @@ export const SceneScreen = () => {
         visible={warmUpVisible}
         onClose={() => setWarmUpVisible(false)}
         rtl={language === 'fa'}
+      />
+
+      <PracticeSettingsModal
+        visible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+        rtl={language === 'fa'}
+        flowMode={flowMode}
+        onChangeFlowMode={setFlowMode}
+        textDisplayMode={textDisplayMode}
+        onChangeTextDisplayMode={setTextDisplayMode}
+        showProsodyGuide={showProsodyGuide}
+        onToggleProsodyGuide={setShowProsodyGuide}
+        onOpenGuide={handleOpenGuide}
+        onOpenWarmUp={() => setWarmUpVisible(true)}
       />
     </View>
   );

@@ -57,7 +57,7 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
 
   const options: { key: string; Icon: typeof ListChecks; label: string; onPress: () => void }[] = [
     ...(onStartActiveRecall
-      ? [{ key: 'recall', Icon: Zap, label: t('activeRecallTitle') || 'اکتیو لرنینگ (۵ ثانیه‌ای)', onPress: onStartActiveRecall }]
+      ? [{ key: 'recall', Icon: Zap, label: t('activeRecallTitle') || 'مرور فعال (۵ ثانیه‌ای)', onPress: onStartActiveRecall }]
       : []),
     ...(onListenPodcast
       ? [{ key: 'podcast', Icon: Headphones, label: t('listenScenePodcast'), onPress: onListenPodcast }]
@@ -82,7 +82,7 @@ export const LessonCompleteModal: React.FC<LessonCompleteModalProps> = ({
             <View style={styles.challengeBadge}>
               <Flame size={14} color="#EA580C" />
               <Text style={styles.challengeBadgeText}>
-                {`تیک سبز چالش ۲۸ روزه شادوئینگ (روز ${challengeDay}) ثبت شد ✅`}
+                {`تیک سبز چالش ۲۸ روزه مکالمه (روز ${challengeDay}) ثبت شد ✅`}
               </Text>
             </View>
           ) : null}

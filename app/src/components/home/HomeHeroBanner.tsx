@@ -49,7 +49,7 @@ const HERO_SLIDES: SlideItem[] = [
     fa: {
       headlineTop: 'روان و طبیعی',
       headlineAccent: 'صحبت کن.',
-      subtitle: 'شادویینگ تعاملی با بازخورد هوشمند.',
+      subtitle: 'تکرار همزمان با بازخورد هوشمند تلفظ.',
     },
     image: slide2,
   },

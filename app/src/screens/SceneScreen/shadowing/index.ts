@@ -3,3 +3,4 @@ export { PlayerControlsBar } from './PlayerControlsBar';
 export { PinnedCurrentLine } from './PinnedCurrentLine';
 export { ProsodyFeedbackCard } from './ProsodyFeedbackCard';
 export { VocalWarmUpModal } from './VocalWarmUpModal';
+export { PracticeSettingsModal } from './PracticeSettingsModal';

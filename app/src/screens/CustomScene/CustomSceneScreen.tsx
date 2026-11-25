@@ -512,7 +512,7 @@ export const CustomSceneScreen: React.FC = () => {
                 }
               >
                 <Play size={16} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 6 }} />
-                <Text style={styles.playButtonText}>تمرین شادوئینگ</Text>
+                <Text style={styles.playButtonText}>تمرین مکالمه</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -533,7 +533,7 @@ export const CustomSceneScreen: React.FC = () => {
           <ChevronRight size={26} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>شادوئینگ اختصاصی من ✨</Text>
+          <Text style={styles.headerTitle}>سناریوی اختصاصی من ✨</Text>
           <Text style={styles.headerSub}>تولید محتوای هوشمند با موضوع دلخواه</Text>
         </View>
       </View>

@@ -165,6 +165,9 @@ func (s Service) Track(ctx context.Context, req TrackRequest, userID string) err
 	if e.Event == EventScreenView && e.Screen == "" {
 		return invalid("نام صفحه الزامی است")
 	}
+	if e.Screen == "ToastDemo" || e.Screen == "RealtimePoC" {
+		return nil
+	}
 
 	if err := s.repo.Insert(ctx, e); err != nil {
 		return richerror.New(op).WithErr(err)
