@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,6 +24,8 @@ import {
 } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { GradientFill } from '../components/GradientFill';
+
+const appLogoMark = require('../assets/brand/app-logo-mark.png');
 import { FONT_FAMILY } from '../theme/typography';
 import { useLanguage } from '../data/i18n';
 import { useAuth } from '../data/AuthContext';
@@ -115,9 +118,8 @@ const LoginScreen = ({
     <AuthScroll>
       {/* Brand Header */}
       <View style={styles.brandHeader}>
-        <View style={styles.brandBadge}>
-          <GradientFill from="#F28A55" to="#E2502A" />
-          <Mic color={COLORS.white} size={30} />
+        <View style={[styles.brandBadge, { overflow: 'hidden', backgroundColor: '#FFFFFF' }]}>
+          <Image source={appLogoMark} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
         {/* اسم برند نارنجی، بقیه‌ی تیتر تیره. */}
         <Text style={styles.authTitle}>
