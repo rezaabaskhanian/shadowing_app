@@ -87,22 +87,29 @@ export const PlayerControlsBar: React.FC<{
   );
 
   return (
-    <View style={[styles.controlsBar, rtl && styles.rowReverse]}>
-      <TouchableOpacity style={styles.chevronBtn} onPress={onPrevDialogue}>
-        <ChevronLeft size={20} color={COLORS.text} />
-      </TouchableOpacity>
+    <View style={styles.wrapper}>
+      {/* دکمه سرعت (نردبان سرعت) به صورت کپسول وسط‌چین بالای نوار کنترل */}
+      <View style={styles.speedCenterRow}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.speedCenterPill, isSpeedLadder && styles.speedLadderBtn]}
+          onPress={toggleSpeed}
+        >
+          <Text style={[styles.speedPillText, isSpeedLadder && styles.speedLadderPillText]}>
+            {isSpeedLadder
+              ? (rtl ? `🪜 سرعت خودکار: ${playbackRate}x` : `🪜 Auto Speed: ${playbackRate}x`)
+              : (rtl ? `سرعت پخش: ${playbackRate}x` : `Speed: ${playbackRate}x`)}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity
-        style={[styles.chevronBtn, isSpeedLadder && styles.speedLadderBtn]}
-        onPress={toggleSpeed}
-      >
-        <Text style={[styles.speedPillText, isSpeedLadder && styles.speedLadderPillText]}>
-          {isSpeedLadder ? `🪜 ${playbackRate}x` : `${playbackRate}x`}
-        </Text>
-      </TouchableOpacity>
+      <View style={[styles.controlsBar, rtl && styles.rowReverse]}>
+        <TouchableOpacity style={styles.chevronBtn} onPress={onPrevDialogue}>
+          <ChevronLeft size={20} color={COLORS.text} />
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        activeOpacity={0.85}
+        <TouchableOpacity
+          activeOpacity={0.85}
         disabled={(activeStepIndex === 2 && playing && !recording) || (flowMode === 'smart_flow' && activeStepIndex === 1 && !recording)}
         style={[
           styles.centerMicBtn,
@@ -191,17 +198,36 @@ export const PlayerControlsBar: React.FC<{
       <TouchableOpacity style={styles.chevronBtn} onPress={onNextDialogue}>
         <ChevronRight size={20} color={COLORS.text} />
       </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    width: '100%',
+  },
+  speedCenterRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  speedCenterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F0EBE3',
+    ...SHADOWS.level1,
+  },
   rowReverse: { flexDirection: 'row-reverse' },
   controlsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 10,
+    justifyContent: 'space-around',
+    marginVertical: 8,
   },
   chevronBtn: {
     width: 46,
