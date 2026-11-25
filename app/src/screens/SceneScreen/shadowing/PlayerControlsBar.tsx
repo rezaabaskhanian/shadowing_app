@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Mic, Pause, Play, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react-native';
+import { Mic, Pause, Play, RotateCcw, SkipBack, SkipForward, Sparkles, Square, Volume2 } from 'lucide-react-native';
 
 import { COLORS } from '../../../theme/colors';
 import { FONT_FAMILY } from '../../../theme/typography';
@@ -87,32 +87,29 @@ export const PlayerControlsBar: React.FC<{
   );
 
   return (
-    <View style={styles.wrapper}>
-      {/* دکمه سرعت (نردبان سرعت) به صورت کپسول وسط‌چین بالای نوار کنترل */}
-      <View style={styles.speedCenterRow}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[styles.speedCenterPill, isSpeedLadder && styles.speedLadderBtn]}
-          onPress={toggleSpeed}
-        >
-          <Text style={[styles.speedPillText, isSpeedLadder && styles.speedLadderPillText]}>
-            {isSpeedLadder
-              ? (rtl ? `🪜 سرعت خودکار: ${playbackRate}x` : `🪜 Auto Speed: ${playbackRate}x`)
-              : (rtl ? `سرعت پخش: ${playbackRate}x` : `Speed: ${playbackRate}x`)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.controlsBar}>
+      {/* سرعت پخش (سمت چپ، متقارن با میکروفون) */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={[styles.outerPillBtn, isSpeedLadder && styles.speedLadderBtn]}
+        onPress={toggleSpeed}
+      >
+        <Text style={[styles.speedPillText, isSpeedLadder && styles.speedLadderPillText]}>
+          {isSpeedLadder ? `🪜 ${playbackRate}x` : `${playbackRate}x`}
+        </Text>
+      </TouchableOpacity>
 
-      <View style={[styles.controlsBar, rtl && styles.rowReverse]}>
-        <TouchableOpacity style={styles.chevronBtn} onPress={onPrevDialogue}>
-          <ChevronLeft size={20} color={COLORS.text} />
-        </TouchableOpacity>
+      {/* جمله قبلی */}
+      <TouchableOpacity style={styles.transportBtn} onPress={onPrevDialogue} activeOpacity={0.75}>
+        <SkipBack size={20} color={COLORS.text} fill={COLORS.text} />
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.85}
+      {/* دکمه اصلی وسط (پخش / مکث / توقف ضبط) */}
+      <TouchableOpacity
+        activeOpacity={0.85}
         disabled={(activeStepIndex === 2 && playing && !recording) || (flowMode === 'smart_flow' && activeStepIndex === 1 && !recording)}
         style={[
-          styles.centerMicBtn,
+          styles.centerPlayBtn,
           { backgroundColor: accentColor },
           recording ? styles.centerMicBtnActive : null,
           (activeStepIndex === 2 && playing && !recording) || (flowMode === 'smart_flow' && activeStepIndex === 1 && !recording)
@@ -123,14 +120,12 @@ export const PlayerControlsBar: React.FC<{
           if (recording) {
             onStopRecord();
           } else if (activeStepIndex === 2) {
-            // روش ۴ مرحله‌ای سنتی: دکمه میکروفون پایین برای شروع و پایان ضبط دستی است
             if (!playing) {
               startRecord(false);
             }
           } else if (flowMode === 'smart_flow' && activeStepIndex === 1) {
-            // جریان هوشمند: شروع ضبط خودکار از طریق دکمه وسط صحنه و شمارش معکوس است
+            // جریان هوشمند: شروع ضبط خودکار از طریق دکمه تایید صحنه
           } else {
-            // در مرحله گوش دادن (صفحه اول) و مقایسه، دکمه پخش و مکث است
             togglePlay();
           }
         }}
@@ -150,20 +145,27 @@ export const PlayerControlsBar: React.FC<{
             <Sparkles size={22} color={COLORS.white} />
           )
         ) : playing ? (
-          <Pause size={22} color={COLORS.white} fill={COLORS.white} />
+          <Pause size={24} color={COLORS.white} fill={COLORS.white} />
         ) : (
-          <Play size={22} color={COLORS.white} fill={COLORS.white} />
+          <Play size={24} color={COLORS.white} fill={COLORS.white} style={{ marginLeft: 2 }} />
         )}
       </TouchableOpacity>
 
+      {/* جمله بعدی */}
+      <TouchableOpacity style={styles.transportBtn} onPress={onNextDialogue} activeOpacity={0.75}>
+        <SkipForward size={20} color={COLORS.text} fill={COLORS.text} />
+      </TouchableOpacity>
+
+      {/* دکمه میکروفون / اکشن سریع (سمت راست، متقارن با سرعت) */}
       <TouchableOpacity
-        // در صفحه اول (گام ۰)، دکمه کناری مستقیماً ضبط صدا (میکروفون) را فعال می‌کند تا بدون رد کردن مرحله ضبط شود.
         style={[
-          styles.smallPlayBtn,
-          activeStepIndex === 0 && !recording ? { backgroundColor: '#FFF5F0', borderColor: COLORS.primary } : null,
+          styles.outerPillBtn,
+          activeStepIndex === 0 && !recording ? styles.micActionBtn : null,
+          activeStepIndex === 0 && recording ? styles.micRecordingBtn : null,
           activeStepIndex === 2 && !hasRecordingForCurrentLine ? styles.smallPlayBtnDisabled : null,
         ]}
         disabled={activeStepIndex === 2 && !hasRecordingForCurrentLine}
+        activeOpacity={0.8}
         onPress={
           activeStepIndex === 0
             ? () => (recording ? onStopRecord() : startRecord(false))
@@ -180,86 +182,70 @@ export const PlayerControlsBar: React.FC<{
           recording ? (
             <Square size={16} color="#DC2626" fill="#DC2626" />
           ) : (
-            <Mic size={18} color={COLORS.primary} />
+            <Mic size={19} color={COLORS.primary} />
           )
         ) : activeStepIndex === 1 ? (
           playing ? (
-            <Pause size={16} color={accentColor} />
+            <Pause size={17} color={accentColor} />
           ) : (
-            <Play size={16} color={accentColor} />
+            <RotateCcw size={17} color={accentColor} />
           )
         ) : activeStepIndex === 3 ? (
-          <RotateCcw size={16} color={accentColor} />
+          <RotateCcw size={17} color={accentColor} />
         ) : (
-          <Play size={16} color={accentColor} />
+          <Play size={17} color={accentColor} />
         )}
       </TouchableOpacity>
-
-      <TouchableOpacity style={styles.chevronBtn} onPress={onNextDialogue}>
-        <ChevronRight size={20} color={COLORS.text} />
-      </TouchableOpacity>
-      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
-  },
-  speedCenterRow: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  speedCenterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F0EBE3',
-    ...SHADOWS.level1,
-  },
-  rowReverse: { flexDirection: 'row-reverse' },
   controlsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
     marginVertical: 8,
   },
-  chevronBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  outerPillBtn: {
+    minWidth: 52,
+    height: 40,
+    paddingHorizontal: 10,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#F0EBE3',
+    borderColor: '#EDE7DD',
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.level1,
+  },
+  transportBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FAF7F2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   speedPillText: {
     color: '#191C21',
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 12.5,
+    fontSize: 12,
   },
   speedLadderBtn: {
     borderColor: '#C7D2FE',
     backgroundColor: '#EEF2FF',
-    minWidth: 54,
-    paddingHorizontal: 4,
   },
   speedLadderPillText: {
     color: '#4338CA',
     fontFamily: FONT_FAMILY.bold,
-    fontSize: 11,
+    fontSize: 11.5,
   },
-  centerMicBtn: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+  centerPlayBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.level2,
@@ -272,16 +258,13 @@ const styles = StyleSheet.create({
   centerMicBtnPlaying: {
     opacity: 0.75,
   },
-  smallPlayBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F0EBE3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.level1,
+  micActionBtn: {
+    backgroundColor: '#FFF5F0',
+    borderColor: COLORS.primary,
+  },
+  micRecordingBtn: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#DC2626',
   },
   smallPlayBtnDisabled: {
     opacity: 0.35,
