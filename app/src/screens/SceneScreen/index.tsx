@@ -1395,15 +1395,12 @@ export const SceneScreen = () => {
               return;
             }
 
-            // مرحله ۱ (سایه‌زنی تعاملی هوشمند): پخش صدای این جمله تمام شد
+            // مرحله ۱ (تکرار همزمان): پخش صدای این جمله تمام شد
             if (flowMode === 'smart_flow' && activeStepIndex === 1 && actionCommand !== 'start_record') {
               if (shadowPromptState === 'mumbling') {
-                // زمزمه تمام شد؛ کاربر اکنون دکمه «آماده شادوئینگ کامل هستم» یا «تکرار زمزمه» را در اختیار دارد
-              } else if (hasConfirmedReady) {
-                // از دفعات بعد: شمارش معکوس روی تصویر صحنه آغاز و سپس ضبط خودکار انجام می‌شود
-                startCountdownAndRecord(2);
+                // زمزمه تمام شد؛ کاربر اکنون دکمه تایید یا تکرار زمزمه را در اختیار دارد
               } else {
-                // بار اول: دکمه تایید «آماده‌ام! 🚀» وسط صحنه نمایش داده می‌شود
+                // همیشه از کاربر می‌پرسیم آماده است یا نه تا فقط با زدن دکمه شروع کند
                 setShadowPromptState('waiting_ready');
               }
             }
@@ -1425,11 +1422,7 @@ export const SceneScreen = () => {
                       return;
                     }
                     if (flowMode === 'smart_flow' && activeStepIndex === 1 && actionCommand !== 'start_record') {
-                      if (hasConfirmedReady) {
-                        startCountdownAndRecord(2);
-                      } else {
-                        setShadowPromptState('waiting_ready');
-                      }
+                      setShadowPromptState('waiting_ready');
                     }
                   } else {
                     dispatch({ type: 'AUDIO_MISSING' });
